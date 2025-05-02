@@ -1,0 +1,135 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\TokoController;
+use App\Http\Controllers\BarangController;
+use App\Http\Controllers\BarangTokoController;
+use App\Http\Controllers\PengirimanController;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+// Route tamu/belum login
+Route::middleware('guest')->group(function () {
+    Route::get('/', [AuthController::class, 'showLoginForm']);
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+});
+
+// Route yang memerlukan autentikasi
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/', [AuthController::class, 'dashboard'])->name('dashboard');
+    Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
+    
+    // Route profil
+    Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
+    
+    // Route Master Data
+    Route::group(['prefix' => 'barang'], function() {
+        Route::get('/', [BarangController::class, 'index'])->name('barang.index');
+        Route::get('/data', [BarangController::class, 'getData'])->name('barang.data');
+        Route::get('/generate-kode', [BarangController::class, 'generateKode'])->name('barang.generateKode');
+        Route::post('/store', [BarangController::class, 'store'])->name('barang.store');
+        Route::get('/{id}/edit', [BarangController::class, 'edit'])->name('barang.edit');
+        Route::put('/update/{id}', [BarangController::class, 'update'])->name('barang.update');
+        Route::delete('/destroy/{id}', [BarangController::class, 'destroy'])->name('barang.destroy');
+        Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
+    });
+    
+    Route::get('/toko/data', [TokoController::class, 'getData'])->name('toko.data');
+    Route::get('/toko/list', [TokoController::class, 'getList'])->name('toko.list');
+    Route::get('/toko/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
+    Route::resource('toko', TokoController::class);
+    
+    Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');
+    Route::get('/barang-toko/getAvailableBarang', [BarangTokoController::class, 'getAvailableBarang'])->name('barang-toko.getAvailableBarang');
+    Route::resource('barang-toko', BarangTokoController::class);
+    
+    Route::group(['prefix' => 'user'], function() {
+        Route::get('/', function () {
+            return view('user.index', [
+                'activemenu' => 'user',
+                'breadcrumb' => (object) [
+                    'title' => 'Data Pengguna',
+                    'list' => ['Home', 'Master Data', 'Data Pengguna']
+                ]
+            ]);
+        })->name('user.index');
+    });
+    
+    // Route Transaksi
+    Route::group(['prefix' => 'pengiriman'], function() {
+        Route::get('/data', [PengirimanController::class, 'getData'])->name('pengiriman.data');
+        Route::get('/get-nomer', [PengirimanController::class, 'getNomerPengiriman'])->name('pengiriman.getNomerPengiriman');
+        Route::get('/get-barang-by-toko', [PengirimanController::class, 'getBarangByToko'])->name('pengiriman.getBarangByToko');
+        Route::put('/{id}/update-status', [PengirimanController::class, 'updateStatus'])->name('pengiriman.updateStatus');
+        Route::get('/export', [PengirimanController::class, 'export'])->name('pengiriman.export');
+        Route::get('/list', [PengirimanController::class, 'getList'])->name('pengiriman.list');
+    });
+    Route::resource('pengiriman', PengirimanController::class);
+    
+    Route::group(['prefix' => 'retur'], function() {
+        Route::get('/', function () {
+            return view('retur.index', [
+                'activemenu' => 'retur',
+                'breadcrumb' => (object) [
+                    'title' => 'Retur Barang',
+                    'list' => ['Home', 'Transaksi', 'Retur Barang']
+                ]
+            ]);
+        })->name('retur.index');
+    });
+    
+    Route::group(['prefix' => 'pemesanan'], function() {
+        Route::get('/', function () {
+            return view('pemesanan.index', [
+                'activemenu' => 'pemesanan',
+                'breadcrumb' => (object) [
+                    'title' => 'Pemesanan',
+                    'list' => ['Home', 'Transaksi', 'Pemesanan']
+                ]
+            ]);
+        })->name('pemesanan.index');
+    });
+    
+    // Route Laporan
+    Route::get('/laporan-penjualan', function () {
+        return view('laporan.penjualan', [
+            'activemenu' => 'laporan-penjualan',
+            'breadcrumb' => (object) [
+                'title' => 'Laporan Penjualan',
+                'list' => ['Home', 'Laporan', 'Laporan Penjualan']
+            ]
+        ]);
+    })->name('laporan.penjualan');
+    
+    Route::get('/laporan-toko', function () {
+        return view('laporan.toko', [
+            'activemenu' => 'laporan-toko',
+            'breadcrumb' => (object) [
+                'title' => 'Laporan Per Toko',
+                'list' => ['Home', 'Laporan', 'Laporan Per Toko']
+            ]
+        ]);
+    })->name('laporan.toko');
+    
+    Route::get('/laporan-barang', function () {
+        return view('laporan.barang', [
+            'activemenu' => 'laporan-barang',
+            'breadcrumb' => (object) [
+                'title' => 'Laporan Per Barang',
+                'list' => ['Home', 'Laporan', 'Laporan Per Barang']
+            ]
+        ]);
+    })->name('laporan.barang');
+});
