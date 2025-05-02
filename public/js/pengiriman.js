@@ -18,68 +18,13 @@ $(document).ready(function() {
     // Set default date for new shipment (today)
     const today = new Date().toISOString().split('T')[0];
     $('#tanggal_pengiriman').val(today);
-    
-    // Initialize DataTable
-    var table = $('#table-pengiriman').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: "/pengiriman/data",
-            type: "GET",
-            data: function(d) {
-                d.toko_id = $('#filter_toko_id').val();
-                d.status = $('#filter_status').val();
-                d.start_date = $('#filter_start_date').val();
-                d.end_date = $('#filter_end_date').val();
-                return d;
-            }
-        },
-        columns: [
-            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'nomer_pengiriman', name: 'nomer_pengiriman' },
-            { data: 'formatted_tanggal', name: 'tanggal_pengiriman' },
-            { data: 'toko_nama', name: 'toko.nama_toko' },
-            { data: 'barang_nama', name: 'barang.nama_barang' },
-            { 
-                data: 'jumlah_kirim', 
-                name: 'jumlah_kirim',
-                render: function(data, type, row) {
-                    return data + ' ' + (row.barang ? row.barang.satuan : '');
-                }
-            },
-            { data: 'status_label', name: 'status', orderable: true, searchable: true },
-            {
-                data: null,
-                name: 'action',
-                orderable: false,
-                searchable: false,
-                render: function(data, type, row) {
-                    let buttons = `
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-info btn-edit" data-id="${row.pengiriman_id}" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-warning btn-status" data-id="${row.pengiriman_id}" data-nomer="${row.nomer_pengiriman}" data-status="${row.status}" title="Update Status">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-danger btn-delete" data-id="${row.pengiriman_id}" data-nomer="${row.nomer_pengiriman}" title="Hapus">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                    return buttons;
-                }
-            }
-        ],
-        responsive: true,
-        lengthChange: true,
-        autoWidth: false,
-        buttons: ["copy", "csv", "excel", "pdf", "print", "colvis"]
-    }).buttons().container().appendTo('#table-pengiriman_wrapper .col-md-6:eq(0)');
 
-    // Apply filter when button is clicked (changed from form submit)
+    // Load initial data
+    loadPengirimanData();
+    
+    // Apply filter when button is clicked
     $('#btnFilter').click(function() {
-        table.ajax.reload();
+        loadPengirimanData();
         console.log("Filter applied:", {
             toko: $('#filter_toko_id').val(),
             status: $('#filter_status').val(),
@@ -94,7 +39,7 @@ $(document).ready(function() {
         $('#filter_status').val('');
         $('#filter_start_date').val('');
         $('#filter_end_date').val('');
-        table.ajax.reload();
+        loadPengirimanData();
     });
 
     // Export data button
@@ -132,20 +77,6 @@ $(document).ready(function() {
         $('#modalTambahPengiriman').modal('show');
     });
 
-    // Function to get auto-generated nomor pengiriman
-    function getNomerPengiriman() {
-        $.ajax({
-            url: '/pengiriman/get-nomer',
-            type: 'GET',
-            success: function(response) {
-                $('#nomer_pengiriman').val(response.nomer_pengiriman);
-            },
-            error: function() {
-                showAlert('danger', 'Gagal mendapatkan nomor pengiriman otomatis');
-            }
-        });
-    }
-
     // When toko is selected, load available barang for that toko
     $('#toko_id').change(function() {
         var tokoId = $(this).val();
@@ -157,41 +88,6 @@ $(document).ready(function() {
             $('#satuan').val('');
         }
     });
-
-    // Function to load barang by toko
-    function loadBarangByToko(tokoId) {
-        $.ajax({
-            url: '/pengiriman/get-barang-by-toko',
-            type: 'GET',
-            data: {
-                toko_id: tokoId
-            },
-            success: function(response) {
-                $('#barang_id').empty().append('<option value="">-- Pilih Barang --</option>');
-                
-                if (response.data.length > 0) {
-                    $.each(response.data, function(index, item) {
-                        $('#barang_id').append(
-                            $('<option></option>')
-                                .attr('value', item.barang_id)
-                                .attr('data-satuan', item.satuan)
-                                .text(item.barang_kode + ' - ' + item.nama_barang)
-                        );
-                    });
-                } else {
-                    showAlert('warning', 'Tidak ada barang yang terdaftar untuk toko ini');
-                }
-                
-                // Refresh select2
-                if ($.fn.select2) {
-                    $('#barang_id').trigger('change');
-                }
-            },
-            error: function() {
-                showAlert('danger', 'Gagal memuat data barang untuk toko ini');
-            }
-        });
-    }
 
     // When barang is selected, populate satuan
     $('#barang_id').change(function() {
@@ -214,7 +110,7 @@ $(document).ready(function() {
             data: $(this).serialize(),
             success: function(response) {
                 $('#modalTambahPengiriman').modal('hide');
-                table.ajax.reload();
+                loadPengirimanData(); // Reload the data after successful submission
                 showAlert('success', response.message);
             },
             error: function(xhr) {
@@ -270,7 +166,7 @@ $(document).ready(function() {
             data: $(this).serialize(),
             success: function(response) {
                 $('#modalEditPengiriman').modal('hide');
-                table.ajax.reload();
+                loadPengirimanData(); // Reload the data after successful edit
                 showAlert('success', response.message);
             },
             error: function(xhr) {
@@ -321,11 +217,15 @@ $(document).ready(function() {
             data: $(this).serialize(),
             success: function(response) {
                 $('#modalUpdateStatus').modal('hide');
-                table.ajax.reload();
+                loadPengirimanData(); // Reload the data after successful status update
                 showAlert('success', response.message);
             },
-            error: function() {
-                showAlert('danger', 'Gagal mengubah status pengiriman');
+            error: function(xhr) {
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    showAlert('danger', xhr.responseJSON.message);
+                } else {
+                    showAlert('danger', 'Gagal mengubah status pengiriman');
+                }
             }
         });
     });
@@ -353,7 +253,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 $('#deleteModal').modal('hide');
-                table.ajax.reload();
+                loadPengirimanData(); // Reload the data after successful deletion
                 showAlert('success', response.message);
             },
             error: function(xhr) {
@@ -366,6 +266,57 @@ $(document).ready(function() {
             }
         });
     });
+
+    // -------------- HELPER FUNCTIONS --------------
+
+    // Function to get auto-generated nomor pengiriman
+    function getNomerPengiriman() {
+        $.ajax({
+            url: '/pengiriman/get-nomer',
+            type: 'GET',
+            success: function(response) {
+                $('#nomer_pengiriman').val(response.nomer_pengiriman);
+            },
+            error: function() {
+                showAlert('danger', 'Gagal mendapatkan nomor pengiriman otomatis');
+            }
+        });
+    }
+
+    // Function to load barang by toko
+    function loadBarangByToko(tokoId) {
+        $.ajax({
+            url: '/pengiriman/get-barang-by-toko',
+            type: 'GET',
+            data: {
+                toko_id: tokoId
+            },
+            success: function(response) {
+                $('#barang_id').empty().append('<option value="">-- Pilih Barang --</option>');
+                
+                if (response.data.length > 0) {
+                    $.each(response.data, function(index, item) {
+                        $('#barang_id').append(
+                            $('<option></option>')
+                                .attr('value', item.barang_id)
+                                .attr('data-satuan', item.satuan)
+                                .text(item.barang_kode + ' - ' + item.nama_barang)
+                        );
+                    });
+                } else {
+                    showAlert('warning', 'Tidak ada barang yang terdaftar untuk toko ini');
+                }
+                
+                // Refresh select2
+                if ($.fn.select2) {
+                    $('#barang_id').trigger('change');
+                }
+            },
+            error: function() {
+                showAlert('danger', 'Gagal memuat data barang untuk toko ini');
+            }
+        });
+    }
 
     // Reset form
     function resetForm() {
@@ -408,4 +359,144 @@ $(document).ready(function() {
             $('.alert').alert('close');
         }, 5000);
     }
+
+    // --------- MAIN FUNCTION FOR LOADING DATA ----------
+
+    // Function to load data with AJAX and update the table
+    function loadPengirimanData() {
+        // Show loading indicator
+        $('#table-pengiriman tbody').html('<tr><td colspan="8" class="text-center">Loading data...</td></tr>');
+        
+        // Prepare filter parameters
+        var filterParams = {
+            toko_id: $('#filter_toko_id').val(),
+            status: $('#filter_status').val(),
+            start_date: $('#filter_start_date').val(),
+            end_date: $('#filter_end_date').val()
+        };
+        
+        // Make AJAX request
+        $.ajax({
+            url: '/pengiriman/list', // Make sure the endpoint returns JSON data
+            type: 'GET',
+            data: filterParams,
+            success: function(response) {
+                // Clear the table body
+                $('#table-pengiriman tbody').empty();
+                
+                if (response.data.length === 0) {
+                    // Handle empty data
+                    $('#table-pengiriman tbody').html('<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>');
+                    return;
+                }
+                
+                // Loop through the data and append rows to the table
+                $.each(response.data, function(index, item) {
+                    // Create formatted date
+                    var tanggal = new Date(item.tanggal_pengiriman);
+                    var formattedTanggal = tanggal.getDate() + '/' + (tanggal.getMonth() + 1) + '/' + tanggal.getFullYear();
+                    
+                    // Format the status label
+                    var statusLabel;
+                    if (item.status === 'proses') {
+                        statusLabel = '<span class="badge badge-warning">Proses</span>';
+                    } else if (item.status === 'terkirim') {
+                        statusLabel = '<span class="badge badge-success">Terkirim</span>';
+                    } else {
+                        statusLabel = '<span class="badge badge-danger">Batal</span>';
+                    }
+                    
+                    // Create action buttons
+                    var actionButtons = `
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-info btn-edit" data-id="${item.pengiriman_id}" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning btn-status" data-id="${item.pengiriman_id}" data-nomer="${item.nomer_pengiriman}" data-status="${item.status}" title="Update Status">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger btn-delete" data-id="${item.pengiriman_id}" data-nomer="${item.nomer_pengiriman}" title="Hapus">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Create row
+                    var row = `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${item.nomer_pengiriman}</td>
+                            <td>${formattedTanggal}</td>
+                            <td>${item.toko ? item.toko.nama_toko : ''}</td>
+                            <td>${item.barang ? item.barang.nama_barang : ''}</td>
+                            <td>${item.jumlah_kirim} ${item.barang ? item.barang.satuan : ''}</td>
+                            <td>${statusLabel}</td>
+                            <td>${actionButtons}</td>
+                        </tr>
+                    `;
+                    
+                    // Append row to table
+                    $('#table-pengiriman tbody').append(row);
+                });
+                
+                // Add pagination if needed
+                updatePagination(response);
+            },
+            error: function() {
+                showAlert('danger', 'Gagal memuat data pengiriman');
+                $('#table-pengiriman tbody').html('<tr><td colspan="8" class="text-center">Error loading data</td></tr>');
+            }
+        });
+    }
+    
+    // Function to update pagination
+    function updatePagination(response) {
+        // If you want to implement custom pagination, you can do it here
+        // Example: Create pagination links based on response.current_page, response.last_page, etc.
+        if (response.last_page > 1) {
+            var paginationHtml = '<ul class="pagination justify-content-center">';
+            
+            // Previous page link
+            if (response.current_page > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${response.current_page - 1}">Previous</a></li>`;
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Previous</span></li>';
+            }
+            
+            // Page number links
+            for (var i = 1; i <= response.last_page; i++) {
+                if (i === response.current_page) {
+                    paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                } else {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+                }
+            }
+            
+            // Next page link
+            if (response.current_page < response.last_page) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${response.current_page + 1}">Next</a></li>`;
+            } else {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">Next</span></li>';
+            }
+            
+            paginationHtml += '</ul>';
+            
+            // Append pagination to a container (you need to add this container to your HTML)
+            $('#pagination-container').html(paginationHtml);
+        } else {
+            $('#pagination-container').empty();
+        }
+    }
+    
+    // Handle pagination clicks
+    $(document).on('click', '.pagination .page-link', function(e) {
+        e.preventDefault();
+        var page = $(this).data('page');
+        
+        // Add page to filter parameters
+        $('#current_page').val(page);
+        
+        // Reload data with new page
+        loadPengirimanData();
+    });
 });

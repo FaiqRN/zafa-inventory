@@ -54,9 +54,17 @@
                     <div class="col-md-12">
                         <button type="button" id="btnFilter" class="btn btn-primary">Filter</button>
                         <button type="button" id="resetFilter" class="btn btn-secondary">Reset</button>
-                        <button type="button" class="btn btn-success float-right" id="exportData">
-                            <i class="fas fa-file-excel"></i> Export Data
-                        </button>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-file-excel"></i> Export Data
+                            </button>
+                            <button type="button" id="export-excel" class="btn btn-success mr-2">
+                                <i class="fas fa-file-excel"></i> Export Excel
+                            </button>
+                            <button type="button" id="export-csv" class="btn btn-success">
+                                <i class="fas fa-file-csv"></i> Export CSV
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -95,6 +103,11 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Tambahkan container untuk pagination -->
+                <div id="pagination-container" class="mt-3"></div>
+
+                <!-- Tambahkan input hidden untuk current page -->
+                <input type="hidden" id="current_page" value="1">
         </div>
     </div>
 </div>

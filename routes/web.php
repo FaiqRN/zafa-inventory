@@ -73,7 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/get-nomer', [PengirimanController::class, 'getNomerPengiriman'])->name('pengiriman.getNomerPengiriman');
         Route::get('/get-barang-by-toko', [PengirimanController::class, 'getBarangByToko'])->name('pengiriman.getBarangByToko');
         Route::put('/{id}/update-status', [PengirimanController::class, 'updateStatus'])->name('pengiriman.updateStatus');
-        Route::get('/export', [PengirimanController::class, 'export'])->name('pengiriman.export');
+        Route::get('/pengiriman/export', [PengirimanController::class, 'export'])->name('pengiriman.export');
         Route::get('/list', [PengirimanController::class, 'getList'])->name('pengiriman.list');
     });
     Route::resource('pengiriman', PengirimanController::class);

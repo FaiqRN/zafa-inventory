@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PengirimanExport;
 
 class PengirimanController extends Controller
 {
@@ -430,25 +432,49 @@ class PengirimanController extends Controller
         ]);
     }
 
-    /**
-     * Export pengiriman data to Excel/CSV.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function export(Request $request)
+/**
+ * Export pengiriman data to Excel/CSV.
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return \Illuminate\Http\Response
+ */
+public function export(Request $request)
+{
+    // Collect filter parameters
+    $filters = [
+        'toko_id' => $request->input('toko_id'),
+        'status' => $request->input('status'),
+        'start_date' => $request->input('start_date'),
+        'end_date' => $request->input('end_date'),
+    ];
+    
+    // Get filename with date
+    $date = date('Y-m-d_His');
+    $filename = 'pengiriman_' . $date;
+    
+    // Export as Excel (xlsx) by default
+    if ($request->has('format') && $request->format == 'csv') {
+        return Excel::download(new PengirimanExport($filters), $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
+    } else {
+        return Excel::download(new PengirimanExport($filters), $filename . '.xlsx');
+    }
+}
+
+    public function getList(Request $request)
     {
         $query = Pengiriman::with(['toko', 'barang']);
-
-        // Apply filters if provided
+        
+        // Filter by toko_id if provided
         if ($request->has('toko_id') && !empty($request->toko_id)) {
             $query->where('toko_id', $request->toko_id);
         }
-
+    
+        // Filter by status if provided
         if ($request->has('status') && !empty($request->status)) {
             $query->where('status', $request->status);
         }
-
+    
+        // Filter by date range if provided
         if ($request->has('start_date') && !empty($request->start_date)) {
             $query->whereDate('tanggal_pengiriman', '>=', $request->start_date);
         }
@@ -456,96 +482,28 @@ class PengirimanController extends Controller
         if ($request->has('end_date') && !empty($request->end_date)) {
             $query->whereDate('tanggal_pengiriman', '<=', $request->end_date);
         }
-
-        $data = $query->orderBy('tanggal_pengiriman', 'desc')->get();
-
-        // Define headers for CSV
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="pengiriman_barang.csv"',
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
+        
+        // Order by date descending
+        $query->orderBy('tanggal_pengiriman', 'desc');
+        
+        // Pagination
+        $perPage = 10;
+        $page = $request->input('page', 1);
+        $total = $query->count();
+        $result = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
+        
+        // Prepare response
+        $response = [
+            'data' => $result,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => (int)$page,
+            'last_page' => ceil($total / $perPage)
         ];
-
-        // Create the callback for streaming the CSV
-        $callback = function() use ($data) {
-            $file = fopen('php://output', 'w');
-            
-            // Add headers
-            fputcsv($file, [
-                'No. Pengiriman', 
-                'Tanggal', 
-                'Toko', 
-                'Barang', 
-                'Jumlah', 
-                'Satuan',
-                'Status'
-            ]);
-            
-            // Add data rows
-            foreach ($data as $row) {
-                fputcsv($file, [
-                    $row->nomer_pengiriman,
-                    $row->tanggal_pengiriman,
-                    $row->toko->nama_toko,
-                    $row->barang->nama_barang,
-                    $row->jumlah_kirim,
-                    $row->barang->satuan,
-                    $row->status
-                ]);
-            }
-            
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        
+        return response()->json($response)
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
-
-    public function getList(Request $request)
-{
-    $query = Pengiriman::with(['toko', 'barang']);
-    
-    // Filter by toko_id if provided
-    if ($request->has('toko_id') && !empty($request->toko_id)) {
-        $query->where('toko_id', $request->toko_id);
-    }
-
-    // Filter by status if provided
-    if ($request->has('status') && !empty($request->status)) {
-        $query->where('status', $request->status);
-    }
-
-    // Filter by date range if provided
-    if ($request->has('start_date') && !empty($request->start_date)) {
-        $query->whereDate('tanggal_pengiriman', '>=', $request->start_date);
-    }
-    
-    if ($request->has('end_date') && !empty($request->end_date)) {
-        $query->whereDate('tanggal_pengiriman', '<=', $request->end_date);
-    }
-    
-    // Order by date descending
-    $query->orderBy('tanggal_pengiriman', 'desc');
-    
-    // Pagination
-    $perPage = 10;
-    $page = $request->input('page', 1);
-    $total = $query->count();
-    $result = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
-    
-    // Prepare response
-    $response = [
-        'data' => $result,
-        'total' => $total,
-        'per_page' => $perPage,
-        'current_page' => (int)$page,
-        'last_page' => ceil($total / $perPage)
-    ];
-    
-    return response()->json($response)
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
-}
 }
