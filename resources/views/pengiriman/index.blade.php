@@ -55,15 +55,21 @@
                         <button type="button" id="btnFilter" class="btn btn-primary">Filter</button>
                         <button type="button" id="resetFilter" class="btn btn-secondary">Reset</button>
                         <div class="btn-group">
-                            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-file-excel"></i> Export Data
-                            </button>
-                            <button type="button" id="export-excel" class="btn btn-success mr-2">
-                                <i class="fas fa-file-excel"></i> Export Excel
-                            </button>
-                            <button type="button" id="export-csv" class="btn btn-success">
-                                <i class="fas fa-file-csv"></i> Export CSV
-                            </button>
+                            <form action="{{ route('pengiriman.export') }}" method="GET" class="d-inline">
+                                <input type="hidden" name="format" value="xlsx">
+                                <!-- Copy hidden input for filter jika dibutuhkan -->
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </button>
+                            </form>
+                            
+                            <form action="{{ route('pengiriman.export') }}" method="GET" class="d-inline">
+                                <input type="hidden" name="format" value="csv">
+                                <!-- Copy hidden input untuk filter jika dibutuhkan -->
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-file-csv"></i> Export CSV
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>

@@ -44,30 +44,52 @@ $(document).ready(function() {
 
     // Export data button
     $('#exportData').click(function() {
-        let url = '/pengiriman/export';
-        let params = [];
+        $('#export-excel').on('click', function() {
+            console.log('Export Excel button clicked');
+            doExport('xlsx');
+        });
         
-        if ($('#filter_toko_id').val()) {
-            params.push('toko_id=' + $('#filter_toko_id').val());
+        // Export CSV button
+        $('#export-csv').on('click', function() {
+            console.log('Export CSV button clicked');
+            doExport('csv');
+        });
+        
+        // Fungsi untuk melakukan export
+        function doExport(format) {
+            // Buat URL dasar
+            var url = '/pengiriman/export';
+            
+            // Siapkan parameter
+            var params = ['format=' + format];
+            
+            // Tambahkan filter jika ada
+            if ($('#filter_toko_id').val()) {
+                params.push('toko_id=' + $('#filter_toko_id').val());
+            }
+            
+            if ($('#filter_status').val()) {
+                params.push('status=' + $('#filter_status').val());
+            }
+            
+            if ($('#filter_start_date').val()) {
+                params.push('start_date=' + $('#filter_start_date').val());
+            }
+            
+            if ($('#filter_end_date').val()) {
+                params.push('end_date=' + $('#filter_end_date').val());
+            }
+            
+            // Tambahkan parameter ke URL
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            console.log('Exporting to URL:', url);
+            
+            // Buka URL
+            window.location.href = url;
         }
-        
-        if ($('#filter_status').val()) {
-            params.push('status=' + $('#filter_status').val());
-        }
-        
-        if ($('#filter_start_date').val()) {
-            params.push('start_date=' + $('#filter_start_date').val());
-        }
-        
-        if ($('#filter_end_date').val()) {
-            params.push('end_date=' + $('#filter_end_date').val());
-        }
-        
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
-        
-        window.location.href = url;
     });
 
     // Generate nomor pengiriman when opening the add modal

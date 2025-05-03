@@ -7,6 +7,7 @@ use App\Models\Toko;
 use App\Models\Barang;
 use App\Models\BarangToko;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
@@ -440,23 +441,43 @@ class PengirimanController extends Controller
  */
 public function export(Request $request)
 {
-    // Collect filter parameters
-    $filters = [
-        'toko_id' => $request->input('toko_id'),
-        'status' => $request->input('status'),
-        'start_date' => $request->input('start_date'),
-        'end_date' => $request->input('end_date'),
-    ];
+    // Debug logs
+    Log::info('Export request received', [
+        'format' => $request->format,
+        'filters' => $request->all()
+    ]);
     
-    // Get filename with date
-    $date = date('Y-m-d_His');
-    $filename = 'pengiriman_' . $date;
-    
-    // Export as Excel (xlsx) by default
-    if ($request->has('format') && $request->format == 'csv') {
-        return Excel::download(new PengirimanExport($filters), $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
-    } else {
-        return Excel::download(new PengirimanExport($filters), $filename . '.xlsx');
+    try {
+        // Collect filter parameters
+        $filters = [
+            'toko_id' => $request->input('toko_id'),
+            'status' => $request->input('status'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+        ];
+        
+        // Get filename with date
+        $date = date('Y-m-d_His');
+        $filename = 'pengiriman_' . $date;
+        
+        // Export as Excel (xlsx) by default
+        if ($request->format == 'csv') {
+            Log::info('Exporting as CSV');
+            return Excel::download(new PengirimanExport($filters), $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
+        } else {
+            Log::info('Exporting as XLSX');
+            return Excel::download(new PengirimanExport($filters), $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX);
+        }
+        
+    } catch (\Exception $e) {
+        Log::error('Export error', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'error' => 'Export failed: ' . $e->getMessage()
+        ], 500);
     }
 }
 
