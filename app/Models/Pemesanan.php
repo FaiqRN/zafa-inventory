@@ -31,6 +31,13 @@ class Pemesanan extends Model
     protected $keyType = 'string';
 
     /**
+     * Menentukan apakah primary key auto-increment.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
      * Atribut yang dapat diisi (mass assignable).
      *
      * @var array
@@ -85,34 +92,18 @@ class Pemesanan extends Model
     }
 
     /**
-     * Cek apakah pesanan telah selesai.
+     * Mendapatkan status dengan format yang lebih baik.
      */
-    public function getIsSelesaiAttribute()
+    public function getStatusLabelAttribute()
     {
-        return $this->status_pemesanan === 'selesai';
-    }
-
-    /**
-     * Cek apakah pesanan sedang diproses.
-     */
-    public function getIsProsesAttribute()
-    {
-        return $this->status_pemesanan === 'diproses' || $this->status_pemesanan === 'dikirim';
-    }
-
-    /**
-     * Cek apakah pesanan dibatalkan.
-     */
-    public function getIsBatalAttribute()
-    {
-        return $this->status_pemesanan === 'dibatalkan';
-    }
-
-    /**
-     * Cek apakah pesanan masih pending.
-     */
-    public function getIsPendingAttribute()
-    {
-        return $this->status_pemesanan === 'pending';
+        $labels = [
+            'pending' => '<span class="badge badge-warning">Menunggu</span>',
+            'diproses' => '<span class="badge badge-info">Diproses</span>',
+            'dikirim' => '<span class="badge badge-primary">Dikirim</span>',
+            'selesai' => '<span class="badge badge-success">Selesai</span>',
+            'dibatalkan' => '<span class="badge badge-danger">Dibatalkan</span>'
+        ];
+        
+        return $labels[$this->status_pemesanan] ?? '<span class="badge badge-secondary">Tidak Diketahui</span>';
     }
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
+use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
 
@@ -90,15 +91,13 @@ Route::middleware('auth')->group(function () {
     });
     
     Route::group(['prefix' => 'pemesanan'], function() {
-        Route::get('/', function () {
-            return view('pemesanan.index', [
-                'activemenu' => 'pemesanan',
-                'breadcrumb' => (object) [
-                    'title' => 'Pemesanan',
-                    'list' => ['Home', 'Transaksi', 'Pemesanan']
-                ]
-            ]);
-        })->name('pemesanan.index');
+        Route::get('/', [PemesananController::class, 'index'])->name('pemesanan.index');
+        Route::get('/data', [PemesananController::class, 'getData'])->name('pemesanan.data');
+        Route::get('/get-id', [PemesananController::class, 'getPemesananId'])->name('pemesanan.getId');
+        Route::post('/store', [PemesananController::class, 'store'])->name('pemesanan.store');
+        Route::get('/{id}', [PemesananController::class, 'show'])->name('pemesanan.show');
+        Route::put('/{id}', [PemesananController::class, 'update'])->name('pemesanan.update');
+        Route::delete('/{id}', [PemesananController::class, 'destroy'])->name('pemesanan.destroy');
     });
     
     // Route Laporan
