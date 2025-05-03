@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TokoController;
+use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
@@ -79,15 +80,13 @@ Route::middleware('auth')->group(function () {
     Route::resource('pengiriman', PengirimanController::class);
     
     Route::group(['prefix' => 'retur'], function() {
-        Route::get('/', function () {
-            return view('retur.index', [
-                'activemenu' => 'retur',
-                'breadcrumb' => (object) [
-                    'title' => 'Retur Barang',
-                    'list' => ['Home', 'Transaksi', 'Retur Barang']
-                ]
-            ]);
-        })->name('retur.index');
+        Route::get('/', [ReturController::class, 'index'])->name('retur.index');
+        Route::get('/data', [ReturController::class, 'getData'])->name('retur.data');
+        Route::get('/get-pengiriman', [ReturController::class, 'getPengiriman'])->name('retur.getPengiriman');
+        Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
+        Route::get('/{id}', [ReturController::class, 'show'])->name('retur.show');
+        Route::delete('/{id}', [ReturController::class, 'destroy'])->name('retur.destroy');
+        Route::get('/export', [ReturController::class, 'export'])->name('retur.export');
     });
     
     Route::group(['prefix' => 'pemesanan'], function() {
