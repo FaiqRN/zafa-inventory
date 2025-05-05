@@ -39,6 +39,25 @@ $(function() {
         order: [[1, 'asc']]
     });
 
+    // Fungsi untuk refresh data table
+    function refreshData() {
+        table.ajax.reload(null, false); // null callback, false to maintain pagination
+    }
+
+    // Auto refresh setiap 30 detik
+    var refreshInterval = setInterval(function() {
+        refreshData();
+    }, 30000); // 30 detik
+
+    // Manual refresh button
+    $('#btnRefresh').click(function() {
+        $(this).html('<i class="fas fa-spinner fa-spin"></i>');
+        refreshData();
+        setTimeout(function() {
+            $('#btnRefresh').html('<i class="fas fa-sync-alt"></i> Refresh Data');
+        }, 1000);
+    });
+
     // Show modal for adding new customer
     $('#btnTambah').click(function() {
         resetForm();
@@ -103,7 +122,7 @@ $(function() {
                         title: 'Berhasil!',
                         text: response.message
                     });
-                    table.ajax.reload();
+                    refreshData();
                 } else if (response.status === 'info') {
                     Swal.fire({
                         icon: 'info',
@@ -165,7 +184,7 @@ $(function() {
                         title: 'Berhasil!',
                         text: response.message
                     });
-                    table.ajax.reload();
+                    refreshData();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -257,7 +276,7 @@ $(function() {
                                 title: 'Berhasil!',
                                 text: response.message
                             });
-                            table.ajax.reload();
+                            refreshData();
                         } else {
                             Swal.fire({
                                 icon: 'error',
@@ -307,7 +326,7 @@ $(function() {
                         title: 'Berhasil!',
                         text: response.message
                     });
-                    table.ajax.reload();
+                    refreshData();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -336,4 +355,18 @@ $(function() {
         $('#formCustomer')[0].reset();
         $('#customer_id').val('');
     }
+    
+    // Pause auto-refresh when any modal is open
+    $('.modal').on('show.bs.modal', function() {
+        clearInterval(refreshInterval);
+    });
+    
+    // Resume auto-refresh when all modals are closed
+    $('.modal').on('hidden.bs.modal', function() {
+        if ($('.modal:visible').length === 0) {
+            refreshInterval = setInterval(function() {
+                refreshData();
+            }, 10000);
+        }
+    });
 });
