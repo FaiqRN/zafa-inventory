@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Pemesanan;
+use App\Observers\PemesananObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +24,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Pemesanan::observe(PemesananObserver::class);
     }
 }

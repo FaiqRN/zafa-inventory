@@ -461,7 +461,7 @@ public function export(Request $request)
         $filename = 'pengiriman_' . $date;
         
         // Export as Excel (xlsx) by default
-        if ($request->format == 'csv') {
+        if ($request->format == 'xlsx') {
             Log::info('Exporting as CSV');
             return Excel::download(new PengirimanExport($filters), $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
         } else {

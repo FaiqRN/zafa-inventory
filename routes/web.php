@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
@@ -57,16 +58,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/barang-toko/getAvailableBarang', [BarangTokoController::class, 'getAvailableBarang'])->name('barang-toko.getAvailableBarang');
     Route::resource('barang-toko', BarangTokoController::class);
     
-    Route::group(['prefix' => 'user'], function() {
-        Route::get('/', function () {
-            return view('user.index', [
-                'activemenu' => 'user',
-                'breadcrumb' => (object) [
-                    'title' => 'Data Pengguna',
-                    'list' => ['Home', 'Master Data', 'Data Pengguna']
-                ]
-            ]);
-        })->name('user.index');
+    Route::group(['prefix' => 'customer'], function() {
+        Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
+        Route::get('/data', [CustomerController::class, 'getData'])->name('customer.data');
+        Route::post('/', [CustomerController::class, 'store'])->name('customer.store');
+        Route::get('/{id}/edit', [CustomerController::class, 'edit'])->name('customer.edit');
+        Route::put('/{id}', [CustomerController::class, 'update'])->name('customer.update');
+        Route::delete('/{id}', [CustomerController::class, 'destroy'])->name('customer.destroy');
+        Route::post('/import', [CustomerController::class, 'import'])->name('customer.import');
+        Route::post('/sync-pemesanan', [CustomerController::class, 'syncFromPemesanan'])->name('customer.syncPemesanan');
+        Route::get('/debug-tables', [CustomerController::class, 'debugTables'])->name('customer.debugTables');
     });
     
     // Route Transaksi

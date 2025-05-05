@@ -42,9 +42,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/user') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
+                        <a href="{{ url('/customer') }}" class="nav-link {{ ($activemenu == 'customer')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Data Pengguna</p>
+                            <p>Data Customer</p>
                         </a>
                     </li>
                 </ul>

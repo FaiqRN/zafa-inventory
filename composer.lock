@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c8dda505516a44a7a99d3459a758895a",
+    "content-hash": "e85e2e95a3e5fa67ff2e9698d08a41b9",
     "packages": [
         {
             "name": "almasaeed2010/adminlte",
@@ -6443,6 +6443,66 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "beyondcode/laravel-query-detector",
+            "version": "2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/beyondcode/laravel-query-detector.git",
+                "reference": "a489b427cb95fe06684770633630ea575944b8ba"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/beyondcode/laravel-query-detector/zipball/a489b427cb95fe06684770633630ea575944b8ba",
+                "reference": "a489b427cb95fe06684770633630ea575944b8ba",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^5.5 || ^6.0 || ^7.0 || ^8.0 || ^9.0|^10.0 || ^11.0 || ^12.0",
+                "php": "^7.1 || ^8.0"
+            },
+            "require-dev": {
+                "laravel/legacy-factories": "^1.0",
+                "orchestra/testbench": "^3.0 || ^4.0 || ^5.0 || ^6.0|^8.0 || ^9.0 || ^10.0",
+                "phpunit/phpunit": "^7.0 || ^8.0 || ^9.0 || ^10.5 || ^11.5.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "BeyondCode\\QueryDetector\\QueryDetectorServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "BeyondCode\\QueryDetector\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Marcel Pociot",
+                    "email": "marcel@beyondco.de",
+                    "homepage": "https://beyondcode.de",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Laravel N+1 Query Detector",
+            "homepage": "https://github.com/beyondcode/laravel-query-detector",
+            "keywords": [
+                "beyondcode",
+                "laravel-query-detector"
+            ],
+            "support": {
+                "issues": "https://github.com/beyondcode/laravel-query-detector/issues",
+                "source": "https://github.com/beyondcode/laravel-query-detector/tree/2.1.0"
+            },
+            "time": "2025-03-11T09:48:29+00:00"
+        },
         {
             "name": "fakerphp/faker",
             "version": "v1.24.1",
