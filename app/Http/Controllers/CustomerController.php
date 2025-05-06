@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Pemesanan;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\CustomersImport;
+use App\Imports\SimpleCustomerImporter;
+use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends Controller
 {
@@ -226,42 +226,96 @@ class CustomerController extends Controller
         }
     }
 
-    /**
-     * Import customers from Excel/CSV file
-     */
-    public function import(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:xlsx,xls,csv|max:2048',
-        ]);
+// Tambahkan fungsi import ini ke CustomerController.php
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first()
-            ], 422);
-        }
+/**
+ * Import customers from Excel/CSV file
+ */
+public function import(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'file' => 'required|file|mimes:xlsx,xls,csv|max:2048',
+    ]);
 
-        try {
-            $import = new CustomersImport;
-            Excel::import($import, $request->file('file'));
-            
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Berhasil mengimpor ' . $import->getRowCount() . ' data customer',
-                'imported' => $import->getRowCount(),
-                'updated' => $import->getUpdatedCount(),
-                'duplicates' => $import->getDuplicateCount()
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error importing customers: ' . $e->getMessage());
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal mengimpor data: ' . $e->getMessage()
-            ], 500);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $validator->errors()->first()
+        ], 422);
     }
 
+    try {
+        // Log start of import process
+        Log::info('Starting customer import process');
+        
+        // Get file details
+        $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        
+        // Log file information
+        Log::info('Import file details: ', [
+            'name' => $file->getClientOriginalName(),
+            'extension' => $extension,
+            'size' => $file->getSize(),
+            'mime' => $file->getMimeType()
+        ]);
+        
+        // Create temporary storage path
+        $tempPath = $file->storeAs('temp_imports', 'import_'.time().'.'.$extension);
+        Log::info('File stored at: ' . $tempPath);
+        
+        // Use simplified importer for all file types
+        $importer = new SimpleCustomerImporter();
+        Excel::import($importer, storage_path('app/'.$tempPath));
+        
+        // Get import statistics
+        $processed = $importer->getProcessedCount();
+        $inserted = $importer->getInsertedCount(); 
+        $updated = $importer->getUpdatedCount();
+        $skipped = $importer->getSkippedCount();
+        $errors = $importer->getErrors();
+        
+        // Log import results
+        Log::info('Import completed successfully', [
+            'processed' => $processed,
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'errors' => count($errors)
+        ]);
+        
+        // Build success message
+        $message = "Berhasil mengimpor {$inserted} data baru";
+        if ($updated > 0) {
+            $message .= " dan memperbarui {$updated} data yang sudah ada";
+        }
+        
+        // Clean up temporary file
+        if (file_exists(storage_path('app/'.$tempPath))) {
+            unlink(storage_path('app/'.$tempPath));
+        }
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => $message,
+            'details' => [
+                'processed' => $processed,
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'errors' => $errors
+            ]
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Failed to import customer data: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Gagal mengimpor data: ' . $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * Sync customers from pemesanan data - FIXED VERSION
      */
