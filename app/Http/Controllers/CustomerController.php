@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Pemesanan;
 use Illuminate\Http\Request;
+use App\Imports\ManualCSVImporter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -234,7 +235,7 @@ class CustomerController extends Controller
 public function import(Request $request)
 {
     $validator = Validator::make($request->all(), [
-        'file' => 'required|file|mimes:xlsx,xls,csv|max:2048',
+        'file' => 'required|file|max:2048',
     ]);
 
     if ($validator->fails()) {
@@ -245,54 +246,71 @@ public function import(Request $request)
     }
 
     try {
-        // Log start of import process
-        Log::info('Starting customer import process');
-        
         // Get file details
         $file = $request->file('file');
+        $originalName = $file->getClientOriginalName();
         $extension = strtolower($file->getClientOriginalExtension());
+        $mimeType = $file->getMimeType();
         
         // Log file information
-        Log::info('Import file details: ', [
-            'name' => $file->getClientOriginalName(),
+        Log::info('Import file details:', [
+            'name' => $originalName,
             'extension' => $extension,
-            'size' => $file->getSize(),
-            'mime' => $file->getMimeType()
+            'mimeType' => $mimeType,
+            'size' => $file->getSize()
         ]);
         
-        // Create temporary storage path
-        $tempPath = $file->storeAs('temp_imports', 'import_'.time().'.'.$extension);
-        Log::info('File stored at: ' . $tempPath);
+        // Store file temporarily
+        $tempPath = $file->getRealPath();
+        $storedPath = storage_path('app/temp_imports/') . time() . '_' . $originalName;
         
-        // Use simplified importer for all file types
-        $importer = new SimpleCustomerImporter();
-        Excel::import($importer, storage_path('app/'.$tempPath));
+        // Create directory if it doesn't exist
+        if (!file_exists(storage_path('app/temp_imports/'))) {
+            mkdir(storage_path('app/temp_imports/'), 0755, true);
+        }
         
-        // Get import statistics
-        $processed = $importer->getProcessedCount();
-        $inserted = $importer->getInsertedCount(); 
-        $updated = $importer->getUpdatedCount();
-        $skipped = $importer->getSkippedCount();
-        $errors = $importer->getErrors();
+        // Copy file to storage
+        copy($tempPath, $storedPath);
+        Log::info('File stored at: ' . $storedPath);
+        
+        // Use different import methods based on file type
+        if ($extension == 'csv' || $mimeType == 'text/csv' || $mimeType == 'text/plain') {
+            // Use manual CSV importer
+            $importer = new ManualCSVImporter();
+            $result = $importer->import($storedPath);
+            
+            $processed = $result['processed'];
+            $inserted = $result['inserted'];
+            $updated = $result['updated'];
+            $errors = $importer->getErrors();
+        } else {
+            // Use Excel importer for xlsx/xls
+            $importer = new SimpleCustomerImporter();
+            Excel::import($importer, $storedPath);
+            
+            $processed = $importer->getProcessedCount();
+            $inserted = $importer->getInsertedCount();
+            $updated = $importer->getUpdatedCount();
+            $errors = $importer->getErrors();
+        }
         
         // Log import results
-        Log::info('Import completed successfully', [
+        Log::info('Import completed:', [
             'processed' => $processed,
             'inserted' => $inserted,
             'updated' => $updated,
-            'skipped' => $skipped,
-            'errors' => count($errors)
+            'errors' => count($errors ?? [])
         ]);
         
-        // Build success message
+        // Clean up temporary file
+        if (file_exists($storedPath)) {
+            unlink($storedPath);
+        }
+        
+        // Build response message
         $message = "Berhasil mengimpor {$inserted} data baru";
         if ($updated > 0) {
             $message .= " dan memperbarui {$updated} data yang sudah ada";
-        }
-        
-        // Clean up temporary file
-        if (file_exists(storage_path('app/'.$tempPath))) {
-            unlink(storage_path('app/'.$tempPath));
         }
         
         return response()->json([
@@ -302,12 +320,11 @@ public function import(Request $request)
                 'processed' => $processed,
                 'inserted' => $inserted,
                 'updated' => $updated,
-                'skipped' => $skipped,
-                'errors' => $errors
+                'errors' => $errors ?? []
             ]
         ]);
     } catch (\Exception $e) {
-        Log::error('Failed to import customer data: ' . $e->getMessage());
+        Log::error('Import error: ' . $e->getMessage());
         Log::error('Stack trace: ' . $e->getTraceAsString());
         
         return response()->json([
