@@ -110,6 +110,9 @@ $(function() {
             url: '/customer/sync-pemesanan',
             type: 'POST',
             dataType: 'json',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             beforeSend: function() {
                 $('#btnSyncPemesanan').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Menyinkronkan...');
             },
@@ -171,6 +174,9 @@ $(function() {
             data: formData,
             contentType: false,
             processData: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             beforeSend: function() {
                 $('#btnSimpanImport').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Mengimpor...');
             },
@@ -250,7 +256,7 @@ $(function() {
         });
     });
     
-    // Handle delete
+    // Handle delete - PERBAIKAN DI SINI
     $(document).on('click', '.btn-delete', function() {
         var id = $(this).data('id');
         
@@ -265,10 +271,14 @@ $(function() {
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
+                // PERBAIKAN: Menambahkan token CSRF secara eksplisit
                 $.ajax({
                     url: '/customer/' + id,
                     type: 'DELETE',
                     dataType: 'json',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
                     success: function(response) {
                         if (response.status === 'success') {
                             Swal.fire({
@@ -313,6 +323,9 @@ $(function() {
             type: method,
             data: formData,
             dataType: 'json',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             beforeSend: function() {
                 $('#btnSimpan').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Menyimpan...');
             },
