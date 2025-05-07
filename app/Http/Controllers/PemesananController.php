@@ -343,11 +343,27 @@ public function update(Request $request, $id)
         ], 404);
     }
     
-    // Get the previous status
-    $previousStatus = $pemesanan->status_pemesanan;
+    // Validasi dasar (tanpa tanggal)
+    $rules = [
+        'barang_id' => 'required|exists:barang,barang_id',
+        'nama_pemesan' => 'required|string|max:100',
+        'alamat_pemesan' => 'required|string',
+        'jumlah_pesanan' => 'required|integer|min:1',
+        'total' => 'required|numeric|min:0',
+        'pemesanan_dari' => 'required|string|max:50',
+        'metode_pembayaran' => 'required|string|max:50',
+        'status_pemesanan' => 'required|in:pending,diproses,dikirim,selesai,dibatalkan',
+        'no_telp_pemesan' => 'required|string|max:20',
+        'email_pemesan' => 'required|email|max:100',
+        'catatan_pemesanan' => 'nullable|string',
+    ];
     
-    // Validate request data with our custom function that considers previous status
-    $validator = $this->validatePemesanan($request->all(), $previousStatus);
+    // Tanggal hanya divalidasi jika dikirim dan belum ada nilainya
+    if ($request->has('tanggal_pemesanan') && !$pemesanan->tanggal_pemesanan) {
+        $rules['tanggal_pemesanan'] = 'required|date';
+    }
+    
+    $validator = Validator::make($request->all(), $rules);
     
     if ($validator->fails()) {
         return response()->json([
@@ -360,7 +376,6 @@ public function update(Request $request, $id)
     // Update basic pemesanan data
     $pemesanan->barang_id = $request->barang_id;
     $pemesanan->nama_pemesan = $request->nama_pemesan;
-    $pemesanan->tanggal_pemesanan = $request->tanggal_pemesanan;
     $pemesanan->alamat_pemesan = $request->alamat_pemesan;
     $pemesanan->jumlah_pesanan = $request->jumlah_pesanan;
     $pemesanan->total = $request->total;
@@ -370,57 +385,39 @@ public function update(Request $request, $id)
     $pemesanan->email_pemesan = $request->email_pemesan;
     $pemesanan->catatan_pemesanan = $request->catatan_pemesanan;
     
-    // Status has changed
-    if ($previousStatus != $request->status_pemesanan) {
-        // Update the date field based on the new status only if the appropriate date is provided
-        // and only if we're moving forward in the workflow
-        switch ($request->status_pemesanan) {
-            case 'diproses':
-                // Only update tanggal_diproses if coming from pending or dibatalkan
-                if (($previousStatus == 'pending' || $previousStatus == 'dibatalkan') && $request->has('tanggal_diproses')) {
-                    $pemesanan->tanggal_diproses = $request->tanggal_diproses;
-                }
-                break;
-            case 'dikirim':
-                // Only update tanggal_dikirim if coming from pending, dibatalkan, or diproses
-                if (($previousStatus == 'pending' || $previousStatus == 'dibatalkan' || $previousStatus == 'diproses') 
-                    && $request->has('tanggal_dikirim')) {
-                    $pemesanan->tanggal_dikirim = $request->tanggal_dikirim;
-                }
-                // Ensure tanggal_diproses is set when moving to dikirim
-                if (!$pemesanan->tanggal_diproses) {
-                    $pemesanan->tanggal_diproses = $request->has('tanggal_dikirim') ? 
-                        $request->tanggal_dikirim : Carbon::now()->format('Y-m-d');
-                }
-                break;
-            case 'selesai':
-                // Only update tanggal_selesai if coming from pending, dibatalkan, diproses, or dikirim
-                if (($previousStatus == 'pending' || $previousStatus == 'dibatalkan' || 
-                    $previousStatus == 'diproses' || $previousStatus == 'dikirim') 
-                    && $request->has('tanggal_selesai')) {
-                    $pemesanan->tanggal_selesai = $request->tanggal_selesai;
-                }
-                // Ensure tanggal_diproses and tanggal_dikirim are set when moving to selesai
-                if (!$pemesanan->tanggal_diproses) {
-                    $pemesanan->tanggal_diproses = $request->has('tanggal_selesai') ? 
-                        $request->tanggal_selesai : Carbon::now()->format('Y-m-d');
-                }
-                if (!$pemesanan->tanggal_dikirim) {
-                    $pemesanan->tanggal_dikirim = $request->has('tanggal_selesai') ? 
-                        $request->tanggal_selesai : Carbon::now()->format('Y-m-d');
-                }
-                break;
-            case 'pending':
-            case 'dibatalkan':
-                // Reset all status dates if going back to pending or dibatalkan
-                $pemesanan->tanggal_diproses = null;
-                $pemesanan->tanggal_dikirim = null;
-                $pemesanan->tanggal_selesai = null;
-                break;
+    // Update tanggal hanya jika dikirim dan belum ada nilainya
+    if (!$pemesanan->tanggal_pemesanan && $request->has('tanggal_pemesanan')) {
+        $pemesanan->tanggal_pemesanan = $request->tanggal_pemesanan;
+    }
+    
+    // Atur tanggal status berdasarkan status
+    if ($request->status_pemesanan === 'pending' || $request->status_pemesanan === 'dibatalkan') {
+        // Reset semua tanggal status jika status pending atau dibatalkan
+        $pemesanan->tanggal_diproses = null;
+        $pemesanan->tanggal_dikirim = null;
+        $pemesanan->tanggal_selesai = null;
+    } else {
+        // Update tanggal status jika dikirim dan belum ada nilainya
+        if ($request->status_pemesanan === 'diproses' || $request->status_pemesanan === 'dikirim' || $request->status_pemesanan === 'selesai') {
+            if (!$pemesanan->tanggal_diproses) {
+                $pemesanan->tanggal_diproses = $request->tanggal_diproses ?? Carbon::now()->format('Y-m-d');
+            }
+        }
+        
+        if ($request->status_pemesanan === 'dikirim' || $request->status_pemesanan === 'selesai') {
+            if (!$pemesanan->tanggal_dikirim) {
+                $pemesanan->tanggal_dikirim = $request->tanggal_dikirim ?? Carbon::now()->format('Y-m-d');
+            }
+        }
+        
+        if ($request->status_pemesanan === 'selesai') {
+            if (!$pemesanan->tanggal_selesai) {
+                $pemesanan->tanggal_selesai = $request->tanggal_selesai ?? Carbon::now()->format('Y-m-d');
+            }
         }
     }
     
-    // Update status after handling date fields
+    // Update status
     $pemesanan->status_pemesanan = $request->status_pemesanan;
     $pemesanan->save();
     
