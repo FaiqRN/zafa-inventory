@@ -1,50 +1,32 @@
+// File JavaScript untuk Pemesanan
 $(document).ready(function() {
-    // Initialize Select2
-    if ($.fn.select2) {
-        $('#filter_barang_id, #barang_id').select2({
-            placeholder: "Pilih Barang",
-            allowClear: true,
-            theme: 'bootstrap4'
-        });
+    // Format tanggal
+    function formatDate(date) {
+        if (!date) return '-';
         
-        $('#filter_status, #status_pemesanan').select2({
-            placeholder: "Pilih Status",
-            allowClear: true,
-            theme: 'bootstrap4'
-        });
-        
-        $('#pemesanan_dari').select2({
-            placeholder: "Pilih Sumber",
-            allowClear: true,
-            theme: 'bootstrap4',
-            dropdownParent: $('#modalPemesanan')
-        });
-        
-        $('#metode_pembayaran').select2({
-            placeholder: "Pilih Metode",
-            allowClear: true,
-            theme: 'bootstrap4',
-            dropdownParent: $('#modalPemesanan')
-        });
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
     }
-    
-    // Set default date for pemesanan (today)
-    const today = new Date().toISOString().split('T')[0];
-    $('#tanggal_pemesanan').val(today);
-    
-    // Initialize DataTable
-    var table = $('#table-pemesanan').DataTable({
+
+    // Format mata uang
+    function formatRupiah(angka) {
+        return 'Rp ' + parseFloat(angka).toFixed(0).replace(/\d(?=(\d{3})+$)/g, '$&.');
+    }
+
+    // DataTable
+    const table = $('#table-pemesanan').DataTable({
         processing: true,
         serverSide: true,
         ajax: {
-            url: "/pemesanan/data",
-            type: "GET",
+            url: '/pemesanan/data',
             data: function(d) {
                 d.barang_id = $('#filter_barang_id').val();
                 d.status = $('#filter_status').val();
                 d.start_date = $('#filter_start_date').val();
                 d.end_date = $('#filter_end_date').val();
-                return d;
             }
         },
         columns: [
@@ -58,186 +40,64 @@ $(document).ready(function() {
             { data: 'status_label', name: 'status_pemesanan' },
             { data: 'action', name: 'action', orderable: false, searchable: false }
         ],
-        responsive: true,
-        lengthChange: true,
-        autoWidth: false,
-        order: [[2, 'desc']] // Order by tanggal_pemesanan desc
+        order: [[2, 'desc']]
     });
 
-    // Apply filter when button is clicked
+    // Filter action
     $('#btnFilter').click(function() {
-        table.ajax.reload();
+        table.draw();
     });
 
     // Reset filter
     $('#resetFilter').click(function() {
-        $('#filter_barang_id').val('').trigger('change');
-        $('#filter_status').val('').trigger('change');
-        $('#filter_start_date').val('');
-        $('#filter_end_date').val('');
-        table.ajax.reload();
+        $('#filterForm')[0].reset();
+        table.draw();
     });
 
-    // Calculate total when harga_satuan or jumlah_pesanan changes
-    $('#harga_satuan, #jumlah_pesanan').on('input', function() {
-        calculateTotal();
-    });
-
-    // Calculate total when barang is selected (if it has price)
-    $('#barang_id').change(function() {
-        var selectedOption = $(this).find('option:selected');
-        var harga = selectedOption.data('harga') || 0;
-        $('#harga_satuan').val(harga);
-        calculateTotal();
-    });
-
-    // Open modal for adding new pemesanan
-    $('#btnTambahPemesanan').click(function() {
-        resetForm();
-        $('#modalPemesananLabel').text('Tambah Pemesanan');
-        $('#form_action').val('add');
-        $('#modalPemesanan').modal('show');
+    // Show/hide date fields based on status
+    function toggleDateFields(status) {
+        // Reset all date fields visibility first
+        $('#tanggal-diproses-container, #tanggal-dikirim-container, #tanggal-selesai-container').hide();
+        $('#tanggal_diproses, #tanggal_dikirim, #tanggal_selesai').prop('required', false);
         
-        // Get auto-generated ID
-        getPemesananId();
-    });
-
-    // Handle detail pemesanan button
-    $(document).on('click', '.btn-detail', function() {
-        var id = $(this).data('id');
-        showPemesananDetail(id);
-    });
-
-    // Handle edit pemesanan button
-    $(document).on('click', '.btn-edit', function() {
-        var id = $(this).data('id');
-        
-        resetForm();
-        $('#modalPemesananLabel').text('Edit Pemesanan');
-        $('#form_action').val('edit');
-        
-        // Get pemesanan data for editing
-        $.ajax({
-            url: '/pemesanan/' + id,
-            type: 'GET',
-            success: function(response) {
-                const data = response.data;
-                
-                // Fill form with pemesanan data
-                $('#pemesanan_id').val(data.pemesanan_id);
-                $('#no_pemesanan').val(data.pemesanan_id);
-                $('#tanggal_pemesanan').val(data.tanggal_pemesanan);
-                $('#nama_pemesan').val(data.nama_pemesan);
-                $('#email_pemesan').val(data.email_pemesan);
-                $('#no_telp_pemesan').val(data.no_telp_pemesan);
-                $('#pemesanan_dari').val(data.pemesanan_dari).trigger('change');
-                $('#alamat_pemesan').val(data.alamat_pemesan);
-                $('#barang_id').val(data.barang_id).trigger('change');
-                $('#jumlah_pesanan').val(data.jumlah_pesanan);
-                
-                // Calculate harga_satuan
-                var hargaSatuan = 0;
-                if (data.jumlah_pesanan > 0) {
-                    hargaSatuan = data.total / data.jumlah_pesanan;
-                }
-                $('#harga_satuan').val(hargaSatuan);
-                
-                $('#total').val(data.total);
-                $('#metode_pembayaran').val(data.metode_pembayaran).trigger('change');
-                $('#status_pemesanan').val(data.status_pemesanan).trigger('change');
-                $('#catatan_pemesanan').val(data.catatan_pemesanan);
-                
-                // Show modal
-                $('#modalPemesanan').modal('show');
-            },
-            error: function() {
-                showAlert('danger', 'Gagal memuat data pemesanan');
-            }
-        });
-    });
-
-    // Submit pemesanan form
-    $('#formPemesanan').submit(function(e) {
-        e.preventDefault();
-        clearErrors();
-        
-        var formData = $(this).serialize();
-        var formAction = $('#form_action').val();
-        var url, method;
-        
-        if (formAction === 'add') {
-            url = '/pemesanan/store';
-            method = 'POST';
-        } else {
-            // Edit existing pemesanan
-            var id = $('#pemesanan_id').val();
-            url = '/pemesanan/' + id;
-            method = 'PUT';
+        // Show and require appropriate date fields based on status
+        if (status === 'diproses' || status === 'dikirim' || status === 'selesai') {
+            $('#tanggal-diproses-container').show();
+            $('#tanggal_diproses').prop('required', true);
         }
         
-        $.ajax({
-            url: url,
-            type: method,
-            data: formData,
-            success: function(response) {
-                $('#modalPemesanan').modal('hide');
-                table.ajax.reload();
-                showAlert('success', response.message);
-            },
-            error: function(xhr) {
-                if (xhr.status === 422) {
-                    let errors = xhr.responseJSON.errors;
-                    showValidationErrors(errors);
-                } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                    showAlert('danger', xhr.responseJSON.message);
-                } else {
-                    showAlert('danger', 'Terjadi kesalahan! Silahkan coba lagi.');
-                }
-            }
-        });
+        if (status === 'dikirim' || status === 'selesai') {
+            $('#tanggal-dikirim-container').show();
+            $('#tanggal_dikirim').prop('required', true);
+        }
+        
+        if (status === 'selesai') {
+            $('#tanggal-selesai-container').show();
+            $('#tanggal_selesai').prop('required', true);
+        }
+    }
+
+    // Toggle date fields when status changes
+    $('#status_pemesanan').change(function() {
+        toggleDateFields($(this).val());
     });
 
-    // Setup delete confirmation
-    $(document).on('click', '.btn-delete', function() {
-        var id = $(this).data('id');
-        var nama = $(this).data('nama');
+    // Set default tanggal_pemesanan to today when adding new pemesanan
+    $('#btnTambahPemesanan').click(function() {
+        $('#form_action').val('add');
+        $('#formPemesanan')[0].reset();
+        $('#modalPemesananLabel').text('Tambah Pemesanan');
         
-        $('#delete-item-name').text(nama);
-        $('#btnDelete').data('id', id);
+        // Set today's date as default
+        const today = new Date();
+        const formattedDate = today.toISOString().substr(0, 10);
+        $('#tanggal_pemesanan').val(formattedDate);
         
-        $('#deleteModal').modal('show');
-    });
-
-    // Process delete
-    $('#btnDelete').click(function() {
-        var id = $(this).data('id');
+        // Default status is pending
+        $('#status_pemesanan').val('pending');
+        toggleDateFields('pending');
         
-        $.ajax({
-            url: '/pemesanan/' + id,
-            type: 'DELETE',
-            data: {
-                _token: $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(response) {
-                $('#deleteModal').modal('hide');
-                table.ajax.reload();
-                showAlert('success', response.message);
-            },
-            error: function(xhr) {
-                $('#deleteModal').modal('hide');
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    showAlert('danger', xhr.responseJSON.message);
-                } else {
-                    showAlert('danger', 'Gagal menghapus data pemesanan');
-                }
-            }
-        });
-    });
-
-    // HELPER FUNCTIONS
-
-    // Get auto-generated pemesanan ID
-    function getPemesananId() {
+        // Get new pemesanan ID
         $.ajax({
             url: '/pemesanan/get-id',
             type: 'GET',
@@ -245,130 +105,301 @@ $(document).ready(function() {
                 $('#pemesanan_id').val(response.pemesanan_id);
                 $('#no_pemesanan').val(response.pemesanan_id);
             },
-            error: function() {
-                showAlert('danger', 'Gagal mendapatkan nomor pemesanan otomatis');
+            error: function(xhr) {
+                Swal.fire('Error', 'Gagal mengambil nomor pemesanan', 'error');
             }
         });
-    }
-
-    // Calculate total from harga_satuan and jumlah_pesanan
-    function calculateTotal() {
-        var hargaSatuan = parseFloat($('#harga_satuan').val()) || 0;
-        var jumlahPesanan = parseInt($('#jumlah_pesanan').val()) || 0;
-        var total = hargaSatuan * jumlahPesanan;
         
-        $('#total').val(total);
-    }
+        $('.is-invalid').removeClass('is-invalid');
+        $('#modalPemesanan').modal('show');
+    });
 
-    // Show pemesanan detail
-    function showPemesananDetail(id) {
+    // Calculate total price when quantity or price changes
+    $('#jumlah_pesanan, #harga_satuan').on('input', function() {
+        const jumlah = parseInt($('#jumlah_pesanan').val()) || 0;
+        const harga = parseFloat($('#harga_satuan').val()) || 0;
+        const total = jumlah * harga;
+        $('#total').val(total);
+    });
+
+    // Set price when barang selection changes
+    $('#barang_id').change(function() {
+        const harga = $(this).find(':selected').data('harga') || 0;
+        $('#harga_satuan').val(harga);
+        
+        // Trigger total calculation
+        $('#harga_satuan').trigger('input');
+    });
+
+    // Edit pemesanan
+    $(document).on('click', '.btn-edit', function() {
+        const id = $(this).data('id');
+        $('#form_action').val('edit');
+        $('#modalPemesananLabel').text('Edit Pemesanan');
+        $('.is-invalid').removeClass('is-invalid');
+        
         $.ajax({
-            url: '/pemesanan/' + id,
+            url: `/pemesanan/${id}`,
             type: 'GET',
             success: function(response) {
                 const data = response.data;
+                $('#pemesanan_id').val(data.pemesanan_id);
+                $('#no_pemesanan').val(data.pemesanan_id);
+                $('#nama_pemesan').val(data.nama_pemesan);
+                $('#tanggal_pemesanan').val(data.tanggal_pemesanan);
+                $('#tanggal_diproses').val(data.tanggal_diproses);
+                $('#tanggal_dikirim').val(data.tanggal_dikirim);
+                $('#tanggal_selesai').val(data.tanggal_selesai);
+                $('#alamat_pemesan').val(data.alamat_pemesan);
+                $('#barang_id').val(data.barang_id);
+                $('#jumlah_pesanan').val(data.jumlah_pesanan);
+                $('#total').val(data.total);
+                $('#pemesanan_dari').val(data.pemesanan_dari);
+                $('#metode_pembayaran').val(data.metode_pembayaran);
+                $('#status_pemesanan').val(data.status_pemesanan);
+                $('#no_telp_pemesan').val(data.no_telp_pemesan);
+                $('#email_pemesan').val(data.email_pemesan);
+                $('#catatan_pemesanan').val(data.catatan_pemesanan);
                 
-                // Fill detail modal
+                // Calculate harga satuan
+                const hargaSatuan = data.jumlah_pesanan > 0 ? (data.total / data.jumlah_pesanan) : 0;
+                $('#harga_satuan').val(hargaSatuan);
+                
+                // Show/hide date fields based on status
+                toggleDateFields(data.status_pemesanan);
+                
+                $('#modalPemesanan').modal('show');
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+            }
+        });
+    });
+
+    // Detail pemesanan
+    $(document).on('click', '.btn-detail', function() {
+        const id = $(this).data('id');
+        
+        $.ajax({
+            url: `/pemesanan/${id}`,
+            type: 'GET',
+            success: function(response) {
+                const data = response.data;
                 $('#detail_pemesanan_id').val(data.pemesanan_id);
-                $('#detail_tanggal_pemesanan').val(formatDate(data.tanggal_pemesanan));
                 $('#detail_nama_pemesan').val(data.nama_pemesan);
-                $('#detail_email_pemesan').val(data.email_pemesan);
-                $('#detail_no_telp_pemesan').val(data.no_telp_pemesan);
-                $('#detail_pemesanan_dari').val(data.pemesanan_dari);
+                $('#detail_tanggal_pemesanan').val(formatDate(data.tanggal_pemesanan));
                 $('#detail_alamat_pemesan').val(data.alamat_pemesan);
                 $('#detail_barang').val(data.barang ? data.barang.nama_barang : '-');
                 $('#detail_jumlah_pesanan').val(data.jumlah_pesanan);
-                
-                // Calculate harga_satuan
-                var hargaSatuan = 0;
-                if (data.jumlah_pesanan > 0) {
-                    hargaSatuan = data.total / data.jumlah_pesanan;
-                }
-                $('#detail_harga_satuan').val(formatRupiah(hargaSatuan));
-                
+                $('#detail_harga_satuan').val(formatRupiah(data.jumlah_pesanan > 0 ? (data.total / data.jumlah_pesanan) : 0));
                 $('#detail_total').val(formatRupiah(data.total));
+                $('#detail_pemesanan_dari').val(data.pemesanan_dari);
                 $('#detail_metode_pembayaran').val(data.metode_pembayaran);
+                $('#detail_email_pemesan').val(data.email_pemesan);
+                $('#detail_no_telp_pemesan').val(data.no_telp_pemesan);
+                $('#detail_catatan_pemesanan').val(data.catatan_pemesanan);
                 
-                // Format status label
-                var statusLabels = {
+                // Map status value to label
+                const statusMap = {
                     'pending': 'Menunggu',
                     'diproses': 'Diproses',
                     'dikirim': 'Dikirim',
                     'selesai': 'Selesai',
                     'dibatalkan': 'Dibatalkan'
                 };
-                $('#detail_status_pemesanan').val(statusLabels[data.status_pemesanan] || data.status_pemesanan);
+                $('#detail_status_pemesanan').val(statusMap[data.status_pemesanan] || 'Tidak Diketahui');
                 
-                $('#detail_catatan_pemesanan').val(data.catatan_pemesanan);
+                // Show status dates if available
+                $('#detail_tanggal_diproses').val(formatDate(data.tanggal_diproses));
+                $('#detail_tanggal_dikirim').val(formatDate(data.tanggal_dikirim));
+                $('#detail_tanggal_selesai').val(formatDate(data.tanggal_selesai));
                 
-                // Show modal
+                // Show/hide date fields based on status
+                $('#detail-tanggal-diproses-container, #detail-tanggal-dikirim-container, #detail-tanggal-selesai-container').hide();
+                
+                if (data.status_pemesanan === 'diproses' || data.status_pemesanan === 'dikirim' || data.status_pemesanan === 'selesai') {
+                    $('#detail-tanggal-diproses-container').show();
+                }
+                
+                if (data.status_pemesanan === 'dikirim' || data.status_pemesanan === 'selesai') {
+                    $('#detail-tanggal-dikirim-container').show();
+                }
+                
+                if (data.status_pemesanan === 'selesai') {
+                    $('#detail-tanggal-selesai-container').show();
+                }
+                
                 $('#modalDetailPemesanan').modal('show');
             },
-            error: function() {
-                showAlert('danger', 'Gagal memuat detail pemesanan');
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
             }
         });
-    }
+    });
 
-    // Reset form
-    function resetForm() {
-        $('#formPemesanan')[0].reset();
-        $('#barang_id').val('').trigger('change');
-        $('#pemesanan_dari').val('').trigger('change');
-        $('#metode_pembayaran').val('').trigger('change');
-        $('#status_pemesanan').val('pending').trigger('change');
-        $('#tanggal_pemesanan').val(today);
-        clearErrors();
-    }
-
-    // Format date
-    function formatDate(dateString) {
-        if (!dateString) return '-';
+    // Delete confirmation
+    $(document).on('click', '.btn-delete', function() {
+        const id = $(this).data('id');
+        const nama = $(this).data('nama');
+        $('#delete-item-name').text(nama);
         
-        const date = new Date(dateString);
-        return date.toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
+        $('#deleteModal').modal('show');
+        
+        $('#btnDelete').off('click').on('click', function() {
+            $.ajax({
+                url: `/pemesanan/${id}`,
+                type: 'DELETE',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    $('#deleteModal').modal('hide');
+                    Swal.fire('Sukses', response.message, 'success');
+                    table.ajax.reload();
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON;
+                    Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+                }
+            });
         });
-    }
+    });
 
-    // Format currency
-    function formatRupiah(angka) {
-        if (!angka) return 'Rp 0';
-        return 'Rp ' + parseFloat(angka).toLocaleString('id-ID');
-    }
-
-    // Clear validation errors
-    function clearErrors() {
+    // Form submission
+    $('#formPemesanan').submit(function(e) {
+        e.preventDefault();
         $('.is-invalid').removeClass('is-invalid');
-        $('.invalid-feedback').text('');
-    }
-
-    // Show validation errors
-    function showValidationErrors(errors) {
-        $.each(errors, function(field, messages) {
-            $('#' + field).addClass('is-invalid');
-            $('#error-' + field).text(messages[0]);
+        
+        const formAction = $('#form_action').val();
+        const pemesananId = $('#pemesanan_id').val();
+        let url = '/pemesanan/store';
+        let method = 'POST';
+        
+        if (formAction === 'edit') {
+            url = `/pemesanan/${pemesananId}`;
+            method = 'PUT';
+        }
+        
+        // Validate date fields based on status
+        const status = $('#status_pemesanan').val();
+        let isValid = true;
+        
+        if (status === 'diproses' || status === 'dikirim' || status === 'selesai') {
+            if (!$('#tanggal_diproses').val()) {
+                $('#tanggal_diproses').addClass('is-invalid');
+                $('#error-tanggal_diproses').text('Tanggal diproses harus diisi');
+                isValid = false;
+            }
+        }
+        
+        if (status === 'dikirim' || status === 'selesai') {
+            if (!$('#tanggal_dikirim').val()) {
+                $('#tanggal_dikirim').addClass('is-invalid');
+                $('#error-tanggal_dikirim').text('Tanggal dikirim harus diisi');
+                isValid = false;
+            }
+        }
+        
+        if (status === 'selesai') {
+            if (!$('#tanggal_selesai').val()) {
+                $('#tanggal_selesai').addClass('is-invalid');
+                $('#error-tanggal_selesai').text('Tanggal selesai harus diisi');
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            return false;
+        }
+        
+        $.ajax({
+            url: url,
+            type: method,
+            data: $(this).serialize(),
+            success: function(response) {
+                $('#modalPemesanan').modal('hide');
+                Swal.fire('Sukses', response.message, 'success');
+                table.ajax.reload();
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                if (response.errors) {
+                    // Display validation errors
+                    $.each(response.errors, function(field, messages) {
+                        const inputField = $(`#${field}`);
+                        if (inputField.length) {
+                            inputField.addClass('is-invalid');
+                            $(`#error-${field}`).text(messages[0]);
+                        }
+                    });
+                } else {
+                    Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+                }
+            }
         });
-    }
+    });
 
-    // Show alert message
-    function showAlert(type, message) {
-        var alert = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
-        
-        $('#alert-container').html(alert);
-        
-        // Auto close alert after 5 seconds
-        setTimeout(function() {
-            $('.alert').alert('close');
-        }, 5000);
+    // Initialize date fields on page load (for add new case)
+    toggleDateFields($('#status_pemesanan').val());
+    
+    // Set today's date as default
+    if (!$('#tanggal_pemesanan').val()) {
+        const today = new Date();
+        const formattedDate = today.toISOString().substr(0, 10);
+        $('#tanggal_pemesanan').val(formattedDate);
     }
+    
+    // Date fields validation - check that dates are in logical order
+    $('#tanggal_dikirim').change(function() {
+        const tanggalDiproses = $('#tanggal_diproses').val();
+        const tanggalDikirim = $(this).val();
+        
+        if (tanggalDiproses && tanggalDikirim && new Date(tanggalDikirim) < new Date(tanggalDiproses)) {
+            $(this).addClass('is-invalid');
+            $('#error-tanggal_dikirim').text('Tanggal dikirim tidak boleh sebelum tanggal diproses');
+        } else {
+            $(this).removeClass('is-invalid');
+            $('#error-tanggal_dikirim').text('');
+        }
+    });
+    
+    $('#tanggal_selesai').change(function() {
+        const tanggalDikirim = $('#tanggal_dikirim').val();
+        const tanggalSelesai = $(this).val();
+        
+        if (tanggalDikirim && tanggalSelesai && new Date(tanggalSelesai) < new Date(tanggalDikirim)) {
+            $(this).addClass('is-invalid');
+            $('#error-tanggal_selesai').text('Tanggal selesai tidak boleh sebelum tanggal dikirim');
+        } else {
+            $(this).removeClass('is-invalid');
+            $('#error-tanggal_selesai').text('');
+        }
+    });
+    
+    // Set default date when status changes
+    $('#status_pemesanan').change(function() {
+        const status = $(this).val();
+        const today = new Date().toISOString().substr(0, 10);
+        
+        // If status changes to a value requiring dates and the date fields are empty, 
+        // set them to today's date
+        if (status === 'diproses' && !$('#tanggal_diproses').val()) {
+            $('#tanggal_diproses').val(today);
+        }
+        
+        if (status === 'dikirim' && !$('#tanggal_dikirim').val()) {
+            $('#tanggal_dikirim').val(today);
+        }
+        
+        if (status === 'selesai' && !$('#tanggal_selesai').val()) {
+            $('#tanggal_selesai').val(today);
+        }
+        
+        // If changing to pending or dibatalkan, clear all status dates
+        if (status === 'pending' || status === 'dibatalkan') {
+            $('#tanggal_diproses, #tanggal_dikirim, #tanggal_selesai').val('');
+        }
+    });
 });

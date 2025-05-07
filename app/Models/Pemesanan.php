@@ -47,6 +47,9 @@ class Pemesanan extends Model
         'barang_id',
         'nama_pemesan',
         'tanggal_pemesanan',
+        'tanggal_diproses',
+        'tanggal_dikirim',
+        'tanggal_selesai',
         'alamat_pemesan',
         'jumlah_pesanan',
         'total',
@@ -65,6 +68,9 @@ class Pemesanan extends Model
      */
     protected $casts = [
         'tanggal_pemesanan' => 'date',
+        'tanggal_diproses' => 'date',
+        'tanggal_dikirim' => 'date',
+        'tanggal_selesai' => 'date',
         'jumlah_pesanan' => 'integer',
         'total' => 'decimal:2',
         'created_at' => 'datetime',

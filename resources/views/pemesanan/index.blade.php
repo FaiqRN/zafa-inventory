@@ -258,6 +258,36 @@
                         </div>
                     </div>
                     
+                    <!-- Tanggal Status Fields (Show/hide based on status) -->
+                    <div class="row" id="tanggal-status-container">
+                        <!-- Tanggal Diproses (For 'diproses', 'dikirim', and 'selesai' status) -->
+                        <div class="col-md-4" id="tanggal-diproses-container" style="display: none;">
+                            <div class="form-group">
+                                <label for="tanggal_diproses">Tanggal Diproses <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="tanggal_diproses" name="tanggal_diproses">
+                                <div class="invalid-feedback" id="error-tanggal_diproses"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tanggal Dikirim (For 'dikirim' and 'selesai' status) -->
+                        <div class="col-md-4" id="tanggal-dikirim-container" style="display: none;">
+                            <div class="form-group">
+                                <label for="tanggal_dikirim">Tanggal Dikirim <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="tanggal_dikirim" name="tanggal_dikirim">
+                                <div class="invalid-feedback" id="error-tanggal_dikirim"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tanggal Selesai (For 'selesai' status) -->
+                        <div class="col-md-4" id="tanggal-selesai-container" style="display: none;">
+                            <div class="form-group">
+                                <label for="tanggal_selesai">Tanggal Selesai <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="tanggal_selesai" name="tanggal_selesai">
+                                <div class="invalid-feedback" id="error-tanggal_selesai"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="catatan_pemesanan">Catatan</label>
                         <textarea class="form-control" id="catatan_pemesanan" name="catatan_pemesanan" rows="3"></textarea>
@@ -375,6 +405,33 @@
                         <div class="form-group">
                             <label>Status</label>
                             <input type="text" class="form-control" id="detail_status_pemesanan" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail tanggal status -->
+                <div class="row" id="detail-tanggal-status-container">
+                    <!-- Tanggal Diproses -->
+                    <div class="col-md-4" id="detail-tanggal-diproses-container">
+                        <div class="form-group">
+                            <label>Tanggal Diproses</label>
+                            <input type="text" class="form-control" id="detail_tanggal_diproses" readonly>
+                        </div>
+                    </div>
+                    
+                    <!-- Tanggal Dikirim -->
+                    <div class="col-md-4" id="detail-tanggal-dikirim-container">
+                        <div class="form-group">
+                            <label>Tanggal Dikirim</label>
+                            <input type="text" class="form-control" id="detail_tanggal_dikirim" readonly>
+                        </div>
+                    </div>
+                    
+                    <!-- Tanggal Selesai -->
+                    <div class="col-md-4" id="detail-tanggal-selesai-container">
+                        <div class="form-group">
+                            <label>Tanggal Selesai</label>
+                            <input type="text" class="form-control" id="detail_tanggal_selesai" readonly>
                         </div>
                     </div>
                 </div>
