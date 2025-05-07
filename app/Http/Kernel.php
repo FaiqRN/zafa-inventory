@@ -66,5 +66,8 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'auth.custom' => RedirectIfNotAuthenticated::class,
+        'nocache' => \App\Http\Middleware\NoCache::class,
+        'verifysession' => \App\Http\Middleware\VerifySession::class,
+        'session.timeout' => \App\Http\Middleware\SessionTimeout::class,
     ];
 }

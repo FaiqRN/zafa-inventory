@@ -7,7 +7,7 @@
 
   <meta name="csrf-token" content="{{csrf_token()}}">
 
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 
@@ -102,6 +102,36 @@
           window.location.reload();
       }
   };
+  window.history.pushState(null, null, window.location.href);
+  window.onpopstate = function() {
+      window.history.pushState(null, null, window.location.href);
+  };
+  
+  // Deteksi perubahan visibilitas halaman
+  document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'hidden') {
+          // Simpan timestamp ke sessionStorage
+          sessionStorage.setItem('lastHiddenTime', Date.now());
+      } else if (document.visibilityState === 'visible') {
+          const lastHiddenTime = sessionStorage.getItem('lastHiddenTime');
+          const currentTime = Date.now();
+          
+          // Jika lebih dari 1 menit tidak aktif, refresh halaman
+          if (lastHiddenTime && (currentTime - lastHiddenTime > 60000)) {
+              window.location.reload();
+          }
+      }
+  });
+  
+  // Deteksi tab baru dengan session storage dari tab lama
+  window.addEventListener('load', function() {
+      if (sessionStorage.getItem('sessionChecked') === null) {
+          sessionStorage.setItem('sessionChecked', 'true');
+      } else {
+          // Refresh halaman untuk memverifikasi session
+          window.location.reload();
+      }
+  });
 </script>
 </body>
 </html>

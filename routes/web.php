@@ -23,14 +23,14 @@ use App\Http\Controllers\LaporanTokoController;
 */
 
 // Route tamu/belum login
-Route::middleware('guest')->group(function () {
+Route::middleware(['guest', 'nocache'])->group(function () {
     Route::get('/', [AuthController::class, 'showLoginForm']);
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.process');
 });
 
 // Route yang memerlukan autentikasi
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/', [AuthController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');

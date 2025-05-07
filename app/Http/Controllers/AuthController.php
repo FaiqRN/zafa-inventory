@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -49,10 +50,22 @@ class AuthController extends Controller
             session([
                 'user_id' => $user->user_id,
                 'username' => $user->username,
-                'nama_lengkap' => $user->nama_lengkap
+                'nama_lengkap' => $user->nama_lengkap,
+                'login_time' => now()->timestamp,
+                'last_activity' => now()->timestamp
             ]);
             
-            return redirect()->intended(route('dashboard'));
+            // Jika remember tidak dicentang, pastikan session hilang saat browser ditutup
+            if (!$remember) {
+                config(['session.expire_on_close' => true]);
+            }
+            
+            return redirect()->intended(route('dashboard'))
+                ->withHeaders([
+                    'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                    'Pragma' => 'no-cache',
+                    'Expires' => 'Sat, 01 Jan 1990 00:00:00 GMT',
+                ]);
         }
 
         return back()->withErrors([
@@ -73,6 +86,10 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
+        // Hapus semua cookie terkait session
+        $cookie = cookie()->forget('laravel_session');
+        $rememberCookie = cookie()->forget(Auth::getRecallerName());
+        
         // Tambahkan header cache control
         return redirect()->route('login')
             ->with('success', 'Anda telah berhasil logout')
@@ -80,7 +97,9 @@ class AuthController extends Controller
                 'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma' => 'no-cache',
                 'Expires' => 'Sat, 01 Jan 1990 00:00:00 GMT',
-            ]);
+            ])
+            ->withCookie($cookie)
+            ->withCookie($rememberCookie);
     }
 
     /**
@@ -90,6 +109,9 @@ class AuthController extends Controller
      */
     public function dashboard(): View
     {
+        // Update last activity
+        session(['last_activity' => now()->timestamp]);
+        
         // Tambahkan variabel yang dibutuhkan oleh dashboard
         $activemenu = 'dashboard';
         $breadcrumb = (object) [
@@ -107,6 +129,9 @@ class AuthController extends Controller
      */
     public function profile(): View
     {
+        // Update last activity
+        session(['last_activity' => now()->timestamp]);
+        
         $activemenu = 'profile';
         $breadcrumb = (object) [
             'title' => 'Profil Pengguna',

@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::middleware('auth:sanctum')->get('/ping-session', function (Request $request) {
+    // Update last activity time dalam session
+    $request->session()->put('last_activity', now()->timestamp);
+    return response()->json(['status' => 'active']);
 });

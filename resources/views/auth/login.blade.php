@@ -186,32 +186,36 @@
         </form>
     </div>
     <script>
-      // Mencegah back button
-      window.onload = function() {
-          if (window.history && window.history.pushState) {
-              window.history.pushState('forward', null, null);
-              window.onpopstate = function(event) {
-                  window.history.pushState('forward', null, null);
-                  if (event.state === null) {
-                      // Handle the back button
-                      window.location.replace("{{ route('login') }}");
-                  }
-              };
-          }
-      }
-  
-      // Mencegah akses halaman yang di-cache
-      window.onpageshow = function(event) {
-          if (event.persisted) {
-              window.location.reload();
-          }
-      };
-      
-      // Disable caching untuk halaman ini
-      window.onunload = function(){};
-      
-      // Tambahan untuk Firefox
-      window.onpagehide = function(){};
-  </script>
+        // Mencegah back button
+        window.onload = function() {
+            if (window.history && window.history.pushState) {
+                window.history.pushState('forward', null, null);
+                window.onpopstate = function(event) {
+                    window.history.pushState('forward', null, null);
+                    if (event.state === null) {
+                        // Handle the back button
+                        window.location.replace("{{ route('login') }}");
+                    }
+                };
+            }
+        }
+    
+        // Mencegah akses halaman yang di-cache
+        window.onpageshow = function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+        
+        // Disable caching untuk halaman ini
+        window.onunload = function(){};
+        
+        // Tambahan untuk Firefox
+        window.onpagehide = function(){};
+        
+        // Hapus localStorage dan sessionStorage saat halaman login dimuat
+        localStorage.clear();
+        sessionStorage.clear();
+    </script>
 </body>
 </html>
