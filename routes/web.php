@@ -9,6 +9,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
+use App\Http\Controllers\LaporanTokoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -112,15 +113,10 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('laporan.penjualan');
     
-    Route::get('/laporan-toko', function () {
-        return view('laporan.toko', [
-            'activemenu' => 'laporan-toko',
-            'breadcrumb' => (object) [
-                'title' => 'Laporan Per Toko',
-                'list' => ['Home', 'Laporan', 'Laporan Per Toko']
-            ]
-        ]);
-    })->name('laporan.toko');
+    Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
+    Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
+    Route::post('/laporan-toko/update-catatan', [LaporanTokoController::class, 'updateCatatan'])->name('laporan.toko.updateCatatan');
+    Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData'])->name('laporan.toko.detail');
     
     Route::get('/laporan-barang', function () {
         return view('laporan.barang', [
