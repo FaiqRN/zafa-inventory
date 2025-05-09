@@ -277,4 +277,228 @@ class LaporanTokoController extends Controller
             ];
         }
     }
+
+    public function exportCsv(Request $request)
+{
+    try {
+        $periode = $request->periode ?? '1_bulan';
+        $bulan = $request->bulan ?? Carbon::now()->month;
+        $tahun = $request->tahun ?? Carbon::now()->year;
+        
+        // Calculate date range based on periode
+        $dateRange = $this->calculateDateRange($periode, $bulan, $tahun);
+        $startDate = $dateRange['start_date'];
+        $endDate = $dateRange['end_date'];
+        
+        // Get all toko
+        $tokos = Toko::all();
+        $data = [];
+        
+        foreach ($tokos as $toko) {
+            // Total Penjualan: sum of hasil from retur table
+            $totalPenjualan = DB::table('retur')
+                ->where('toko_id', $toko->toko_id)
+                ->whereBetween('tanggal_pengiriman', [$startDate, $endDate])
+                ->sum('hasil');
+            
+            // Total jumlah barang yang dikirim dalam periode tersebut
+            $totalPengiriman = DB::table('pengiriman')
+                ->where('toko_id', $toko->toko_id)
+                ->whereBetween('tanggal_pengiriman', [$startDate, $endDate])
+                ->sum('jumlah_kirim');
+            
+            // Total jumlah barang yang diretur dalam periode tersebut
+            $totalRetur = DB::table('retur')
+                ->where('toko_id', $toko->toko_id)
+                ->whereBetween('tanggal_retur', [$startDate, $endDate])
+                ->sum('jumlah_retur');
+            
+            // Get existing notes
+            $laporan = TokoLaporan::where('toko_id', $toko->toko_id)
+                ->where('periode', $periode)
+                ->where('bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->first();
+            
+            $catatan = $laporan ? $laporan->catatan : '';
+            
+            $data[] = [
+                'toko_id' => $toko->toko_id,
+                'nama_toko' => $toko->nama_toko,
+                'pemilik' => $toko->pemilik,
+                'alamat' => $toko->alamat,
+                'nomer_telpon' => $toko->nomer_telpon,
+                'total_penjualan' => $totalPenjualan ?? 0,
+                'total_pengiriman' => $totalPengiriman ?? 0,
+                'total_retur' => $totalRetur ?? 0,
+                'catatan' => $catatan
+            ];
+        }
+        
+        // Generate filename
+        $periodeLabel = '';
+        if ($periode == '1_bulan') {
+            $bulanLabel = Carbon::create($tahun, $bulan, 1)->locale('id')->isoFormat('MMMM');
+            $periodeLabel = "1_Bulan_{$bulanLabel}_{$tahun}";
+        } elseif ($periode == '6_bulan') {
+            $endDate = Carbon::create($tahun, $bulan, 1);
+            $startDate = Carbon::create($tahun, $bulan, 1)->subMonths(5);
+            $periodeLabel = "6_Bulan_{$startDate->locale('id')->isoFormat('MMMM_YYYY')}_sampai_{$endDate->locale('id')->isoFormat('MMMM_YYYY')}";
+        } else { // 1_tahun
+            $endDate = Carbon::create($tahun, $bulan, 1);
+            $startDate = Carbon::create($tahun, $bulan, 1)->subMonths(11);
+            $periodeLabel = "1_Tahun_{$startDate->locale('id')->isoFormat('MMMM_YYYY')}_sampai_{$endDate->locale('id')->isoFormat('MMMM_YYYY')}";
+        }
+        
+        $filename = "Laporan_Toko_{$periodeLabel}.csv";
+        
+        // Create CSV
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+        
+        $columns = [
+            'ID Toko', 
+            'Nama Toko', 
+            'Pemilik', 
+            'Alamat', 
+            'Nomor Telepon',
+            'Total Penjualan (Rp)', 
+            'Total Barang Dikirim', 
+            'Total Barang Retur', 
+            'Catatan'
+        ];
+        
+$callback = function() use ($data, $columns) {
+    $file = fopen('php://output', 'w');
+    // Add BOM to fix UTF-8 in Excel
+    fputs($file, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
+    fputcsv($file, $columns);
+    
+    foreach ($data as $row) {
+        fputcsv($file, [
+            $row['toko_id'],
+            $row['nama_toko'],
+            $row['pemilik'],
+            $row['alamat'],
+            $row['nomer_telpon'],
+            $row['total_penjualan'],
+            $row['total_pengiriman'],
+            $row['total_retur'],
+            $row['catatan']
+        ]);
+    }
+    
+    fclose($file);
+};
+        
+        return response()->stream($callback, 200, $headers);
+        
+    } catch (\Exception $e) {
+        Log::error("Error in exportCsv: " . $e->getMessage());
+        Log::error($e->getTraceAsString());
+        
+        return response()->json([
+            'error' => true,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+// Tambahkan juga method untuk export detail CSV
+public function exportDetailCsv(Request $request)
+{
+    try {
+        $toko_id = $request->toko_id;
+        $periode = $request->periode ?? '1_bulan';
+        $bulan = $request->bulan ?? Carbon::now()->month;
+        $tahun = $request->tahun ?? Carbon::now()->year;
+        
+        // Calculate date range
+        $dateRange = $this->calculateDateRange($periode, $bulan, $tahun);
+        $startDate = $dateRange['start_date'];
+        $endDate = $dateRange['end_date'];
+        
+        // Get toko info
+        $toko = Toko::findOrFail($toko_id);
+        
+        // Get detail penjualan per barang
+        $detailPenjualan = DB::table('retur')
+            ->join('barang', 'retur.barang_id', '=', 'barang.barang_id')
+            ->select(
+                'barang.barang_id',
+                'barang.nama_barang',
+                'barang.satuan',
+                'barang.harga_awal_barang',
+                DB::raw('SUM(retur.jumlah_kirim) as total_kirim'),
+                DB::raw('SUM(retur.jumlah_retur) as total_retur'),
+                DB::raw('SUM(retur.total_terjual) as total_terjual'),
+                DB::raw('SUM(retur.hasil) as total_penjualan')
+            )
+            ->where('retur.toko_id', $toko_id)
+            ->whereBetween('retur.tanggal_pengiriman', [$startDate, $endDate])
+            ->groupBy('barang.barang_id', 'barang.nama_barang', 'barang.satuan', 'barang.harga_awal_barang')
+            ->get();
+        
+        // Generate filename
+        $filename = "Detail_Laporan_Toko_{$toko->nama_toko}_{$periode}_{$bulan}_{$tahun}.csv";
+        
+        // Create CSV
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+        
+        $columns = [
+            'ID Barang',
+            'Nama Barang', 
+            'Satuan', 
+            'Harga Awal Barang', 
+            'Total Kirim',
+            'Total Retur', 
+            'Total Terjual', 
+            'Total Penjualan'
+        ];
+        
+$callback = function() use ($detailPenjualan, $columns) {
+    $file = fopen('php://output', 'w');
+    // Add BOM to fix UTF-8 in Excel
+    fputs($file, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
+    fputcsv($file, $columns);
+    
+    foreach ($detailPenjualan as $row) {
+        fputcsv($file, [
+            $row->barang_id,
+            $row->nama_barang,
+            $row->satuan,
+            $row->harga_awal_barang,
+            $row->total_kirim,
+            $row->total_retur,
+            $row->total_terjual,
+            $row->total_penjualan
+        ]);
+    }
+    
+    fclose($file);
+};
+        
+        return response()->stream($callback, 200, $headers);
+        
+    } catch (\Exception $e) {
+        Log::error("Error in exportDetailCsv: " . $e->getMessage());
+        Log::error($e->getTraceAsString());
+        
+        return response()->json([
+            'error' => true,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

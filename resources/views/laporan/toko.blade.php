@@ -171,6 +171,7 @@
                         <div class="tab-pane fade show active" id="bulan-1" role="tabpanel">
                             <div class="table-responsive">
                                 <div id="export-btn-container-1" class="mb-3"></div>
+                                <div id="export-btn-container-1" class="mb-3 btn-group"></div>
                                 <table id="tabel-laporan-1" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
@@ -191,6 +192,7 @@
                         <div class="tab-pane fade" id="bulan-6" role="tabpanel">
                             <div class="table-responsive">
                                 <div id="export-btn-container-6" class="mb-3"></div>
+                                <div id="export-btn-container-6" class="mb-3 btn-group"></div>
                                 <table id="tabel-laporan-6" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
@@ -211,6 +213,7 @@
                         <div class="tab-pane fade" id="tahun-1" role="tabpanel">
                             <div class="table-responsive">
                                 <div id="export-btn-container-tahun" class="mb-3"></div>
+                                <div id="export-btn-container-tahun" class="mb-3 btn-group"></div>
                                 <table id="tabel-laporan-tahun" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>

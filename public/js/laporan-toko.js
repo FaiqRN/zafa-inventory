@@ -136,6 +136,12 @@ $(function() {
         });
         $(exportContainerId).append(printBtn);
         
+        const csvBtn = $(`<button class="btn btn-success mr-2"><i class="fas fa-file-csv"></i> Export CSV</button>`);
+        csvBtn.on('click', function() {
+        exportCsv(periode);
+        });
+        $(exportContainerId).append(csvBtn);
+
         // Clear previous alert messages
         $(tableId).parent().parent().find('.alert-warning').remove();
         
@@ -586,6 +592,9 @@ $(function() {
                         <button type="button" class="btn btn-primary" id="btn-print-detail">
                             <i class="fas fa-print"></i> Cetak
                         </button>
+                         <button type="button" class="btn btn-success mr-1" id="btn-export-detail-csv">
+                                 <i class="fas fa-file-csv"></i> Export CSV
+                         </button>
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
                     </div>`;
                 
@@ -669,6 +678,10 @@ $(function() {
                     // Add print handler
                     $('#btn-print-detail').on('click', function() {
                         printDetailReport(response, nama_toko);
+                    });
+
+                    $('#btn-export-detail-csv').on('click', function() {
+                        exportDetailCsv(toko_id);
                     });
                 });
             },
@@ -1122,5 +1135,64 @@ $(function() {
             console.error('Error formatting date:', error);
             return dateString;
         }
+    }
+
+    function exportCsv(periode) {
+        const bulan = $('#bulan').val();
+        const tahun = $('#tahun').val();
+    
+        window.location.href = `/laporan-toko/export-csv?periode=${periode}&bulan=${bulan}&tahun=${tahun}`;
+    }
+    function exportDetailCsv(toko_id) {
+        const periode = $('#periode').val();
+        const bulan = $('#bulan').val();
+        const tahun = $('#tahun').val();
+    
+        window.location.href = `/laporan-toko/export-detail-csv?toko_id=${toko_id}&periode=${periode}&bulan=${bulan}&tahun=${tahun}`;
+    }
+
+        function exportCsv(periode) {
+        // Show loading
+        Swal.fire({
+            title: 'Memproses...',
+            text: 'Sedang menyiapkan file CSV',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+                
+                setTimeout(() => {
+                    const bulan = $('#bulan').val();
+                    const tahun = $('#tahun').val();
+                    
+                    const url = `/laporan-toko/export-csv?periode=${periode}&bulan=${bulan}&tahun=${tahun}`;
+                    window.location.href = url;
+                    
+                    Swal.close();
+                }, 1000);
+            }
+        });
+    }
+
+    function exportDetailCsv(toko_id) {
+        // Show loading
+        Swal.fire({
+            title: 'Memproses...',
+            text: 'Sedang menyiapkan file CSV',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+                
+                setTimeout(() => {
+                    const periode = $('#periode').val();
+                    const bulan = $('#bulan').val();
+                    const tahun = $('#tahun').val();
+                    
+                    const url = `/laporan-toko/export-detail-csv?toko_id=${toko_id}&periode=${periode}&bulan=${bulan}&tahun=${tahun}`;
+                    window.location.href = url;
+                    
+                    Swal.close();
+                }, 1000);
+            }
+        });
     }
 });
