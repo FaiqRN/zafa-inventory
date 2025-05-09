@@ -240,7 +240,8 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="jumlah_retur">Jumlah Retur <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="jumlah_retur" name="jumlah_retur" min="1" required>
+                                    <input type="number" class="form-control" id="jumlah_retur" name="jumlah_retur" min="0" required>
+                                    <small class="form-text text-muted">Masukkan 0 jika hanya ingin mencatat tanpa ada barang yang diretur.</small>
                                     <div class="invalid-feedback" id="error-jumlah_retur"></div>
                                 </div>
                             </div>
@@ -249,6 +250,7 @@
                             <label for="kondisi">Kondisi Barang <span class="text-danger">*</span></label>
                             <select class="form-control" id="kondisi" name="kondisi" required>
                                 <option value="">-- Pilih Kondisi --</option>
+                                <option value="Tidak Ada Retur">Tidak Ada Retur</option>
                                 <option value="Rusak">Rusak</option>
                                 <option value="Kadaluarsa">Kadaluarsa</option>
                                 <option value="Cacat Produksi">Cacat Produksi</option>

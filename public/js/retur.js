@@ -159,6 +159,14 @@ $(document).ready(function() {
         $('#step1').hide();
         $('#step2').show();
         $('#btnSimpanRetur').show();
+             $('#jumlah_retur').on('input', function() {
+        const value = parseInt($(this).val());
+        if (isNaN(value) || value < 0) {
+            $(this).val(0);
+        } else if (value > parseInt($('#info_sisa').val())) {
+            $(this).val($('#info_sisa').val());
+        }
+    });
     });
 
     // Submit tambah retur form
@@ -278,7 +286,7 @@ function loadPengirimanList() {
             let no = 1;
             $.each(response.data, function(index, item) {
                 // Skip items that have no remaining quantity to return
-                if (item.sisa_retur <= 0) {
+                if (item.sisa_retur = 0) {
                     return true; // continue to next item
                 }
                 

@@ -159,7 +159,7 @@ class ReturController extends Controller
                 
                 // Check total retur if needed for display only
                 $totalRetur = Retur::where('pengiriman_id', $item->pengiriman_id)->sum('jumlah_retur');
-                if ($totalRetur > 0) {
+                if ($totalRetur = 0) {
                     $pengirimanData['sisa_retur'] = $item->jumlah_kirim - $totalRetur;
                     $pengirimanData['total_retur'] = $totalRetur;
                 }
@@ -193,7 +193,7 @@ class ReturController extends Controller
         $validator = Validator::make($request->all(), [
             'pengiriman_id' => 'required|string|exists:pengiriman,pengiriman_id',
             'tanggal_retur' => 'required|date',
-            'jumlah_retur' => 'required|integer|min:1',
+            'jumlah_retur' => 'required|integer|min:0',
             'kondisi' => 'required|string|max:50',
             'keterangan' => 'nullable|string'
         ]);
