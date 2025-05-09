@@ -1,3 +1,4 @@
+<!-- resources/views/laporan/toko.blade.php -->
 @extends('layouts.template')
 
 @section('page_title', 'Laporan Per Toko')
@@ -20,6 +21,17 @@
     .period-text {
         font-weight: bold;
     }
+    .card-info .card-header {
+        background-color: #17a2b8;
+        color: white;
+    }
+    .small-box .icon i {
+        font-size: 50px;
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        opacity: 0.3;
+    }
 </style>
 @endpush
 
@@ -27,9 +39,9 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="card">
+            <div class="card card-info">
                 <div class="card-header">
-                    <h3 class="card-title">Laporan Penjualan Per Toko</h3>
+                    <h3 class="card-title"><i class="fas fa-store mr-2"></i> Laporan Penjualan Per Toko</h3>
                 </div>
                 <div class="card-body">
                     <div class="row mb-4">
@@ -117,7 +129,7 @@
                             <div class="small-box bg-warning">
                                 <div class="inner">
                                     <h3 id="summary-pengiriman">0</h3>
-                                    <p>Total Pengiriman</p>
+                                    <p>Total Barang Dikirim</p>
                                 </div>
                                 <div class="icon">
                                     <i class="fas fa-truck"></i>
@@ -166,8 +178,8 @@
                                             <th>Nama Toko</th>
                                             <th>Pemilik</th>
                                             <th>Total Penjualan</th>
-                                            <th>Total Pengiriman</th>
-                                            <th>Total Retur</th>
+                                            <th>Total Barang Dikirim</th>
+                                            <th>Total Barang Retur</th>
                                             <th>Catatan</th>
                                             <th>Aksi</th>
                                         </tr>
@@ -186,8 +198,8 @@
                                             <th>Nama Toko</th>
                                             <th>Pemilik</th>
                                             <th>Total Penjualan</th>
-                                            <th>Total Pengiriman</th>
-                                            <th>Total Retur</th>
+                                            <th>Total Barang Dikirim</th>
+<th>Total Barang Retur</th>
                                             <th>Catatan</th>
                                             <th>Aksi</th>
                                         </tr>
@@ -206,8 +218,8 @@
                                             <th>Nama Toko</th>
                                             <th>Pemilik</th>
                                             <th>Total Penjualan</th>
-                                            <th>Total Pengiriman</th>
-                                            <th>Total Retur</th>
+                                            <th>Total Barang Dikirim</th>
+                                            <th>Total Barang Retur</th>
                                             <th>Catatan</th>
                                             <th>Aksi</th>
                                         </tr>
@@ -249,6 +261,15 @@
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
                 <button type="button" class="btn btn-primary" id="btn-simpan-catatan">Simpan</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Detail -->
+<div class="modal fade" id="detailModal" tabindex="-1" role="dialog" aria-labelledby="detailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <!-- Content akan diisi melalui JavaScript -->
         </div>
     </div>
 </div>

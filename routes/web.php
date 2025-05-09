@@ -113,10 +113,10 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
         ]);
     })->name('laporan.penjualan');
     
-    Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
-    Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
-    Route::post('/laporan-toko/update-catatan', [LaporanTokoController::class, 'updateCatatan'])->name('laporan.toko.updateCatatan');
-    Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData'])->name('laporan.toko.detail');
+Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
+Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
+Route::post('/laporan-toko/update-catatan', [LaporanTokoController::class, 'updateCatatan'])->name('laporan.toko.updateCatatan');
+Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData'])->name('laporan.toko.detail');
     
     Route::get('/laporan-barang', function () {
         return view('laporan.barang', [
