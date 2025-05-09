@@ -73,12 +73,17 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     
     // Route Transaksi
     Route::group(['prefix' => 'pengiriman'], function() {
+        Route::get('/', [PengirimanController::class, 'index'])->name('pengiriman.index');
         Route::get('/data', [PengirimanController::class, 'getData'])->name('pengiriman.data');
         Route::get('/get-nomer', [PengirimanController::class, 'getNomerPengiriman'])->name('pengiriman.getNomerPengiriman');
         Route::get('/get-barang-by-toko', [PengirimanController::class, 'getBarangByToko'])->name('pengiriman.getBarangByToko');
         Route::put('/{id}/update-status', [PengirimanController::class, 'updateStatus'])->name('pengiriman.updateStatus');
-        Route::get('/pengiriman/export', [PengirimanController::class, 'export'])->name('pengiriman.export');
+        Route::get('/export', [PengirimanController::class, 'export'])->name('pengiriman.export');
         Route::get('/list', [PengirimanController::class, 'getList'])->name('pengiriman.list');
+        Route::post('/', [PengirimanController::class, 'store'])->name('pengiriman.store');
+        Route::get('/{id}/edit', [PengirimanController::class, 'edit'])->name('pengiriman.edit');
+        Route::put('/{id}', [PengirimanController::class, 'update'])->name('pengiriman.update');
+        Route::delete('/{id}', [PengirimanController::class, 'destroy'])->name('pengiriman.destroy');
     });
     Route::resource('pengiriman', PengirimanController::class);
     

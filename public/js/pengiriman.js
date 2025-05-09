@@ -1,4 +1,10 @@
 $(document).ready(function() {
+    // Inisialisasi variabel sorting
+    var currentSort = {
+        column: 'tanggal_pengiriman',
+        direction: 'desc'
+    };
+
     // Initialize Select2
     if ($.fn.select2) {
         $('#toko_id, #filter_toko_id').select2({
@@ -22,8 +28,31 @@ $(document).ready(function() {
     // Load initial data
     loadPengirimanData();
     
+    // Handler klik untuk header tabel yang dapat diurutkan
+    $(document).on('click', '.sortable', function() {
+        var column = $(this).data('column');
+        
+        // Toggle direction jika kolom sama, atau set asc jika kolom baru
+        if (column === currentSort.column) {
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.column = column;
+            currentSort.direction = 'asc';
+        }
+        
+        // Update UI untuk menunjukkan sorting aktif
+        $('.sortable').removeClass('sorting-asc sorting-desc');
+        $(this).addClass('sorting-' + currentSort.direction);
+        
+        // Reset page ke 1 dan reload data
+        $('#current_page').val(1);
+        loadPengirimanData();
+    });
+    
     // Apply filter when button is clicked
     $('#btnFilter').click(function() {
+        // Reset page ke 1 saat mengaplikasikan filter
+        $('#current_page').val(1);
         loadPengirimanData();
         console.log("Filter applied:", {
             toko: $('#filter_toko_id').val(),
@@ -39,58 +68,110 @@ $(document).ready(function() {
         $('#filter_status').val('');
         $('#filter_start_date').val('');
         $('#filter_end_date').val('');
+        $('#current_page').val(1); // Reset page ke 1
         loadPengirimanData();
     });
 
     // Export data button
-    $('#exportData').click(function() {
-        $('#export-excel').on('click', function() {
-            console.log('Export Excel button clicked');
-            doExport('xlsx');
-        });
-        
-        // Export CSV button
-        $('#export-csv').on('click', function() {
-            console.log('Export CSV button clicked');
-            doExport('csv');
-        });
-        
-        // Fungsi untuk melakukan export
-        function doExport(format) {
-            // Buat URL dasar
-            var url = '/pengiriman/export';
-            
-            // Siapkan parameter
-            var params = ['format=' + format];
-            
-            // Tambahkan filter jika ada
-            if ($('#filter_toko_id').val()) {
-                params.push('toko_id=' + $('#filter_toko_id').val());
-            }
-            
-            if ($('#filter_status').val()) {
-                params.push('status=' + $('#filter_status').val());
-            }
-            
-            if ($('#filter_start_date').val()) {
-                params.push('start_date=' + $('#filter_start_date').val());
-            }
-            
-            if ($('#filter_end_date').val()) {
-                params.push('end_date=' + $('#filter_end_date').val());
-            }
-            
-            // Tambahkan parameter ke URL
-            if (params.length > 0) {
-                url += '?' + params.join('&');
-            }
-            
-            console.log('Exporting to URL:', url);
-            
-            // Buka URL
-            window.location.href = url;
-        }
+// Export Excel button
+$('#export-excel').click(function() {
+    console.log('Export Excel button clicked');
+    doExport('xlsx');
+});
+
+// Export CSV button
+$('#export-csv').click(function() {
+    console.log('Export CSV button clicked');
+    doExport('csv');
+});
+
+// Fungsi untuk melakukan export
+function doExport(format) {
+    // Buat URL dasar
+    var url = '/pengiriman/export';
+    
+    // Buat form sementara
+    var $form = $('<form>', {
+        'method': 'GET',
+        'action': url
     });
+    
+    // Tambahkan parameter format
+    $form.append($('<input>', {
+        'type': 'hidden',
+        'name': 'format',
+        'value': format
+    }));
+    
+    // Tambahkan filter jika ada
+    if ($('#filter_toko_id').val()) {
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'toko_id',
+            'value': $('#filter_toko_id').val()
+        }));
+    }
+    
+    if ($('#filter_status').val()) {
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'status',
+            'value': $('#filter_status').val()
+        }));
+    }
+    
+    if ($('#filter_start_date').val()) {
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'start_date',
+            'value': $('#filter_start_date').val()
+        }));
+    }
+    
+    if ($('#filter_end_date').val()) {
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'end_date',
+            'value': $('#filter_end_date').val()
+        }));
+    }
+    
+    // Tambahkan parameter sorting
+    $form.append($('<input>', {
+        'type': 'hidden',
+        'name': 'sort_column',
+        'value': currentSort.column
+    }));
+    
+    $form.append($('<input>', {
+        'type': 'hidden',
+        'name': 'sort_direction',
+        'value': currentSort.direction
+    }));
+    
+    // Tambahkan CSRF token untuk keamanan
+    $form.append($('<input>', {
+        'type': 'hidden',
+        'name': '_token',
+        'value': $('meta[name="csrf-token"]').attr('content')
+    }));
+    
+    // Log untuk debugging
+    console.log('Exporting with parameters:', {
+        format: format,
+        toko_id: $('#filter_toko_id').val(),
+        status: $('#filter_status').val(),
+        start_date: $('#filter_start_date').val(),
+        end_date: $('#filter_end_date').val(),
+        sort_column: currentSort.column,
+        sort_direction: currentSort.direction
+    });
+    
+    // Tambahkan form ke body, submit, dan hapus
+    $('body').append($form);
+    $form.submit();
+    $form.remove();
+}
 
     // Generate nomor pengiriman when opening the add modal
     $('#btnTambahPengiriman').click(function() {
@@ -394,7 +475,10 @@ $(document).ready(function() {
             toko_id: $('#filter_toko_id').val(),
             status: $('#filter_status').val(),
             start_date: $('#filter_start_date').val(),
-            end_date: $('#filter_end_date').val()
+            end_date: $('#filter_end_date').val(),
+            page: $('#current_page').val() || 1,
+            sort_column: currentSort.column,
+            sort_direction: currentSort.direction
         };
         
         // Make AJAX request
@@ -461,7 +545,7 @@ $(document).ready(function() {
                     $('#table-pengiriman tbody').append(row);
                 });
                 
-                // Add pagination if needed
+                // Add pagination
                 updatePagination(response);
             },
             error: function() {
@@ -473,37 +557,53 @@ $(document).ready(function() {
     
     // Function to update pagination
     function updatePagination(response) {
-        // If you want to implement custom pagination, you can do it here
-        // Example: Create pagination links based on response.current_page, response.last_page, etc.
         if (response.last_page > 1) {
             var paginationHtml = '<ul class="pagination justify-content-center">';
             
             // Previous page link
             if (response.current_page > 1) {
-                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${response.current_page - 1}">Previous</a></li>`;
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0)" data-page="${response.current_page - 1}">Previous</a></li>`;
             } else {
                 paginationHtml += '<li class="page-item disabled"><span class="page-link">Previous</span></li>';
             }
             
             // Page number links
-            for (var i = 1; i <= response.last_page; i++) {
+            // Tampilkan maksimal 5 nomor halaman
+            var startPage = Math.max(1, response.current_page - 2);
+            var endPage = Math.min(response.last_page, startPage + 4);
+            
+            if (startPage > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0)" data-page="1">1</a></li>`;
+                if (startPage > 2) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+            
+            for (var i = startPage; i <= endPage; i++) {
                 if (i === response.current_page) {
                     paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
                 } else {
-                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0)" data-page="${i}">${i}</a></li>`;
                 }
+            }
+            
+            if (endPage < response.last_page) {
+                if (endPage < response.last_page - 1) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0)" data-page="${response.last_page}">${response.last_page}</a></li>`;
             }
             
             // Next page link
             if (response.current_page < response.last_page) {
-                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${response.current_page + 1}">Next</a></li>`;
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0)" data-page="${response.current_page + 1}">Next</a></li>`;
             } else {
                 paginationHtml += '<li class="page-item disabled"><span class="page-link">Next</span></li>';
             }
             
             paginationHtml += '</ul>';
             
-            // Append pagination to a container (you need to add this container to your HTML)
+            // Append pagination to a container
             $('#pagination-container').html(paginationHtml);
         } else {
             $('#pagination-container').empty();
@@ -515,10 +615,15 @@ $(document).ready(function() {
         e.preventDefault();
         var page = $(this).data('page');
         
-        // Add page to filter parameters
+        // Set the current page value
         $('#current_page').val(page);
         
         // Reload data with new page
         loadPengirimanData();
+        
+        // Scroll ke atas tabel
+        $('html, body').animate({
+            scrollTop: $('#table-pengiriman').offset().top - 70
+        }, 200);
     });
 });

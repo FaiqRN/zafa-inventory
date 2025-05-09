@@ -55,21 +55,17 @@
                         <button type="button" id="btnFilter" class="btn btn-primary">Filter</button>
                         <button type="button" id="resetFilter" class="btn btn-secondary">Reset</button>
                         <div class="btn-group">
-                            <form action="{{ route('pengiriman.export') }}" method="GET" class="d-inline">
-                                <input type="hidden" name="format" value="xlsx">
-                                <!-- Copy hidden input for filter jika dibutuhkan -->
-                                <button type="submit" class="btn btn-success">
+                            <button type="button" id="exportData" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-file-export"></i> Export
+                            </button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="javascript:void(0)" id="export-excel">
                                     <i class="fas fa-file-excel"></i> Export Excel
-                                </button>
-                            </form>
-                            
-                            <form action="{{ route('pengiriman.export') }}" method="GET" class="d-inline">
-                                <input type="hidden" name="format" value="csv">
-                                <!-- Copy hidden input untuk filter jika dibutuhkan -->
-                                <button type="submit" class="btn btn-success">
+                                </a>
+                                <a class="dropdown-item" href="javascript:void(0)" id="export-csv">
                                     <i class="fas fa-file-csv"></i> Export CSV
-                                </button>
-                            </form>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -94,14 +90,14 @@
                 <table id="table-pengiriman" class="table table-bordered table-striped">
                     <thead>
                         <tr>
-                            <th>No</th>
-                            <th>No. Pengiriman</th>
-                            <th>Tanggal</th>
-                            <th>Toko</th>
-                            <th>Barang</th>
-                            <th>Jumlah</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
+                            <th width="5%">No</th>
+                            <th class="sortable" data-column="nomer_pengiriman">No. Pengiriman</th>
+                            <th class="sortable" data-column="tanggal_pengiriman">Tanggal</th>
+                            <th class="sortable" data-column="toko_id">Toko</th>
+                            <th class="sortable" data-column="barang_id">Barang</th>
+                            <th class="sortable" data-column="jumlah_kirim">Jumlah</th>
+                            <th class="sortable" data-column="status">Status</th>
+                            <th width="15%">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -109,11 +105,11 @@
                     </tbody>
                 </table>
             </div>
-            <!-- Tambahkan container untuk pagination -->
-                <div id="pagination-container" class="mt-3"></div>
+            <!-- Container untuk pagination -->
+            <div id="pagination-container" class="mt-3"></div>
 
-                <!-- Tambahkan input hidden untuk current page -->
-                <input type="hidden" id="current_page" value="1">
+            <!-- Input hidden untuk current page -->
+            <input type="hidden" id="current_page" value="1">
         </div>
     </div>
 </div>
@@ -338,6 +334,32 @@
 @push('css')
 <link rel="stylesheet" href="{{asset('adminlte/plugins/select2/css/select2.min.css')}}">
 <link rel="stylesheet" href="{{asset('adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css')}}">
+<style>
+    /* CSS untuk styling tabel sortable */
+    .sortable {
+        cursor: pointer;
+        position: relative;
+    }
+    .sortable:after {
+        content: "↕";
+        font-size: 12px;
+        color: #999;
+        margin-left: 5px;
+    }
+    .sorting-asc:after {
+        content: "↑";
+        color: #333;
+    }
+    .sorting-desc:after {
+        content: "↓";
+        color: #333;
+    }
+
+    /* Pagination styles */
+    #pagination-container .pagination {
+        margin-bottom: 0;
+    }
+</style>
 @endpush
 
 @push('js')

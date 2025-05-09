@@ -64,7 +64,24 @@ class PengirimanController extends Controller
             $query->whereDate('tanggal_pengiriman', '<=', $request->end_date);
         }
     
-        $data = $query->orderBy('tanggal_pengiriman', 'desc')->get();
+        // Sorting
+        $sortColumn = $request->input('sort_column', 'tanggal_pengiriman');
+        $sortDirection = $request->input('sort_direction', 'desc');
+        
+        // Validasi kolom yang diizinkan untuk sorting untuk mencegah SQL injection
+        $allowedColumns = [
+            'nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 
+            'barang_id', 'jumlah_kirim', 'status'
+        ];
+        
+        if (!in_array($sortColumn, $allowedColumns)) {
+            $sortColumn = 'tanggal_pengiriman';
+        }
+        
+        // Apply sorting
+        $query->orderBy($sortColumn, $sortDirection);
+    
+        $data = $query->get();
         
         $response = DataTables::of($data)
             ->addIndexColumn()
@@ -433,6 +450,12 @@ class PengirimanController extends Controller
         ]);
     }
 
+    /**
+     * Export pengiriman data to Excel/CSV.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
 /**
  * Export pengiriman data to Excel/CSV.
  *
@@ -454,19 +477,33 @@ public function export(Request $request)
             'status' => $request->input('status'),
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
+            'sort_column' => $request->input('sort_column', 'tanggal_pengiriman'),
+            'sort_direction' => $request->input('sort_direction', 'desc'),
         ];
+        
+        // Buat instance kelas export 
+        $export = new PengirimanExport($filters);
+        
+        // Verifikasi data tersedia - jika tidak ada data, berikan pesan yang lebih jelas
+        $dataCount = $export->collection()->count();
+        
+        Log::info('Data untuk export: ' . $dataCount . ' record');
+        
+        if ($dataCount == 0) {
+            return back()->with('error', 'Tidak ada data yang sesuai dengan filter untuk diekspor.');
+        }
         
         // Get filename with date
         $date = date('Y-m-d_His');
         $filename = 'pengiriman_' . $date;
         
-        // Export as Excel (xlsx) by default
-        if ($request->format == 'xlsx') {
-            Log::info('Exporting as CSV');
-            return Excel::download(new PengirimanExport($filters), $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
+        // Export sesuai format yang diminta
+        if ($request->format == 'csv') {
+            Log::info('Exporting as CSV - ' . $dataCount . ' records');
+            return Excel::download($export, $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
         } else {
-            Log::info('Exporting as XLSX');
-            return Excel::download(new PengirimanExport($filters), $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX);
+            Log::info('Exporting as XLSX - ' . $dataCount . ' records');
+            return Excel::download($export, $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX);
         }
         
     } catch (\Exception $e) {
@@ -475,12 +512,16 @@ public function export(Request $request)
             'trace' => $e->getTraceAsString()
         ]);
         
-        return response()->json([
-            'error' => 'Export failed: ' . $e->getMessage()
-        ], 500);
+        return back()->with('error', 'Export gagal: ' . $e->getMessage());
     }
 }
 
+    /**
+     * Get list of pengiriman with pagination.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getList(Request $request)
     {
         $query = Pengiriman::with(['toko', 'barang']);
@@ -504,8 +545,22 @@ public function export(Request $request)
             $query->whereDate('tanggal_pengiriman', '<=', $request->end_date);
         }
         
-        // Order by date descending
-        $query->orderBy('tanggal_pengiriman', 'desc');
+        // Sorting
+        $sortColumn = $request->input('sort_column', 'tanggal_pengiriman');
+        $sortDirection = $request->input('sort_direction', 'desc');
+        
+        // Validasi kolom yang diizinkan untuk sorting untuk mencegah SQL injection
+        $allowedColumns = [
+            'nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 
+            'barang_id', 'jumlah_kirim', 'status'
+        ];
+        
+        if (!in_array($sortColumn, $allowedColumns)) {
+            $sortColumn = 'tanggal_pengiriman';
+        }
+        
+        // Apply sorting
+        $query->orderBy($sortColumn, $sortDirection);
         
         // Pagination
         $perPage = 10;

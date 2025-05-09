@@ -15,6 +15,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class PengirimanExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithColumnWidths, WithTitle, ShouldAutoSize
 {
@@ -29,6 +30,9 @@ class PengirimanExport implements FromCollection, WithHeadings, WithMapping, Wit
     public function __construct(array $filters = [])
     {
         $this->filters = $filters;
+        
+        // Log filter yang digunakan untuk debugging
+        Log::info('PengirimanExport filters:', $this->filters);
     }
     
     /**
@@ -59,7 +63,29 @@ class PengirimanExport implements FromCollection, WithHeadings, WithMapping, Wit
             $query->whereDate('tanggal_pengiriman', '<=', $this->filters['end_date']);
         }
         
-        return $query->orderBy('tanggal_pengiriman', 'desc')->get();
+        // Sorting
+        $sortColumn = !empty($this->filters['sort_column']) ? $this->filters['sort_column'] : 'tanggal_pengiriman';
+        $sortDirection = !empty($this->filters['sort_direction']) ? $this->filters['sort_direction'] : 'desc';
+        
+        // Validasi kolom sorting
+        $allowedColumns = [
+            'nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 
+            'barang_id', 'jumlah_kirim', 'status'
+        ];
+        
+        if (!in_array($sortColumn, $allowedColumns)) {
+            $sortColumn = 'tanggal_pengiriman';
+        }
+        
+        // Apply sorting
+        $query->orderBy($sortColumn, $sortDirection);
+        
+        $collection = $query->get();
+        
+        // Log untuk debugging
+        Log::info('PengirimanExport collection count: ' . $collection->count());
+        
+        return $collection;
     }
     
     /**
