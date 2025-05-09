@@ -152,21 +152,45 @@ $(document).ready(function() {
         $('#info_sudah_retur').val(row.find('td:eq(6)').text());
         $('#info_sisa').val(row.find('td:eq(7)').text());
         
-        // Update jumlah_retur max value
-        $('#jumlah_retur').attr('max', row.find('td:eq(7)').text());
+        // MODIFIED: Remove attributes for number spinner and set default to 0
+        $('#jumlah_retur').val(0);
+        $('#jumlah_retur').attr('type', 'text'); // Ensure it's a text input
+        $('#jumlah_retur').removeAttr('min');
+        $('#jumlah_retur').removeAttr('max');
+        $('#jumlah_retur').removeAttr('step');
         
         // Show step 2, hide step 1
         $('#step1').hide();
         $('#step2').show();
         $('#btnSimpanRetur').show();
-             $('#jumlah_retur').on('input', function() {
-        const value = parseInt($(this).val());
-        if (isNaN(value) || value < 0) {
-            $(this).val(0);
-        } else if (value > parseInt($('#info_sisa').val())) {
-            $(this).val($('#info_sisa').val());
-        }
-    });
+        
+        // MODIFIED: Validate input as text field (only allow numbers)
+        $('#jumlah_retur').off('input').on('input', function() {
+            // Remove any non-numeric characters except for the first '-' if it exists
+            let value = $(this).val().replace(/[^0-9]/g, '');
+            
+            // Convert to number and enforce limits
+            let numValue = parseInt(value);
+            
+            // If not a number, set to 0
+            if (isNaN(numValue)) {
+                numValue = 0;
+            }
+            
+            // Ensure value is not negative
+            if (numValue < 0) {
+                numValue = 0;
+            }
+            
+            // Ensure value doesn't exceed max limit
+            const maxVal = parseInt($('#info_sisa').val());
+            if (numValue > maxVal) {
+                numValue = maxVal;
+            }
+            
+            // Update the input value
+            $(this).val(numValue);
+        });
     });
 
     // Submit tambah retur form
@@ -263,79 +287,76 @@ $(document).ready(function() {
     }
 
     // Load pengiriman list for retur
- // Bagian loadPengirimanList
-function loadPengirimanList() {
-    $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Loading data...</td></tr>');
-    
-    $.ajax({
-        url: '/retur/get-pengiriman',
-        type: 'GET',
-        data: {
-            toko_id: $('#pengiriman_filter_toko').val(),
-            barang_id: $('#pengiriman_filter_barang').val()
-        },
-        success: function(response) {
-            console.log("Response success:", response);
-            $('#table-pengiriman tbody').empty();
-            
-            if (!response.data || response.data.length === 0) {
-                $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Tidak ada data pengiriman yang tersedia untuk retur</td></tr>');
-                return;
-            }
-            
-            let no = 1;
-            $.each(response.data, function(index, item) {
-                // Skip items that have no remaining quantity to return
-                if (item.sisa_retur = 0) {
-                    return true; // continue to next item
+    function loadPengirimanList() {
+        $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Loading data...</td></tr>');
+        
+        $.ajax({
+            url: '/retur/get-pengiriman',
+            type: 'GET',
+            data: {
+                toko_id: $('#pengiriman_filter_toko').val(),
+                barang_id: $('#pengiriman_filter_barang').val()
+            },
+            success: function(response) {
+                console.log("Response success:", response);
+                $('#table-pengiriman tbody').empty();
+                
+                if (!response.data || response.data.length === 0) {
+                    $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Tidak ada data pengiriman yang tersedia untuk retur</td></tr>');
+                    return;
                 }
                 
-                let hargaBarang = 'Rp 0';
-                if (item.barang && item.barang.harga_awal_barang) {
-                    hargaBarang = 'Rp ' + parseFloat(item.barang.harga_awal_barang).toLocaleString('id-ID');
-                } else if (item.harga_barang) {
-                    hargaBarang = 'Rp ' + parseFloat(item.harga_barang).toLocaleString('id-ID');
+                let no = 1;
+                $.each(response.data, function(index, item) {
+                    // We don't skip any items here since the backend already filters
+                    // out shipments that have been returned, and we allow zero returns
+                    
+                    let hargaBarang = 'Rp 0';
+                    if (item.barang && item.barang.harga_awal_barang) {
+                        hargaBarang = 'Rp ' + parseFloat(item.barang.harga_awal_barang).toLocaleString('id-ID');
+                    } else if (item.harga_barang) {
+                        hargaBarang = 'Rp ' + parseFloat(item.harga_barang).toLocaleString('id-ID');
+                    }
+                    
+                    let row = `
+                        <tr>
+                            <td>${no++}</td>
+                            <td>${item.nomer_pengiriman}</td>
+                            <td>${formatDate(item.tanggal_pengiriman)}</td>
+                            <td>${item.toko ? item.toko.nama_toko : '-'}</td>
+                            <td>${item.barang ? item.barang.nama_barang : '-'}</td>
+                            <td>${item.jumlah_kirim}</td>
+                            <td>${item.total_retur}</td>
+                            <td>${item.sisa_retur}</td>
+                            <td>${hargaBarang}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary btn-pilih-pengiriman" 
+                                    data-id="${item.pengiriman_id}" 
+                                    data-harga="${item.barang ? item.barang.harga_awal_barang : 0}">
+                                    <i class="fas fa-check"></i> Pilih
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    $('#table-pengiriman tbody').append(row);
+                });
+                
+                // If no rows were added (all items were already returned)
+                if ($('#table-pengiriman tbody tr').length === 0) {
+                    $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Semua pengiriman sudah diretur sepenuhnya</td></tr>');
                 }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error response:", xhr.responseText);
+                console.error("Status:", status);
+                console.error("Error:", error);
                 
-                let row = `
-                    <tr>
-                        <td>${no++}</td>
-                        <td>${item.nomer_pengiriman}</td>
-                        <td>${formatDate(item.tanggal_pengiriman)}</td>
-                        <td>${item.toko ? item.toko.nama_toko : '-'}</td>
-                        <td>${item.barang ? item.barang.nama_barang : '-'}</td>
-                        <td>${item.jumlah_kirim}</td>
-                        <td>${item.total_retur}</td>
-                        <td>${item.sisa_retur}</td>
-                        <td>${hargaBarang}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-primary btn-pilih-pengiriman" 
-                                data-id="${item.pengiriman_id}" 
-                                data-harga="${item.barang ? item.barang.harga_awal_barang : 0}">
-                                <i class="fas fa-check"></i> Pilih
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                
-                $('#table-pengiriman tbody').append(row);
-            });
-            
-            // If no rows were added (all items were fully returned)
-            if ($('#table-pengiriman tbody tr').length === 0) {
-                $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Semua pengiriman sudah diretur sepenuhnya</td></tr>');
+                $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Gagal memuat data pengiriman: ' + (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : error) + '</td></tr>');
+                showAlert('danger', 'Gagal memuat data pengiriman');
             }
-        },
-        error: function(xhr, status, error) {
-            console.error("Error response:", xhr.responseText);
-            console.error("Status:", status);
-            console.error("Error:", error);
-            
-            $('#table-pengiriman tbody').html('<tr><td colspan="9" class="text-center">Gagal memuat data pengiriman: ' + (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : error) + '</td></tr>');
-            showAlert('danger', 'Gagal memuat data pengiriman');
-        }
-    });
-}
+        });
+    }
 
     // Submit form retur
     function submitFormRetur() {
@@ -398,30 +419,29 @@ function loadPengirimanList() {
     }
 
     // Show validation errors
-// Show validation errors
-function showValidationErrors(errors) {
-    $.each(errors, function(field, messages) {
-        $('#' + field).addClass('is-invalid');
-        $('#error-' + field).text(messages[0]);
-    });
-}
+    function showValidationErrors(errors) {
+        $.each(errors, function(field, messages) {
+            $('#' + field).addClass('is-invalid');
+            $('#error-' + field).text(messages[0]);
+        });
+    }
 
-// Show alert message
-function showAlert(type, message) {
-    var alert = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    `;
-    
-    $('#alert-container').html(alert);
-    
-    // Auto close alert after 5 seconds
-    setTimeout(function() {
-        $('.alert').alert('close');
-    }, 5000);
-}
+    // Show alert message
+    function showAlert(type, message) {
+        var alert = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        
+        $('#alert-container').html(alert);
+        
+        // Auto close alert after 5 seconds
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 5000);
+    }
 });

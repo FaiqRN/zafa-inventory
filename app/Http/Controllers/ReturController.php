@@ -139,6 +139,20 @@ class ReturController extends Controller
                 // Debug each item
                 Log::info("Processing pengiriman_id: {$item->pengiriman_id}, status: {$item->status}");
                 
+                // Cek apakah barang sudah diretur (mencegah duplikasi)
+                // MODIFIED: Periksa apakah pengiriman sudah memiliki catatan retur
+                $existingRetur = Retur::where('pengiriman_id', $item->pengiriman_id)->first();
+                if ($existingRetur) {
+                    Log::info("Skipping pengiriman_id: {$item->pengiriman_id} - already has a return record");
+                    continue;
+                }
+                
+                // Cek total retur yang sudah ada
+                $totalRetur = Retur::where('pengiriman_id', $item->pengiriman_id)->sum('jumlah_retur');
+                
+                // Hitung sisa yang bisa diretur
+                $sisaRetur = $item->jumlah_kirim - $totalRetur;
+                
                 // Create a new array to store the pengiriman data with additional properties
                 $pengirimanData = [
                     'pengiriman_id' => $item->pengiriman_id,
@@ -150,21 +164,14 @@ class ReturController extends Controller
                     'status' => $item->status,
                     'toko' => $item->toko,
                     'barang' => $item->barang,
-                    'sisa_retur' => $item->jumlah_kirim,
-                    'total_retur' => 0
+                    'sisa_retur' => $sisaRetur,
+                    'total_retur' => $totalRetur
                 ];
                 
                 // Dapatkan harga barang dari relasi barang
                 $pengirimanData['harga_barang'] = $item->barang->harga_awal_barang ?? 0;
                 
-                // Check total retur if needed for display only
-                $totalRetur = Retur::where('pengiriman_id', $item->pengiriman_id)->sum('jumlah_retur');
-                if ($totalRetur = 0) {
-                    $pengirimanData['sisa_retur'] = $item->jumlah_kirim - $totalRetur;
-                    $pengirimanData['total_retur'] = $totalRetur;
-                }
-                
-                // Add to result even if fully returned (we'll handle this in UI)
+                // Add to result - no need to check for sisa_retur > 0 since we now allow zero returns
                 $result[] = $pengirimanData;
             }
             
@@ -193,7 +200,7 @@ class ReturController extends Controller
         $validator = Validator::make($request->all(), [
             'pengiriman_id' => 'required|string|exists:pengiriman,pengiriman_id',
             'tanggal_retur' => 'required|date',
-            'jumlah_retur' => 'required|integer|min:0',
+            'jumlah_retur' => 'required|integer|min:0', // MODIFIED: Changed to min:0 to allow zero returns
             'kondisi' => 'required|string|max:50',
             'keterangan' => 'nullable|string'
         ]);
@@ -228,11 +235,20 @@ class ReturController extends Controller
                 ], 422);
             }
             
+            // Cek apakah pengiriman ini sudah memiliki catatan retur (duplikasi)
+            $existingRetur = Retur::where('pengiriman_id', $pengiriman->pengiriman_id)->first();
+            if ($existingRetur) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Barang dari pengiriman ini sudah pernah diretur. Tidak dapat membuat retur kedua untuk mencegah duplikasi.'
+                ], 422);
+            }
+            
             // Ambil harga awal barang dari relasi barang
             $hargaAwalBarang = $pengiriman->barang->harga_awal_barang ?? 0;
             
             // Hitung total terjual dan hasil
-            $totalTerjual = $pengiriman->jumlah_kirim - $request->jumlah_retur - $totalRetur;
+            $totalTerjual = $pengiriman->jumlah_kirim - $request->jumlah_retur;
             $hasil = $totalTerjual * $hargaAwalBarang;
             
             // Tambah data retur baru
