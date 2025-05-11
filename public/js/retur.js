@@ -80,41 +80,75 @@ $(document).ready(function() {
         table.ajax.reload();
     });
 
-    // Export data
+    // Export data - PERBAIKAN DI SINI
     $(document).on('click', '.export-data', function(e) {
         e.preventDefault();
         
         let format = $(this).data('format');
-        let url = '/retur/export';
-        let params = [];
+        let baseUrl = '/retur/export';
         
-        // Add format to parameters
-        params.push('format=' + format);
+        // Create form for file download
+        let form = document.createElement('form');
+        form.method = 'GET';
+        form.action = baseUrl;
+        form.style.display = 'none';
         
-        // Add filters if any
-        if ($('#filter_toko_id').val()) {
-            params.push('toko_id=' + $('#filter_toko_id').val());
+        // Add format parameter
+        let formatInput = document.createElement('input');
+        formatInput.type = 'hidden';
+        formatInput.name = 'format';
+        formatInput.value = format;
+        form.appendChild(formatInput);
+        
+        // Add filter parameters
+        let tokoId = $('#filter_toko_id').val();
+        if (tokoId && tokoId !== '') {
+            let tokoInput = document.createElement('input');
+            tokoInput.type = 'hidden';
+            tokoInput.name = 'toko_id';
+            tokoInput.value = tokoId;
+            form.appendChild(tokoInput);
         }
         
-        if ($('#filter_barang_id').val()) {
-            params.push('barang_id=' + $('#filter_barang_id').val());
+        let barangId = $('#filter_barang_id').val();
+        if (barangId && barangId !== '') {
+            let barangInput = document.createElement('input');
+            barangInput.type = 'hidden';
+            barangInput.name = 'barang_id';
+            barangInput.value = barangId;
+            form.appendChild(barangInput);
         }
         
-        if ($('#filter_start_date').val()) {
-            params.push('start_date=' + $('#filter_start_date').val());
+        let startDate = $('#filter_start_date').val();
+        if (startDate && startDate !== '') {
+            let startInput = document.createElement('input');
+            startInput.type = 'hidden';
+            startInput.name = 'start_date';
+            startInput.value = startDate;
+            form.appendChild(startInput);
         }
         
-        if ($('#filter_end_date').val()) {
-            params.push('end_date=' + $('#filter_end_date').val());
+        let endDate = $('#filter_end_date').val();
+        if (endDate && endDate !== '') {
+            let endInput = document.createElement('input');
+            endInput.type = 'hidden';
+            endInput.name = 'end_date';
+            endInput.value = endDate;
+            form.appendChild(endInput);
         }
         
-        // Add parameters to URL
-        if (params.length > 0) {
-            url += '?' + params.join('&');
-        }
+        // Submit form
+        document.body.appendChild(form);
+        form.submit();
         
-        // Open URL
-        window.location.href = url;
+        // Clean up
+        setTimeout(function() {
+            document.body.removeChild(form);
+        }, 100);
+        
+        // Log for debugging
+        console.log('Export requested with format:', format);
+        console.log('Form action:', form.action);
     });
 
     // Open tambah retur modal

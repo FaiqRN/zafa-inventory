@@ -331,7 +331,7 @@ class ReturController extends Controller
         ]);
     }
 
-    /**
+/**
      * Export retur data to Excel/CSV.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -339,23 +339,75 @@ class ReturController extends Controller
      */
     public function export(Request $request)
     {
-        // Collect filter parameters
-        $filters = [
-            'toko_id' => $request->input('toko_id'),
-            'barang_id' => $request->input('barang_id'),
-            'start_date' => $request->input('start_date'),
-            'end_date' => $request->input('end_date'),
-        ];
-        
-        // Get filename with date
-        $date = date('Y-m-d_His');
-        $filename = 'retur_barang_' . $date;
-        
-        // Export as Excel (xlsx) by default
-        if ($request->has('format') && $request->format == 'csv') {
-            return Excel::download(new ReturExport($filters), $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
-        } else {
-            return Excel::download(new ReturExport($filters), $filename . '.xlsx');
+        try {
+            // Log that we entered the export function
+            Log::info('=== EXPORT FUNCTION CALLED ===');
+            Log::info('Request URL: ' . $request->fullUrl());
+            Log::info('Request method: ' . $request->method());
+            Log::info('Request all params: ', $request->all());
+            
+            // Collect filter parameters
+            $filters = [
+                'toko_id' => $request->input('toko_id'),
+                'barang_id' => $request->input('barang_id'),
+                'start_date' => $request->input('start_date'),
+                'end_date' => $request->input('end_date'),
+            ];
+            
+            // Log filters for debugging
+            Log::info('Export filters:', $filters);
+            
+            // Get filename with date
+            $date = date('Y-m-d_His');
+            $filename = 'retur_barang_' . $date;
+            
+            // Check if we have data first
+            $query = Retur::with(['toko', 'barang']);
+            if (!empty($filters['toko_id'])) {
+                $query->where('toko_id', $filters['toko_id']);
+            }
+            if (!empty($filters['barang_id'])) {
+                $query->where('barang_id', $filters['barang_id']);
+            }
+            if (!empty($filters['start_date'])) {
+                $query->whereDate('tanggal_retur', '>=', $filters['start_date']);
+            }
+            if (!empty($filters['end_date'])) {
+                $query->whereDate('tanggal_retur', '<=', $filters['end_date']);
+            }
+            
+            $dataCount = $query->count();
+            Log::info('Data count before export: ' . $dataCount);
+            
+            // Create export instance
+            $export = new ReturExport($filters);
+            
+            // Export based on format
+            if ($request->has('format') && $request->format == 'csv') {
+                Log::info('Exporting as CSV');
+                return Excel::download($export, $filename . '.csv', \Maatwebsite\Excel\Excel::CSV, [
+                    'Content-Type' => 'text/csv',
+                ]);
+            } else {
+                Log::info('Exporting as XLSX');
+                return Excel::download($export, $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX, [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error in export: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            // For AJAX requests, return JSON
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Terjadi kesalahan saat export data: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            // For non-AJAX requests, redirect back with error
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat export data: ' . $e->getMessage());
         }
     }
 }

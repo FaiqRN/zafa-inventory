@@ -92,9 +92,9 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
         Route::get('/data', [ReturController::class, 'getData'])->name('retur.data');
         Route::get('/get-pengiriman', [ReturController::class, 'getPengiriman'])->name('retur.getPengiriman');
         Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
+        Route::get('/export', [ReturController::class, 'export'])->name('retur.export'); // Pastikan ini di atas {id}
         Route::get('/{id}', [ReturController::class, 'show'])->name('retur.show');
         Route::delete('/{id}', [ReturController::class, 'destroy'])->name('retur.destroy');
-        Route::get('/export', [ReturController::class, 'export'])->name('retur.export');
     });
     
     Route::group(['prefix' => 'pemesanan'], function() {
