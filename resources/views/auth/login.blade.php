@@ -132,8 +132,8 @@
     <div class="login-container">
         <div class="logo-container">
             <!-- Ganti path sesuai dengan lokasi logo Anda -->
-            <img src="{{ asset('adminlte\dist\img\zafalogo.png') }}" alt="Logo Zafa Distribusi" class="logo">
-            <div class="company-name">Zafa Distribusi</div>
+            <img src="{{ asset('adminlte\dist\img\zafalogo.png') }}" alt="Logo ZafaSys" class="logo">
+            <div class="company-name">ZafaSys</div>
         </div>
         
         @if(session('error'))
