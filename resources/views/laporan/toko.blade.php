@@ -170,7 +170,6 @@
                     <div class="tab-content mt-3" id="reportTabsContent">
                         <div class="tab-pane fade show active" id="bulan-1" role="tabpanel">
                             <div class="table-responsive">
-                                <div id="export-btn-container-1" class="mb-3"></div>
                                 <div id="export-btn-container-1" class="mb-3 btn-group"></div>
                                 <table id="tabel-laporan-1" class="table table-bordered table-striped">
                                     <thead>
@@ -191,7 +190,6 @@
                         </div>
                         <div class="tab-pane fade" id="bulan-6" role="tabpanel">
                             <div class="table-responsive">
-                                <div id="export-btn-container-6" class="mb-3"></div>
                                 <div id="export-btn-container-6" class="mb-3 btn-group"></div>
                                 <table id="tabel-laporan-6" class="table table-bordered table-striped">
                                     <thead>
@@ -201,7 +199,7 @@
                                             <th>Pemilik</th>
                                             <th>Total Penjualan</th>
                                             <th>Total Barang Dikirim</th>
-<th>Total Barang Retur</th>
+                                            <th>Total Barang Retur</th>
                                             <th>Catatan</th>
                                             <th>Aksi</th>
                                         </tr>
@@ -212,7 +210,6 @@
                         </div>
                         <div class="tab-pane fade" id="tahun-1" role="tabpanel">
                             <div class="table-responsive">
-                                <div id="export-btn-container-tahun" class="mb-3"></div>
                                 <div id="export-btn-container-tahun" class="mb-3 btn-group"></div>
                                 <table id="tabel-laporan-tahun" class="table table-bordered table-striped">
                                     <thead>
@@ -280,4 +277,5 @@
 
 @push('js')
 <script src="{{ asset('js/laporan-toko.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 @endpush

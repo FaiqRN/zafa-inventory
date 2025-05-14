@@ -138,7 +138,7 @@ $(function() {
         
         const csvBtn = $(`<button class="btn btn-success mr-2"><i class="fas fa-file-csv"></i> Export CSV</button>`);
         csvBtn.on('click', function() {
-        exportCsv(periode);
+            exportCsv(periode);
         });
         $(exportContainerId).append(csvBtn);
 
@@ -604,75 +604,114 @@ $(function() {
                 
                 // After modal is shown, initialize the chart
                 $('#detailModal').on('shown.bs.modal', function () {
-                    // Prepare data for chart
-                    if (response.detailPenjualan && response.detailPenjualan.length > 0) {
-                        const labels = response.detailPenjualan.map(item => {
-                            // Truncate long names
-                            const name = item.nama_barang;
-                            return name.length > 15 ? name.substring(0, 15) + '...' : name;
-                        });
-                        const totalTerjual = response.detailPenjualan.map(item => item.total_terjual);
-                        const totalPenjualan = response.detailPenjualan.map(item => item.total_penjualan);
-                        
-                        // Initialize chart
-                        const ctx = document.getElementById('salesChart').getContext('2d');
-                        new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels: labels,
-                                datasets: [
-                                    {
-                                        label: 'Jumlah Terjual',
-                                        data: totalTerjual,
-                                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                                        borderColor: 'rgba(54, 162, 235, 1)',
-                                        borderWidth: 1
+                    // Perbaikan untuk Ringkasan Penjualan
+                    try {
+                        console.log("Modal shown, preparing chart data...");
+                        // Prepare data for chart with proper error handling
+                        if (response.detailPenjualan && response.detailPenjualan.length > 0) {
+                            // Batasi jumlah data yang ditampilkan untuk performa lebih baik
+                            const maxDataPoints = 10;
+                            const dataToDisplay = response.detailPenjualan.slice(0, maxDataPoints);
+                            
+                            const labels = dataToDisplay.map(item => {
+                                const name = item.nama_barang;
+                                return name.length > 15 ? name.substring(0, 15) + '...' : name;
+                            });
+                            
+                            const totalTerjual = dataToDisplay.map(item => parseInt(item.total_terjual) || 0);
+                            const totalPenjualan = dataToDisplay.map(item => parseInt(item.total_penjualan) || 0);
+                            
+                            // Debug values before chart creation
+                            console.log("Chart data prepared:", {labels, totalTerjual, totalPenjualan});
+                            
+                            // Pastikan elemen canvas ada
+                            const ctx = document.getElementById('salesChart');
+                            if (ctx) {
+                                new Chart(ctx, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: labels,
+                                        datasets: [
+                                            {
+                                                label: 'Jumlah Terjual',
+                                                data: totalTerjual,
+                                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                                borderColor: 'rgba(54, 162, 235, 1)',
+                                                borderWidth: 1
+                                            },
+                                            {
+                                                label: 'Total Penjualan (Rp)',
+                                                data: totalPenjualan,
+                                                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                                borderColor: 'rgba(255, 99, 132, 1)',
+                                                borderWidth: 1,
+                                                yAxisID: 'y1'
+                                            }
+                                        ]
                                     },
-                                    {
-                                        label: 'Total Penjualan (Rp)',
-                                        data: totalPenjualan,
-                                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                                        borderColor: 'rgba(255, 99, 132, 1)',
-                                        borderWidth: 1,
-                                        yAxisID: 'y1'
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        title: {
-                                            display: true,
-                                            text: 'Jumlah Terjual'
-                                        }
-                                    },
-                                    y1: {
-                                        position: 'right',
-                                        beginAtZero: true,
-                                        title: {
-                                            display: true,
-                                            text: 'Total Penjualan (Rp)'
-                                        },
-                                        grid: {
-                                            drawOnChartArea: false
-                                        },
-                                        ticks: {
-                                            callback: function(value) {
-                                                if (value >= 1000000) {
-                                                    return 'Rp ' + (value / 1000000).toFixed(1) + ' Jt';
-                                                } else if (value >= 1000) {
-                                                    return 'Rp ' + (value / 1000).toFixed(1) + ' Rb';
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                title: {
+                                                    display: true,
+                                                    text: 'Jumlah Terjual'
                                                 }
-                                                return 'Rp ' + value;
+                                            },
+                                            y1: {
+                                                position: 'right',
+                                                beginAtZero: true,
+                                                title: {
+                                                    display: true,
+                                                    text: 'Total Penjualan (Rp)'
+                                                },
+                                                grid: {
+                                                    drawOnChartArea: false
+                                                },
+                                                ticks: {
+                                                    callback: function(value) {
+                                                        if (value >= 1000000) {
+                                                            return 'Rp ' + (value / 1000000).toFixed(1) + ' Jt';
+                                                        } else if (value >= 1000) {
+                                                            return 'Rp ' + (value / 1000).toFixed(1) + ' Rb';
+                                                        }
+                                                        return 'Rp ' + value;
+                                                    }
+                                                }
                                             }
                                         }
                                     }
+                                });
+                                
+                                // Tampilkan notifikasi jika terpotong
+                                if (response.detailPenjualan.length > maxDataPoints) {
+                                    const chartContainer = document.querySelector('.chart-container');
+                                    if (chartContainer) {
+                                        const notifEl = document.createElement('div');
+                                        notifEl.className = 'small text-muted text-center mt-2';
+                                        notifEl.innerText = `Menampilkan ${maxDataPoints} dari ${response.detailPenjualan.length} barang`;
+                                        chartContainer.appendChild(notifEl);
+                                    }
                                 }
+                            } else {
+                                console.error("Canvas element 'salesChart' not found");
+                                throw new Error("Elemen canvas tidak ditemukan");
                             }
-                        });
+                        } else {
+                            // No data to display
+                            const chartContainer = document.querySelector('.chart-container');
+                            if (chartContainer) {
+                                chartContainer.innerHTML = '<div class="text-center text-muted py-5">Tidak ada data penjualan untuk ditampilkan</div>';
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error creating chart:", error);
+                        const chartContainer = document.querySelector('.chart-container');
+                        if (chartContainer) {
+                            chartContainer.innerHTML = '<div class="alert alert-danger text-center">Gagal memuat grafik: ' + error.message + '</div>';
+                        }
                     }
                     
                     // Add print handler
@@ -683,6 +722,11 @@ $(function() {
                     $('#btn-export-detail-csv').on('click', function() {
                         exportDetailCsv(toko_id);
                     });
+                });
+                
+                // Hapus event handler lama saat modal ditutup untuk mencegah penumpukan
+                $('#detailModal').on('hidden.bs.modal', function () {
+                    $(this).off('shown.bs.modal');
                 });
             },
             error: function(xhr, status, error) {
@@ -721,7 +765,7 @@ $(function() {
                     }
                     table { 
                         width: 100%; 
-                        margin-bottom: 20px; 
+margin-bottom: 20px; 
                         border-collapse: collapse;
                     }
                     th, td { 
@@ -1138,20 +1182,6 @@ $(function() {
     }
 
     function exportCsv(periode) {
-        const bulan = $('#bulan').val();
-        const tahun = $('#tahun').val();
-    
-        window.location.href = `/laporan-toko/export-csv?periode=${periode}&bulan=${bulan}&tahun=${tahun}`;
-    }
-    function exportDetailCsv(toko_id) {
-        const periode = $('#periode').val();
-        const bulan = $('#bulan').val();
-        const tahun = $('#tahun').val();
-    
-        window.location.href = `/laporan-toko/export-detail-csv?toko_id=${toko_id}&periode=${periode}&bulan=${bulan}&tahun=${tahun}`;
-    }
-
-        function exportCsv(periode) {
         // Show loading
         Swal.fire({
             title: 'Memproses...',
