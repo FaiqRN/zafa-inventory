@@ -132,7 +132,7 @@
     <div class="login-container">
         <div class="logo-container">
             <!-- Ganti path sesuai dengan lokasi logo Anda -->
-            <img src="{{ asset('images/logo_zafa.png') }}" alt="Logo Zafa Distribusi" class="logo">
+            <img src="{{ asset('adminlte\dist\img\zafalogo.png') }}" alt="Logo Zafa Distribusi" class="logo">
             <div class="company-name">Zafa Distribusi</div>
         </div>
         

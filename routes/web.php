@@ -108,15 +108,15 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     });
     
     // Route Laporan
-    Route::get('/laporan-penjualan', function () {
-        return view('laporan.penjualan', [
-            'activemenu' => 'laporan-penjualan',
+    Route::get('/laporan-pemesanan', function () {
+        return view('laporan.pemesanan', [
+            'activemenu' => 'laporan-pemesanan',
             'breadcrumb' => (object) [
-                'title' => 'Laporan Penjualan',
-                'list' => ['Home', 'Laporan', 'Laporan Penjualan']
+                'title' => 'Laporan Ppemesanan',
+                'list' => ['Home', 'Laporan', 'Laporan pemesanan']
             ]
         ]);
-    })->name('laporan.penjualan');
+    })->name('laporan.pemesanan');
     
 Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
 Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');

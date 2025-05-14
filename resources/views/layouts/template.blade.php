@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{config('app.name','Zafa Distribusi')}}</title>
+  <title>{{config('app.name','ZafaSys')}}</title>
 
   <meta name="csrf-token" content="{{csrf_token()}}">
 
@@ -37,8 +37,8 @@
   <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
     <a href="{{url('/')}}" class="brand-link">
-      <img src="{{asset('adminlte/dist/img/AdminLTELogo.png')}}" alt="Zafa Logo" class="brand-image img-circle elevation-3" style="opacity: .9">
-      <span class="brand-text font-weight-light">Zafa Distribusi</span>
+      <img src="{{asset('adminlte/dist/img/zafalogo.png')}}" alt="Zafa Logo" class="brand-image img-circle elevation-3" style="opacity: .9">
+      <span class="brand-text font-weight-light">ZafaSys</span>
     </a>
 
     <!-- Sidebar -->

@@ -8,8 +8,8 @@
             <!-- Dashboard -->
             <li class="nav-item">
                 <a href="{{ url('/') }}" class="nav-link {{ ($activemenu == 'dashboard')? 'active' : '' }}">
-                    <i class="nav-icon fas fa-tachometer-alt"></i>
-                    <p>Dashboard</p>
+                    <i class="nav-icon fas fa-home"></i>
+                    <p>Beranda</p>
                 </a>
             </li>
 
@@ -92,9 +92,9 @@
                 </a>
                 <ul class="nav nav-treeview">
                     <li class="nav-item">
-                        <a href="{{ url('/laporan-penjualan') }}" class="nav-link {{ ($activemenu == 'laporan-penjualan')? 'active' : '' }}">
+                        <a href="{{ url('/laporan-pemesanan') }}" class="nav-link {{ ($activemenu == 'laporan-pemesanan')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Laporan Penjualan</p>
+                            <p>Laporan Pemesanan</p>
                         </a>
                     </li>
                     <li class="nav-item">
