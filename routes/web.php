@@ -10,6 +10,7 @@ use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
 use App\Http\Controllers\LaporanTokoController;
+use App\Http\Controllers\LaporanPemesananController;
 
 /*
 |--------------------------------------------------------------------------
@@ -108,15 +109,12 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     });
     
     // Route Laporan
-    Route::get('/laporan-pemesanan', function () {
-        return view('laporan.pemesanan', [
-            'activemenu' => 'laporan-pemesanan',
-            'breadcrumb' => (object) [
-                'title' => 'Laporan Ppemesanan',
-                'list' => ['Home', 'Laporan', 'Laporan pemesanan']
-            ]
-        ]);
-    })->name('laporan.pemesanan');
+// Laporan Pemesanan Routes
+Route::get('/laporan-pemesanan', [LaporanPemesananController::class, 'index'])->name('laporan.pemesanan');
+Route::get('/laporan-pemesanan/data', [LaporanPemesananController::class, 'getData'])->name('laporan.pemesanan.data');
+Route::post('/laporan-pemesanan/update-catatan', [LaporanPemesananController::class, 'updateCatatan'])->name('laporan.pemesanan.updateCatatan');
+Route::get('/laporan-pemesanan/detail', [LaporanPemesananController::class, 'getDetailData'])->name('laporan.pemesanan.detail');
+Route::get('/laporan-pemesanan/export-csv', [LaporanPemesananController::class, 'exportCsv'])->name('laporan.pemesanan.exportCsv');
     
 Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
 Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
