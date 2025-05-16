@@ -32,25 +32,12 @@
         top: 15px;
         opacity: 0.3;
     }
-    .badge-pending {
-        background-color: #ffc107;
-        color: #212529;
+    .total-row {
+        font-weight: bold;
+        background-color: #f8f9fa;
     }
-    .badge-diproses {
-        background-color: #17a2b8;
-        color: white;
-    }
-    .badge-dikirim {
-        background-color: #007bff;
-        color: white;
-    }
-    .badge-selesai {
-        background-color: #28a745;
-        color: white;
-    }
-    .badge-dibatalkan {
-        background-color: #dc3545;
-        color: white;
+    .total-cell {
+        border-top: 2px solid #dee2e6 !important;
     }
 </style>
 @endpush
@@ -61,10 +48,9 @@
         <div class="col-12">
             <div class="card card-info">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-shopping-cart mr-2"></i> Laporan Pemesanan</h3>
+                    <h3 class="card-title"><i class="fas fa-chart-bar mr-2"></i> Laporan Pemesanan</h3>
                 </div>
                 <div class="card-body">
-                    <!-- Filter Periode -->
                     <div class="row mb-4">
                         <div class="col-md-3">
                             <div class="form-group">
@@ -115,7 +101,6 @@
                         </div>
                     </div>
 
-                    <!-- Tampilkan periode aktif -->
                     <div class="row mb-3">
                         <div class="col-12">
                             <div class="alert alert-info">
@@ -124,308 +109,251 @@
                         </div>
                     </div>
 
-                    <!-- Kotak Ringkasan -->
-                    <div class="row mb-4">
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-info">
-                                <div class="inner">
-                                    <h3 id="summary-total">0</h3>
-                                    <p>Total Pemesanan</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-shopping-cart"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-success">
-                                <div class="inner">
-                                    <h3 id="summary-nilai">Rp 0</h3>
-                                    <p>Total Nilai Pemesanan</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-warning">
-                                <div class="inner">
-                                    <h3 id="summary-selesai">0</h3>
-                                    <p>Pemesanan Selesai</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-danger">
-                                <div class="inner">
-                                    <h3 id="summary-cancel">0</h3>
-                                    <p>Pemesanan Dibatalkan</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-times-circle"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab untuk periode berbeda -->
                     <ul class="nav nav-tabs" id="reportTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="bulan-1-tab" data-toggle="tab" href="#bulan-1" role="tab">
-                                1 Bulan
+                            <a class="nav-link active" id="barang-tab" data-toggle="tab" href="#tab-barang" role="tab">
+                                <i class="fas fa-box mr-1"></i> Per Barang
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="bulan-6-tab" data-toggle="tab" href="#bulan-6" role="tab">
-                                6 Bulan
+                            <a class="nav-link" id="sumber-tab" data-toggle="tab" href="#tab-sumber" role="tab">
+                                <i class="fas fa-store mr-1"></i> Per Sumber
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="tahun-1-tab" data-toggle="tab" href="#tahun-1" role="tab">
-                                1 Tahun
+                            <a class="nav-link" id="pemesan-tab" data-toggle="tab" href="#tab-pemesan" role="tab">
+                                <i class="fas fa-user mr-1"></i> Per Pemesan
                             </a>
                         </li>
                     </ul>
 
-                    <!-- Tabel data -->
                     <div class="tab-content mt-3" id="reportTabsContent">
-                        <div class="tab-pane fade show active" id="bulan-1" role="tabpanel">
+                        <!-- Tab Barang -->
+                        <div class="tab-pane fade show active" id="tab-barang" role="tabpanel">
+                            <div class="mb-3">
+                                <div class="btn-group">
+                                    <button type="button" id="refresh-barang" class="btn btn-info">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                    <button type="button" id="export-barang" class="btn btn-success">
+                                        <i class="fas fa-file-excel"></i> Export CSV
+                                    </button>
+                                    <button type="button" id="print-barang" class="btn btn-primary">
+                                        <i class="fas fa-print"></i> Print
+                                    </button>
+                                </div>
+                            </div>
                             <div class="table-responsive">
-                                <div id="export-btn-container-1" class="mb-3 btn-group"></div>
-                                <table id="tabel-pemesanan-1" class="table table-bordered table-striped">
+                                <table id="table-barang" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
-                                            <th>No</th>
-                                            <th>ID Pemesanan</th>
-                                            <th>Tanggal</th>
-                                            <th>Nama Pemesan</th>
-                                            <th>Barang</th>
-                                            <th>Jumlah</th>
-                                            <th>Total</th>
-                                            <th>Sumber</th>
-                                            <th>Pembayaran</th>
-                                            <th>Status</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div class="tab-pane fade" id="bulan-6" role="tabpanel">
-                            <div class="table-responsive">
-                                <div id="export-btn-container-6" class="mb-3 btn-group"></div>
-                                <table id="tabel-pemesanan-6" class="table table-bordered table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>ID Pemesanan</th>
-                                            <th>Tanggal</th>
-                                            <th>Nama Pemesan</th>
-                                            <th>Barang</th>
-                                            <th>Jumlah</th>
-                                            <th>Total</th>
-                                            <th>Sumber</th>
-                                            <th>Pembayaran</th>
-                                            <th>Status</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div class="tab-pane fade" id="tahun-1" role="tabpanel">
-                            <div class="table-responsive">
-                                <div id="export-btn-container-tahun" class="mb-3 btn-group"></div>
-                                <table id="tabel-pemesanan-tahun" class="table table-bordered table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>ID Pemesanan</th>
-                                            <th>Tanggal</th>
-                                            <th>Nama Pemesan</th>
-                                            <th>Barang</th>
-                                            <th>Jumlah</th>
-                                            <th>Total</th>
-                                            <th>Sumber</th>
-                                            <th>Pembayaran</th>
-                                            <th>Status</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Detail Pemesanan -->
-<div class="modal fade" id="detailModal" tabindex="-1" role="dialog" aria-labelledby="detailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Detail Pemesanan: <span id="id-pemesanan"></span></h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-info text-white">
-                                <h6 class="mb-0"><i class="fas fa-info-circle mr-1"></i> Informasi Pemesanan</h6>
-                            </div>
-                            <div class="card-body">
-                                <table class="table table-sm table-bordered">
-                                    <tr>
-                                        <th width="40%">ID Pemesanan</th>
-                                        <td id="detail-id"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Tanggal Pemesanan</th>
-                                        <td id="detail-tanggal"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Sumber Pemesanan</th>
-                                        <td id="detail-sumber"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Metode Pembayaran</th>
-                                        <td id="detail-pembayaran"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Status</th>
-                                        <td id="detail-status"></td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <h6 class="mb-0"><i class="fas fa-user mr-1"></i> Informasi Pemesan</h6>
-                            </div>
-                            <div class="card-body">
-                                <table class="table table-sm table-bordered">
-                                    <tr>
-                                        <th width="40%">Nama</th>
-                                        <td id="detail-nama"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Alamat</th>
-                                        <td id="detail-alamat"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>No. Telepon</th>
-                                        <td id="detail-telp"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Email</th>
-                                        <td id="detail-email"></td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0"><i class="fas fa-shopping-basket mr-1"></i> Detail Barang</h6>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-bordered mb-0">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th>ID Barang</th>
                                             <th>Nama Barang</th>
-                                            <th>Harga Satuan</th>
-                                            <th>Jumlah</th>
-                                            <th>Total</th>
+                                            <th class="text-right">Jumlah Pesanan</th>
+                                            <th class="text-right">Total Unit</th>
+                                            <th class="text-right">Total Pendapatan</th>
+                                            <th class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td id="detail-barang-id"></td>
-                                            <td id="detail-barang-nama"></td>
-                                            <td id="detail-barang-harga"></td>
-                                            <td id="detail-barang-jumlah"></td>
-                                            <td id="detail-barang-total"></td>
-                                        </tr>
+                                        <!-- Data akan diisi oleh JavaScript -->
                                     </tbody>
+                                    <tfoot>
+                                        <tr class="total-row">
+                                            <th>TOTAL</th>
+                                            <th class="text-right" id="barang-total-pesanan">0</th>
+                                            <th class="text-right" id="barang-total-unit">0</th>
+                                            <th class="text-right" id="barang-total-pendapatan">Rp 0</th>
+                                            <th></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Sumber -->
+                        <div class="tab-pane fade" id="tab-sumber" role="tabpanel">
+                            <div class="mb-3">
+                                <div class="btn-group">
+                                    <button type="button" id="refresh-sumber" class="btn btn-info">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                    <button type="button" id="export-sumber" class="btn btn-success">
+                                        <i class="fas fa-file-excel"></i> Export CSV
+                                    </button>
+                                    <button type="button" id="print-sumber" class="btn btn-primary">
+                                        <i class="fas fa-print"></i> Print
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table id="table-sumber" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Sumber Pemesanan</th>
+                                            <th class="text-right">Jumlah Pesanan</th>
+                                            <th class="text-right">Total Unit</th>
+                                            <th class="text-right">Total Pendapatan</th>
+                                            <th class="text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data akan diisi oleh JavaScript -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="total-row">
+                                            <th>TOTAL</th>
+                                            <th class="text-right" id="sumber-total-pesanan">0</th>
+                                            <th class="text-right" id="sumber-total-unit">0</th>
+                                            <th class="text-right" id="sumber-total-pendapatan">Rp 0</th>
+                                            <th></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Pemesan -->
+                        <div class="tab-pane fade" id="tab-pemesan" role="tabpanel">
+                            <div class="mb-3">
+                                <div class="btn-group">
+                                    <button type="button" id="refresh-pemesan" class="btn btn-info">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                    <button type="button" id="export-pemesan" class="btn btn-success">
+                                        <i class="fas fa-file-excel"></i> Export CSV
+                                    </button>
+                                    <button type="button" id="print-pemesan" class="btn btn-primary">
+                                        <i class="fas fa-print"></i> Print
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table id="table-pemesan" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama Pemesan</th>
+                                            <th class="text-right">Jumlah Pesanan</th>
+                                            <th class="text-right">Total Unit</th>
+                                            <th class="text-right">Total Pendapatan</th>
+                                            <th class="text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data akan diisi oleh JavaScript -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="total-row">
+                                            <th>TOTAL</th>
+                                            <th class="text-right" id="pemesan-total-pesanan">0</th>
+                                            <th class="text-right" id="pemesan-total-unit">0</th>
+                                            <th class="text-right" id="pemesan-total-pendapatan">Rp 0</th>
+                                            <th></th>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header bg-secondary text-white">
-                                <h6 class="mb-0"><i class="fas fa-sticky-note mr-1"></i> Catatan</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="detail-catatan">-</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="btn-print-detail">
-                    <i class="fas fa-print"></i> Cetak
-                </button>
-                <button type="button" class="btn btn-success mr-1" id="btn-export-detail-csv">
-                    <i class="fas fa-file-csv"></i> Export CSV
-                </button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Catatan -->
-<div class="modal fade" id="modalCatatan" tabindex="-1" role="dialog" aria-labelledby="modalCatatanLabel" aria-hidden="true">
+<!-- Modal for Catatan -->
+<div class="modal fade" id="modal-catatan" tabindex="-1" role="dialog" aria-labelledby="modalCatatanTitle" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalCatatanLabel">Catatan untuk <span id="id-pemesanan-catatan"></span></h5>
+                <h5 class="modal-title" id="modalCatatanTitle">Catatan</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <form id="form-catatan">
-                    <input type="hidden" id="pemesanan_id" name="pemesanan_id">
-                    <input type="hidden" id="catatan_periode" name="periode">
-                    <input type="hidden" id="catatan_bulan" name="bulan">
-                    <input type="hidden" id="catatan_tahun" name="tahun">
+                    <input type="hidden" id="catatan-tipe">
+                    <input type="hidden" id="catatan-id">
                     <div class="form-group">
                         <label for="catatan">Catatan:</label>
-                        <textarea class="form-control note-textarea" id="catatan" name="catatan" rows="5"></textarea>
+                        <textarea class="form-control note-textarea" id="catatan" rows="5"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-                <button type="button" class="btn btn-primary" id="btn-simpan-catatan">Simpan</button>
+                <button type="button" class="btn btn-primary" id="save-catatan">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Detail -->
+<div class="modal fade" id="modal-detail" tabindex="-1" role="dialog" aria-labelledby="modalDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDetailTitle">Detail</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="btn-group">
+                        <button type="button" id="export-detail" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Export Detail
+                        </button>
+                        <button type="button" id="print-detail" class="btn btn-primary">
+                            <i class="fas fa-print"></i> Print Detail
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-12 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">Grafik Pemesanan</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="detail-chart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Daftar Pemesanan</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="table-detail" class="table table-bordered table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>ID Pemesanan</th>
+                                                <th>Tanggal</th>
+                                                <th>Nama Barang</th>
+                                                <th>Nama Pemesan</th>
+                                                <th class="text-right">Jumlah</th>
+                                                <th class="text-right">Total</th>
+                                                <th>Sumber</th>
+                                                <th class="text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Data akan diisi oleh JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
@@ -434,4 +362,5 @@
 
 @push('js')
 <script src="{{ asset('js/laporan-pemesanan.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 @endpush

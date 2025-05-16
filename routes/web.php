@@ -110,6 +110,7 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     
     // Route Laporan
 // Laporan Pemesanan Routes
+// Route Laporan Pemesanan
 Route::get('/laporan-pemesanan', [LaporanPemesananController::class, 'index'])->name('laporan.pemesanan');
 Route::get('/laporan-pemesanan/data', [LaporanPemesananController::class, 'getData'])->name('laporan.pemesanan.data');
 Route::post('/laporan-pemesanan/update-catatan', [LaporanPemesananController::class, 'updateCatatan'])->name('laporan.pemesanan.updateCatatan');
