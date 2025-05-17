@@ -51,10 +51,16 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
         Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
     });
     
-    Route::get('/toko/data', [TokoController::class, 'getData'])->name('toko.data');
-    Route::get('/toko/list', [TokoController::class, 'getList'])->name('toko.list');
-    Route::get('/toko/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
-    Route::resource('toko', TokoController::class);
+Route::get('/toko/data', [TokoController::class, 'getData'])->name('toko.data');
+Route::get('/toko/list', [TokoController::class, 'getList'])->name('toko.list');
+Route::get('/toko/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
+
+// Routes untuk Wilayah Dropdown
+Route::get('/toko/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
+Route::get('/toko/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
+Route::get('/toko/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
+
+Route::resource('toko', TokoController::class);
     
     Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');
     Route::get('/barang-toko/getAvailableBarang', [BarangTokoController::class, 'getAvailableBarang'])->name('barang-toko.getAvailableBarang');
@@ -124,13 +130,13 @@ Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData
 Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
 Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
-    Route::get('/laporan-barang', function () {
-        return view('laporan.barang', [
-            'activemenu' => 'laporan-barang',
+    Route::get('/analytics', function () {
+        return view('analytics', [
+            'activemenu' => 'analytics',
             'breadcrumb' => (object) [
-                'title' => 'Laporan Per Barang',
-                'list' => ['Home', 'Laporan', 'Laporan Per Barang']
+                'title' => 'analytics',
+                'list' => ['Home', 'Laporan', 'analytics']
             ]
         ]);
-    })->name('laporan.barang');
+    })->name('analytics');
 });

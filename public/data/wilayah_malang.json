@@ -1,0 +1,244 @@
+{
+  "wilayah": [
+    {
+      "id": "kotamalang",
+      "nama": "Kota Malang",
+      "kecamatan": [
+        {
+          "id": "blimbing",
+          "nama": "Blimbing",
+          "kelurahan": [
+            { "id": "balearjosari", "nama": "Balearjosari" },
+            { "id": "polowijen", "nama": "Polowijen" },
+            { "id": "purwantoro", "nama": "Purwantoro" },
+            { "id": "bunulrejo", "nama": "Bunulrejo" },
+            { "id": "kesatrian", "nama": "Kesatrian" },
+            { "id": "polehan", "nama": "Polehan" },
+            { "id": "jodipan", "nama": "Jodipan" },
+            { "id": "arjosari", "nama": "Arjosari" },
+            { "id": "purwodadi", "nama": "Purwodadi" },
+            { "id": "blimbing", "nama": "Blimbing" },
+            { "id": "pandanwangi", "nama": "Pandanwangi" }
+          ]
+        },
+        {
+          "id": "kedungkandang",
+          "nama": "Kedungkandang",
+          "kelurahan": [
+            { "id": "arjowinangun", "nama": "Arjowinangun" },
+            { "id": "tlogowaru", "nama": "Tlogowaru" },
+            { "id": "wonokoyo", "nama": "Wonokoyo" },
+            { "id": "bumiayu", "nama": "Bumiayu" },
+            { "id": "buring", "nama": "Buring" },
+            { "id": "mergosono", "nama": "Mergosono" },
+            { "id": "kotalama", "nama": "Kotalama" },
+            { "id": "kedungkandang", "nama": "Kedungkandang" },
+            { "id": "sawojajar", "nama": "Sawojajar" },
+            { "id": "madyopuro", "nama": "Madyopuro" },
+            { "id": "lesanpuro", "nama": "Lesanpuro" },
+            { "id": "cemorokandang", "nama": "Cemorokandang" }
+          ]
+        },
+        {
+          "id": "klojen",
+          "nama": "Klojen",
+          "kelurahan": [
+            { "id": "kasin", "nama": "Kasin" },
+            { "id": "sukoharjo", "nama": "Sukoharjo" },
+            { "id": "kidul dalem", "nama": "Kidul Dalem" },
+            { "id": "kauman", "nama": "Kauman" },
+            { "id": "oro-oro dowo", "nama": "Oro-oro Dowo" },
+            { "id": "bareng", "nama": "Bareng" },
+            { "id": "gadingkasri", "nama": "Gadingkasri" },
+            { "id": "klojen", "nama": "Klojen" },
+            { "id": "rampal celaket", "nama": "Rampal Celaket" },
+            { "id": "samaan", "nama": "Samaan" },
+            { "id": "penanggungan", "nama": "Penanggungan" }
+          ]
+        },
+        {
+          "id": "lowokwaru",
+          "nama": "Lowokwaru",
+          "kelurahan": [
+            { "id": "tasikmadu", "nama": "Tasikmadu" },
+            { "id": "tunggulwulung", "nama": "Tunggulwulung" },
+            { "id": "tunjungsekar", "nama": "Tunjungsekar" },
+            { "id": "mojolangu", "nama": "Mojolangu" },
+            { "id": "tulusrejo", "nama": "Tulusrejo" },
+            { "id": "lowokwaru", "nama": "Lowokwaru" },
+            { "id": "tlogomas", "nama": "Tlogomas" },
+            { "id": "merjosari", "nama": "Merjosari" },
+            { "id": "dinoyo", "nama": "Dinoyo" },
+            { "id": "sumbersari", "nama": "Sumbersari" },
+            { "id": "ketawanggede", "nama": "Ketawanggede" },
+            { "id": "jatimulyo", "nama": "Jatimulyo" }
+          ]
+        },
+        {
+          "id": "sukun",
+          "nama": "Sukun",
+          "kelurahan": [
+            { "id": "kebonsari", "nama": "Kebonsari" },
+            { "id": "bandungrejosari", "nama": "Bandungrejosari" },
+            { "id": "sukun", "nama": "Sukun" },
+            { "id": "tanjungrejo", "nama": "Tanjungrejo" },
+            { "id": "pisangcandi", "nama": "Pisangcandi" },
+            { "id": "mulyorejo", "nama": "Mulyorejo" },
+            { "id": "bandulan", "nama": "Bandulan" },
+            { "id": "karangbesuki", "nama": "Karangbesuki" },
+            { "id": "ciptomulyo", "nama": "Ciptomulyo" },
+            { "id": "gadang", "nama": "Gadang" },
+            { "id": "bakalan krajan", "nama": "Bakalan Krajan" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kabmalang",
+      "nama": "Kabupaten Malang",
+      "kecamatan": [
+        {
+          "id": "dau",
+          "nama": "Dau",
+          "kelurahan": [
+            { "id": "kucur", "nama": "Kucur" },
+            { "id": "karangwidoro", "nama": "Karangwidoro" },
+            { "id": "petungsewu", "nama": "Petungsewu" },
+            { "id": "selorejo", "nama": "Selorejo" },
+            { "id": "tegalweru", "nama": "Tegalweru" },
+            { "id": "landungsari", "nama": "Landungsari" },
+            { "id": "mulyoagung", "nama": "Mulyoagung" },
+            { "id": "sumbersekar", "nama": "Sumbersekar" },
+            { "id": "gadingkulon", "nama": "Gadingkulon" },
+            { "id": "kalisongo", "nama": "Kalisongo" }
+          ]
+        },
+        {
+          "id": "karangploso",
+          "nama": "Karangploso",
+          "kelurahan": [
+            { "id": "bocek", "nama": "Bocek" },
+            { "id": "donowarih", "nama": "Donowarih" },
+            { "id": "girimoyo", "nama": "Girimoyo" },
+            { "id": "kepuharjo", "nama": "Kepuharjo" },
+            { "id": "ngenep", "nama": "Ngenep" },
+            { "id": "ngijo", "nama": "Ngijo" },
+            { "id": "tawangargo", "nama": "Tawangargo" },
+            { "id": "tegalgondo", "nama": "Tegalgondo" },
+            { "id": "ampeldento", "nama": "Ampeldento" }
+          ]
+        },
+        {
+          "id": "lawang",
+          "nama": "Lawang",
+          "kelurahan": [
+            { "id": "bedali", "nama": "Bedali" },
+            { "id": "ketindan", "nama": "Ketindan" },
+            { "id": "lawang", "nama": "Lawang" },
+            { "id": "kalirejo", "nama": "Kalirejo" },
+            { "id": "sidodadi", "nama": "Sidodadi" },
+            { "id": "sidoluhur", "nama": "Sidoluhur" },
+            { "id": "srigading", "nama": "Srigading" },
+            { "id": "sumberporong", "nama": "Sumberporong" },
+            { "id": "turirejo", "nama": "Turirejo" },
+            { "id": "wonorejo", "nama": "Wonorejo" },
+            { "id": "mulyoarjo", "nama": "Mulyoarjo" },
+            { "id": "mentaraman", "nama": "Mentaraman" }
+          ]
+        },
+        {
+          "id": "singosari",
+          "nama": "Singosari",
+          "kelurahan": [
+            { "id": "ardimulyo", "nama": "Ardimulyo" },
+            { "id": "banjararum", "nama": "Banjararum" },
+            { "id": "baturetno", "nama": "Baturetno" },
+            { "id": "dengkol", "nama": "Dengkol" },
+            { "id": "gunungrejo", "nama": "Gunungrejo" },
+            { "id": "langlang", "nama": "Langlang" },
+            { "id": "pagentan", "nama": "Pagentan" },
+            { "id": "purwoasri", "nama": "Purwoasri" },
+            { "id": "randuagung", "nama": "Randuagung" },
+            { "id": "tamanharjo", "nama": "Tamanharjo" },
+            { "id": "toyomarto", "nama": "Toyomarto" },
+            { "id": "tunjungtirto", "nama": "Tunjungtirto" },
+            { "id": "watugede", "nama": "Watugede" },
+            { "id": "wonorejo", "nama": "Wonorejo" },
+            { "id": "candirenggo", "nama": "Candirenggo" },
+            { "id": "losari", "nama": "Losari" },
+            { "id": "klampok", "nama": "Klampok" }
+          ]
+        },
+        {
+          "id": "pakis",
+          "nama": "Pakis",
+          "kelurahan": [
+            { "id": "ampeldento", "nama": "Ampeldento" },
+            { "id": "asrikaton", "nama": "Asrikaton" },
+            { "id": "banjarejo", "nama": "Banjarejo" },
+            { "id": "bunutwetan", "nama": "Bunutwetan" },
+            { "id": "kedungrejo", "nama": "Kedungrejo" },
+            { "id": "mangliawan", "nama": "Mangliawan" },
+            { "id": "pakiskembar", "nama": "Pakiskembar" },
+            { "id": "pucangsongo", "nama": "Pucangsongo" },
+            { "id": "saptorenggo", "nama": "Saptorenggo" },
+            { "id": "sekarpuro", "nama": "Sekarpuro" },
+            { "id": "sukoanyar", "nama": "Sukoanyar" },
+            { "id": "sumberkradenan", "nama": "Sumberkradenan" },
+            { "id": "sumberpasir", "nama": "Sumberpasir" },
+            { "id": "tirtomoyo", "nama": "Tirtomoyo" },
+            { "id": "pakisjajar", "nama": "Pakisjajar" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kotabatu",
+      "nama": "Kota Batu",
+      "kecamatan": [
+        {
+          "id": "batu",
+          "nama": "Batu",
+          "kelurahan": [
+            { "id": "ngaglik", "nama": "Ngaglik" },
+            { "id": "pesanggrahan", "nama": "Pesanggrahan" },
+            { "id": "sisir", "nama": "Sisir" },
+            { "id": "songgokerto", "nama": "Songgokerto" },
+            { "id": "sumberejo", "nama": "Sumberejo" },
+            { "id": "temas", "nama": "Temas" },
+            { "id": "oro-oro ombo", "nama": "Oro-oro Ombo" },
+            { "id": "sidomulyo", "nama": "Sidomulyo" }
+          ]
+        },
+        {
+          "id": "bumiaji",
+          "nama": "Bumiaji",
+          "kelurahan": [
+            { "id": "bulukerto", "nama": "Bulukerto" },
+            { "id": "bumiaji", "nama": "Bumiaji" },
+            { "id": "giripurno", "nama": "Giripurno" },
+            { "id": "gunungsari", "nama": "Gunungsari" },
+            { "id": "pandanrejo", "nama": "Pandanrejo" },
+            { "id": "punten", "nama": "Punten" },
+            { "id": "sumbergondo", "nama": "Sumbergondo" },
+            { "id": "tulungrejo", "nama": "Tulungrejo" },
+            { "id": "sumberbrantas", "nama": "Sumberbrantas" }
+          ]
+        },
+        {
+          "id": "junrejo",
+          "nama": "Junrejo",
+          "kelurahan": [
+            { "id": "beji", "nama": "Beji" },
+            { "id": "dadaprejo", "nama": "Dadaprejo" },
+            { "id": "junrejo", "nama": "Junrejo" },
+            { "id": "mojorejo", "nama": "Mojorejo" },
+            { "id": "pendem", "nama": "Pendem" },
+            { "id": "tlekung", "nama": "Tlekung" },
+            { "id": "torongrejo", "nama": "Torongrejo" }
+          ]
+        }
+      ]
+    }
+  ]
+}
