@@ -1,221 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>Login - Zafa Distribusi</title>
-    
-    <style>
-        body {
-            background-color: #2b71e8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
-        
-        .login-container {
-            background-color: #d3d3d3;
-            padding: 2rem;
-            border-radius: 10px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .logo-container {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .logo {
-            width: 120px;
-            height: auto;
-            margin-bottom: 1rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-            font-weight: 500;
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1rem;
-            box-sizing: border-box;
-        }
-        
-        .btn-login {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #ff0000;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-bottom: 1rem;
-            transition: background-color 0.2s;
-        }
-        
-        .btn-login:hover {
-            background-color: #cc0000;
-        }
-        
-        .forgot-password {
-            text-align: center;
-        }
-        
-        .forgot-password a {
-            color: #666;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        
-        .forgot-password a:hover {
-            text-decoration: underline;
-        }
-        
-        .alert {
-            padding: 0.75rem 1rem;
-            margin-bottom: 1rem;
-            border-radius: 5px;
-            font-size: 0.9rem;
-        }
-        
-        .alert-danger {
-            background-color: #fff3f3;
-            color: #dc3545;
-            border: 1px solid #f8d7da;
-        }
-        
-        .alert-success {
-            background-color: #f3fff3;
-            color: #28a745;
-            border: 1px solid #d7f8db;
-        }
-        
-        .company-name {
-            text-align: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 1rem;
-            color: #333;
-        }
-        
-        .remember-me {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .remember-me input {
-            margin-right: 0.5rem;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | ZafaSys</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(to right, #e0eafc, #cfdef3);
+    }
+
+    .container {
+      display: flex;
+      width: 900px;
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    }
+
+    .left {
+      background: #fece0b;
+      color: white;
+      flex: 1;
+      padding: 60px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      border-top-right-radius: 160px;
+      border-bottom-right-radius: 160px;
+    }
+
+    .left img {
+      width: 150px;
+      height: 150px;
+      margin-bottom: 30px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .left h2 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .left p {
+      font-size: 16px;
+    }
+
+    .right {
+      flex: 1;
+      padding: 40px;
+    }
+
+    .right h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 32px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .form-group {
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 40px 12px 40px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .form-group .input-icon-left {
+      position: absolute;
+      top: 38px;
+      left: 10px;
+      color: #999;
+      font-size: 18px;
+    }
+
+    .form-group .toggle-password {
+      position: absolute;
+      top: 38px;
+      right: 10px;
+      cursor: pointer;
+      color: #999;
+      font-size: 18px;
+    }
+
+    .form-group a {
+      display: block;
+      text-align: right;
+      font-size: 14px;
+      margin-top: 5px;
+      color: #555;
+      text-decoration: none;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background: #fece0b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .btn-login:hover {
+      background: #ffd43b;
+    }
+
+    .social-login {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .social-login i {
+      font-size: 22px;
+      margin: 0 10px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+        width: 90%;
+      }
+
+      .left, .right {
+        padding: 30px 20px;
+      }
+    }
+
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(to right, #e5e593, #ebe8e0);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      flex-direction: column;
+    }
+
+    #splash-screen h1 {
+      font-size: 78px;
+      color: #ffd43b;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    #splash-screen p {
+      font-size: 48px;
+      color: #fece0b;
+    }
+  </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="logo-container">
-            <!-- Ganti path sesuai dengan lokasi logo Anda -->
-            <img src="{{ asset('adminlte\dist\img\zafalogo.png') }}" alt="Logo ZafaSys" class="logo">
-            <div class="company-name">ZafaSys</div>
-        </div>
-        
-        @if(session('error'))
-            <div class="alert alert-danger">
-                {{ session('error') }}
-            </div>
-        @endif
 
-        @if(session('success'))
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-        @endif
-        
-        <form method="POST" action="{{ route('login.process') }}">
-            @csrf
-            
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" class="form-control" 
-                       placeholder="Masukkan username" value="{{ old('username') }}" required>
-                @error('username')
-                    <div class="alert alert-danger">{{ $message }}</div>
-                @enderror
-            </div>
+<!-- Splash Screen -->
+<div id="splash-screen">
+  <h1>Hello 👋</h1>
+  <p>Welcome to ZafaSys</p>
+</div>
 
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" class="form-control" 
-                       placeholder="Masukkan password" required>
-                @error('password')
-                    <div class="alert alert-danger">{{ $message }}</div>
-                @enderror
-            </div>
+<!-- Login Form -->
+<div class="container">
+  <div class="left">
+    <img src="{{ asset('adminlte/dist/img/zafalogo.png') }}" alt="Logo">
+    <h2>Hello, Welcome!</h2>
+    <p>Please login to continue</p>
+  </div>
+  <div class="right">
+    <h2>Login</h2>
+    <form method="POST" action="{{ route('login') }}">
+      @csrf
 
-            <div class="remember-me">
-                <input type="checkbox" id="remember" name="remember">
-                <label for="remember">Ingat saya</label>
-            </div>
+      <!-- Username -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <i class='bx bx-user input-icon-left'></i>
+        <input type="text" name="username" id="username" placeholder="Enter your username" required>
+      </div>
 
-            @error('login')
-                <div class="alert alert-danger">{{ $message }}</div>
-            @enderror
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <i class='bx bx-lock input-icon-left'></i>
+        <input type="password" name="password" id="password" placeholder="Enter your password" required>
+        <i class='bx bx-show toggle-password' id="togglePassword"></i>
+        <a href="#">Forgot Password?</a>
+      </div>
 
-            <button type="submit" class="btn-login">Login</button>
+      <button class="btn-login" type="submit">Login</button>
 
-            <div class="forgot-password">
-                <a href="#" onclick="alert('Fitur lupa password akan segera tersedia')">Lupa Password?</a>
-            </div>
-        </form>
-    </div>
-    <script>
-        // Mencegah back button
-        window.onload = function() {
-            if (window.history && window.history.pushState) {
-                window.history.pushState('forward', null, null);
-                window.onpopstate = function(event) {
-                    window.history.pushState('forward', null, null);
-                    if (event.state === null) {
-                        // Handle the back button
-                        window.location.replace("{{ route('login') }}");
-                    }
-                };
-            }
-        }
-    
-        // Mencegah akses halaman yang di-cache
-        window.onpageshow = function(event) {
-            if (event.persisted) {
-                window.location.reload();
-            }
-        };
-        
-        // Disable caching untuk halaman ini
-        window.onunload = function(){};
-        
-        // Tambahan untuk Firefox
-        window.onpagehide = function(){};
-        
-        // Hapus localStorage dan sessionStorage saat halaman login dimuat
-        localStorage.clear();
-        sessionStorage.clear();
-    </script>
+    </form>
+  </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      document.getElementById('splash-screen').style.display = 'none';
+    }, 2000);
+  });
+
+  const togglePassword = document.querySelector('#togglePassword');
+  const passwordInput = document.querySelector('#password');
+
+  togglePassword.addEventListener('click', function () {
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    this.classList.toggle('bx-show');
+    this.classList.toggle('bx-hide');
+  });
+</script>
+
 </body>
 </html>

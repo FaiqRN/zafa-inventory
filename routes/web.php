@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
@@ -36,8 +37,17 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     Route::get('/', [AuthController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
     
-    // Route profil
-    Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
+ // Route profil
+Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'index'])->name('profile');
+    
+    Route::prefix('pengaturan')->group(function () {
+        Route::get('/edit-profile', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::post('/update-profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+        Route::get('/ubah-password', [App\Http\Controllers\ProfileController::class, 'changePassword'])->name('profile.change-password');
+        Route::post('/update-password', [App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.update-password');
+    });
+});
     
     // Route Master Data
     Route::group(['prefix' => 'barang'], function() {
