@@ -87,23 +87,32 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="wilayah_kelurahan">Kelurahan</label>
-                                <input type="text" class="form-control" id="wilayah_kelurahan" name="wilayah_kelurahan" required>
-                                <div class="invalid-feedback" id="error-wilayah_kelurahan"></div>
+                                <label for="wilayah_kota_id">Kota/Kabupaten</label>
+                                <select class="form-control" id="wilayah_kota_id" required>
+                                    <option value="">-- Pilih Kota/Kabupaten --</option>
+                                </select>
+                                <input type="hidden" id="wilayah_kota_kabupaten" name="wilayah_kota_kabupaten">
+                                <div class="invalid-feedback" id="error-wilayah_kota_kabupaten"></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="wilayah_kecamatan">Kecamatan</label>
-                                <input type="text" class="form-control" id="wilayah_kecamatan" name="wilayah_kecamatan" required>
+                                <label for="wilayah_kecamatan_id">Kecamatan</label>
+                                <select class="form-control" id="wilayah_kecamatan_id" required disabled>
+                                    <option value="">-- Pilih Kecamatan --</option>
+                                </select>
+                                <input type="hidden" id="wilayah_kecamatan" name="wilayah_kecamatan">
                                 <div class="invalid-feedback" id="error-wilayah_kecamatan"></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="wilayah_kota_kabupaten">Kota/Kabupaten</label>
-                                <input type="text" class="form-control" id="wilayah_kota_kabupaten" name="wilayah_kota_kabupaten" required>
-                                <div class="invalid-feedback" id="error-wilayah_kota_kabupaten"></div>
+                                <label for="wilayah_kelurahan_id">Kelurahan</label>
+                                <select class="form-control" id="wilayah_kelurahan_id" required disabled>
+                                    <option value="">-- Pilih Kelurahan --</option>
+                                </select>
+                                <input type="hidden" id="wilayah_kelurahan" name="wilayah_kelurahan">
+                                <div class="invalid-feedback" id="error-wilayah_kelurahan"></div>
                             </div>
                         </div>
                     </div>

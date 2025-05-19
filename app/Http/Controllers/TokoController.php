@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\File;
 
 class TokoController extends Controller
 {
@@ -92,6 +93,143 @@ class TokoController extends Controller
     }
 
     /**
+     * Get all wilayah data (Kota/Kabupaten)
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getWilayahKota()
+    {
+        $jsonFile = public_path('data/wilayah_malang.json');
+        
+        if (!File::exists($jsonFile)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'File data wilayah tidak ditemukan'
+            ], 404)
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+        }
+        
+        $wilayahData = json_decode(File::get($jsonFile), true);
+        
+        return response()->json([
+            'status' => 'success',
+            'data' => $wilayahData['wilayah']
+        ])
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
+    }
+    
+    /**
+     * Get kecamatan by kota ID
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getKecamatanByKota(Request $request)
+    {
+        $kotaId = $request->kota_id;
+        
+        if (!$kotaId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ID Kota/Kabupaten tidak valid'
+            ], 400)
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+        }
+        
+        $jsonFile = public_path('data/wilayah_malang.json');
+        
+        if (!File::exists($jsonFile)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'File data wilayah tidak ditemukan'
+            ], 404)
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+        }
+        
+        $wilayahData = json_decode(File::get($jsonFile), true);
+        $kecamatanData = [];
+        
+        foreach ($wilayahData['wilayah'] as $kota) {
+            if ($kota['id'] == $kotaId) {
+                $kecamatanData = $kota['kecamatan'];
+                break;
+            }
+        }
+        
+        return response()->json([
+            'status' => 'success',
+            'data' => $kecamatanData
+        ])
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
+    }
+    
+    /**
+     * Get kelurahan by kecamatan ID
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getKelurahanByKecamatan(Request $request)
+    {
+        $kotaId = $request->kota_id;
+        $kecamatanId = $request->kecamatan_id;
+        
+        if (!$kotaId || !$kecamatanId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ID Kota/Kabupaten atau Kecamatan tidak valid'
+            ], 400)
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+        }
+        
+        $jsonFile = public_path('data/wilayah_malang.json');
+        
+        if (!File::exists($jsonFile)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'File data wilayah tidak ditemukan'
+            ], 404)
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+        }
+        
+        $wilayahData = json_decode(File::get($jsonFile), true);
+        $kelurahanData = [];
+        
+        foreach ($wilayahData['wilayah'] as $kota) {
+            if ($kota['id'] == $kotaId) {
+                foreach ($kota['kecamatan'] as $kecamatan) {
+                    if ($kecamatan['id'] == $kecamatanId) {
+                        $kelurahanData = $kecamatan['kelurahan'];
+                        break 2;
+                    }
+                }
+            }
+        }
+        
+        return response()->json([
+            'status' => 'success',
+            'data' => $kelurahanData
+        ])
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -105,9 +243,9 @@ class TokoController extends Controller
             'nama_toko' => 'required|string|max:100',
             'pemilik' => 'required|string|max:100',
             'alamat' => 'required|string',
+            'wilayah_kota_kabupaten' => 'required|string|max:100',
             'wilayah_kecamatan' => 'required|string|max:100',
             'wilayah_kelurahan' => 'required|string|max:100',
-            'wilayah_kota_kabupaten' => 'required|string|max:100',
             'nomer_telpon' => 'required|string|max:20',
         ]);
 
@@ -216,9 +354,9 @@ class TokoController extends Controller
             'nama_toko' => 'required|string|max:100',
             'pemilik' => 'required|string|max:100',
             'alamat' => 'required|string',
+            'wilayah_kota_kabupaten' => 'required|string|max:100',
             'wilayah_kecamatan' => 'required|string|max:100',
             'wilayah_kelurahan' => 'required|string|max:100',
-            'wilayah_kota_kabupaten' => 'required|string|max:100',
             'nomer_telpon' => 'required|string|max:20',
         ]);
 

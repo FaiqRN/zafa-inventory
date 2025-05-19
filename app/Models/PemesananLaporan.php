@@ -1,28 +1,16 @@
 <?php
-// app/Models/PemesananLaporan.php
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PemesananLaporan extends Model
 {
-    use HasFactory;
-
     protected $table = 'pemesanan_laporan';
+    protected $primaryKey = 'id';
+    public $timestamps = true;
     
     protected $fillable = [
-        'pemesanan_id',
-        'periode',
-        'bulan',
-        'tahun',
-        'catatan'
+        'tipe', 'reference_id', 'catatan', 'periode', 'bulan', 'tahun'
     ];
-    
-    // Relasi dengan pemesanan
-    public function pemesanan()
-    {
-        return $this->belongsTo(Pemesanan::class, 'pemesanan_id', 'pemesanan_id');
-    }
 }

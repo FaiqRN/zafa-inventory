@@ -104,9 +104,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/laporan-barang') }}" class="nav-link {{ ($activemenu == 'laporan-barang')? 'active' : '' }}">
+                        <a href="{{ url('/analytics') }}" class="nav-link {{ ($activemenu == 'analytics')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Laporan Per Barang</p>
+                            <p>Analytics</p>
                         </a>
                     </li>
                 </ul>

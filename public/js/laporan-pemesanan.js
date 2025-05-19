@@ -1,797 +1,906 @@
-// public/js/laporan-pemesanan.js
-$(function() {
-    'use strict';
+/**
+ * Javascript untuk Laporan Pemesanan
+ */
+
+// DataTable Instances
+let tableBarang, tableSumber, tablePemesan, tableDetail;
+let detailChart = null;
+
+// Data status for current active tab
+let currentTab = 'barang';
+let currentPeriode = '1_bulan';
+let currentBulan = '';
+let currentTahun = '';
+let startDate = '';
+let endDate = '';
+let detailId = '';
+let detailName = '';
+
+// Initialize DataTables
+$(document).ready(function() {
+    // Set current month and year
+    currentBulan = $('#bulan').val();
+    currentTahun = $('#tahun').val();
     
-    // Tambah CSRF token untuk semua request AJAX
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        }
-    });
-    
-    // Initialize DataTables
-    let dataTable1, dataTable6, dataTableYear;
-    
-    // Initialize tabs
-    $('#reportTabs a').on('click', function (e) {
-        e.preventDefault();
-        $(this).tab('show');
-        
-        const tabId = $(this).attr('id');
-        
-        // Sync periode dropdown with selected tab
-        if (tabId.includes('bulan-1')) {
-            $('#periode').val('1_bulan');
-        } else if (tabId.includes('bulan-6')) {
-            $('#periode').val('6_bulan');
-        } else { // tahun-1
-            $('#periode').val('1_tahun');
-        }
-        
-        // Load data for the selected period
-        loadData();
-    });
-    
-    // Initial load
-    loadData();
-    
-    // Handle Filter button
-    $('#btn-filter').on('click', function() {
-        loadData();
-    });
-    
-    function loadData() {
-        const periode = $('#periode').val();
-        const bulan = $('#bulan').val();
-        const tahun = $('#tahun').val();
-        
-        // Sync tabs with periode dropdown
-        let tabId;
-        if (periode === '1_bulan') {
-            tabId = '#bulan-1-tab';
-        } else if (periode === '6_bulan') {
-            tabId = '#bulan-6-tab';
-        } else { // 1_tahun
-            tabId = '#tahun-1-tab';
-        }
-        
-        $(tabId).tab('show');
-        
-        // Update periode display
-        const periodeDisplay = getPeriodeLabel();
-        $('#periode-display').text(periodeDisplay);
-        
-        // Show loading
-        Swal.fire({
-            title: 'Loading...',
-            text: 'Sedang mengambil data',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-        
-        $.ajax({
-            url: '/laporan-pemesanan/data',
-            type: 'GET',
-            data: {
-                periode: periode,
-                bulan: bulan,
-                tahun: tahun
+    // Inisialisasi DataTables
+    tableBarang = $('#table-barang').DataTable({
+        processing: true,
+        language: {
+            processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span>'
+        },
+        paging: true,
+        lengthChange: true,
+        searching: true,
+        ordering: true,
+        info: true,
+        autoWidth: false,
+        responsive: true,
+        columns: [
+            { data: 'nama' },
+            { 
+                data: 'jumlah_pesanan',
+                className: 'text-right' 
             },
-            dataType: 'json',
-            success: function(response) {
-                console.log('Response data:', response);
-                
-                Swal.close();
-                
-                // Update summary stats
-                $('#summary-total').text(response.summary.totalPemesanan);
-                $('#summary-nilai').text(formatRupiah(response.summary.totalNilai));
-                $('#summary-selesai').text(response.summary.totalSelesai);
-                $('#summary-cancel').text(response.summary.totalCancel);
-                
-                // Update table
-                updateTable(response.data, periode);
+            { 
+                data: 'total_unit',
+                className: 'text-right' 
             },
-            error: function(xhr, status, error) {
-                Swal.close();
-                console.error('Error fetching data:', error);
-                console.error('Response:', xhr.responseText);
-                
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'Gagal memuat data. Silakan coba lagi.',
-                    icon: 'error'
-                });
-            }
-        });
-    }
-    
-    function updateTable(data, periode) {
-        const tableId = periode === '1_bulan' ? '#tabel-pemesanan-1' : 
-                      periode === '6_bulan' ? '#tabel-pemesanan-6' : '#tabel-pemesanan-tahun';
-        
-        // If DataTable already initialized, destroy it
-        if ($.fn.DataTable.isDataTable(tableId)) {
-            $(tableId).DataTable().destroy();
-        }
-        
-        // Clear export button container
-        const exportContainerId = periode === '1_bulan' ? '#export-btn-container-1' : 
-                               periode === '6_bulan' ? '#export-btn-container-6' : '#export-btn-container-tahun';
-        $(exportContainerId).empty();
-        
-        // Add print and export buttons
-        const printBtn = $(`<button class="btn btn-info mr-2"><i class="fas fa-print"></i> Print</button>`);
-        printBtn.on('click', function() {
-            printReport(data, periode);
-        });
-        $(exportContainerId).append(printBtn);
-        
-        const csvBtn = $(`<button class="btn btn-success mr-2"><i class="fas fa-file-csv"></i> Export CSV</button>`);
-        csvBtn.on('click', function() {
-            exportCsv(periode);
-        });
-        $(exportContainerId).append(csvBtn);
-        
-        // Initialize DataTable
-        $(tableId).DataTable({
-            data: data,
-            columns: [
-                { 
-                    data: null, 
-                    render: function(data, type, row, meta) {
-                        return meta.row + 1;
-                    }
-                },
-                { data: 'pemesanan_id' },
-                { 
-                    data: 'tanggal_pemesanan',
-                    render: function(data) {
-                        return formatDate(data);
-                    }
-                },
-                { data: 'nama_pemesan' },
-                { data: 'nama_barang' }, // Perlu join dengan tabel barang
-                { data: 'jumlah_pesanan' },
-                { 
-                    data: 'total',
-                    render: function(data) {
-                        return formatRupiah(data);
-                    }
-                },
-                { data: 'pemesanan_dari' },
-                { data: 'metode_pembayaran' },
-                { 
-                    data: 'status_pemesanan',
-                    render: function(data) {
-                        let badgeClass = '';
-                        
-                        if (data === 'selesai') {
-                            badgeClass = 'badge-selesai';
-                        } else if (data === 'dikirim') {
-                            badgeClass = 'badge-dikirim';
-                        } else if (data === 'diproses') {
-                            badgeClass = 'badge-diproses';
-                        } else if (data === 'pending') {
-                            badgeClass = 'badge-pending';
-                        } else if (data === 'dibatalkan') {
-                            badgeClass = 'badge-dibatalkan';
-                        }
-                        
-                        return `<span class="badge ${badgeClass}">${data}</span>`;
-                    }
-                },
-                {
-                    data: null,
-                    render: function(data, type, row) {
-                        return `
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-info btn-edit-catatan" 
-                                        data-pemesanan-id="${row.pemesanan_id}" 
-                                        data-catatan="${row.catatan || ''}">
-                                    <i class="fas fa-edit"></i> Catatan
-                                </button>
-                                <button class="btn btn-sm btn-primary btn-detail" 
-                                        data-pemesanan-id="${row.pemesanan_id}">
-                                    <i class="fas fa-eye"></i> Detail
-                                </button>
-                            </div>`;
-                    }
+            { 
+                data: 'total_pendapatan',
+                className: 'text-right',
+                render: function(data) {
+                    return formatRupiah(data);
                 }
-            ],
-            responsive: true,
-            lengthChange: true,
-            autoWidth: false,
-            language: {
-                url: "//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json"
             },
-            drawCallback: function() {
-                // Re-attach event handlers after table redraws
-                attachEventHandlers();
+            { 
+                data: null,
+                orderable: false,
+                className: 'text-center',
+                render: function(data) {
+                    let buttonCatatan = `<button type="button" class="btn btn-sm btn-warning catatan-btn mr-1" data-tipe="barang" data-id="${data.id}" data-nama="${data.nama}" data-catatan="${data.catatan || ''}">
+                        <i class="fas fa-sticky-note"></i>
+                    </button>`;
+                    
+                    let buttonDetail = `<button type="button" class="btn btn-sm btn-info detail-btn" data-tipe="barang" data-id="${data.id}" data-nama="${data.nama}">
+                        <i class="fas fa-search"></i>
+                    </button>`;
+                    
+                    return buttonCatatan + buttonDetail;
+                }
             }
-        });
-    }
+        ]
+    });
     
-    function attachEventHandlers() {
-        // Register event for catatan buttons
-        $('.btn-edit-catatan').off('click').on('click', function() {
-            const pemesanan_id = $(this).data('pemesanan-id');
-            const catatan = $(this).data('catatan');
-            
-            $('#id-pemesanan-catatan').text(pemesanan_id);
-            $('#pemesanan_id').val(pemesanan_id);
-            $('#catatan').val(catatan);
-            $('#catatan_periode').val($('#periode').val());
-            $('#catatan_bulan').val($('#bulan').val());
-            $('#catatan_tahun').val($('#tahun').val());
-            
-            $('#modalCatatan').modal('show');
-        });
-        
-        // Register event for detail button
-        $('.btn-detail').off('click').on('click', function() {
-            const pemesanan_id = $(this).data('pemesanan-id');
-            
-            showDetailModal(pemesanan_id);
-        });
-    }
-    
-    // Handle saving catatan
-    $('#btn-simpan-catatan').on('click', function() {
-        const pemesanan_id = $('#pemesanan_id').val();
-        const periode = $('#catatan_periode').val();
-        const bulan = $('#catatan_bulan').val();
-        const tahun = $('#catatan_tahun').val();
-        const catatan = $('#catatan').val();
-        
-        // Show loading
-        Swal.fire({
-            title: 'Menyimpan...',
-            text: 'Sedang menyimpan catatan',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
+    tableSumber = $('#table-sumber').DataTable({
+        processing: true,
+        language: {
+            processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span>'
+        },
+        paging: true,
+        lengthChange: true,
+        searching: true,
+        ordering: true,
+        info: true,
+        autoWidth: false,
+        responsive: true,
+        columns: [
+            { data: 'nama' },
+            { 
+                data: 'jumlah_pesanan',
+                className: 'text-right' 
+            },
+            { 
+                data: 'total_unit',
+                className: 'text-right' 
+            },
+            { 
+                data: 'total_pendapatan',
+                className: 'text-right',
+                render: function(data) {
+                    return formatRupiah(data);
+                }
+            },
+            { 
+                data: null,
+                orderable: false,
+                className: 'text-center',
+                render: function(data) {
+                    let buttonCatatan = `<button type="button" class="btn btn-sm btn-warning catatan-btn mr-1" data-tipe="sumber" data-id="${data.id}" data-nama="${data.nama}" data-catatan="${data.catatan || ''}">
+                        <i class="fas fa-sticky-note"></i>
+                    </button>`;
+                    
+                    let buttonDetail = `<button type="button" class="btn btn-sm btn-info detail-btn" data-tipe="sumber" data-id="${data.id}" data-nama="${data.nama}">
+                        <i class="fas fa-search"></i>
+                    </button>`;
+                    
+                    return buttonCatatan + buttonDetail;
+                }
             }
-        });
+        ]
+    });
+    
+    tablePemesan = $('#table-pemesan').DataTable({
+        processing: true,
+        language: {
+            processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span>'
+        },
+        paging: true,
+        lengthChange: true,
+        searching: true,
+        ordering: true,
+        info: true,
+        autoWidth: false,
+        responsive: true,
+        columns: [
+            { data: 'nama' },
+            { 
+                data: 'jumlah_pesanan',
+                className: 'text-right' 
+            },
+            { 
+                data: 'total_unit',
+                className: 'text-right' 
+            },
+            { 
+                data: 'total_pendapatan',
+                className: 'text-right',
+                render: function(data) {
+                    return formatRupiah(data);
+                } 
+            },
+            { 
+                data: null,
+                orderable: false,
+                className: 'text-center',
+                render: function(data) {
+                    let buttonCatatan = `<button type="button" class="btn btn-sm btn-warning catatan-btn mr-1" data-tipe="pemesan" data-id="${data.id}" data-nama="${data.nama}" data-catatan="${data.catatan || ''}">
+                        <i class="fas fa-sticky-note"></i>
+                    </button>`;
+                    
+                    let buttonDetail = `<button type="button" class="btn btn-sm btn-info detail-btn" data-tipe="pemesan" data-id="${data.id}" data-nama="${data.nama}">
+                        <i class="fas fa-search"></i>
+                    </button>`;
+                    
+                    return buttonCatatan + buttonDetail;
+                }
+            }
+        ]
+    });
+    
+    tableDetail = $('#table-detail').DataTable({
+        processing: true,
+        language: {
+            processing: '<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span>'
+        },
+        paging: true,
+        lengthChange: true,
+        searching: true,
+        ordering: true,
+        info: true,
+        autoWidth: false,
+        responsive: true,
+        columns: [
+            { data: 'pemesanan_id' },
+            { data: 'tanggal' },
+            { data: 'nama_barang' },
+            { data: 'nama_pemesan' },
+            { 
+                data: 'jumlah',
+                className: 'text-right' 
+            },
+            { 
+                data: 'total',
+                className: 'text-right',
+                render: function(data) {
+                    return formatRupiah(data);
+                } 
+            },
+            { data: 'sumber' },
+            { 
+                data: 'status',
+                className: 'text-center',
+                render: function(data) {
+                    let badges = {
+                        'pending': 'badge-warning',
+                        'diproses': 'badge-info',
+                        'dikirim': 'badge-primary',
+                        'selesai': 'badge-success',
+                        'dibatalkan': 'badge-danger'
+                    };
+                    
+                    return `<span class="badge ${badges[data] || 'badge-secondary'}">${data}</span>`;
+                }
+            }
+        ]
+    });
+    
+    // Filter button event handler
+    $('#btn-filter').click(function() {
+        currentPeriode = $('#periode').val();
+        currentBulan = $('#bulan').val();
+        currentTahun = $('#tahun').val();
+        
+        // Update periode display text
+        updatePeriodeDisplay();
+        
+        // Refresh data for the active tab
+        refreshData(currentTab);
+    });
+    
+    // Load data awal dan set periode display
+    updatePeriodeDisplay();
+    refreshData('barang');
+    
+    // Tab change event handler
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        let targetId = $(e.target).attr('id');
+        currentTab = targetId.split('-')[0];
+        refreshData(currentTab);
+    });
+    
+    // Button refresh event handlers
+    $('#refresh-barang').click(function() {
+        refreshData('barang');
+    });
+    
+    $('#refresh-sumber').click(function() {
+        refreshData('sumber');
+    });
+    
+    $('#refresh-pemesan').click(function() {
+        refreshData('pemesan');
+    });
+    
+    // Catatan button click handler
+    $(document).on('click', '.catatan-btn', function() {
+        let tipe = $(this).data('tipe');
+        let id = $(this).data('id');
+        let nama = $(this).data('nama');
+        let catatan = $(this).data('catatan');
+        
+        $('#modalCatatanTitle').text('Catatan untuk ' + nama);
+        $('#catatan-tipe').val(tipe);
+        $('#catatan-id').val(id);
+        $('#catatan').val(catatan);
+        
+        $('#modal-catatan').modal('show');
+    });
+    
+    // Save catatan handler
+    $('#save-catatan').click(function() {
+        let formData = {
+            tipe: $('#catatan-tipe').val(),
+            id: $('#catatan-id').val(),
+            catatan: $('#catatan').val(),
+            periode: currentPeriode,
+            bulan: currentBulan,
+            tahun: currentTahun
+        };
         
         $.ajax({
             url: '/laporan-pemesanan/update-catatan',
             type: 'POST',
-            data: {
-                pemesanan_id: pemesanan_id,
-                periode: periode,
-                bulan: bulan,
-                tahun: tahun,
-                catatan: catatan
+            data: formData,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            dataType: 'json',
             success: function(response) {
-                Swal.close();
                 if (response.success) {
-                    $('#modalCatatan').modal('hide');
                     Swal.fire({
-                        title: 'Berhasil!',
-                        text: 'Catatan berhasil disimpan.',
                         icon: 'success',
+                        title: 'Berhasil',
+                        text: response.message,
+                        showConfirmButton: false,
                         timer: 1500
                     });
-                    loadData();
+                    
+                    $('#modal-catatan').modal('hide');
+                    refreshData(currentTab);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: response.message
+                    });
                 }
             },
-            error: function(xhr, status, error) {
-                Swal.close();
-                console.error('Error saving catatan:', error);
-                console.error('Response:', xhr.responseText);
-                
+            error: function(xhr) {
                 Swal.fire({
-                    title: 'Error!',
-                    text: 'Gagal menyimpan catatan. Silakan coba lagi.',
-                    icon: 'error'
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Terjadi kesalahan saat menyimpan catatan'
                 });
             }
         });
     });
     
-    function showDetailModal(pemesanan_id) {
-        // Show loading state
-// Show loading state
-       Swal.fire({
-           title: 'Loading...',
-           text: 'Mengambil data detail pemesanan',
-           allowOutsideClick: false,
-           didOpen: () => {
-               Swal.showLoading();
-           }
-       });
-       
-       $.ajax({
-           url: '/laporan-pemesanan/detail',
-           type: 'GET',
-           data: {
-               pemesanan_id: pemesanan_id
-           },
-           dataType: 'json',
-           success: function(response) {
-               console.log('Detail data:', response);
-               
-               Swal.close();
-               
-               if (response.pemesanan) {
-                   const pemesanan = response.pemesanan;
-                   
-                   // Update modal title and content
-                   $('#id-pemesanan').text(pemesanan.pemesanan_id);
-                   
-                   // Fill in information
-                   $('#detail-id').text(pemesanan.pemesanan_id);
-                   $('#detail-tanggal').text(formatDate(pemesanan.tanggal_pemesanan));
-                   $('#detail-sumber').text(pemesanan.pemesanan_dari);
-                   $('#detail-pembayaran').text(pemesanan.metode_pembayaran);
-                   
-                   // Set status with badge
-                   let statusBadge = '';
-                   if (pemesanan.status_pemesanan === 'selesai') {
-                       statusBadge = `<span class="badge badge-success">${pemesanan.status_pemesanan}</span>`;
-                   } else if (pemesanan.status_pemesanan === 'dikirim') {
-                       statusBadge = `<span class="badge badge-primary">${pemesanan.status_pemesanan}</span>`;
-                   } else if (pemesanan.status_pemesanan === 'diproses') {
-                       statusBadge = `<span class="badge badge-info">${pemesanan.status_pemesanan}</span>`;
-                   } else if (pemesanan.status_pemesanan === 'pending') {
-                       statusBadge = `<span class="badge badge-warning">${pemesanan.status_pemesanan}</span>`;
-                   } else if (pemesanan.status_pemesanan === 'dibatalkan') {
-                       statusBadge = `<span class="badge badge-danger">${pemesanan.status_pemesanan}</span>`;
-                   }
-                   $('#detail-status').html(statusBadge);
-                   
-                   // Fill in customer information
-                   $('#detail-nama').text(pemesanan.nama_pemesan);
-                   $('#detail-alamat').text(pemesanan.alamat_pemesan);
-                   $('#detail-telp').text(pemesanan.no_telp_pemesan);
-                   $('#detail-email').text(pemesanan.email_pemesan);
-                   
-                   // Fill in product information
-                   $('#detail-barang-id').text(pemesanan.barang_id);
-                   $('#detail-barang-nama').text(pemesanan.nama_barang);
-                   $('#detail-barang-harga').text(formatRupiah(pemesanan.harga_awal_barang));
-                   $('#detail-barang-jumlah').text(pemesanan.jumlah_pesanan);
-                   $('#detail-barang-total').text(formatRupiah(pemesanan.total));
-                   
-                   // Fill in notes
-                   $('#detail-catatan').text(pemesanan.catatan_pemesanan || '-');
-                   
-                   // Show modal
-                   $('#detailModal').modal('show');
-                   
-                   // Setup print and export buttons
-                   $('#btn-print-detail').off('click').on('click', function() {
-                       printDetailReport(pemesanan);
-                   });
-                   
-                   $('#btn-export-detail-csv').off('click').on('click', function() {
-                       exportDetailCsv(pemesanan_id);
-                   });
-               }
-           },
-           error: function(xhr, status, error) {
-               Swal.close();
-               console.error('Error fetching detail data:', error);
-               console.error('Response:', xhr.responseText);
-               
-               Swal.fire({
-                   title: 'Error!',
-                   text: 'Gagal memuat data detail. Silakan coba lagi.',
-                   icon: 'error'
-               });
-           }
-       });
-   }
-   
-   function printDetailReport(pemesanan) {
-       const printWindow = window.open('', '_blank');
-       
-       let printContent = `
-           <!DOCTYPE html>
-           <html>
-           <head>
-               <title>Detail Pemesanan: ${pemesanan.pemesanan_id}</title>
-               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
-               <style>
-                   body { 
-                       padding: 20px; 
-                       font-family: Arial, sans-serif;
-                   }
-                   .page-header { 
-                       margin-bottom: 30px; 
-                       border-bottom: 1px solid #dee2e6;
-                       padding-bottom: 10px;
-                   }
-                   table { 
-                       width: 100%; 
-                       margin-bottom: 20px; 
-                       border-collapse: collapse;
-                   }
-                   th, td { 
-                       padding: 8px; 
-                       border: 1px solid #dee2e6; 
-                   }
-                   th { 
-                       background-color: #f8f9fa; 
-                   }
-                   .text-right { 
-                       text-align: right; 
-                   }
-                   .text-center { 
-                       text-align: center; 
-                   }
-                   h5 {
-                       margin-top: 20px;
-                       margin-bottom: 10px;
-                       font-weight: bold;
-                   }
-                   .footer {
-                       margin-top: 30px;
-                       text-align: center;
-                       font-size: 12px;
-                       color: #6c757d;
-                   }
-               </style>
-           </head>
-           <body>
-               <div class="page-header text-center">
-                   <h3>Detail Pemesanan</h3>
-                   <h4>${pemesanan.pemesanan_id}</h4>
-                   <p>Tanggal: ${formatDate(pemesanan.tanggal_pemesanan)}</p>
-               </div>
-               
-               <div class="row">
-                   <div class="col-6">
-                       <h5>Informasi Pemesanan</h5>
-                       <table class="table table-bordered">
-                           <tr>
-                               <th width="40%">ID Pemesanan</th>
-                               <td>${pemesanan.pemesanan_id}</td>
-                           </tr>
-                           <tr>
-                               <th>Tanggal Pemesanan</th>
-                               <td>${formatDate(pemesanan.tanggal_pemesanan)}</td>
-                           </tr>
-                           <tr>
-                               <th>Sumber Pemesanan</th>
-                               <td>${pemesanan.pemesanan_dari}</td>
-                           </tr>
-                           <tr>
-                               <th>Metode Pembayaran</th>
-                               <td>${pemesanan.metode_pembayaran}</td>
-                           </tr>
-                           <tr>
-                               <th>Status</th>
-                               <td>${pemesanan.status_pemesanan}</td>
-                           </tr>
-                       </table>
-                   </div>
-                   
-                   <div class="col-6">
-                       <h5>Informasi Pemesan</h5>
-                       <table class="table table-bordered">
-                           <tr>
-                               <th width="40%">Nama</th>
-                               <td>${pemesanan.nama_pemesan}</td>
-                           </tr>
-                           <tr>
-                               <th>Alamat</th>
-                               <td>${pemesanan.alamat_pemesan}</td>
-                           </tr>
-                           <tr>
-                               <th>No. Telepon</th>
-                               <td>${pemesanan.no_telp_pemesan}</td>
-                           </tr>
-                           <tr>
-                               <th>Email</th>
-                               <td>${pemesanan.email_pemesan}</td>
-                           </tr>
-                       </table>
-                   </div>
-               </div>
-               
-               <h5>Detail Barang</h5>
-               <table class="table table-bordered">
-                   <thead>
-                       <tr>
-                           <th>ID Barang</th>
-                           <th>Nama Barang</th>
-                           <th>Harga Satuan</th>
-                           <th>Jumlah</th>
-                           <th>Total</th>
-                       </tr>
-                   </thead>
-                   <tbody>
-                       <tr>
-                           <td>${pemesanan.barang_id}</td>
-                           <td>${pemesanan.nama_barang}</td>
-                           <td>${formatRupiah(pemesanan.harga_awal_barang)}</td>
-                           <td>${pemesanan.jumlah_pesanan}</td>
-                           <td>${formatRupiah(pemesanan.total)}</td>
-                       </tr>
-                   </tbody>
-                   <tfoot>
-                       <tr>
-                           <th colspan="4" class="text-right">Total:</th>
-                           <th>${formatRupiah(pemesanan.total)}</th>
-                       </tr>
-                   </tfoot>
-               </table>
-               
-               <h5>Catatan</h5>
-               <div class="card">
-                   <div class="card-body">
-                       ${pemesanan.catatan_pemesanan || '-'}
-                   </div>
-               </div>
-               
-               <div class="footer">
-                   <p>Laporan ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-                   <p>ZafaSys © ${new Date().getFullYear()}</p>
-               </div>
-               
-               <script>
-                   window.onload = function() {
-                       window.print();
-                   }
-               </script>
-           </body>
-           </html>`;
-       
-       printWindow.document.write(printContent);
-       printWindow.document.close();
-   }
-   
-   function printReport(data, periode) {
-       const printWindow = window.open('', '_blank');
-       
-       let printContent = `
-           <!DOCTYPE html>
-           <html>
-           <head>
-               <title>Laporan Pemesanan - ${getPeriodeLabel()}</title>
-               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
-               <style>
-                   body { 
-                       padding: 20px; 
-                       font-family: Arial, sans-serif;
-                   }
-                   .page-header { 
-                       margin-bottom: 30px; 
-                       border-bottom: 1px solid #dee2e6;
-                       padding-bottom: 10px;
-                   }
-                   table { 
-                       width: 100%; 
-                       margin-bottom: 20px; 
-                       border-collapse: collapse; 
-                   }
-                   th, td { 
-                       padding: 8px; 
-                       border: 1px solid #dee2e6; 
-                   }
-                   th { 
-                       background-color: #f8f9fa; 
-                   }
-                   .text-right { 
-                       text-align: right; 
-                   }
-                   .text-center { 
-                       text-align: center; 
-                   }
-                   .footer {
-                       margin-top: 30px;
-                       text-align: center;
-                       font-size: 12px;
-                       color: #6c757d;
-                   }
-               </style>
-           </head>
-           <body>
-               <div class="page-header text-center">
-                   <h3>Laporan Pemesanan</h3>
-                   <p>Periode: ${getPeriodeLabel()}</p>
-               </div>
-               
-               <table class="table table-bordered">
-                   <thead>
-                       <tr>
-                           <th>No</th>
-                           <th>ID Pemesanan</th>
-                           <th>Tanggal</th>
-                           <th>Nama Pemesan</th>
-                           <th>Barang</th>
-                           <th>Jumlah</th>
-                           <th>Total</th>
-                           <th>Sumber</th>
-                           <th>Status</th>
-                       </tr>
-                   </thead>
-                   <tbody>`;
-       
-       if (data && data.length > 0) {
-           let totalNilai = 0;
-           
-           data.forEach((item, index) => {
-               totalNilai += parseFloat(item.total || 0);
-               
-               printContent += `
-                   <tr>
-                       <td>${index + 1}</td>
-                       <td>${item.pemesanan_id}</td>
-                       <td>${formatDate(item.tanggal_pemesanan)}</td>
-                       <td>${item.nama_pemesan}</td>
-                       <td>${item.nama_barang}</td>
-                       <td>${item.jumlah_pesanan}</td>
-                       <td>${formatRupiah(item.total)}</td>
-                       <td>${item.pemesanan_dari}</td>
-                       <td>${item.status_pemesanan}</td>
-                   </tr>`;
-           });
-           
-           printContent += `
-               </tbody>
-               <tfoot>
-                   <tr>
-                       <th colspan="6" class="text-right">Total:</th>
-                       <th>${formatRupiah(totalNilai)}</th>
-                       <th colspan="2"></th>
-                   </tr>
-               </tfoot>`;
-       } else {
-           printContent += `
-               <tr>
-                   <td colspan="9" class="text-center">Tidak ada data</td>
-               </tr>
-               </tbody>`;
-       }
-       
-       printContent += `
-               </table>
-               
-               <div class="footer">
-                   <p>Laporan ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-                   <p>ZafaSys © ${new Date().getFullYear()}</p>
-               </div>
-               
-               <script>
-                   window.onload = function() {
-                       window.print();
-                   }
-               </script>
-           </body>
-           </html>`;
-       
-       printWindow.document.write(printContent);
-       printWindow.document.close();
-   }
-   
-   // Helper function to get formatted period label
-   function getPeriodeLabel() {
-       const periode = $('#periode').val();
-       const bulan = parseInt($('#bulan').val());
-       const tahun = parseInt($('#tahun').val());
-       
-       const monthNames = [
-           'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-           'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-       ];
-       
-       if (periode === '1_bulan') {
-           return `${monthNames[bulan - 1]} ${tahun}`;
-       } else if (periode === '6_bulan') {
-           // Calculate 6 months back
-           let startMonth = bulan - 5;
-           let startYear = tahun;
-           
-           if (startMonth <= 0) {
-               startMonth = 12 + startMonth;
-               startYear = tahun - 1;
-           }
-           
-           return `${monthNames[startMonth - 1]} ${startYear} - ${monthNames[bulan - 1]} ${tahun}`;
-       } else { // 1_tahun
-           // Calculate 1 year back
-           let startMonth = bulan;
-           let startYear = tahun - 1;
-           
-           return `${monthNames[startMonth - 1]} ${startYear} - ${monthNames[bulan - 1]} ${tahun}`;
-       }
-   }
-   
-   // Format number to Rupiah
-   function formatRupiah(angka) {
-       if (angka === null || angka === undefined || isNaN(angka) || angka === '') {
-           return 'Rp 0';
-       }
-       
-       // Convert to number if it's a string
-       const number = typeof angka === 'string' ? parseFloat(angka) : angka;
-       
-       // Check if the number is valid
-       if (isNaN(number)) {
-           return 'Rp 0';
-       }
-       
-       // Format the number
-       const formattedNumber = new Intl.NumberFormat('id-ID', {
-           style: 'currency',
-           currency: 'IDR',
-           minimumFractionDigits: 0,
-           maximumFractionDigits: 0
-       }).format(number);
-       
-       return formattedNumber;
-   }
-   
-   // Format date
-   function formatDate(dateString) {
-       if (!dateString) return '-';
-       
-       try {
-           const date = new Date(dateString);
-           
-           // Check if date is valid
-           if (isNaN(date.getTime())) {
-               return dateString;
-           }
-           
-           return new Intl.DateTimeFormat('id-ID', {
-               day: '2-digit',
-               month: 'long',
-               year: 'numeric'
-           }).format(date);
-       } catch (error) {
-           console.error('Error formatting date:', error);
-           return dateString;
-       }
-   }
-
-   // Export to CSV
-   function exportCsv(periode) {
-       // Show loading
-       Swal.fire({
-           title: 'Memproses...',
-           text: 'Sedang menyiapkan file CSV',
-           allowOutsideClick: false,
-           didOpen: () => {
-               Swal.showLoading();
-               
-               setTimeout(() => {
-                   const bulan = $('#bulan').val();
-                   const tahun = $('#tahun').val();
-                   
-                   const url = `/laporan-pemesanan/export-csv?periode=${periode}&bulan=${bulan}&tahun=${tahun}`;
-                   window.location.href = url;
-                   
-                   Swal.close();
-               }, 1000);
-           }
-       });
-   }
-
-   // Export detail to CSV
-   function exportDetailCsv(pemesanan_id) {
-       // Show loading
-       Swal.fire({
-           title: 'Memproses...',
-           text: 'Sedang menyiapkan file CSV',
-           allowOutsideClick: false,
-           didOpen: () => {
-               Swal.showLoading();
-               
-               setTimeout(() => {
-                   const url = `/laporan-pemesanan/export-detail-csv?pemesanan_id=${pemesanan_id}`;
-                   window.location.href = url;
-                   
-                   Swal.close();
-               }, 1000);
-           }
-       });
-   }
+    // Detail button click handler
+    $(document).on('click', '.detail-btn', function() {
+        let tipe = $(this).data('tipe');
+        let id = $(this).data('id');
+        let nama = $(this).data('nama');
+        
+        detailId = id;
+        detailName = nama;
+        
+        $('#modalDetailTitle').text('Detail ' + 
+            (tipe === 'barang' ? 'Barang: ' : tipe === 'sumber' ? 'Sumber Pemesanan: ' : 'Pemesan: ') + 
+            nama);
+        
+        loadDetailData(tipe, id);
+        
+        $('#modal-detail').modal('show');
+    });
+    
+    // Export handlers
+    $('#export-barang').click(function() {
+        exportData('barang');
+    });
+    
+    $('#export-sumber').click(function() {
+        exportData('sumber');
+    });
+    
+    $('#export-pemesan').click(function() {
+        exportData('pemesan');
+    });
+    
+    $('#export-detail').click(function() {
+        exportDetailData();
+    });
+    
+    // Print handlers
+    $('#print-barang').click(function() {
+        printData('barang');
+    });
+    
+    $('#print-sumber').click(function() {
+        printData('sumber');
+    });
+    
+    $('#print-pemesan').click(function() {
+        printData('pemesan');
+    });
+    
+    $('#print-detail').click(function() {
+        printDetailData();
+    });
 });
+
+/**
+ * Update periode display text
+ */
+function updatePeriodeDisplay() {
+    let bulanText = $('#bulan option:selected').text();
+    let tahunText = $('#tahun option:selected').text();
+    let periodeText = '';
+    
+    if (currentPeriode === '1_bulan') {
+        periodeText = `${bulanText} ${tahunText}`;
+    } else if (currentPeriode === '6_bulan') {
+        // Calculate 6 months period
+        let month = parseInt(currentBulan);
+        let year = parseInt(currentTahun);
+        
+        let startMonth = month - 5;
+        let startYear = year;
+        
+        if (startMonth <= 0) {
+            startMonth += 12;
+            startYear -= 1;
+        }
+        
+        let monthNames = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+        
+        periodeText = `${monthNames[startMonth-1]} ${startYear} - ${bulanText} ${tahunText}`;
+    } else { // 1_tahun
+        // Calculate 1 year period
+        let month = parseInt(currentBulan);
+        let year = parseInt(currentTahun);
+        
+        let startMonth = month;
+        let startYear = year - 1;
+        
+        let monthNames = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+        
+        periodeText = `${monthNames[startMonth-1]} ${startYear} - ${bulanText} ${tahunText}`;
+    }
+    
+    $('#periode-display').text(periodeText);
+}
+
+/**
+ * Refresh data for specified table
+ */
+function refreshData(tipe) {
+    $.ajax({
+        url: '/laporan-pemesanan/data',
+        type: 'GET',
+        data: {
+            tipe: tipe,
+            periode: currentPeriode,
+            bulan: currentBulan,
+            tahun: currentTahun
+        },
+        beforeSend: function() {
+            // Show loading indicator
+            $(`#table-${tipe} tbody`).html('<tr><td colspan="5" class="text-center">Loading data...</td></tr>');
+        },
+        success: function(response) {
+            if (response.success) {
+                // Save date range for export
+                startDate = response.periode.start;
+                endDate = response.periode.end;
+                
+                // Update table data
+                switch (tipe) {
+                    case 'barang':
+                        tableBarang.clear().rows.add(response.data).draw();
+                        $('#barang-total-pesanan').text(response.total.pesanan);
+                        $('#barang-total-unit').text(response.total.unit);
+                        $('#barang-total-pendapatan').text(formatRupiah(response.total.pendapatan));
+                        break;
+                    case 'sumber':
+                        tableSumber.clear().rows.add(response.data).draw();
+                        $('#sumber-total-pesanan').text(response.total.pesanan);
+                        $('#sumber-total-unit').text(response.total.unit);
+                        $('#sumber-total-pendapatan').text(formatRupiah(response.total.pendapatan));
+                        break;
+                    case 'pemesan':
+                        tablePemesan.clear().rows.add(response.data).draw();
+                        $('#pemesan-total-pesanan').text(response.total.pesanan);
+                        $('#pemesan-total-unit').text(response.total.unit);
+                        $('#pemesan-total-pendapatan').text(formatRupiah(response.total.pendapatan));
+                        break;
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message
+                });
+            }
+        },
+        error: function(xhr) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Gagal memuat data'
+            });
+        }
+    });
+}
+
+/**
+ * Load detail data for modal
+ */
+function loadDetailData(tipe, id) {
+    $.ajax({
+        url: '/laporan-pemesanan/detail',
+        type: 'GET',
+        data: {
+            tipe: tipe,
+            id: id,
+            start_date: startDate,
+            end_date: endDate
+        },
+        beforeSend: function() {
+            // Show loading indicator
+            $('#table-detail tbody').html('<tr><td colspan="8" class="text-center">Loading data...</td></tr>');
+        },
+        success: function(response) {
+            if (response.success) {
+                // Update table
+                tableDetail.clear().rows.add(response.data).draw();
+                
+                // Update chart
+                updateDetailChart(response.chart_data);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: response.message
+                });
+            }
+        },
+        error: function(xhr) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Gagal memuat data detail'
+            });
+        }
+    });
+}
+
+/**
+ * Update chart in detail modal
+ */
+function updateDetailChart(chartData) {
+    // Destroy existing chart if exists
+    if (detailChart) {
+        detailChart.destroy();
+    }
+    
+    // Prepare data
+    const labels = chartData.map(item => item.month);
+    const totalData = chartData.map(item => item.total);
+    const countData = chartData.map(item => item.count);
+    
+    // Create new chart
+    const ctx = document.getElementById('detail-chart').getContext('2d');
+    detailChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Total Pendapatan (Rp)',
+                    data: totalData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y1'
+                },
+                {
+                    label: 'Jumlah Pesanan',
+                    data: countData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                    type: 'line',
+                    yAxisID: 'y2'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            
+                            if (label) {
+                                label += ': ';
+                            }
+                            
+                            if (context.dataset.yAxisID === 'y1') {
+                                label += formatRupiah(context.raw);
+                            } else {
+                                label += context.raw;
+                            }
+                            
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Total Pendapatan (Rp)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatRupiah(value);
+                        }
+                    }
+                },
+                y2: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Jumlah Pesanan'
+                    },
+                    ticks: {
+                        stepSize: 1
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Export data to CSV
+ */
+function exportData(tipe) {
+    let url = `/laporan-pemesanan/export-csv?tipe=${tipe}&start_date=${startDate}&end_date=${endDate}`;
+    window.location.href = url;
+}
+
+/**
+ * Export detail data to CSV
+ */
+function exportDetailData() {
+    let url = `/laporan-pemesanan/export-csv?tipe=${currentTab}&start_date=${startDate}&end_date=${endDate}&detail_id=${detailId}`;
+    window.location.href = url;
+}
+
+/**
+ * Print data
+ */
+function printData(tipe) {
+    let table = '';
+    let title = '';
+    let period = `Periode: ${formatDate(startDate)} - ${formatDate(endDate)}`;
+    
+    switch (tipe) {
+        case 'barang':
+            table = document.getElementById('table-barang');
+            title = 'Laporan Pemesanan Per Barang';
+            break;
+        case 'sumber':
+            table = document.getElementById('table-sumber');
+            title = 'Laporan Pemesanan Per Sumber';
+            break;
+        case 'pemesan':
+            table = document.getElementById('table-pemesan');
+            title = 'Laporan Pemesanan Per Pemesan';
+            break;
+    }
+    
+    let printContent = `
+        <html>
+        <head>
+            <title>${title}</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-bottom: 20px;
+                }
+                table, th, td {
+                    border: 1px solid #ddd;
+                }
+                th, td {
+                    padding: 8px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f2f2f2;
+                }
+                .text-right {
+                    text-align: right;
+                }
+                .text-center {
+                    text-align: center;
+                }
+                h1, h2 {
+                    text-align: center;
+                }
+                .print-header {
+                    margin-bottom: 20px;
+                }
+                .print-footer {
+                    margin-top: 30px;
+                    text-align: right;
+                }
+                .total-row {
+                    font-weight: bold;
+                    background-color: #f2f2f2;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <h1>${title}</h1>
+                <h2>${period}</h2>
+            </div>
+            <table id="print-table">
+                <thead>
+                    <tr>
+                        ${Array.from(table.querySelectorAll('thead th')).slice(0, -1).map(th => `<th>${th.textContent}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Array.from(table.querySelectorAll('tbody tr')).map(tr => {
+                        return `<tr>${Array.from(tr.querySelectorAll('td')).slice(0, -1).map(td => {
+                            return `<td class="${td.className}">${td.textContent}</td>`;
+                        }).join('')}</tr>`;
+                    }).join('')}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        ${Array.from(table.querySelectorAll('tfoot th')).slice(0, -1).map(th => `<th class="${th.className}">${th.textContent}</th>`).join('')}
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="print-footer">
+                <p>Dicetak pada: ${new Date().toLocaleString()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    printContentInNewWindow(printContent);
+}
+
+/**
+ * Print detail data
+ */
+function printDetailData() {
+    let title = `Detail Pemesanan ${currentTab === 'barang' ? 'Barang' : currentTab === 'sumber' ? 'Sumber' : 'Pemesan'}: ${detailName}`;
+    let period = `Periode: ${formatDate(startDate)} - ${formatDate(endDate)}`;
+    
+    // Create chart image
+    let chartCanvas = document.getElementById('detail-chart');
+    let chartImage = chartCanvas.toDataURL('image/png');
+    
+    let table = document.getElementById('table-detail');
+    
+    let printContent = `
+        <html>
+        <head>
+            <title>${title}</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-bottom: 20px;
+                }
+                table, th, td {
+                    border: 1px solid #ddd;
+                }
+                th, td {
+                    padding: 8px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f2f2f2;
+                }
+                .text-right {
+                    text-align: right;
+                }
+                .text-center {
+                    text-align: center;
+                }
+                h1, h2, h3 {
+                    text-align: center;
+                }
+                .print-header {
+                    margin-bottom: 20px;
+                }
+                .print-footer {
+                    margin-top: 30px;
+                    text-align: right;
+                }
+                .chart-container {
+                    text-align: center;
+                    margin: 20px 0;
+                }
+                .badge {
+                    padding: 3px 6px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                }
+                .badge-warning {
+                    background-color: #ffc107;
+                    color: #212529;
+                }
+                .badge-info {
+                    background-color: #17a2b8;
+                    color: white;
+                }
+                .badge-primary {
+                    background-color: #007bff;
+                    color: white;
+                }
+                .badge-success {
+                    background-color: #28a745;
+                    color: white;
+                }
+                .badge-danger {
+                    background-color: #dc3545;
+                    color: white;
+                }
+                .badge-secondary {
+                    background-color: #6c757d;
+                    color: white;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <h1>${title}</h1>
+                <h2>${period}</h2>
+            </div>
+            
+            <div class="chart-container">
+                <img src="${chartImage}" alt="Grafik Pemesanan" style="max-width: 100%;">
+            </div>
+            
+            <h3>Daftar Pemesanan</h3>
+            <table id="print-detail-table">
+                <thead>
+                    <tr>
+                        ${Array.from(table.querySelectorAll('thead th')).map(th => `<th>${th.textContent}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Array.from(table.querySelectorAll('tbody tr')).map(tr => {
+                        return `<tr>${Array.from(tr.querySelectorAll('td')).map(td => {
+                            return `<td class="${td.className}">${td.innerHTML}</td>`;
+                        }).join('')}</tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+            
+            <div class="print-footer">
+                <p>Dicetak pada: ${new Date().toLocaleString()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    printContentInNewWindow(printContent);
+}
+
+/**
+ * Helper function to print content in new window
+ */
+function printContentInNewWindow(content) {
+    let printWindow = window.open('', '_blank');
+    printWindow.document.write(content);
+    printWindow.document.close();
+    
+    // Wait for images to load
+    printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.onafterprint = function() {
+            printWindow.close();
+        };
+    };
+}
+
+/**
+ * Helper function to format currency
+ */
+function formatRupiah(angka) {
+    let reverse = angka.toString().split('').reverse().join('');
+    let ribuan = reverse.match(/\d{1,3}/g);
+    let formatted = ribuan.join('.').split('').reverse().join('');
+    
+    return `Rp ${formatted}`;
+}
+
+/**
+ * Helper function to format date
+ */
+function formatDate(dateString) {
+    let date = new Date(dateString);
+    let day = date.getDate().toString().padStart(2, '0');
+    let month = (date.getMonth() + 1).toString().padStart(2, '0');
+    let year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+}
