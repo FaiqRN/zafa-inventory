@@ -227,7 +227,60 @@ $(document).ready(function() {
         refreshData(currentTab);
     });
     
+    // Periode change handler untuk mengatur opsi bulan
+    $('#periode').change(function() {
+        let selectedPeriode = $(this).val();
+        let bulanSelect = $('#bulan');
+        
+        if (selectedPeriode === '6_bulan') {
+            // Untuk 6 bulan, hanya tampilkan bulan akhir semester
+            bulanSelect.prop('disabled', false);
+            bulanSelect.empty();
+            bulanSelect.append('<option value="6">Juni (Semester 1)</option>');
+            bulanSelect.append('<option value="12">Desember (Semester 2)</option>');
+            
+            // Set default ke semester saat ini
+            let currentMonth = new Date().getMonth() + 1;
+            if (currentMonth <= 6) {
+                bulanSelect.val('6');
+            } else {
+                bulanSelect.val('12');
+            }
+        } else if (selectedPeriode === '1_tahun') {
+            // Untuk 1 tahun, disable bulan
+            bulanSelect.prop('disabled', true);
+            bulanSelect.empty();
+            bulanSelect.append('<option value="12">Tahun Penuh</option>');
+            bulanSelect.val('12');
+        } else {
+            // Untuk 1 bulan, tampilkan semua bulan
+            bulanSelect.prop('disabled', false);
+            bulanSelect.empty();
+            let months = [
+                {val: '1', text: 'Januari'},
+                {val: '2', text: 'Februari'},
+                {val: '3', text: 'Maret'},
+                {val: '4', text: 'April'},
+                {val: '5', text: 'Mei'},
+                {val: '6', text: 'Juni'},
+                {val: '7', text: 'Juli'},
+                {val: '8', text: 'Agustus'},
+                {val: '9', text: 'September'},
+                {val: '10', text: 'Oktober'},
+                {val: '11', text: 'November'},
+                {val: '12', text: 'Desember'}
+            ];
+            
+            let currentMonth = new Date().getMonth() + 1;
+            months.forEach(function(month) {
+                let selected = month.val == currentMonth ? 'selected' : '';
+                bulanSelect.append(`<option value="${month.val}" ${selected}>${month.text}</option>`);
+            });
+        }
+    });
+    
     // Load data awal dan set periode display
+    $('#periode').trigger('change'); // Trigger untuk set initial state
     updatePeriodeDisplay();
     refreshData('barang');
     
@@ -371,45 +424,29 @@ $(document).ready(function() {
  * Update periode display text
  */
 function updatePeriodeDisplay() {
-    let bulanText = $('#bulan option:selected').text();
+    let bulanValue = $('#bulan').val();
     let tahunText = $('#tahun option:selected').text();
     let periodeText = '';
     
     if (currentPeriode === '1_bulan') {
+        let bulanText = $('#bulan option:selected').text();
         periodeText = `${bulanText} ${tahunText}`;
     } else if (currentPeriode === '6_bulan') {
-        // Calculate 6 months period
-        let month = parseInt(currentBulan);
+        // Calculate 6 months period based on semester
+        let month = parseInt(bulanValue);
         let year = parseInt(currentTahun);
         
-        let startMonth = month - 5;
-        let startYear = year;
-        
-        if (startMonth <= 0) {
-            startMonth += 12;
-            startYear -= 1;
+        if (month === 6) {
+            // Semester 1: Januari - Juni
+            periodeText = `Januari ${year} - Juni ${year} (Semester 1)`;
+        } else if (month === 12) {
+            // Semester 2: Juli - Desember
+            periodeText = `Juli ${year} - Desember ${year} (Semester 2)`;
         }
-        
-        let monthNames = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-        ];
-        
-        periodeText = `${monthNames[startMonth-1]} ${startYear} - ${bulanText} ${tahunText}`;
     } else { // 1_tahun
-        // Calculate 1 year period
-        let month = parseInt(currentBulan);
+        // Periode 1 tahun: berdasarkan tahun yang dipilih
         let year = parseInt(currentTahun);
-        
-        let startMonth = month;
-        let startYear = year - 1;
-        
-        let monthNames = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-        ];
-        
-        periodeText = `${monthNames[startMonth-1]} ${startYear} - ${bulanText} ${tahunText}`;
+        periodeText = `Januari ${year} - Desember ${year} (Tahun ${year})`;
     }
     
     $('#periode-display').text(periodeText);
@@ -533,40 +570,93 @@ function updateDetailChart(chartData) {
     const totalData = chartData.map(item => item.total);
     const countData = chartData.map(item => item.count);
     
+    // Debug: log data untuk memastikan ada lebih dari satu titik
+    console.log('Chart labels:', labels);
+    console.log('Total data:', totalData);
+    console.log('Count data:', countData);
+    
     // Create new chart
     const ctx = document.getElementById('detail-chart').getContext('2d');
     detailChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: labels,
             datasets: [
                 {
                     label: 'Total Pendapatan (Rp)',
                     data: totalData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
                     borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    yAxisID: 'y1'
+                    borderWidth: 3,
+                    fill: false, // Ubah ke false untuk melihat garis lebih jelas
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 10,
+                    yAxisID: 'y1',
+                    spanGaps: true, // Tambahkan ini untuk menangani data yang hilang
+                    showLine: true // Pastikan garis ditampilkan
                 },
                 {
                     label: 'Jumlah Pesanan',
                     data: countData,
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
                     borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1,
-                    type: 'line',
-                    yAxisID: 'y2'
+                    borderWidth: 3,
+                    fill: false, // Ubah ke false untuk melihat garis lebih jelas
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 10,
+                    yAxisID: 'y2',
+                    spanGaps: true, // Tambahkan ini untuk menangani data yang hilang
+                    showLine: true // Pastikan garis ditampilkan
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
             },
+            elements: {
+                line: {
+                    tension: 0.4
+                },
+                point: {
+                    radius: 6,
+                    hoverRadius: 8
+                }
+            },
             plugins: {
+                title: {
+                    display: true,
+                    text: `Trend Pemesanan - ${detailName}`,
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
                 tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: 'rgba(255,255,255,0.2)',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
@@ -578,7 +668,7 @@ function updateDetailChart(chartData) {
                             if (context.dataset.yAxisID === 'y1') {
                                 label += formatRupiah(context.raw);
                             } else {
-                                label += context.raw;
+                                label += context.raw + ' pesanan';
                             }
                             
                             return label;
@@ -587,18 +677,37 @@ function updateDetailChart(chartData) {
                 }
             },
             scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Periode',
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
                 y1: {
                     type: 'linear',
                     display: true,
                     position: 'left',
                     title: {
                         display: true,
-                        text: 'Total Pendapatan (Rp)'
+                        text: 'Total Pendapatan (Rp)',
+                        font: {
+                            weight: 'bold'
+                        }
                     },
                     ticks: {
                         callback: function(value) {
                             return formatRupiah(value);
                         }
+                    },
+                    grid: {
+                        color: 'rgba(54, 162, 235, 0.1)'
                     }
                 },
                 y2: {
@@ -607,13 +716,20 @@ function updateDetailChart(chartData) {
                     position: 'right',
                     title: {
                         display: true,
-                        text: 'Jumlah Pesanan'
+                        text: 'Jumlah Pesanan',
+                        font: {
+                            weight: 'bold'
+                        }
                     },
                     ticks: {
-                        stepSize: 1
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Math.floor(value);
+                        }
                     },
                     grid: {
-                        drawOnChartArea: false
+                        drawOnChartArea: false,
+                        color: 'rgba(255, 99, 132, 0.1)'
                     }
                 }
             }

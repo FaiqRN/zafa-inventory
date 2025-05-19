@@ -66,18 +66,7 @@
                             <div class="form-group">
                                 <label>Bulan</label>
                                 <select id="bulan" class="form-control">
-                                    <option value="1" {{ date('n') == 1 ? 'selected' : '' }}>Januari</option>
-                                    <option value="2" {{ date('n') == 2 ? 'selected' : '' }}>Februari</option>
-                                    <option value="3" {{ date('n') == 3 ? 'selected' : '' }}>Maret</option>
-                                    <option value="4" {{ date('n') == 4 ? 'selected' : '' }}>April</option>
-                                    <option value="5" {{ date('n') == 5 ? 'selected' : '' }}>Mei</option>
-                                    <option value="6" {{ date('n') == 6 ? 'selected' : '' }}>Juni</option>
-                                    <option value="7" {{ date('n') == 7 ? 'selected' : '' }}>Juli</option>
-                                    <option value="8" {{ date('n') == 8 ? 'selected' : '' }}>Agustus</option>
-                                    <option value="9" {{ date('n') == 9 ? 'selected' : '' }}>September</option>
-                                    <option value="10" {{ date('n') == 10 ? 'selected' : '' }}>Oktober</option>
-                                    <option value="11" {{ date('n') == 11 ? 'selected' : '' }}>November</option>
-                                    <option value="12" {{ date('n') == 12 ? 'selected' : '' }}>Desember</option>
+                                    <!-- Opsi akan diisi oleh JavaScript berdasarkan periode -->
                                 </select>
                             </div>
                         </div>

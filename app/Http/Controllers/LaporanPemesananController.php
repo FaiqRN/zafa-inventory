@@ -45,7 +45,7 @@ class LaporanPemesananController extends Controller
                 'pendapatan' => 0
             ];
             
-            if ($tipe === 'barang') {
+                            if ($tipe === 'barang') {
                 // Group by Barang (Product)
                 $data = DB::table('pemesanan')
                     ->join('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
@@ -57,7 +57,7 @@ class LaporanPemesananController extends Controller
                         DB::raw('SUM(pemesanan.total) as total_pendapatan')
                     )
                     ->whereBetween('pemesanan.tanggal_pemesanan', [$startDate, $endDate])
-                    ->where('pemesanan.status_pemesanan', '!=', 'dibatalkan')
+                    ->where('pemesanan.status_pemesanan', 'selesai')
                     ->groupBy('barang.barang_id', 'barang.nama_barang')
                     ->get();
                 
@@ -90,7 +90,7 @@ class LaporanPemesananController extends Controller
                         DB::raw('SUM(pemesanan.total) as total_pendapatan')
                     )
                     ->whereBetween('pemesanan.tanggal_pemesanan', [$startDate, $endDate])
-                    ->where('pemesanan.status_pemesanan', '!=', 'dibatalkan')
+                    ->where('pemesanan.status_pemesanan', 'selesai')
                     ->groupBy('pemesanan.pemesanan_dari')
                     ->get();
                 
@@ -123,7 +123,7 @@ class LaporanPemesananController extends Controller
                         DB::raw('SUM(pemesanan.total) as total_pendapatan')
                     )
                     ->whereBetween('pemesanan.tanggal_pemesanan', [$startDate, $endDate])
-                    ->where('pemesanan.status_pemesanan', '!=', 'dibatalkan')
+                    ->where('pemesanan.status_pemesanan', 'selesai')
                     ->groupBy('pemesanan.nama_pemesan')
                     ->get();
                 
@@ -226,7 +226,8 @@ class LaporanPemesananController extends Controller
                     'pemesanan.pemesanan_dari as sumber',
                     'pemesanan.status_pemesanan as status'
                 )
-                ->whereBetween('pemesanan.tanggal_pemesanan', [$startDate, $endDate]);
+                ->whereBetween('pemesanan.tanggal_pemesanan', [$startDate, $endDate])
+                ->where('pemesanan.status_pemesanan', 'selesai');
             
             if ($tipe === 'barang') {
                 $query->where('pemesanan.barang_id', $id);
@@ -243,6 +244,7 @@ class LaporanPemesananController extends Controller
             $startMonth = Carbon::parse($startDate)->startOfMonth();
             $endMonth = Carbon::parse($endDate)->endOfMonth();
             
+            // Generate data untuk setiap bulan dalam range, bahkan jika tidak ada data
             $currentMonth = $startMonth->copy();
             while ($currentMonth->lte($endMonth)) {
                 $monthStart = $currentMonth->format('Y-m-d');
@@ -253,7 +255,8 @@ class LaporanPemesananController extends Controller
                         DB::raw('COUNT(*) as count'),
                         DB::raw('SUM(total) as total')
                     )
-                    ->whereBetween('tanggal_pemesanan', [$monthStart, $monthEnd]);
+                    ->whereBetween('tanggal_pemesanan', [$monthStart, $monthEnd])
+                    ->where('status_pemesanan', 'selesai');
                 
                 if ($tipe === 'barang') {
                     $monthQuery->where('barang_id', $id);
@@ -267,12 +270,15 @@ class LaporanPemesananController extends Controller
                 
                 $chartData[] = [
                     'month' => $currentMonth->format('M Y'),
-                    'count' => $monthData->count ?? 0,
-                    'total' => $monthData->total ?? 0
+                    'count' => (int)($monthData->count ?? 0),
+                    'total' => (float)($monthData->total ?? 0)
                 ];
                 
                 $currentMonth->addMonth();
             }
+            
+            // Debug log
+            Log::info('Chart data generated:', $chartData);
             
             return response()->json([
                 'success' => true,
@@ -494,11 +500,19 @@ class LaporanPemesananController extends Controller
                 $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
                 $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
             } elseif ($periode == '6_bulan') {
-                $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
-                $startDate = Carbon::create($tahun, $bulan, 1)->subMonths(5)->startOfMonth();
+                if ($bulan === 6) {
+                    // Semester 1: Januari - Juni
+                    $startDate = Carbon::create($tahun, 1, 1)->startOfMonth();
+                    $endDate = Carbon::create($tahun, 6, 1)->endOfMonth();
+                } else { // $bulan === 12
+                    // Semester 2: Juli - Desember
+                    $startDate = Carbon::create($tahun, 7, 1)->startOfMonth();
+                    $endDate = Carbon::create($tahun, 12, 1)->endOfMonth();
+                }
             } else { // 1_tahun
-                $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
-                $startDate = Carbon::create($tahun, $bulan, 1)->subMonths(11)->startOfMonth();
+                // Periode 1 tahun penuh: Januari - Desember
+                $startDate = Carbon::create($tahun, 1, 1)->startOfYear();
+                $endDate = Carbon::create($tahun, 12, 31)->endOfYear();
             }
             
             // Log untuk debugging

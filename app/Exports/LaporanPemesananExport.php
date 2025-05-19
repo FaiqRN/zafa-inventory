@@ -36,7 +36,7 @@ class LaporanPemesananExport implements FromCollection, WithHeadings, WithMappin
         $query = DB::table('pemesanan')
             ->join('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
             ->whereBetween('pemesanan.tanggal_pemesanan', [$this->startDate, $this->endDate])
-            ->where('pemesanan.status_pemesanan', '!=', 'dibatalkan');
+            ->where('pemesanan.status_pemesanan', 'selesai');
         
         if ($this->detailId) {
             // Detail mode - get specific entries
