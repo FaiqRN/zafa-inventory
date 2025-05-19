@@ -1,3 +1,4 @@
+<!-- resources/views/layouts/header.blade.php -->
 <nav class="main-header navbar navbar-expand navbar-white navbar-light">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
@@ -13,33 +14,6 @@
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
-        <!-- Notifications Dropdown Menu -->
-        <li class="nav-item dropdown">
-            <a class="nav-link" data-toggle="dropdown" href="#">
-                <i class="far fa-bell"></i>
-                <span class="badge badge-warning navbar-badge">3</span>
-            </a>
-            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                <span class="dropdown-item dropdown-header">3 Notifikasi</span>
-                <div class="dropdown-divider"></div>
-                <a href="#" class="dropdown-item">
-                    <i class="fas fa-box mr-2"></i> 5 barang hampir habis
-                    <span class="float-right text-muted text-sm">3 menit</span>
-                </a>
-                <div class="dropdown-divider"></div>
-                <a href="#" class="dropdown-item">
-                    <i class="fas fa-truck mr-2"></i> 2 pengiriman baru
-                    <span class="float-right text-muted text-sm">12 jam</span>
-                </a>
-                <div class="dropdown-divider"></div>
-                <a href="#" class="dropdown-item">
-                    <i class="fas fa-undo-alt mr-2"></i> 3 retur baru
-                    <span class="float-right text-muted text-sm">2 hari</span>
-                </a>
-                <div class="dropdown-divider"></div>
-                <a href="#" class="dropdown-item dropdown-footer">Lihat Semua Notifikasi</a>
-            </div>
-        </li>
         <li class="nav-item">
             <a class="nav-link" data-widget="fullscreen" href="#" role="button">
                 <i class="fas fa-expand-arrows-alt"></i>
@@ -48,7 +22,12 @@
         @if(Auth::check())
             <li class="nav-item dropdown">
                 <a class="nav-link" data-toggle="dropdown" href="#">
-                    <i class="far fa-user-circle"></i> {{ Auth::user()->nama_lengkap ?? 'User' }}
+                    @if(Auth::user()->foto)
+                        <img src="{{ asset('storage/profile/'.Auth::user()->foto) }}" class="img-circle elevation-2" alt="User" style="width: 30px; height: 30px; object-fit: cover;">
+                    @else
+                        <i class="far fa-user-circle"></i>
+                    @endif
+                    <span class="ml-1">{{ Auth::user()->nama_lengkap ?? 'User' }}</span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
                     <a href="{{ route('profile') }}" class="dropdown-item">

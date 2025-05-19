@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Login - ZafaSys</title>
+    <title>Login - Zafa Distribusi</title>
     
     <style>
         body {
@@ -129,93 +129,65 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="logo-container">
-            <!-- Ganti path sesuai dengan lokasi logo Anda -->
-            <img src="{{ asset('adminlte\dist\img\zafalogo.png') }}" alt="Logo ZafaSys" class="logo">
-            <div class="company-name">ZafaSys</div>
-        </div>
-        
-        @if(session('error'))
-            <div class="alert alert-danger">
-                {{ session('error') }}
-            </div>
-        @endif
 
-        @if(session('success'))
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-        @endif
-        
-        <form method="POST" action="{{ route('login.process') }}">
-            @csrf
-            
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" class="form-control" 
-                       placeholder="Masukkan username" value="{{ old('username') }}" required>
-                @error('username')
-                    <div class="alert alert-danger">{{ $message }}</div>
-                @enderror
-            </div>
+<!-- Splash Screen -->
+<div id="splash-screen">
+  <h1>Hello 👋</h1>
+  <p>Welcome to ZafaSys</p>
+</div>
 
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" class="form-control" 
-                       placeholder="Masukkan password" required>
-                @error('password')
-                    <div class="alert alert-danger">{{ $message }}</div>
-                @enderror
-            </div>
+<!-- Login Form -->
+<div class="container">
+  <div class="left">
+    <img src="{{ asset('adminlte/dist/img/zafalogo.png') }}" alt="Logo">
+    <h2>Hello, Welcome!</h2>
+    <p>Please login to continue</p>
+  </div>
+  <div class="right">
+    <h2>Login</h2>
+    <form method="POST" action="{{ route('login') }}">
+      @csrf
 
-            <div class="remember-me">
-                <input type="checkbox" id="remember" name="remember">
-                <label for="remember">Ingat saya</label>
-            </div>
+      <!-- Username -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <i class='bx bx-user input-icon-left'></i>
+        <input type="text" name="username" id="username" placeholder="Enter your username" required>
+      </div>
 
-            @error('login')
-                <div class="alert alert-danger">{{ $message }}</div>
-            @enderror
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <i class='bx bx-lock input-icon-left'></i>
+        <input type="password" name="password" id="password" placeholder="Enter your password" required>
+        <i class='bx bx-show toggle-password' id="togglePassword"></i>
+        <a href="#">Forgot Password?</a>
+      </div>
 
-            <button type="submit" class="btn-login">Login</button>
+      <button class="btn-login" type="submit">Login</button>
 
-            <div class="forgot-password">
-                <a href="#" onclick="alert('Fitur lupa password akan segera tersedia')">Lupa Password?</a>
-            </div>
-        </form>
-    </div>
-    <script>
-        // Mencegah back button
-        window.onload = function() {
-            if (window.history && window.history.pushState) {
-                window.history.pushState('forward', null, null);
-                window.onpopstate = function(event) {
-                    window.history.pushState('forward', null, null);
-                    if (event.state === null) {
-                        // Handle the back button
-                        window.location.replace("{{ route('login') }}");
-                    }
-                };
-            }
-        }
-    
-        // Mencegah akses halaman yang di-cache
-        window.onpageshow = function(event) {
-            if (event.persisted) {
-                window.location.reload();
-            }
-        };
-        
-        // Disable caching untuk halaman ini
-        window.onunload = function(){};
-        
-        // Tambahan untuk Firefox
-        window.onpagehide = function(){};
-        
-        // Hapus localStorage dan sessionStorage saat halaman login dimuat
-        localStorage.clear();
-        sessionStorage.clear();
-    </script>
+    </form>
+  </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      document.getElementById('splash-screen').style.display = 'none';
+    }, 2000);
+  });
+
+  const togglePassword = document.querySelector('#togglePassword');
+  const passwordInput = document.querySelector('#password');
+
+  togglePassword.addEventListener('click', function () {
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    this.classList.toggle('bx-show');
+    this.classList.toggle('bx-hide');
+  });
+</script>
+
 </body>
 </html>
