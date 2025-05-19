@@ -397,6 +397,7 @@ $('#formPemesanan').submit(function(e) {
     }
     
     // Validasi manual hanya untuk field yang tidak disabled
+    const status = $('#status_pemesanan').val();
     let isValid = true;
     
     // Jika mode tambah baru, validasi semua field tanggal yang visible
@@ -563,80 +564,6 @@ $('#formPemesanan').submit(function(e) {
                     Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
                 }
             });
-        });
-    });
-
-    // Form submission
-    $('#formPemesanan').submit(function(e) {
-        e.preventDefault();
-        $('.is-invalid').removeClass('is-invalid');
-        
-        const formAction = $('#form_action').val();
-        const pemesananId = $('#pemesanan_id').val();
-        let url = '/pemesanan/store';
-        let method = 'POST';
-        
-        if (formAction === 'edit') {
-            url = `/pemesanan/${pemesananId}`;
-            method = 'PUT';
-        }
-        
-        // Validate date fields based on status
-        const status = $('#status_pemesanan').val();
-        let isValid = true;
-        
-        if (status === 'diproses' || status === 'dikirim' || status === 'selesai') {
-            if (!$('#tanggal_diproses').val()) {
-                $('#tanggal_diproses').addClass('is-invalid');
-                $('#error-tanggal_diproses').text('Tanggal diproses harus diisi');
-                isValid = false;
-            }
-        }
-        
-        if (status === 'dikirim' || status === 'selesai') {
-            if (!$('#tanggal_dikirim').val()) {
-                $('#tanggal_dikirim').addClass('is-invalid');
-                $('#error-tanggal_dikirim').text('Tanggal dikirim harus diisi');
-                isValid = false;
-            }
-        }
-        
-        if (status === 'selesai') {
-            if (!$('#tanggal_selesai').val()) {
-                $('#tanggal_selesai').addClass('is-invalid');
-                $('#error-tanggal_selesai').text('Tanggal selesai harus diisi');
-                isValid = false;
-            }
-        }
-        
-        if (!isValid) {
-            return false;
-        }
-        
-        $.ajax({
-            url: url,
-            type: method,
-            data: $(this).serialize(),
-            success: function(response) {
-                $('#modalPemesanan').modal('hide');
-                Swal.fire('Sukses', response.message, 'success');
-                table.ajax.reload();
-            },
-            error: function(xhr) {
-                const response = xhr.responseJSON;
-                if (response.errors) {
-                    // Display validation errors
-                    $.each(response.errors, function(field, messages) {
-                        const inputField = $(`#${field}`);
-                        if (inputField.length) {
-                            inputField.addClass('is-invalid');
-                            $(`#error-${field}`).text(messages[0]);
-                        }
-                    });
-                } else {
-                    Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
-                }
-            }
         });
     });
 

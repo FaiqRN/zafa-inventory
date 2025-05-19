@@ -15,45 +15,50 @@ class BarangSeeder extends Seeder
     {
         DB::table('barang')->insert([
             [
-                'barang_id' => 'B0001',
-                'barang_kode' => 'PRD-001',
-                'nama_barang' => 'Balado Teri Kacang',
-                'harga_awal_barang' => 27000.00,
-                'satuan' => 'pcs',
-                'keterangan' => 'Kemasan 180 gram, balado teri kacang pedas manis',
-            ],
-            [
-                'barang_id' => 'B0002',
-                'barang_kode' => 'PRD-002',
-                'nama_barang' => 'Kentang Kriuuuk',
-                'harga_awal_barang' => 26000.00,
-                'satuan' => 'pcs',
-                'keterangan' => 'Kemasan 270 gram, kentang kering renyah',
-            ],
-            [
-                'barang_id' => 'B0003',
-                'barang_kode' => 'PRD-003',
-                'nama_barang' => 'Kering Kentang',
-                'harga_awal_barang' => 26000.00,
-                'satuan' => 'pcs',
-                'keterangan' => 'Kemasan 270 gram, kering kentang original',
-            ],
-            [
-                'barang_id' => 'B0004',
-                'barang_kode' => 'PRD-004',
-                'nama_barang' => 'Kering Kentang Mustofa',
-                'harga_awal_barang' => 27000.00,
-                'satuan' => 'pcs',
-                'keterangan' => 'Kemasan 180 gram, kering kentang ala mustofa pedas',
-            ],
-            [
-                'barang_id' => 'B0005',
-                'barang_kode' => 'PRD-005',
+                'barang_id' => 'BRGG6WPWPU',
+                'barang_kode' => 'BRG002',
                 'nama_barang' => 'Kering Kentang Tempe',
-                'harga_awal_barang' => 26000.00,
-                'satuan' => 'pcs',
-                'keterangan' => 'Kemasan 270 gram, kering kentang dengan tempe',
+                'harga_awal_barang' => 25000.00,
+                'satuan' => 'Pcs',
+                'keterangan' => 'Olahan Kering Kentang yang dipadukan dengan Tempe yang kriuk dengan bumbu pedas manis yang lezat',
+                'is_deleted' => 0
             ],
+            [
+                'barang_id' => 'BRGHRUHXIF',
+                'barang_kode' => 'BRG003',
+                'nama_barang' => 'Kering Kentang Original',
+                'harga_awal_barang' => 25000.00,
+                'satuan' => 'Pcs',
+                'keterangan' => 'Olahan kentang original yang gurih dan kriuk',
+                'is_deleted' => 0
+            ],
+            [
+                'barang_id' => 'BRGOGODSVM',
+                'barang_kode' => 'BRG001',
+                'nama_barang' => 'Kering Kentang',
+                'harga_awal_barang' => 25000.00,
+                'satuan' => 'Pcs',
+                'keterangan' => 'Olahan Kentang yang diiris tipis lebar dengan bumbu pedas manis',
+                'is_deleted' => 0
+            ],
+            [
+                'barang_id' => 'BRGQAVQCQR',
+                'barang_kode' => 'BRG005',
+                'nama_barang' => 'Balado Teri Kacang',
+                'harga_awal_barang' => 26000.00,
+                'satuan' => 'Pcs',
+                'keterangan' => 'Olahan teri dan kacang yang gurih dengan bumbu pedas manis yang lezat',
+                'is_deleted' => 0
+            ],
+            [
+                'barang_id' => 'BRGSNHRBU6',
+                'barang_kode' => 'BRG004',
+                'nama_barang' => 'Kering kentang Mustofa Teri',
+                'harga_awal_barang' => 26000.00,
+                'satuan' => 'Pcs',
+                'keterangan' => 'olahan kering kentang yang panjang dengan perpaduan ikan teri yang gurih dengan bumbu pedas manis',
+                'is_deleted' => 0
+            ]
         ]);
     }
 }
