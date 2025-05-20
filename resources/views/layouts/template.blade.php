@@ -218,8 +218,8 @@
     }
 
     .btn-warning:hover, .btn-warning:focus {
-      background-color: #e68a00 !important;
-      border-color: #e68a00 !important;
+      background-color: white !important;
+      border-color: white !important;
     }
 
     .btn-danger {
