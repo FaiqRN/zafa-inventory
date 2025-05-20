@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
@@ -34,20 +35,33 @@ Route::middleware(['guest', 'nocache'])->group(function () {
 // Route yang memerlukan autentikasi
 Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/', [AuthController::class, 'dashboard'])->name('dashboard');
-    Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
     
- // Route profil
-Route::middleware(['auth'])->group(function () {
-    Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'index'])->name('profile');
+    // ===============================
+    // DASHBOARD ROUTES 
+    // ===============================
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    Route::prefix('pengaturan')->group(function () {
-        Route::get('/edit-profile', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
-        Route::post('/update-profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
-        Route::get('/ubah-password', [App\Http\Controllers\ProfileController::class, 'changePassword'])->name('profile.change-password');
-        Route::post('/update-password', [App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.update-password');
-    });
+    // Dashboard API Routes untuk View Data
+Route::prefix('dashboard/api')->group(function() {
+    Route::get('/statistik', [DashboardController::class, 'getStatistikRingkasan']);
+    Route::get('/grafik-pengiriman', [DashboardController::class, 'getGrafikPengiriman']);
+    Route::get('/barang-analysis', [DashboardController::class, 'getBarangLakuTidakLaku'])->name('dashboard.api.barang-analysis');
+    Route::get('/transaksi-terbaru', [DashboardController::class, 'getTransaksiTerbaru']);
+    Route::get('/toko-retur-terbanyak', [DashboardController::class, 'getTokoReturTerbanyak']);
 });
+    
+    // Route profil
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'index'])->name('profile');
+        
+        Route::prefix('pengaturan')->group(function () {
+            Route::get('/edit-profile', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+            Route::post('/update-profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+            Route::get('/ubah-password', [App\Http\Controllers\ProfileController::class, 'changePassword'])->name('profile.change-password');
+            Route::post('/update-password', [App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.update-password');
+        });
+    });
     
     // Route Master Data
     Route::group(['prefix' => 'barang'], function() {
@@ -61,16 +75,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
     });
     
-Route::get('/toko/data', [TokoController::class, 'getData'])->name('toko.data');
-Route::get('/toko/list', [TokoController::class, 'getList'])->name('toko.list');
-Route::get('/toko/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
+    Route::get('/toko/data', [TokoController::class, 'getData'])->name('toko.data');
+    Route::get('/toko/list', [TokoController::class, 'getList'])->name('toko.list');
+    Route::get('/toko/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
 
-// Routes untuk Wilayah Dropdown
-Route::get('/toko/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
-Route::get('/toko/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
-Route::get('/toko/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
+    // Routes untuk Wilayah Dropdown
+    Route::get('/toko/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
+    Route::get('/toko/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
+    Route::get('/toko/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
 
-Route::resource('toko', TokoController::class);
+    Route::resource('toko', TokoController::class);
     
     Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');
     Route::get('/barang-toko/getAvailableBarang', [BarangTokoController::class, 'getAvailableBarang'])->name('barang-toko.getAvailableBarang');
@@ -125,20 +139,19 @@ Route::resource('toko', TokoController::class);
     });
     
     // Route Laporan
-// Laporan Pemesanan Routes
-// Route Laporan Pemesanan
-Route::get('/laporan-pemesanan', [LaporanPemesananController::class, 'index'])->name('laporan.pemesanan');
-Route::get('/laporan-pemesanan/data', [LaporanPemesananController::class, 'getData'])->name('laporan.pemesanan.data');
-Route::post('/laporan-pemesanan/update-catatan', [LaporanPemesananController::class, 'updateCatatan'])->name('laporan.pemesanan.updateCatatan');
-Route::get('/laporan-pemesanan/detail', [LaporanPemesananController::class, 'getDetailData'])->name('laporan.pemesanan.detail');
-Route::get('/laporan-pemesanan/export-csv', [LaporanPemesananController::class, 'exportCsv'])->name('laporan.pemesanan.exportCsv');
+    // Laporan Pemesanan Routes
+    Route::get('/laporan-pemesanan', [LaporanPemesananController::class, 'index'])->name('laporan.pemesanan');
+    Route::get('/laporan-pemesanan/data', [LaporanPemesananController::class, 'getData'])->name('laporan.pemesanan.data');
+    Route::post('/laporan-pemesanan/update-catatan', [LaporanPemesananController::class, 'updateCatatan'])->name('laporan.pemesanan.updateCatatan');
+    Route::get('/laporan-pemesanan/detail', [LaporanPemesananController::class, 'getDetailData'])->name('laporan.pemesanan.detail');
+    Route::get('/laporan-pemesanan/export-csv', [LaporanPemesananController::class, 'exportCsv'])->name('laporan.pemesanan.exportCsv');
     
-Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
-Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
-Route::post('/laporan-toko/update-catatan', [LaporanTokoController::class, 'updateCatatan'])->name('laporan.toko.updateCatatan');
-Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData'])->name('laporan.toko.detail');
-Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
-Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
+    Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
+    Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
+    Route::post('/laporan-toko/update-catatan', [LaporanTokoController::class, 'updateCatatan'])->name('laporan.toko.updateCatatan');
+    Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData'])->name('laporan.toko.detail');
+    Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
+    Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
     Route::get('/analytics', function () {
         return view('analytics', [
