@@ -5,6 +5,8 @@
 // DataTable Instances
 let tableBarang, tableSumber, tablePemesan, tableDetail;
 let detailChart = null;
+// Chart untuk visualisasi barang
+let barangChart = null;
 
 // Data status for current active tab
 let currentTab = 'barang';
@@ -453,6 +455,147 @@ function updatePeriodeDisplay() {
 }
 
 /**
+ * Create barang chart
+ */
+function createBarangChart(data) {
+    // Destroy existing chart if it exists
+    if (barangChart) {
+        barangChart.destroy();
+    }
+    
+    // Sort data by total_pendapatan in descending order
+    data.sort((a, b) => b.total_pendapatan - a.total_pendapatan);
+    
+    // Take top 10 items for better readability if there are many items
+    let chartData = data;
+    if (data.length > 10) {
+        chartData = data.slice(0, 10);
+    }
+    
+    // Prepare data for the chart
+    const labels = chartData.map(item => item.nama);
+    const totalPendapatan = chartData.map(item => item.total_pendapatan);
+    const jumlahUnit = chartData.map(item => item.total_unit);
+    
+    // Create chart
+    const ctx = document.getElementById('barang-chart').getContext('2d');
+    barangChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Total Pendapatan (Rp)',
+                    data: totalPendapatan,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y1',
+                },
+                {
+                    label: 'Jumlah Unit Terjual',
+                    data: jumlahUnit,
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y2',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: data.length > 10 ? 'Top 10 Barang Berdasarkan Pendapatan' : 'Perbandingan Penjualan Semua Barang',
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            
+                            if (label) {
+                                label += ': ';
+                            }
+                            
+                            if (context.dataset.yAxisID === 'y1') {
+                                label += formatRupiah(context.raw);
+                            } else {
+                                label += context.raw;
+                            }
+                            
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Total Pendapatan (Rp)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            if (value >= 1000000) {
+                                return 'Rp ' + (value / 1000000).toFixed(1) + ' jt';
+                            } else if (value >= 1000) {
+                                return 'Rp ' + (value / 1000).toFixed(1) + ' rb';
+                            }
+                            return 'Rp ' + value;
+                        }
+                    }
+                },
+                y2: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Jumlah Unit Terjual'
+                    },
+                    grid: {
+                        drawOnChartArea: false // only want the grid lines for one axis to show up
+                    }
+                }
+            }
+        }
+    });
+    
+    // Add note if there are more than 10 items
+    if (data.length > 10) {
+        const chartContainer = document.querySelector('.chart-container');
+        // Remove existing note if any
+        const existingNote = chartContainer.querySelector('.chart-note');
+        if (existingNote) {
+            existingNote.remove();
+        }
+        
+        let noteElement = document.createElement('div');
+        noteElement.className = 'text-muted text-center mt-2 chart-note';
+        noteElement.innerHTML = 'Menampilkan 10 dari ' + data.length + ' barang dengan pendapatan tertinggi';
+        chartContainer.appendChild(noteElement);
+    }
+}
+
+/**
  * Refresh data for specified table
  */
 function refreshData(tipe) {
@@ -468,6 +611,11 @@ function refreshData(tipe) {
         beforeSend: function() {
             // Show loading indicator
             $(`#table-${tipe} tbody`).html('<tr><td colspan="5" class="text-center">Loading data...</td></tr>');
+            
+            // Show loading indicator for chart if in barang tab
+            if (tipe === 'barang') {
+                $('.chart-container').html('<div class="d-flex justify-content-center align-items-center" style="height:350px;"><i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span></div>');
+            }
         },
         success: function(response) {
             if (response.success) {
@@ -482,6 +630,14 @@ function refreshData(tipe) {
                         $('#barang-total-pesanan').text(response.total.pesanan);
                         $('#barang-total-unit').text(response.total.unit);
                         $('#barang-total-pendapatan').text(formatRupiah(response.total.pendapatan));
+                        
+                        // Create or update chart
+                        if (response.data.length > 0) {
+                            $('.chart-container').html('<canvas id="barang-chart"></canvas>');
+                            createBarangChart(response.data);
+                        } else {
+                            $('.chart-container').html('<div class="alert alert-info text-center">Tidak ada data untuk ditampilkan</div>');
+                        }
                         break;
                     case 'sumber':
                         tableSumber.clear().rows.add(response.data).draw();
@@ -721,7 +877,7 @@ function updateDetailChart(chartData) {
                             weight: 'bold'
                         }
                     },
-                    ticks: {
+ticks: {
                         stepSize: 1,
                         callback: function(value) {
                             return Math.floor(value);
@@ -760,11 +916,22 @@ function printData(tipe) {
     let table = '';
     let title = '';
     let period = `Periode: ${formatDate(startDate)} - ${formatDate(endDate)}`;
+    let chartImageHtml = '';
     
     switch (tipe) {
         case 'barang':
             table = document.getElementById('table-barang');
             title = 'Laporan Pemesanan Per Barang';
+            // Add chart image if it exists
+            if (barangChart) {
+                let chartImage = barangChart.toBase64Image();
+                chartImageHtml = `
+                    <div class="chart-container">
+                        <h3>Grafik Pemesanan Barang</h3>
+                        <img src="${chartImage}" alt="Grafik Pemesanan Barang" style="max-width: 100%; max-height: 400px;">
+                    </div>
+                `;
+            }
             break;
         case 'sumber':
             table = document.getElementById('table-sumber');
@@ -806,7 +973,7 @@ function printData(tipe) {
                 .text-center {
                     text-align: center;
                 }
-                h1, h2 {
+                h1, h2, h3 {
                     text-align: center;
                 }
                 .print-header {
@@ -820,6 +987,10 @@ function printData(tipe) {
                     font-weight: bold;
                     background-color: #f2f2f2;
                 }
+                .chart-container {
+                    text-align: center;
+                    margin: 20px 0;
+                }
             </style>
         </head>
         <body>
@@ -827,6 +998,10 @@ function printData(tipe) {
                 <h1>${title}</h1>
                 <h2>${period}</h2>
             </div>
+            
+            ${chartImageHtml}
+            
+            <h3>Tabel Data Pemesanan</h3>
             <table id="print-table">
                 <thead>
                     <tr>

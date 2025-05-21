@@ -39,6 +39,11 @@
     .total-cell {
         border-top: 2px solid #dee2e6 !important;
     }
+    .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 20px;
+    }
 </style>
 @endpush
 
@@ -119,6 +124,22 @@
                     <div class="tab-content mt-3" id="reportTabsContent">
                         <!-- Tab Barang -->
                         <div class="tab-pane fade show active" id="tab-barang" role="tabpanel">
+                            <!-- Chart Visualisasi Barang (Bagian Baru) -->
+                            <div class="row mb-4">
+                                <div class="col-lg-12">
+                                    <div class="card">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0"><i class="fas fa-chart-bar mr-2"></i> Visualisasi Data Pemesanan Barang</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="chart-container">
+                                                <canvas id="barang-chart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="mb-3">
                                 <div class="btn-group">
                                     <button type="button" id="refresh-barang" class="btn btn-info">
