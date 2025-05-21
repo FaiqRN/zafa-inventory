@@ -44,6 +44,11 @@
         height: 350px;
         margin-bottom: 20px;
     }
+    .modal-open-no-scroll {
+    overflow: hidden !important;
+    position: fixed;
+    width: 100%;
+}
 </style>
 @endpush
 
@@ -182,6 +187,22 @@
                         
                         <!-- Tab Sumber -->
                         <div class="tab-pane fade" id="tab-sumber" role="tabpanel">
+                            <!-- Chart Visualisasi Sumber (Bagian Baru) -->
+                            <div class="row mb-4">
+                                <div class="col-lg-12">
+                                    <div class="card">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0"><i class="fas fa-chart-pie mr-2"></i> Visualisasi Data Sumber Pemesanan</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="chart-container">
+                                                <canvas id="sumber-chart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="mb-3">
                                 <div class="btn-group">
                                     <button type="button" id="refresh-sumber" class="btn btn-info">
@@ -326,7 +347,7 @@
                             <div class="card-header bg-info text-white">
                                 <h5 class="mb-0">Grafik Pemesanan</h5>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body" id="detail-chart-container">
                                 <canvas id="detail-chart" height="300"></canvas>
                             </div>
                         </div>

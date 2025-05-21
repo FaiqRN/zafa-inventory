@@ -205,97 +205,147 @@ class LaporanPemesananController extends Controller
         }
     }
     
-    public function getDetailData(Request $request)
-    {
-        try {
-            $tipe = $request->tipe;
-            $id = $request->id;
-            $startDate = $request->start_date;
-            $endDate = $request->end_date;
+public function getDetailData(Request $request)
+{
+    try {
+        $tipe = $request->tipe;
+        $id = $request->id;
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+        
+        // Get pemesanan detail based on tipe and id
+        $query = DB::table('pemesanan')
+            ->join('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+            ->select(
+                'pemesanan.pemesanan_id',
+                'pemesanan.tanggal_pemesanan as tanggal',
+                'barang.nama_barang',
+                'pemesanan.nama_pemesan',
+                'pemesanan.jumlah_pesanan as jumlah',
+                'pemesanan.total',
+                'pemesanan.pemesanan_dari as sumber',
+                'pemesanan.status_pemesanan as status'
+            )
+            ->whereBetween('pemesanan.tanggal_pemesanan', [$startDate, $endDate])
+            ->where('pemesanan.status_pemesanan', 'selesai');
+        
+        if ($tipe === 'barang') {
+            $query->where('pemesanan.barang_id', $id);
+        } elseif ($tipe === 'sumber') {
+            $query->where('pemesanan.pemesanan_dari', $id);
+        } elseif ($tipe === 'pemesan') {
+            $query->where('pemesanan.nama_pemesan', $id);
+        }
+        
+        $data = $query->orderBy('pemesanan.tanggal_pemesanan', 'desc')->get();
+        
+        // Prepare chart data (monthly summary)
+        $chartData = [];
+        $startMonth = Carbon::parse($startDate)->startOfMonth();
+        $endMonth = Carbon::parse($endDate)->endOfMonth();
+        
+        // Generate data untuk setiap bulan dalam range, bahkan jika tidak ada data
+        $currentMonth = $startMonth->copy();
+        while ($currentMonth->lte($endMonth)) {
+            $monthStart = $currentMonth->format('Y-m-d');
+            $monthEnd = $currentMonth->copy()->endOfMonth()->format('Y-m-d');
             
-            // Get pemesanan detail based on tipe and id
-            $query = DB::table('pemesanan')
-                ->join('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+            $monthQuery = DB::table('pemesanan')
                 ->select(
-                    'pemesanan.pemesanan_id',
-                    'pemesanan.tanggal_pemesanan as tanggal',
-                    'barang.nama_barang',
-                    'pemesanan.nama_pemesan',
-                    'pemesanan.jumlah_pesanan as jumlah',
-                    'pemesanan.total',
-                    'pemesanan.pemesanan_dari as sumber',
-                    'pemesanan.status_pemesanan as status'
+                    DB::raw('COUNT(*) as count'),
+                    DB::raw('SUM(total) as total')
                 )
-                ->whereBetween('pemesanan.tanggal_pemesanan', [$startDate, $endDate])
-                ->where('pemesanan.status_pemesanan', 'selesai');
+                ->whereBetween('tanggal_pemesanan', [$monthStart, $monthEnd])
+                ->where('status_pemesanan', 'selesai');
             
             if ($tipe === 'barang') {
-                $query->where('pemesanan.barang_id', $id);
+                $monthQuery->where('barang_id', $id);
             } elseif ($tipe === 'sumber') {
-                $query->where('pemesanan.pemesanan_dari', $id);
+                $monthQuery->where('pemesanan_dari', $id);
             } elseif ($tipe === 'pemesan') {
-                $query->where('pemesanan.nama_pemesan', $id);
+                $monthQuery->where('nama_pemesan', $id);
             }
             
-            $data = $query->orderBy('pemesanan.tanggal_pemesanan', 'desc')->get();
+            $monthData = $monthQuery->first();
             
-            // Prepare chart data (monthly summary)
-            $chartData = [];
-            $startMonth = Carbon::parse($startDate)->startOfMonth();
-            $endMonth = Carbon::parse($endDate)->endOfMonth();
+            $chartData[] = [
+                'month' => $currentMonth->format('M Y'),
+                'count' => (int)($monthData->count ?? 0),
+                'total' => (float)($monthData->total ?? 0)
+            ];
             
-            // Generate data untuk setiap bulan dalam range, bahkan jika tidak ada data
-            $currentMonth = $startMonth->copy();
-            while ($currentMonth->lte($endMonth)) {
-                $monthStart = $currentMonth->format('Y-m-d');
-                $monthEnd = $currentMonth->copy()->endOfMonth()->format('Y-m-d');
-                
-                $monthQuery = DB::table('pemesanan')
-                    ->select(
-                        DB::raw('COUNT(*) as count'),
-                        DB::raw('SUM(total) as total')
-                    )
-                    ->whereBetween('tanggal_pemesanan', [$monthStart, $monthEnd])
-                    ->where('status_pemesanan', 'selesai');
-                
-                if ($tipe === 'barang') {
-                    $monthQuery->where('barang_id', $id);
-                } elseif ($tipe === 'sumber') {
-                    $monthQuery->where('pemesanan_dari', $id);
-                } elseif ($tipe === 'pemesan') {
-                    $monthQuery->where('nama_pemesan', $id);
-                }
-                
-                $monthData = $monthQuery->first();
-                
-                $chartData[] = [
-                    'month' => $currentMonth->format('M Y'),
-                    'count' => (int)($monthData->count ?? 0),
-                    'total' => (float)($monthData->total ?? 0)
-                ];
-                
-                $currentMonth->addMonth();
-            }
-            
-            // Debug log
-            Log::info('Chart data generated:', $chartData);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $data,
-                'chart_data' => $chartData
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error("Error in getDetailData: " . $e->getMessage());
-            Log::error($e->getTraceAsString());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
+            $currentMonth->addMonth();
         }
+        
+        // Tambahkan summary data untuk perbandingan pada chart Pie
+        $summary = null;
+        if ($tipe === 'sumber') {
+            // Get this source total
+            $thisSourceTotal = DB::table('pemesanan')
+                ->select(
+                    DB::raw('COUNT(*) as jumlah_pesanan'),
+                    DB::raw('SUM(jumlah_pesanan) as total_unit'),
+                    DB::raw('SUM(total) as total_pendapatan')
+                )
+                ->whereBetween('tanggal_pemesanan', [$startDate, $endDate])
+                ->where('status_pemesanan', 'selesai')
+                ->where('pemesanan_dari', $id)
+                ->first();
+            
+            // Get all sources total for the same period
+            $allSourcesTotal = DB::table('pemesanan')
+                ->select(
+                    DB::raw('COUNT(*) as jumlah_pesanan'),
+                    DB::raw('SUM(jumlah_pesanan) as total_unit'),
+                    DB::raw('SUM(total) as total_pendapatan')
+                )
+                ->whereBetween('tanggal_pemesanan', [$startDate, $endDate])
+                ->where('status_pemesanan', 'selesai')
+                ->first();
+            
+            $summary = [
+                'thisSource' => [
+                    'jumlah_pesanan' => (int)($thisSourceTotal->jumlah_pesanan ?? 0),
+                    'total_unit' => (int)($thisSourceTotal->total_unit ?? 0),
+                    'total_pendapatan' => (float)($thisSourceTotal->total_pendapatan ?? 0)
+                ],
+                'total' => [
+                    'jumlah_pesanan' => (int)($allSourcesTotal->jumlah_pesanan ?? 0),
+                    'total_unit' => (int)($allSourcesTotal->total_unit ?? 0),
+                    'total_pendapatan' => (float)($allSourcesTotal->total_pendapatan ?? 0)
+                ]
+            ];
+        }
+        
+        // Debug log
+        Log::info('Chart data generated:', $chartData);
+        if ($summary) {
+            Log::info('Summary data generated:', $summary);
+        }
+        
+        $response = [
+            'success' => true,
+            'data' => $data,
+            'chart_data' => $chartData
+        ];
+        
+        // Tambahkan summary ke response jika ada
+        if ($summary) {
+            $response['summary'] = $summary;
+        }
+        
+        return response()->json($response);
+        
+    } catch (\Exception $e) {
+        Log::error("Error in getDetailData: " . $e->getMessage());
+        Log::error($e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
     }
+}
     
     public function exportCsv(Request $request)
     {

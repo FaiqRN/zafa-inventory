@@ -7,6 +7,10 @@ let tableBarang, tableSumber, tablePemesan, tableDetail;
 let detailChart = null;
 // Chart untuk visualisasi barang
 let barangChart = null;
+// Chart untuk visualisasi sumber
+let sumberChart = null;
+// Chart untuk summary di detail modal
+let detailSummaryChart = null;
 
 // Data status for current active tab
 let currentTab = 'barang';
@@ -305,20 +309,29 @@ $(document).ready(function() {
     $('#refresh-pemesan').click(function() {
         refreshData('pemesan');
     });
-    
-    // Catatan button click handler
-    $(document).on('click', '.catatan-btn', function() {
-        let tipe = $(this).data('tipe');
-        let id = $(this).data('id');
-        let nama = $(this).data('nama');
-        let catatan = $(this).data('catatan');
-        
-        $('#modalCatatanTitle').text('Catatan untuk ' + nama);
-        $('#catatan-tipe').val(tipe);
-        $('#catatan-id').val(id);
-        $('#catatan').val(catatan);
-        
-        $('#modal-catatan').modal('show');
+/**
+ * Handle saat tombol Detail diklik
+ */
+    $(document).on('click', '.btn-detail', function() {
+        const tipe = currentTab;
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        // Set variabel global
+        detailId = id;
+        detailName = name;
+        // Update judul modal
+        const modalTitle = `Detail ${tipe === 'barang' ? 'Barang' : tipe === 'sumber' ? 'Sumber Pemesanan' : 'Pemesan'}: ${name}`;
+        $('#detail-modal-title').text(modalTitle);
+        // Simpan posisi scroll saat ini
+        const scrollPosition = window.scrollY;
+        // Load data
+        loadDetailData(tipe, id);
+        // Tampilkan modal
+        $('#detail-modal').modal('show');
+        // Mencegah scrolling otomatis dengan mengembalikan ke posisi sebelumnya
+        setTimeout(function() {
+            window.scrollTo(0, scrollPosition);
+        }, 50);
     });
     
     // Save catatan handler
@@ -341,7 +354,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    Swal.fire({
+Swal.fire({
                         icon: 'success',
                         title: 'Berhasil',
                         text: response.message,
@@ -581,7 +594,7 @@ function createBarangChart(data) {
     
     // Add note if there are more than 10 items
     if (data.length > 10) {
-        const chartContainer = document.querySelector('.chart-container');
+        const chartContainer = document.querySelector('#tab-barang .chart-container');
         // Remove existing note if any
         const existingNote = chartContainer.querySelector('.chart-note');
         if (existingNote) {
@@ -592,6 +605,117 @@ function createBarangChart(data) {
         noteElement.className = 'text-muted text-center mt-2 chart-note';
         noteElement.innerHTML = 'Menampilkan 10 dari ' + data.length + ' barang dengan pendapatan tertinggi';
         chartContainer.appendChild(noteElement);
+    }
+}
+
+/**
+ * Create sumber chart (Fungsi baru)
+ */
+function createSumberChart(data) {
+    // Destroy existing chart if it exists
+    if (sumberChart) {
+        sumberChart.destroy();
+    }
+    
+    // Sort data by jumlah_pesanan in descending order
+    data.sort((a, b) => b.jumlah_pesanan - a.jumlah_pesanan);
+    
+    // Prepare data for the chart
+    const labels = data.map(item => item.nama);
+    const jumlahPesanan = data.map(item => item.jumlah_pesanan);
+    
+    // Calculate percentages
+    const total = jumlahPesanan.reduce((sum, value) => sum + value, 0);
+    const percentages = jumlahPesanan.map(value => ((value / total) * 100).toFixed(1));
+    
+    // Generate background colors
+    const backgroundColors = generateColorArray(data.length);
+    
+    // Create chart
+    const ctx = document.getElementById('sumber-chart').getContext('2d');
+    sumberChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: jumlahPesanan,
+                backgroundColor: backgroundColors,
+                borderColor: 'white',
+                borderWidth: 1,
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: 20
+            },
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 20,
+                        boxWidth: 15,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Distribusi Pemesanan Berdasarkan Sumber',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const percentage = percentages[context.dataIndex];
+                            return `${label}: ${value} pesanan (${percentage}%)`;
+                        }
+                    }
+                },
+                datalabels: {
+                    display: function(context) {
+                        // Only show data labels for slices with more than 5% of the total
+                        return parseFloat(percentages[context.dataIndex]) > 5;
+                    },
+                    formatter: function(value, context) {
+                        return percentages[context.dataIndex] + '%';
+                    },
+                    color: 'white',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    }
+                }
+            }
+        }
+    });
+
+    // Add legend title
+    if (data.length > 0) {
+        const chartContainer = document.querySelector('#tab-sumber .chart-container');
+        // Remove existing legend title if any
+        const existingTitle = chartContainer.querySelector('.legend-title');
+        if (existingTitle) {
+            existingTitle.remove();
+        }
+        
+        let totalPesanan = data.reduce((sum, item) => sum + item.jumlah_pesanan, 0);
+        let legendTitle = document.createElement('div');
+        legendTitle.className = 'text-center mt-3 legend-title';
+        legendTitle.innerHTML = `<strong>Total Pesanan: ${totalPesanan}</strong>`;
+        chartContainer.appendChild(legendTitle);
     }
 }
 
@@ -612,9 +736,9 @@ function refreshData(tipe) {
             // Show loading indicator
             $(`#table-${tipe} tbody`).html('<tr><td colspan="5" class="text-center">Loading data...</td></tr>');
             
-            // Show loading indicator for chart if in barang tab
-            if (tipe === 'barang') {
-                $('.chart-container').html('<div class="d-flex justify-content-center align-items-center" style="height:350px;"><i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span></div>');
+            // Show loading indicator for chart
+            if (tipe === 'barang' || tipe === 'sumber') {
+                $(`#tab-${tipe} .chart-container`).html('<div class="d-flex justify-content-center align-items-center" style="height:350px;"><i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span></div>');
             }
         },
         success: function(response) {
@@ -633,10 +757,10 @@ function refreshData(tipe) {
                         
                         // Create or update chart
                         if (response.data.length > 0) {
-                            $('.chart-container').html('<canvas id="barang-chart"></canvas>');
+                            $('#tab-barang .chart-container').html('<canvas id="barang-chart"></canvas>');
                             createBarangChart(response.data);
                         } else {
-                            $('.chart-container').html('<div class="alert alert-info text-center">Tidak ada data untuk ditampilkan</div>');
+                            $('#tab-barang .chart-container').html('<div class="alert alert-info text-center">Tidak ada data untuk ditampilkan</div>');
                         }
                         break;
                     case 'sumber':
@@ -644,6 +768,14 @@ function refreshData(tipe) {
                         $('#sumber-total-pesanan').text(response.total.pesanan);
                         $('#sumber-total-unit').text(response.total.unit);
                         $('#sumber-total-pendapatan').text(formatRupiah(response.total.pendapatan));
+                        
+                        // Create or update chart
+                        if (response.data.length > 0) {
+                            $('#tab-sumber .chart-container').html('<canvas id="sumber-chart"></canvas>');
+                            createSumberChart(response.data);
+                        } else {
+                            $('#tab-sumber .chart-container').html('<div class="alert alert-info text-center">Tidak ada data untuk ditampilkan</div>');
+                        }
                         break;
                     case 'pemesan':
                         tablePemesan.clear().rows.add(response.data).draw();
@@ -670,10 +802,10 @@ function refreshData(tipe) {
     });
 }
 
-/**
- * Load detail data for modal
- */
 function loadDetailData(tipe, id) {
+    // Simpan posisi scroll saat ini
+    const scrollPosition = window.scrollY;
+    
     $.ajax({
         url: '/laporan-pemesanan/detail',
         type: 'GET',
@@ -686,32 +818,62 @@ function loadDetailData(tipe, id) {
         beforeSend: function() {
             // Show loading indicator
             $('#table-detail tbody').html('<tr><td colspan="8" class="text-center">Loading data...</td></tr>');
+            
+            // Show loading indicator for chart
+            $('#detail-chart-container').html('<div class="d-flex justify-content-center align-items-center" style="height:300px;"><i class="fa fa-spinner fa-spin fa-3x fa-fw"></i><span class="sr-only">Loading...</span></div>');
         },
         success: function(response) {
             if (response.success) {
                 // Update table
                 tableDetail.clear().rows.add(response.data).draw();
                 
-                // Update chart
-                updateDetailChart(response.chart_data);
+                // Update chart based on the type
+                if (tipe === 'sumber') {
+                    if (response.chart_data && response.summary) {
+                        updateDetailSumberChart(response.chart_data, response.summary);
+                    } else {
+                        console.error('Data chart atau summary tidak tersedia');
+                        $('#detail-chart-container').html('<div class="alert alert-warning">Data chart tidak tersedia</div>');
+                    }
+                } else {
+                    // Reset chart container for non-sumber types
+                    $('#detail-chart-container').html('<canvas id="detail-chart" height="300"></canvas>');
+                    
+                    if (response.chart_data) {
+                        updateDetailChart(response.chart_data);
+                    } else {
+                        console.error('Data chart tidak tersedia');
+                        $('#detail-chart-container').html('<div class="alert alert-warning">Data chart tidak tersedia</div>');
+                    }
+                }
+                
+                // Mencegah scroll otomatis
+                setTimeout(function() {
+                    window.scrollTo(0, scrollPosition);
+                }, 50);
             } else {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: response.message
+                    text: response.message || 'Terjadi kesalahan saat memuat data detail'
                 });
             }
         },
         error: function(xhr) {
+            console.error('Error AJAX:', xhr);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Gagal memuat data detail'
+                text: 'Gagal memuat data detail. Silakan coba lagi.'
             });
+            
+            // Mencegah scroll otomatis
+            setTimeout(function() {
+                window.scrollTo(0, scrollPosition);
+            }, 50);
         }
     });
 }
-
 /**
  * Update chart in detail modal
  */
@@ -725,11 +887,6 @@ function updateDetailChart(chartData) {
     const labels = chartData.map(item => item.month);
     const totalData = chartData.map(item => item.total);
     const countData = chartData.map(item => item.count);
-    
-    // Debug: log data untuk memastikan ada lebih dari satu titik
-    console.log('Chart labels:', labels);
-    console.log('Total data:', totalData);
-    console.log('Count data:', countData);
     
     // Create new chart
     const ctx = document.getElementById('detail-chart').getContext('2d');
@@ -877,7 +1034,7 @@ function updateDetailChart(chartData) {
                             weight: 'bold'
                         }
                     },
-ticks: {
+                    ticks: {
                         stepSize: 1,
                         callback: function(value) {
                             return Math.floor(value);
@@ -891,6 +1048,311 @@ ticks: {
             }
         }
     });
+}
+
+/**
+ * Update chart in detail modal specifically for Sumber type
+ */
+function updateDetailSumberChart(chartData, summary) {
+    // Clear existing chart container and create layout for dual charts
+    $('#detail-chart-container').html(`
+        <div class="row">
+            <div class="col-md-7">
+                <div class="chart-wrapper mb-3">
+                    <h5 class="text-center">Trend Pemesanan dari ${detailName}</h5>
+                    <canvas id="detail-chart" height="250"></canvas>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="chart-wrapper">
+                    <h5 class="text-center">Kontribusi terhadap Total Pemesanan</h5>
+                    <canvas id="detail-summary-chart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    `);
+    
+    // Destroy existing charts if they exist
+    if (detailChart) {
+        detailChart.destroy();
+    }
+    
+    if (detailSummaryChart) {
+        detailSummaryChart.destroy();
+    }
+    
+    // Prepare data for time series chart
+    const labels = chartData.map(item => item.month);
+    const totalData = chartData.map(item => item.total);
+    const countData = chartData.map(item => item.count);
+    
+    // Create trend line chart
+    const ctx = document.getElementById('detail-chart').getContext('2d');
+    detailChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Total Pendapatan (Rp)',
+                    data: totalData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    yAxisID: 'y1',
+                    spanGaps: true,
+                    showLine: true
+                },
+                {
+                    label: 'Jumlah Pesanan',
+                    data: countData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    yAxisID: 'y2',
+                    spanGaps: true,
+                    showLine: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        boxWidth: 10,
+                        padding: 10,
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            
+                            if (label) {
+                                label += ': ';
+                            }
+                            
+                            if (context.dataset.yAxisID === 'y1') {
+                                label += formatRupiah(context.raw);
+                            } else {
+                                label += context.raw + ' pesanan';
+                            }
+                            
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    ticks: {
+                        font: {
+                            size: 10
+                        },
+                        callback: function(value) {
+                            if (value >= 1000000) {
+                                return 'Rp ' + (value / 1000000).toFixed(1) + ' jt';
+                            } else if (value >= 1000) {
+                                return 'Rp ' + (value / 1000).toFixed(1) + ' rb';
+                            }
+                            return 'Rp ' + value;
+                        }
+                    }
+                },
+                y2: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    ticks: {
+                        font: {
+                            size: 10
+                        },
+                        stepSize: 1
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+    
+    // Create summary pie chart if summary data exists
+    if (summary && typeof summary === 'object') {
+        if (!summary.thisSource || !summary.total) {
+            console.error('Format data summary tidak sesuai:', summary);
+            return;
+        }
+        const otherSourcesCount = summary.total.jumlah_pesanan - summary.thisSource.jumlah_pesanan;
+        const otherSourcesPendapatan = summary.total.total_pendapatan - summary.thisSource.total_pendapatan;
+        
+        if (!document.getElementById('detail-summary-chart')) {
+            console.error('Elemen detail-summary-chart tidak ditemukan');
+            return;
+        }
+        const summaryCtx = document.getElementById('detail-summary-chart').getContext('2d');
+        detailSummaryChart = new Chart(summaryCtx, {
+            type: 'pie',
+            data: {
+                labels: [`${detailName}`, 'Sumber Lainnya'],
+                datasets: [
+                    {
+                        label: 'Jumlah Pesanan',
+                        data: [summary.thisSource.jumlah_pesanan, otherSourcesCount],
+                        backgroundColor: ['rgba(54, 162, 235, 0.8)', 'rgba(211, 211, 211, 0.7)'],
+                        borderColor: ['rgba(54, 162, 235, 1)', 'rgba(211, 211, 211, 1)'],
+                        borderWidth: 1,
+                        hoverOffset: 15
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            boxWidth: 10,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = summary.total.jumlah_pesanan;
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                
+                                if (context.dataIndex === 0) {
+                                    return [
+                                        `${label}: ${value} pesanan (${percentage}%)`,
+                                        `Pendapatan: ${formatRupiah(summary.thisSource.total_pendapatan)}`
+                                    ];
+                                } else {
+                                    return [
+                                        `${label}: ${value} pesanan (${percentage}%)`,
+                                        `Pendapatan: ${formatRupiah(otherSourcesPendapatan)}`
+                                    ];
+                                }
+}
+                        }
+                    }
+                }
+            }
+        });
+
+        // Add summary statistics below the charts
+        const statsContainer = document.createElement('div');
+        statsContainer.className = 'row mt-3';
+        statsContainer.innerHTML = `
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body p-3">
+                        <h6 class="text-center mb-3">Ringkasan Kontribusi ${detailName}</h6>
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="border-right">
+                                    <p class="mb-0 text-muted">Jumlah Pesanan</p>
+                                    <h5>${summary.thisSource.jumlah_pesanan} dari ${summary.total.jumlah_pesanan} (${((summary.thisSource.jumlah_pesanan / summary.total.jumlah_pesanan) * 100).toFixed(1)}%)</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border-right">
+                                    <p class="mb-0 text-muted">Total Unit</p>
+                                    <h5>${summary.thisSource.total_unit} dari ${summary.total.total_unit} (${((summary.thisSource.total_unit / summary.total.total_unit) * 100).toFixed(1)}%)</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div>
+                                    <p class="mb-0 text-muted">Total Pendapatan</p>
+                                    <h5>${formatRupiah(summary.thisSource.total_pendapatan)} dari ${formatRupiah(summary.total.total_pendapatan)} (${((summary.thisSource.total_pendapatan / summary.total.total_pendapatan) * 100).toFixed(1)}%)</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('detail-chart-container').appendChild(statsContainer);
+    }
+}
+
+/**
+ * Generate an array of unique colors for chart
+ */
+function generateColorArray(count) {
+    const baseColors = [
+        'rgba(54, 162, 235, 0.8)',   // Blue
+        'rgba(255, 99, 132, 0.8)',   // Red
+        'rgba(255, 206, 86, 0.8)',   // Yellow
+        'rgba(75, 192, 192, 0.8)',   // Green
+        'rgba(153, 102, 255, 0.8)',  // Purple
+        'rgba(255, 159, 64, 0.8)',   // Orange
+        'rgba(199, 199, 199, 0.8)',  // Gray
+        'rgba(83, 102, 255, 0.8)',   // Indigo
+        'rgba(255, 99, 255, 0.8)',   // Pink
+        'rgba(25, 125, 52, 0.8)'     // Dark Green
+    ];
+    
+    let colors = [];
+    
+    // If we need more colors than in our base array
+    if (count > baseColors.length) {
+        // First add all base colors
+        colors = [...baseColors];
+        
+        // Then generate additional random colors
+        for (let i = baseColors.length; i < count; i++) {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            colors.push(`rgba(${r}, ${g}, ${b}, 0.8)`);
+        }
+    } else {
+        // If we need fewer colors, just take what we need
+        colors = baseColors.slice(0, count);
+    }
+    
+    return colors;
 }
 
 /**
@@ -936,6 +1398,16 @@ function printData(tipe) {
         case 'sumber':
             table = document.getElementById('table-sumber');
             title = 'Laporan Pemesanan Per Sumber';
+            // Add chart image if it exists
+            if (sumberChart) {
+                let chartImage = sumberChart.toBase64Image();
+                chartImageHtml = `
+                    <div class="chart-container">
+                        <h3>Grafik Distribusi Sumber Pemesanan</h3>
+                        <img src="${chartImage}" alt="Grafik Sumber Pemesanan" style="max-width: 100%; max-height: 400px;">
+                    </div>
+                `;
+            }
             break;
         case 'pemesan':
             table = document.getElementById('table-pemesan');
@@ -1038,9 +1510,56 @@ function printDetailData() {
     let title = `Detail Pemesanan ${currentTab === 'barang' ? 'Barang' : currentTab === 'sumber' ? 'Sumber' : 'Pemesan'}: ${detailName}`;
     let period = `Periode: ${formatDate(startDate)} - ${formatDate(endDate)}`;
     
-    // Create chart image
-    let chartCanvas = document.getElementById('detail-chart');
-    let chartImage = chartCanvas.toDataURL('image/png');
+    // Get chart images
+    let chartHtml = '';
+    
+    if (currentTab === 'sumber') {
+        // For sumber, we have two charts plus statistics
+        let trendChartCanvas = document.getElementById('detail-chart');
+        let summaryChartCanvas = document.getElementById('detail-summary-chart');
+        
+        if (trendChartCanvas && summaryChartCanvas) {
+            chartHtml = `
+                <div class="charts-container" style="display: flex; flex-wrap: wrap; justify-content: space-around; margin-bottom: 20px;">
+                    <div style="flex: 1; min-width: 300px; max-width: 60%; margin-right: 10px;">
+                        <h3>Trend Pemesanan</h3>
+                        <img src="${trendChartCanvas.toDataURL('image/png')}" alt="Trend Pemesanan" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1; min-width: 250px; max-width: 40%;">
+                        <h3>Kontribusi terhadap Total</h3>
+                        <img src="${summaryChartCanvas.toDataURL('image/png')}" alt="Kontribusi" style="width: 100%;">
+                    </div>
+                </div>
+                
+                <div class="summary-stats" style="margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; background-color: #f9f9f9;">
+                    <h3 style="margin-top: 0; text-align: center;">Ringkasan ${detailName}</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <th style="width: 33%; text-align: center; padding: 8px; border: 1px solid #ddd;">Jumlah Pesanan</th>
+                            <th style="width: 33%; text-align: center; padding: 8px; border: 1px solid #ddd;">Total Unit</th>
+                            <th style="width: 33%; text-align: center; padding: 8px; border: 1px solid #ddd;">Total Pendapatan</th>
+                        </tr>
+                        <tr>
+                            <td style="text-align: center; padding: 8px; border: 1px solid #ddd;" id="print-summary-pesanan"></td>
+                            <td style="text-align: center; padding: 8px; border: 1px solid #ddd;" id="print-summary-unit"></td>
+                            <td style="text-align: center; padding: 8px; border: 1px solid #ddd;" id="print-summary-pendapatan"></td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+        }
+    } else {
+        // For other tabs, we just have one chart
+        let chartCanvas = document.getElementById('detail-chart');
+        if (chartCanvas) {
+            chartHtml = `
+                <div class="chart-container" style="text-align: center; margin: 20px 0;">
+                    <h3>Grafik Pemesanan</h3>
+                    <img src="${chartCanvas.toDataURL('image/png')}" alt="Grafik Pemesanan" style="max-width: 100%;">
+                </div>
+            `;
+        }
+    }
     
     let table = document.getElementById('table-detail');
     
@@ -1125,9 +1644,7 @@ function printDetailData() {
                 <h2>${period}</h2>
             </div>
             
-            <div class="chart-container">
-                <img src="${chartImage}" alt="Grafik Pemesanan" style="max-width: 100%;">
-            </div>
+            ${chartHtml}
             
             <h3>Daftar Pemesanan</h3>
             <table id="print-detail-table">
@@ -1148,6 +1665,29 @@ function printDetailData() {
             <div class="print-footer">
                 <p>Dicetak pada: ${new Date().toLocaleString()}</p>
             </div>
+            
+            <script>
+                // Fill in the summary data for sumber detail
+                if (${currentTab === 'sumber'}) {
+                    const statsText = document.querySelector('.col-md-12 .card-body').innerText;
+                    const pesananMatch = statsText.match(/Jumlah Pesanan\\s*([\\d,\\.]+)\\s*dari\\s*([\\d,\\.]+)\\s*\\(([\\d\\.]+)%\\)/);
+                    const unitMatch = statsText.match(/Total Unit\\s*([\\d,\\.]+)\\s*dari\\s*([\\d,\\.]+)\\s*\\(([\\d\\.]+)%\\)/);
+                    const pendapatanMatch = statsText.match(/Total Pendapatan\\s*([\\S\\s]+)\\s*dari\\s*([\\S\\s]+)\\s*\\(([\\d\\.]+)%\\)/);
+                    
+                    if (pesananMatch) {
+                        document.getElementById('print-summary-pesanan').innerText = 
+                            pesananMatch[1] + ' dari ' + pesananMatch[2] + ' (' + pesananMatch[3] + '%)';
+                    }
+                    if (unitMatch) {
+                        document.getElementById('print-summary-unit').innerText = 
+                            unitMatch[1] + ' dari ' + unitMatch[2] + ' (' + unitMatch[3] + '%)';
+                    }
+                    if (pendapatanMatch) {
+                        document.getElementById('print-summary-pendapatan').innerText = 
+                            pendapatanMatch[1] + ' dari ' + pendapatanMatch[2] + ' (' + pendapatanMatch[3] + '%)';
+                    }
+                }
+            </script>
         </body>
         </html>
     `;
