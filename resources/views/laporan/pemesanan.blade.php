@@ -1,8 +1,6 @@
 <!-- resources/views/laporan/pemesanan.blade.php -->
 @extends('layouts.template')
-
 @section('page_title', 'Laporan Pemesanan')
-
 @section('breadcrumb')
 <li class="breadcrumb-item"><a href="{{ url('/') }}">Home</a></li>
 <li class="breadcrumb-item"><a href="#">Laporan</a></li>
@@ -44,11 +42,84 @@
         height: 350px;
         margin-bottom: 20px;
     }
-    .modal-open-no-scroll {
-    overflow: hidden !important;
-    position: fixed;
-    width: 100%;
-}
+    
+    /* FIX UTAMA UNTUK INFINITE SCROLLING */
+    .modal {
+        overflow: hidden !important;
+    }
+    
+    .modal.show {
+        overflow: hidden !important;
+    }
+    
+    .modal-dialog {
+        overflow: hidden;
+    }
+    
+    .modal-dialog.modal-xl {
+        max-width: 90%;
+        margin: 30px auto;
+        height: calc(100vh - 60px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .modal-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 15px;
+        max-height: none;
+    }
+    
+    /* Prevent body scroll saat modal terbuka */
+    body.modal-open {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+        padding-right: 0 !important;
+    }
+    
+    /* Chart container fixes */
+    #detail-chart-container {
+        position: relative;
+        overflow: hidden;
+        max-height: none;
+    }
+    
+    #detail-chart-container canvas {
+        max-width: 100% !important;
+        max-height: 300px !important;
+    }
+    
+    /* Disable scrolling pada chart container */
+    #detail-chart-container * {
+        overflow: visible !important;
+    }
+    
+    /* DataTable fixes */
+    .modal .dataTables_wrapper {
+        overflow: visible;
+    }
+    
+    .modal .dataTables_scrollBody {
+        overflow: auto;
+        max-height: 300px;
+    }
+    
+    /* Button disabled state */
+    .detail-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 </style>
 @endpush
 
@@ -99,7 +170,7 @@
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="row mb-3">
                         <div class="col-12">
                             <div class="alert alert-info">
@@ -107,7 +178,7 @@
                             </div>
                         </div>
                     </div>
-
+                    
                     <ul class="nav nav-tabs" id="reportTabs" role="tablist">
                         <li class="nav-item">
                             <a class="nav-link active" id="barang-tab" data-toggle="tab" href="#tab-barang" role="tab">
@@ -125,11 +196,11 @@
                             </a>
                         </li>
                     </ul>
-
+                    
                     <div class="tab-content mt-3" id="reportTabsContent">
                         <!-- Tab Barang -->
                         <div class="tab-pane fade show active" id="tab-barang" role="tabpanel">
-                            <!-- Chart Visualisasi Barang (Bagian Baru) -->
+                            <!-- Chart Visualisasi Barang -->
                             <div class="row mb-4">
                                 <div class="col-lg-12">
                                     <div class="card">
@@ -158,6 +229,7 @@
                                     </button>
                                 </div>
                             </div>
+                            
                             <div class="table-responsive">
                                 <table id="table-barang" class="table table-bordered table-striped">
                                     <thead>
@@ -187,7 +259,7 @@
                         
                         <!-- Tab Sumber -->
                         <div class="tab-pane fade" id="tab-sumber" role="tabpanel">
-                            <!-- Chart Visualisasi Sumber (Bagian Baru) -->
+                            <!-- Chart Visualisasi Sumber -->
                             <div class="row mb-4">
                                 <div class="col-lg-12">
                                     <div class="card">
@@ -216,6 +288,7 @@
                                     </button>
                                 </div>
                             </div>
+                            
                             <div class="table-responsive">
                                 <table id="table-sumber" class="table table-bordered table-striped">
                                     <thead>
@@ -258,6 +331,7 @@
                                     </button>
                                 </div>
                             </div>
+                            
                             <div class="table-responsive">
                                 <table id="table-pemesan" class="table table-bordered table-striped">
                                     <thead>
@@ -320,7 +394,8 @@
 </div>
 
 <!-- Modal for Detail -->
-<div class="modal fade" id="modal-detail" tabindex="-1" role="dialog" aria-labelledby="modalDetailTitle" aria-hidden="true">
+<!-- Modal for Detail - VERSI BARU -->
+<div class="modal fade" id="modal-detail" tabindex="-1" role="dialog" aria-labelledby="modalDetailTitle" aria-hidden="true" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -330,53 +405,57 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <div class="btn-group">
-                        <button type="button" id="export-detail" class="btn btn-success">
-                            <i class="fas fa-file-excel"></i> Export Detail
-                        </button>
-                        <button type="button" id="print-detail" class="btn btn-primary">
-                            <i class="fas fa-print"></i> Print Detail
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-lg-12 mb-4">
-                        <div class="card">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0">Grafik Pemesanan</h5>
-                            </div>
-                            <div class="card-body" id="detail-chart-container">
-                                <canvas id="detail-chart" height="300"></canvas>
+                <div class="container-fluid">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="btn-group">
+                                <button type="button" id="export-detail" class="btn btn-success btn-sm">
+                                    <i class="fas fa-file-excel"></i> Export Detail
+                                </button>
+                                <button type="button" id="print-detail" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-print"></i> Print Detail
+                                </button>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="col-lg-12">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0">Daftar Pemesanan</h5>
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">Grafik Pemesanan</h6>
+                                </div>
+                                <div class="card-body" id="detail-chart-container" style="min-height: 350px;">
+                                    <!-- Chart akan di-render di sini -->
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table id="table-detail" class="table table-bordered table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>ID Pemesanan</th>
-                                                <th>Tanggal</th>
-                                                <th>Nama Barang</th>
-                                                <th>Nama Pemesan</th>
-                                                <th class="text-right">Jumlah</th>
-                                                <th class="text-right">Total</th>
-                                                <th>Sumber</th>
-                                                <th class="text-center">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <!-- Data akan diisi oleh JavaScript -->
-                                        </tbody>
-                                    </table>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">Daftar Pemesanan</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table id="table-detail" class="table table-bordered table-striped table-sm">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>ID Pemesanan</th>
+                                                    <th>Tanggal</th>
+                                                    <th>Nama Barang</th>
+                                                    <th>Nama Pemesan</th>
+                                                    <th class="text-right">Jumlah</th>
+                                                    <th class="text-right">Total</th>
+                                                    <th>Sumber</th>
+                                                    <th class="text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Data akan diisi oleh JavaScript -->
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -392,6 +471,8 @@
 @endsection
 
 @push('js')
-<script src="{{ asset('js/laporan-pemesanan.js') }}"></script>
+<!-- Load Chart.js terlebih dahulu -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<!-- Kemudian load script custom -->
+<script src="{{ asset('js/laporan-pemesanan.js') }}"></script>
 @endpush
