@@ -2,12 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MarketMapController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
@@ -162,4 +163,18 @@ Route::prefix('dashboard/api')->group(function() {
             ]
         ]);
     })->name('analytics');
+
+
+Route::group(['prefix' => 'market-map'], function() {
+    Route::get('/', [MarketMapController::class, 'index'])->name('market-map.index');
+    Route::get('/toko-data', [MarketMapController::class, 'getTokoData'])->name('market-map.toko-data');
+    Route::get('/wilayah-statistics', [MarketMapController::class, 'getWilayahStatistics'])->name('market-map.wilayah-statistics');
+    Route::get('/toko-barang/{tokoId}', [MarketMapController::class, 'getTokoBarang'])->name('market-map.toko-barang');
+    Route::get('/recommendations', [MarketMapController::class, 'getRecommendations'])->name('market-map.recommendations');
+    Route::get('/price-recommendations', [MarketMapController::class, 'getPriceRecommendations'])->name('market-map.price-recommendations');
+    Route::post('/store-toko', [MarketMapController::class, 'storeToko'])->name('market-map.store-toko');
+    Route::get('/wilayah-data', [MarketMapController::class, 'getWilayahData'])->name('market-map.wilayah-data');
+});
+
+Route::get('/market-map', [MarketMapController::class, 'index'])->name('market-map');
 });

@@ -76,15 +76,6 @@ class Toko extends Model
     {
         return $this->hasMany(Retur::class, 'toko_id', 'toko_id');
     }
-
-    /**
-     * Relasi ke tabel laporan_penjualan.
-     */
-    public function laporanPenjualan()
-    {
-        return $this->hasMany(LaporanPenjualan::class, 'toko_id', 'toko_id');
-    }
-
     /**
      * Relasi ke tabel barang melalui barang_toko.
      */
