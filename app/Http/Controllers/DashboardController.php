@@ -122,97 +122,85 @@ class DashboardController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getBarangLakuTidakLaku(Request $request)
-    {
-        try {
-            $filter = $request->input('filter', 'laku'); // 'laku' atau 'tidak_laku'
-            $limit = $request->input('limit', 10); // Batasi hasil
+public function getBarangLakuTidakLaku(Request $request)
+{
+    try {
+        $filter = $request->input('filter', 'laku'); // 'laku' atau 'tidak_laku'
+        $limit = $request->input('limit', 10);
 
-            // Hitung penjualan bersih (total kirim - total retur) per barang
-            if ($filter === 'laku') {
-                // Barang dengan penjualan tertinggi
-                $data = DB::table('barang')
-                    ->leftJoin('retur', 'barang.barang_id', '=', 'retur.barang_id')
-                    ->select(
-                        'barang.barang_id',
-                        'barang.nama_barang',
-                        DB::raw('COALESCE(SUM(retur.total_terjual), 0) as total_terjual'),
-                        DB::raw('COALESCE(SUM(retur.hasil), 0) as total_penjualan'),
-                        DB::raw('COUNT(retur.retur_id) as jumlah_transaksi')
-                    )
-                    ->where('barang.is_deleted', 0)
-                    ->groupBy('barang.barang_id', 'barang.nama_barang')
-                    ->having('total_terjual', '>', 0)
-                    ->orderBy('total_terjual', 'desc')
-                    ->limit($limit)
-                    ->get();
-            } else {
-                // Barang dengan penjualan rendah atau tidak ada
-                $data = DB::table('barang')
-                    ->leftJoin('retur', 'barang.barang_id', '=', 'retur.barang_id')
-                    ->select(
-                        'barang.barang_id',
-                        'barang.nama_barang',
-                        DB::raw('COALESCE(SUM(retur.total_terjual), 0) as total_terjual'),
-                        DB::raw('COALESCE(SUM(retur.hasil), 0) as total_penjualan'),
-                        DB::raw('COUNT(retur.retur_id) as jumlah_transaksi')
-                    )
-                    ->where('barang.is_deleted', 0)
-                    ->groupBy('barang.barang_id', 'barang.nama_barang')
-                    ->orderBy('total_terjual', 'asc')
-                    ->limit($limit)
-                    ->get();
-            }
+        $query = DB::table('barang')
+            ->leftJoin('retur', 'barang.barang_id', '=', 'retur.barang_id')
+            ->select(
+                'barang.barang_id',
+                'barang.nama_barang',
+                DB::raw('COALESCE(SUM(retur.total_terjual), 0) as total_terjual'),
+                DB::raw('COALESCE(SUM(retur.jumlah_retur), 0) as jumlah_retur'),
+                DB::raw('COALESCE(SUM(retur.hasil), 0) as total_penjualan'),
+                DB::raw('COUNT(retur.retur_id) as jumlah_transaksi')
+            )
+            ->where('barang.is_deleted', 0)
+            ->groupBy('barang.barang_id', 'barang.nama_barang');
 
-            // Format data untuk chart
-            $chartLabels = [];
-            $chartData = [];
-            $backgroundColors = [];
-            $detailData = [];
-
-            foreach ($data as $item) {
-                $chartLabels[] = $item->nama_barang;
-                $chartData[] = (int)$item->total_terjual;
-                
-                // Warna berbeda untuk barang laku (hijau) dan tidak laku (merah)
-                if ($filter === 'laku') {
-                    $backgroundColors[] = 'rgba(34, 197, 94, 0.8)'; // Hijau
-                } else {
-                    $backgroundColors[] = 'rgba(239, 68, 68, 0.8)'; // Merah
-                }
-
-                $detailData[] = [
-                    'nama_barang' => $item->nama_barang,
-                    'total_terjual' => (int)$item->total_terjual,
-                    'total_penjualan' => (int)$item->total_penjualan,
-                    'jumlah_transaksi' => (int)$item->jumlah_transaksi
-                ];
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'labels' => $chartLabels,
-                    'datasets' => [[
-                        'label' => $filter === 'laku' ? 'Barang Terlaris' : 'Barang Kurang Laris',
-                        'data' => $chartData,
-                        'backgroundColor' => $backgroundColors,
-                        'borderColor' => $backgroundColors,
-                        'borderWidth' => 1
-                    ]],
-                    'detail_data' => $detailData,
-                    'filter' => $filter
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error in getBarangLakuTidakLaku: ' . $e->getMessage());
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal memuat data barang: ' . $e->getMessage()
-            ], 500);
+        if ($filter === 'laku') {
+            $query->having('total_terjual', '>', 0)
+                  ->orderBy('total_terjual', 'desc');
+        } else {
+            $query->having('jumlah_retur', '>', 0)
+                  ->orderBy('jumlah_retur', 'desc');
         }
+
+        $data = $query->limit($limit)->get();
+
+        // Format data untuk chart
+        $chartLabels = [];
+        $chartData = [];
+        $backgroundColors = [];
+        $detailData = [];
+
+        foreach ($data as $item) {
+            $chartLabels[] = $item->nama_barang;
+            $chartData[] = $filter === 'laku'
+                ? (int)$item->total_terjual
+                : (int)$item->jumlah_retur;
+
+            $backgroundColors[] = $filter === 'laku'
+                ? 'rgba(34, 197, 94, 0.8)' // Hijau
+                : 'rgba(239, 68, 68, 0.8)'; // Merah
+
+            $detailData[] = [
+                'nama_barang' => $item->nama_barang,
+                'total_terjual' => (int)$item->total_terjual,
+                'jumlah_retur' => (int)$item->jumlah_retur,
+                'total_penjualan' => (float)$item->total_penjualan,
+                'jumlah_transaksi' => (int)$item->jumlah_transaksi
+            ];
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'labels' => $chartLabels,
+                'datasets' => [[
+                    'label' => $filter === 'laku' ? 'Barang Terlaris' : 'Barang Banyak Diretur',
+                    'data' => $chartData,
+                    'backgroundColor' => $backgroundColors,
+                    'borderColor' => $backgroundColors,
+                    'borderWidth' => 1
+                ]],
+                'detail_data' => $detailData,
+                'filter' => $filter
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error in getBarangLakuTidakLaku: ' . $e->getMessage());
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Gagal memuat data barang: ' . $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * 3. Transaksi Terbaru Pengiriman (Tabel Data)
