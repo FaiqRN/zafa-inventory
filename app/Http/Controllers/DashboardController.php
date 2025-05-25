@@ -301,16 +301,18 @@ public function getBarangLakuTidakLaku(Request $request)
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
+
     public function getTokoReturTerbanyak(Request $request)
     {
         try {
-            $limit = $request->input('limit', 10);
-            
-            // 3 bulan terakhir
-            $tanggalMulai = Carbon::now()->subMonths(3)->startOfMonth();
-            $tanggalAkhir = Carbon::now()->endOfMonth();
+            $limit = (int) $request->input('limit', 10);
 
-            $data = DB::table('retur')
+            // Tentukan rentang tanggal 3 bulan terakhir
+            $startDate = Carbon::now()->subMonths(3)->startOfMonth();
+            $endDate = Carbon::now()->endOfMonth();
+
+            // Ambil data retur per toko
+            $topReturToko = DB::table('retur')
                 ->join('toko', 'retur.toko_id', '=', 'toko.toko_id')
                 ->select(
                     'toko.toko_id',
@@ -320,36 +322,35 @@ public function getBarangLakuTidakLaku(Request $request)
                     DB::raw('COUNT(retur.retur_id) as jumlah_retur'),
                     DB::raw('SUM(retur.jumlah_retur) as total_barang_retur'),
                     DB::raw('SUM(retur.jumlah_kirim) as total_barang_kirim'),
-                    DB::raw('ROUND((SUM(retur.jumlah_retur) / SUM(retur.jumlah_kirim)) * 100, 2) as persentase_retur')
+                    DB::raw('ROUND((SUM(retur.jumlah_retur) / NULLIF(SUM(retur.jumlah_kirim), 0)) * 100, 2) as persentase_retur')
                 )
-                ->whereBetween('retur.tanggal_retur', [$tanggalMulai, $tanggalAkhir])
+                ->whereBetween('retur.tanggal_retur', [$startDate, $endDate])
                 ->groupBy('toko.toko_id', 'toko.nama_toko', 'toko.pemilik', 'toko.alamat')
-                ->orderBy('jumlah_retur', 'desc')
+                ->orderByDesc('jumlah_retur')
                 ->limit($limit)
                 ->get();
 
-            // Format data untuk tabel
-            $tableData = [];
-            foreach ($data as $item) {
-                $tableData[] = [
+            // Format data untuk tampilan
+            $data = $topReturToko->map(function ($item) {
+                return [
                     'toko_id' => $item->toko_id,
                     'nama_toko' => $item->nama_toko,
                     'pemilik' => $item->pemilik,
                     'alamat' => $item->alamat,
-                    'jumlah_retur' => (int)$item->jumlah_retur,
-                    'total_barang_retur' => (int)$item->total_barang_retur,
-                    'total_barang_kirim' => (int)$item->total_barang_kirim,
-                    'persentase_retur' => (float)$item->persentase_retur,
+                    'jumlah_retur' => (int) $item->jumlah_retur,
+                    'total_barang_retur' => (int) $item->total_barang_retur,
+                    'total_barang_kirim' => (int) $item->total_barang_kirim,
+                    'persentase_retur' => (float) $item->persentase_retur,
                     'rating_class' => $this->getReturRatingClass($item->persentase_retur)
                 ];
-            }
+            });
 
             return response()->json([
                 'status' => 'success',
-                'data' => $tableData,
+                'data' => $data,
                 'periode' => [
-                    'mulai' => $tanggalMulai->format('d/m/Y'),
-                    'akhir' => $tanggalAkhir->format('d/m/Y')
+                    'mulai' => $startDate->format('d/m/Y'),
+                    'akhir' => $endDate->format('d/m/Y')
                 ]
             ]);
 
@@ -357,7 +358,7 @@ public function getBarangLakuTidakLaku(Request $request)
             Log::error('Error in getTokoReturTerbanyak: ' . $e->getMessage());
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal memuat data toko retur: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan saat memuat data retur: ' . $e->getMessage()
             ], 500);
         }
     }
