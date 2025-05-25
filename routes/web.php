@@ -85,6 +85,10 @@ Route::prefix('dashboard/api')->group(function() {
     Route::get('/toko/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
     Route::get('/toko/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
 
+    Route::post('/toko/preview-geocode', [TokoController::class, 'previewGeocode'])->name('toko.previewGeocode');
+    Route::post('/toko/geocode', [TokoController::class, 'geocodeToko'])->name('toko.geocodeToko');
+    Route::post('/toko/batch-geocode', [TokoController::class, 'batchGeocodeToko'])->name('toko.batchGeocodeToko');
+
     Route::resource('toko', TokoController::class);
     
     Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');

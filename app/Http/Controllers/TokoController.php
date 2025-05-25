@@ -257,26 +257,68 @@ class TokoController extends Controller
             ], 422);
         }
 
-        // Tambah data toko baru
-        $toko = new Toko();
-        $toko->toko_id = $request->toko_id;
-        $toko->nama_toko = $request->nama_toko;
-        $toko->pemilik = $request->pemilik;
-        $toko->alamat = $request->alamat;
-        $toko->wilayah_kecamatan = $request->wilayah_kecamatan;
-        $toko->wilayah_kelurahan = $request->wilayah_kelurahan;
-        $toko->wilayah_kota_kabupaten = $request->wilayah_kota_kabupaten;
-        $toko->nomer_telpon = $request->nomer_telpon;
-        $toko->save();
+        try {
+            // Buat alamat lengkap untuk geocoding
+            $fullAddress = $request->alamat . ', ' . 
+                          $request->wilayah_kelurahan . ', ' . 
+                          $request->wilayah_kecamatan . ', ' . 
+                          $request->wilayah_kota_kabupaten . ', Indonesia';
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data toko berhasil ditambahkan',
-            'data' => $toko
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+            // Lakukan geocoding untuk mendapatkan koordinat
+            $geocodeResult = \App\Services\GeocodingService::geocodeAddress($fullAddress);
+            
+            // Tambah data toko baru
+            $toko = new Toko();
+            $toko->toko_id = $request->toko_id;
+            $toko->nama_toko = $request->nama_toko;
+            $toko->pemilik = $request->pemilik;
+            $toko->alamat = $request->alamat;
+            $toko->wilayah_kecamatan = $request->wilayah_kecamatan;
+            $toko->wilayah_kelurahan = $request->wilayah_kelurahan;
+            $toko->wilayah_kota_kabupaten = $request->wilayah_kota_kabupaten;
+            $toko->nomer_telpon = $request->nomer_telpon;
+            $toko->is_active = true;
+            
+            // Set koordinat jika geocoding berhasil
+            if ($geocodeResult) {
+                $toko->latitude = $geocodeResult['latitude'];
+                $toko->longitude = $geocodeResult['longitude'];
+                $toko->alamat_lengkap_geocoding = $geocodeResult['formatted_address'];
+                
+                // Validasi apakah koordinat berada di wilayah yang wajar
+                if (!\App\Services\GeocodingService::isInMalangRegion($geocodeResult['latitude'], $geocodeResult['longitude'])) {
+                    // Jika koordinat di luar wilayah Malang, beri peringatan tapi tetap simpan
+                    \Illuminate\Support\Facades\Log::warning('Toko ' . $request->nama_toko . ' memiliki koordinat di luar wilayah Malang: ' . $geocodeResult['latitude'] . ', ' . $geocodeResult['longitude']);
+                }
+            }
+            
+            $toko->save();
+
+            $responseMessage = 'Data toko berhasil ditambahkan';
+            if ($geocodeResult) {
+                $responseMessage .= ' dengan koordinat GPS (' . $geocodeResult['latitude'] . ', ' . $geocodeResult['longitude'] . ')';
+            } else {
+                $responseMessage .= '. Koordinat GPS tidak dapat ditemukan, akan menggunakan estimasi lokasi di Market Map.';
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => $responseMessage,
+                'data' => $toko,
+                'geocode_info' => $geocodeResult
+            ])
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error saving toko: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat menyimpan data toko'
+            ], 500);
+        }
     }
 
     /**
@@ -451,5 +493,208 @@ class TokoController extends Controller
         ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
         ->header('Pragma', 'no-cache')
         ->header('Expires', '0');
+    }
+
+    // Tambahkan method ini di TokoController.php
+
+/**
+ * Preview geocoding untuk alamat yang diinput (untuk test sebelum save)
+ * 
+ * @param  \Illuminate\Http\Request  $request
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function previewGeocode(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'alamat' => 'required|string'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Alamat harus diisi',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    try {
+        // Lakukan geocoding
+        $geocodeResult = \App\Services\GeocodingService::geocodeAddress($request->alamat);
+        
+        if ($geocodeResult) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Koordinat berhasil ditemukan',
+                'geocode_info' => $geocodeResult
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Koordinat tidak dapat ditemukan untuk alamat tersebut'
+            ], 404);
+        }
+
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error preview geocoding: ' . $e->getMessage());
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Terjadi kesalahan saat melakukan preview geocoding'
+        ], 500);
+    }
+}
+
+/**
+ * Geocode alamat toko manual (untuk test atau perbaikan data)
+ * 
+ * @param  \Illuminate\Http\Request  $request
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function geocodeToko(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'toko_id' => 'required|exists:toko,toko_id',
+        'alamat' => 'required|string'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Validasi gagal',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    try {
+        $toko = Toko::find($request->toko_id);
+        
+        if (!$toko) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Toko tidak ditemukan'
+            ], 404);
+        }
+
+        // Lakukan geocoding
+        $geocodeResult = \App\Services\GeocodingService::geocodeAddress($request->alamat);
+        
+        if ($geocodeResult) {
+            // Update koordinat toko
+            $toko->latitude = $geocodeResult['latitude'];
+            $toko->longitude = $geocodeResult['longitude'];
+            $toko->alamat_lengkap_geocoding = $geocodeResult['formatted_address'];
+            $toko->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Koordinat toko berhasil diperbarui',
+                'data' => [
+                    'toko_id' => $toko->toko_id,
+                    'nama_toko' => $toko->nama_toko,
+                    'latitude' => $toko->latitude,
+                    'longitude' => $toko->longitude,
+                    'formatted_address' => $toko->alamat_lengkap_geocoding
+                ],
+                'geocode_info' => $geocodeResult
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tidak dapat menemukan koordinat untuk alamat tersebut'
+            ], 404);
+        }
+
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error geocoding toko: ' . $e->getMessage());
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Terjadi kesalahan saat melakukan geocoding'
+        ], 500);
+    }
+}
+
+/**
+ * Batch geocoding untuk semua toko yang belum memiliki koordinat
+ * 
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function batchGeocodeToko()
+{
+    try {
+        $tokosWithoutCoordinates = Toko::whereNull('latitude')
+                                      ->orWhereNull('longitude')
+                                      ->get();
+
+        if ($tokosWithoutCoordinates->isEmpty()) {
+            return response()->json([
+                'status' => 'info',
+                'message' => 'Semua toko sudah memiliki koordinat GPS',
+                'summary' => [
+                    'total_processed' => 0,
+                    'success_count' => 0,
+                    'failed_count' => 0
+                ]
+            ]);
+        }
+
+        $successCount = 0;
+        $failedCount = 0;
+        $results = [];
+
+        foreach ($tokosWithoutCoordinates as $toko) {
+            $fullAddress = $toko->alamat . ', ' . 
+                          $toko->wilayah_kelurahan . ', ' . 
+                          $toko->wilayah_kecamatan . ', ' . 
+                          $toko->wilayah_kota_kabupaten . ', Indonesia';
+
+            $geocodeResult = \App\Services\GeocodingService::geocodeAddress($fullAddress);
+            
+            if ($geocodeResult) {
+                $toko->latitude = $geocodeResult['latitude'];
+                $toko->longitude = $geocodeResult['longitude'];
+                $toko->alamat_lengkap_geocoding = $geocodeResult['formatted_address'];
+                $toko->save();
+                
+                $successCount++;
+                $results[] = [
+                    'toko_id' => $toko->toko_id,
+                    'nama_toko' => $toko->nama_toko,
+                    'status' => 'success',
+                    'coordinates' => [$geocodeResult['latitude'], $geocodeResult['longitude']]
+                ];
+            } else {
+                $failedCount++;
+                $results[] = [
+                    'toko_id' => $toko->toko_id,
+                    'nama_toko' => $toko->nama_toko,
+                    'status' => 'failed',
+                    'coordinates' => null
+                ];
+            }
+
+            // Delay untuk menghindari rate limiting
+            usleep(500000); // 0.5 detik
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Batch geocoding selesai. Berhasil: {$successCount}, Gagal: {$failedCount}",
+            'summary' => [
+                'total_processed' => count($tokosWithoutCoordinates),
+                'success_count' => $successCount,
+                'failed_count' => $failedCount
+            ],
+            'results' => $results
+        ]);
+
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error batch geocoding: ' . $e->getMessage());
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Terjadi kesalahan saat melakukan batch geocoding'
+        ], 500);
+    }
     }
 }
