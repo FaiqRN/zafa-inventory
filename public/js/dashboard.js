@@ -211,7 +211,9 @@ function loadTransaksiTerbaru() {
                         <tr>
                             <td><strong>${item.nomer_pengiriman}</strong></td>
                             <td>
-                                <div>${item.nama_toko}</div>
+                                ${item.jenis_pengiriman === 'toko' 
+                                    ? `<div>${item.tujuan}</div>` 
+                                    : `<div>${item.tujuan} <small class="text-muted">(Customer)</small></div>`}
                                 ${item.nama_pemesan !== '-' ? `<small class="text-muted">Pemesan: ${item.nama_pemesan}</small>` : ''}
                             </td>
                             <td>${item.nama_barang}</td>

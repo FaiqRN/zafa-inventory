@@ -226,45 +226,69 @@ class DashboardController extends Controller
         try {
             $limit = $request->input('limit', 15);
 
-            // Ambil data pengiriman terbaru dengan informasi pemesanan terkait
-            $data = DB::table('pengiriman')
+            // Ambil data pengiriman ke toko
+            $pengirimanToko = DB::table('pengiriman')
                 ->join('barang', 'pengiriman.barang_id', '=', 'barang.barang_id')
                 ->join('toko', 'pengiriman.toko_id', '=', 'toko.toko_id')
                 ->leftJoin('pemesanan', function($join) {
                     $join->on('pengiriman.barang_id', '=', 'pemesanan.barang_id')
-                         ->whereRaw('DATE(pengiriman.tanggal_pengiriman) = DATE(pemesanan.tanggal_pemesanan)');
+                        ->whereRaw('DATE(pengiriman.tanggal_pengiriman) = DATE(pemesanan.tanggal_pemesanan)');
                 })
                 ->select(
                     'pengiriman.pengiriman_id',
                     'pengiriman.nomer_pengiriman',
                     'pengiriman.tanggal_pengiriman',
                     'barang.nama_barang',
-                    'toko.nama_toko',
+                    'toko.nama_toko as tujuan',
                     'pengiriman.jumlah_kirim',
                     'pengiriman.status',
                     'barang.harga_awal_barang',
                     DB::raw('(pengiriman.jumlah_kirim * barang.harga_awal_barang) as total_harga'),
-                    'pemesanan.pemesanan_id',
-                    'pemesanan.nama_pemesan'
+                    'pemesanan.nama_pemesan',
+                    DB::raw("'toko' as jenis_pengiriman")
+                );
+
+            // Ambil data pengiriman langsung ke customer dari pemesanan yang statusnya 'dikirim'
+            $pengirimanCustomer = DB::table('pemesanan')
+                ->join('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                ->select(
+                    DB::raw('NULL as pengiriman_id'),
+                    DB::raw('pemesanan_id as nomer_pengiriman'),
+                    'tanggal_dikirim as tanggal_pengiriman',
+                    'barang.nama_barang',
+                    'pemesanan.nama_pemesan as tujuan',
+                    'pemesanan.jumlah_pesanan as jumlah_kirim',
+                    'pemesanan.status_pemesanan as status',
+                    'barang.harga_awal_barang',
+                    DB::raw('(pemesanan.jumlah_pesanan * barang.harga_awal_barang) as total_harga'),
+                    'pemesanan.nama_pemesan',
+                    DB::raw("'customer' as jenis_pengiriman")
                 )
-                ->orderBy('pengiriman.tanggal_pengiriman', 'desc')
+                ->whereNotNull('tanggal_dikirim')
+                ->where('status_pemesanan', 'dikirim');
+
+            // Gabungkan data pengiriman ke toko dan ke customer
+            $dataGabungan = $pengirimanToko
+                ->unionAll($pengirimanCustomer)
+                ->orderBy('tanggal_pengiriman', 'desc')
                 ->limit($limit)
                 ->get();
 
             // Format data untuk tabel
             $tableData = [];
-            foreach ($data as $item) {
+            foreach ($dataGabungan as $item) {
                 $tableData[] = [
                     'pengiriman_id' => $item->pengiriman_id,
                     'nomer_pengiriman' => $item->nomer_pengiriman,
                     'tanggal_pengiriman' => Carbon::parse($item->tanggal_pengiriman)->format('d/m/Y'),
                     'nama_barang' => $item->nama_barang,
-                    'nama_toko' => $item->nama_toko,
+                    'tujuan' => $item->tujuan,
                     'nama_pemesan' => $item->nama_pemesan ?: '-',
                     'jumlah_pesanan' => (int)$item->jumlah_kirim,
                     'total_harga' => (int)$item->total_harga,
                     'status_pemesanan' => $this->formatStatusPengiriman($item->status),
-                    'status_badge' => $this->getStatusBadge($item->status)
+                    'status_badge' => $this->getStatusBadge($item->status),
+                    'jenis_pengiriman' => $item->jenis_pengiriman // bisa 'toko' atau 'customer'
                 ];
             }
 
@@ -281,6 +305,7 @@ class DashboardController extends Controller
             ], 500);
         }
     }
+
 
     /**
      * 4. Toko dengan Retur Terbanyak (3 Bulan Terakhir)
