@@ -15,7 +15,7 @@
 
             <!-- Master Data -->
             <li class="nav-item">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'user']))? 'active' : '' }}">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-database"></i>
                     <p>
                         Master Data
@@ -83,7 +83,7 @@
 
             <!-- Laporan -->
             <li class="nav-item">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['laporan-penjualan', 'laporan-toko', 'laporan-barang']))? 'active' : '' }}">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['laporan-pemesanan', 'laporan-toko', 'analytics']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-chart-line"></i>
                     <p>
                         Laporan
@@ -112,29 +112,37 @@
                 </ul>
             </li>
 
-            <!-- Pengaturan -->
             <li class="nav-item">
-                <a href="#" class="nav-link">
-                <i class="nav-icon fas fa-cog"></i>
-                    <p>Pengaturan
-            <i class="fas fa-angle-left right"></i>
-            </p>
-            </a>
-                <ul class="nav nav-treeview">
-            <li class="nav-item">
-                <a href="{{ route('profile.edit') }}" class="nav-link">
-                <i class="fas fa-pencil-alt nav-icon"></i>
-                <p>Edit Profile</p>
+                <a href="{{ url('/market-map') }}" class="nav-link {{ ($activemenu == 'market-map')? 'active' : '' }}">
+                    <i class="nav-icon fas fa-map"></i>
+                    <p>Market Map</p>
                 </a>
             </li>
-        <li class="nav-item">
-                <a href="{{ route('profile.change-password') }}" class="nav-link">
-                    <i class="fas fa-sync-alt nav-icon"></i>
-                        <p>Ubah Password</p>
+            <li class="nav-item">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['profile.edit', 'profile.change-password']))? 'active' : '' }}">
+                    <i class="nav-icon fas fa-cog"></i>
+                    <p>
+                        Pengaturan
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
+                </a>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="{{ route('profile.edit') }}" class="nav-link {{ ($activemenu == 'profile.edit')? 'active' : '' }}">
+                            <i class="fas fa-pencil-alt nav-icon"></i>
+                            <p>Edit Profile</p>
                         </a>
-        </li>
-    </ul>
-</li>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('profile.change-password') }}" class="nav-link {{ ($activemenu == 'profile.change-password')? 'active' : '' }}">
+                            <i class="fas fa-sync-alt nav-icon"></i>
+                            <p>Ubah Password</p>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </li>
 </ul>
 </nav>
 </div>

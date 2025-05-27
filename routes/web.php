@@ -7,8 +7,8 @@ use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MarketMapController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
@@ -76,16 +76,30 @@ Route::prefix('dashboard/api')->group(function() {
         Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
     });
     
-    Route::get('/toko/data', [TokoController::class, 'getData'])->name('toko.data');
-    Route::get('/toko/list', [TokoController::class, 'getList'])->name('toko.list');
-    Route::get('/toko/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
+Route::prefix('toko')->group(function() {
+    // Basic CRUD routes
+    Route::get('/', [TokoController::class, 'index'])->name('toko.index');
+    Route::get('/list', [TokoController::class, 'getList'])->name('toko.list'); // ← Route yang hilang
+    Route::get('/data', [TokoController::class, 'getData'])->name('toko.data');
+    Route::get('/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
+    Route::post('/', [TokoController::class, 'store'])->name('toko.store');
+    Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
+    Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
+    Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
+    Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
+    
+    // Wilayah routes
+    Route::get('/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
+    Route::get('/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
+    Route::get('/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
+    
+    // Enhanced geocoding routes
+    Route::post('/preview-geocode', [TokoController::class, 'previewGeocode'])->name('toko.previewGeocode');
+    Route::post('/geocode', [TokoController::class, 'geocodeToko'])->name('toko.geocodeToko');
+    Route::post('/batch-geocode', [TokoController::class, 'batchGeocodeToko'])->name('toko.batchGeocodeToko');
 
-    // Routes untuk Wilayah Dropdown
-    Route::get('/toko/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
-    Route::get('/toko/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
-    Route::get('/toko/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
-
-    Route::resource('toko', TokoController::class);
+    Route::post('/validate-coordinates', [TokoController::class, 'validateMapCoordinates'])->name('toko.validateCoordinates');
+});
     
     Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');
     Route::get('/barang-toko/getAvailableBarang', [BarangTokoController::class, 'getAvailableBarang'])->name('barang-toko.getAvailableBarang');
@@ -154,27 +168,37 @@ Route::prefix('dashboard/api')->group(function() {
     Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
     Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
-    Route::get('/analytics', function () {
-        return view('analytics', [
-            'activemenu' => 'analytics',
-            'breadcrumb' => (object) [
-                'title' => 'analytics',
-                'list' => ['Home', 'Laporan', 'analytics']
-            ]
-        ]);
-    })->name('analytics');
-
-// Analytics Route
 Route::prefix('analytics')->middleware(['auth', 'nocache'])->group(function() {
     Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
     
-    // Analitik 1: Partner Performance dengan Multi-Filter
-
-    Route::prefix('analytics')->middleware(['auth', 'nocache'])->group(function() {
-        Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
-        Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner.performance');
-    });
-    
+    // Analitik 1: Partner Performance
+    Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner.performance');
+    Route::get('/partner-detail/{partnerId}', [AnalyticsController::class, 'getPartnerDetail'])->name('analytics.partner.detail');
 });
 
+
+Route::group(['prefix' => 'market-map'], function() {
+    Route::get('/', [MarketMapController::class, 'index'])->name('market-map.index');
+    Route::get('/toko-data', [MarketMapController::class, 'getTokoData'])->name('market-map.toko-data');
+    Route::get('/wilayah-statistics', [MarketMapController::class, 'getWilayahStatistics'])->name('market-map.wilayah-statistics');
+    Route::get('/toko-barang/{tokoId}', [MarketMapController::class, 'getTokoBarang'])->name('market-map.toko-barang');
+    Route::get('/recommendations', [MarketMapController::class, 'getRecommendations'])->name('market-map.recommendations');
+    Route::get('/price-recommendations', [MarketMapController::class, 'getPriceRecommendations'])->name('market-map.price-recommendations');
+    Route::post('/store-toko', [MarketMapController::class, 'storeToko'])->name('market-map.store-toko');
+    Route::get('/wilayah-data', [MarketMapController::class, 'getWilayahData'])->name('market-map.wilayah-data');
+    
+    // Routes tambahan untuk geocoding
+    Route::post('/bulk-geocode', [MarketMapController::class, 'bulkGeocodeTokos'])->name('market-map.bulk-geocode');
+    Route::get('/geocode-status', [MarketMapController::class, 'getGeocodeStatus'])->name('market-map.geocode-status');
+    Route::post('/fix-coordinates/{tokoId}', [MarketMapController::class, 'fixTokoCoordinates'])->name('market-map.fix-coordinates');
+});
+
+// Route untuk debugging (hanya di development)
+if (app()->environment(['local', 'development'])) {
+    Route::group(['prefix' => 'debug/market-map'], function() {
+        Route::get('/test-geocoding', [MarketMapController::class, 'testGeocodingService']);
+        Route::get('/coordinate-stats', [MarketMapController::class, 'getCoordinateStatistics']);
+        Route::get('/validate-coordinates', [MarketMapController::class, 'validateAllCoordinates']);
+    });
+}
 });
