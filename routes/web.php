@@ -2,12 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
@@ -162,4 +163,18 @@ Route::prefix('dashboard/api')->group(function() {
             ]
         ]);
     })->name('analytics');
+
+// Analytics Route
+Route::prefix('analytics')->middleware(['auth', 'nocache'])->group(function() {
+    Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
+    
+    // Analitik 1: Partner Performance dengan Multi-Filter
+
+    Route::prefix('analytics')->middleware(['auth', 'nocache'])->group(function() {
+        Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner.performance');
+    });
+    
+});
+
 });
