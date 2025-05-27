@@ -13,194 +13,385 @@ class MarketMap {
         this.markersLayer = null;
         this.isClusterEnabled = true;
         this.isHeatmapEnabled = true;
+        this.showCoordinateStatus = false;
+        
+        // Check dependencies
+        if (!this.checkDependencies()) {
+            this.showError('Required libraries not loaded. Please check your internet connection.');
+            return;
+        }
         
         this.init();
     }
 
+        checkDependencies() {
+        const required = {
+            'Leaflet': typeof L !== 'undefined',
+            'MarkerCluster': typeof L !== 'undefined' && L.markerClusterGroup,
+            'Heatmap': typeof L !== 'undefined' && L.heatLayer,
+            'SweetAlert': typeof Swal !== 'undefined'
+        };
+
+        const missing = Object.keys(required).filter(lib => !required[lib]);
+        
+        if (missing.length > 0) {
+            console.error('Missing dependencies:', missing);
+            this.showFallbackError('Missing libraries: ' + missing.join(', '));
+            return false;
+        }
+        
+        return true;
+    }
+
     init() {
-        this.initMap();
-        this.setupEventListeners();
-        this.loadData();
+        try {
+            this.initMap();
+            this.setupEventListeners();
+            this.loadData();
+        } catch (error) {
+            console.error('Error initializing MarketMap:', error);
+            this.showError('Failed to initialize map: ' + error.message);
+        }
     }
 
     initMap() {
-        // Inisialisasi peta dengan center di Malang
-        this.map = L.map('market-map').setView([-7.9666, 112.6326], 11);
+        try {
+            // Inisialisasi peta dengan center di Malang
+            this.map = L.map('market-map').setView([-7.9666, 112.6326], 11);
 
-        // Base tile layer - OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 18
-        }).addTo(this.map);
+            // Base tile layer dengan error handling
+            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+                errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+            });
+            
+            tileLayer.on('tileerror', (e) => {
+                console.warn('Tile loading error:', e);
+            });
+            
+            tileLayer.addTo(this.map);
 
-        // Inisialisasi marker cluster
-        this.markerCluster = L.markerClusterGroup({
-            iconCreateFunction: (cluster) => {
-                const count = cluster.getChildCount();
-                let size = 'small';
-                let color = '#ffd700'; // kuning default
-                
-                if (count >= 10) {
-                    size = 'large';
-                    color = '#ff0000'; // merah untuk density tinggi
-                } else if (count >= 5) {
-                    size = 'medium';
-                    color = '#ff8c00'; // oranye untuk density sedang
-                }
+            // Inisialisasi marker cluster dengan custom styling
+            this.markerCluster = L.markerClusterGroup({
+                iconCreateFunction: (cluster) => {
+                    const count = cluster.getChildCount();
+                    let size = 'small';
+                    let color = '#ffd700'; // kuning default
+                    
+                    if (count >= 10) {
+                        size = 'large';
+                        color = '#ff0000'; // merah untuk density tinggi
+                    } else if (count >= 5) {
+                        size = 'medium';
+                        color = '#ff8c00'; // oranye untuk density sedang
+                    }
 
-                return L.divIcon({
-                    html: `<div style="background-color: ${color}; color: white; border-radius: 50%; 
-                           width: 40px; height: 40px; display: flex; align-items: center; 
-                           justify-content: center; font-weight: bold; border: 3px solid white;
-                           box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${count}</div>`,
-                    className: 'market-cluster',
-                    iconSize: [40, 40]
-                });
-            },
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true,
-            maxClusterRadius: 50
-        });
+                    return L.divIcon({
+                        html: `<div style="background-color: ${color}; color: white; border-radius: 50%; 
+                               width: 40px; height: 40px; display: flex; align-items: center; 
+                               justify-content: center; font-weight: bold; border: 3px solid white;
+                               box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${count}</div>`,
+                        className: 'market-cluster',
+                        iconSize: [40, 40]
+                    });
+                },
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true,
+                maxClusterRadius: 50
+            });
 
-        // Layer untuk markers individual
-        this.markersLayer = L.layerGroup();
-        
-        // Add layers to map
-        this.map.addLayer(this.markerCluster);
+            // Layer untuk markers individual
+            this.markersLayer = L.layerGroup();
+            
+            // Add cluster layer to map by default
+            this.map.addLayer(this.markerCluster);
+            
+            console.log('Map initialized successfully');
+            
+        } catch (error) {
+            console.error('Error initializing map:', error);
+            throw new Error('Map initialization failed: ' + error.message);
+        }
     }
 
     setupEventListeners() {
-        // Filter wilayah
-        document.getElementById('filter-wilayah').addEventListener('change', (e) => {
-            this.filterByWilayah(e.target.value);
-        });
+        try {
+            // Filter wilayah
+            const filterWilayah = document.getElementById('filter-wilayah');
+            if (filterWilayah) {
+                filterWilayah.addEventListener('change', (e) => {
+                    this.filterByWilayah(e.target.value);
+                });
+            }
 
-        // Toggle heatmap
-        document.getElementById('toggle-heatmap').addEventListener('change', (e) => {
-            this.toggleHeatmap(e.target.checked);
-        });
+            // Toggle heatmap
+            const toggleHeatmap = document.getElementById('toggle-heatmap');
+            if (toggleHeatmap) {
+                toggleHeatmap.addEventListener('change', (e) => {
+                    this.toggleHeatmap(e.target.checked);
+                });
+            }
 
-        // Toggle cluster
-        document.getElementById('toggle-cluster').addEventListener('change', (e) => {
-            this.toggleCluster(e.target.checked);
-        });
+            // Toggle cluster
+            const toggleCluster = document.getElementById('toggle-cluster');
+            if (toggleCluster) {
+                toggleCluster.addEventListener('change', (e) => {
+                    this.toggleCluster(e.target.checked);
+                });
+            }
 
-        // Refresh map
-        document.getElementById('btn-refresh-map').addEventListener('click', () => {
-            this.loadData();
-        });
+            // Toggle coordinate status
+            const toggleCoordinates = document.getElementById('toggle-coordinates');
+            if (toggleCoordinates) {
+                toggleCoordinates.addEventListener('change', (e) => {
+                    this.showCoordinateStatus = e.target.checked;
+                    this.renderMarkers();
+                });
+            }
 
-        // Form tambah toko
-        document.getElementById('form-add-toko').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleAddToko(e);
-        });
+            // Refresh map
+            const btnRefreshMap = document.getElementById('btn-refresh-map');
+            if (btnRefreshMap) {
+                btnRefreshMap.addEventListener('click', () => {
+                    this.loadData();
+                });
+            }
 
-        // Dropdown wilayah untuk form
-        document.getElementById('select-kota').addEventListener('change', (e) => {
-            this.loadKecamatan(e.target.value);
-        });
+            // Bulk geocoding
+            const btnBulkGeocode = document.getElementById('btn-bulk-geocode');
+            if (btnBulkGeocode) {
+                btnBulkGeocode.addEventListener('click', () => {
+                    this.handleBulkGeocode();
+                });
+            }
 
-        document.getElementById('select-kecamatan').addEventListener('change', (e) => {
-            this.loadKelurahan(e.target.value);
-        });
+            // Form tambah toko
+            const formAddToko = document.getElementById('form-add-toko');
+            if (formAddToko) {
+                formAddToko.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleAddToko(e);
+                });
+            }
+
+            // Dropdown wilayah untuk form
+            const selectKota = document.getElementById('select-kota');
+            if (selectKota) {
+                selectKota.addEventListener('change', (e) => {
+                    this.loadKecamatan(e.target.value);
+                });
+            }
+
+            const selectKecamatan = document.getElementById('select-kecamatan');
+            if (selectKecamatan) {
+                selectKecamatan.addEventListener('change', (e) => {
+                    this.loadKelurahan(e.target.value);
+                });
+            }
+
+            console.log('Event listeners set up successfully');
+            
+        } catch (error) {
+            console.error('Error setting up event listeners:', error);
+        }
     }
 
     async loadData() {
         try {
-            // Show loading
             this.showLoading(true);
 
-            // Load toko data
-            const tokoResponse = await fetch('/market-map/toko-data');
-            const tokoResult = await tokoResponse.json();
-            
-            if (tokoResult.success) {
-                this.tokoData = tokoResult.data;
+            // Load toko data dengan error handling
+            const tokoData = await this.fetchWithRetry('/market-map/toko-data');
+            if (tokoData.success) {
+                this.tokoData = tokoData.data;
                 this.renderMarkers();
-                this.updateStatistics();
+                this.updateStatistics(tokoData.summary);
+                console.log('Loaded', this.tokoData.length, 'toko records');
+            } else {
+                throw new Error(tokoData.message || 'Failed to load toko data');
             }
 
             // Load wilayah data
-            const wilayahResponse = await fetch('/market-map/wilayah-data');
-            const wilayahResult = await wilayahResponse.json();
-            
-            if (wilayahResult.success) {
-                this.wilayahData = wilayahResult.data;
+            try {
+                const wilayahData = await this.fetchWithRetry('/market-map/wilayah-data');
+                if (wilayahData.success) {
+                    this.wilayahData = wilayahData.data;
+                    console.log('Loaded wilayah data successfully');
+                }
+            } catch (error) {
+                console.warn('Failed to load wilayah data:', error);
+                // Continue without wilayah data
             }
 
             // Load recommendations
-            await this.loadRecommendations();
+            try {
+                await this.loadRecommendations();
+            } catch (error) {
+                console.warn('Failed to load recommendations:', error);
+            }
             
             this.showLoading(false);
+            
         } catch (error) {
             console.error('Error loading data:', error);
-            this.showError('Gagal memuat data peta');
+            this.showError('Gagal memuat data peta: ' + error.message);
             this.showLoading(false);
+        }
+    }
+
+        async fetchWithRetry(url, options = {}, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.warn(`Attempt ${i + 1} failed:`, error);
+                if (i === retries - 1) throw error;
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            }
         }
     }
 
     renderMarkers() {
-        // Clear existing markers
-        this.markerCluster.clearLayers();
-        this.markersLayer.clearLayers();
+        try {
+            // Clear existing markers
+            this.markerCluster.clearLayers();
+            this.markersLayer.clearLayers();
 
-        // Create markers for each toko
-        this.tokoData.forEach(toko => {
-            const marker = this.createTokoMarker(toko);
-            
-            if (this.isClusterEnabled) {
-                this.markerCluster.addLayer(marker);
-            } else {
-                this.markersLayer.addLayer(marker);
+            if (!this.tokoData || this.tokoData.length === 0) {
+                console.warn('No toko data to render');
+                return;
             }
-        });
 
-        // Update heatmap
-        if (this.isHeatmapEnabled) {
-            this.updateHeatmap();
+            // Create markers for each toko
+            let validMarkers = 0;
+            this.tokoData.forEach(toko => {
+                try {
+                    const marker = this.createTokoMarker(toko);
+                    if (marker) {
+                        if (this.isClusterEnabled) {
+                            this.markerCluster.addLayer(marker);
+                        } else {
+                            this.markersLayer.addLayer(marker);
+                        }
+                        validMarkers++;
+                    }
+                } catch (error) {
+                    console.warn('Error creating marker for toko:', toko.toko_id, error);
+                }
+            });
+
+            console.log(`Rendered ${validMarkers} markers from ${this.tokoData.length} toko records`);
+
+            // Update heatmap
+            if (this.isHeatmapEnabled) {
+                this.updateHeatmap();
+            }
+            
+        } catch (error) {
+            console.error('Error rendering markers:', error);
+            this.showError('Gagal menampilkan marker toko');
         }
     }
 
+
     createTokoMarker(toko) {
-        // Pilih icon berdasarkan status toko
-        const isAktif = toko.status_aktif === 'Aktif';
-        const iconColor = isAktif ? '#28a745' : '#dc3545';
-        const iconClass = isAktif ? 'fas fa-store' : 'fas fa-store-slash';
+        try {
+            // Validasi koordinat
+            if (!toko.latitude || !toko.longitude || 
+                isNaN(toko.latitude) || isNaN(toko.longitude)) {
+                console.warn('Invalid coordinates for toko:', toko.toko_id);
+                return null;
+            }
 
-        // Custom marker icon
-        const customIcon = L.divIcon({
-            html: `<div style="background-color: ${iconColor}; color: white; border-radius: 50%; 
-                   width: 25px; height: 25px; display: flex; align-items: center; 
-                   justify-content: center; border: 3px solid white;
-                   box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                   <i class="${iconClass}" style="font-size: 12px;"></i></div>`,
-            className: 'custom-marker',
-            iconSize: [25, 25],
-            iconAnchor: [12, 12]
-        });
+            // Validasi rentang koordinat (Indonesia)
+            if (toko.latitude < -12 || toko.latitude > 8 || 
+                toko.longitude < 94 || toko.longitude > 142) {
+                console.warn('Coordinates outside Indonesia for toko:', toko.toko_id);
+                return null;
+            }
 
-        const marker = L.marker([toko.latitude, toko.longitude], {
-            icon: customIcon
-        });
+            // Pilih icon berdasarkan status toko
+            const isAktif = toko.status_aktif === 'Aktif';
+            const iconColor = isAktif ? '#28a745' : '#dc3545';
+            const iconClass = isAktif ? 'fas fa-store' : 'fas fa-store-slash';
+            
+            // Add coordinate status indicator
+            const coordStatus = toko.has_coordinates ? 'GPS' : 'EST';
+            const coordClass = toko.has_coordinates ? 'real' : 'estimated';
 
-        // Popup content
-        const popupContent = this.createPopupContent(toko);
-        marker.bindPopup(popupContent, {
-            maxWidth: 350,
-            className: 'custom-popup'
-        });
+            // Custom marker icon dengan coordinate status
+            let iconHtml = `
+                <div style="background-color: ${iconColor}; color: white; border-radius: 50%; 
+                     width: 25px; height: 25px; display: flex; align-items: center; 
+                     justify-content: center; border: 3px solid white;
+                     box-shadow: 0 2px 4px rgba(0,0,0,0.3); position: relative;">
+                    <i class="${iconClass}" style="font-size: 12px;"></i>
+            `;
+            
+            if (this.showCoordinateStatus) {
+                iconHtml += `
+                    <span class="coordinate-status ${coordClass}" 
+                          style="position: absolute; top: -8px; right: -8px; 
+                                 padding: 1px 3px; font-size: 8px; border-radius: 6px;">
+                        ${coordStatus}
+                    </span>
+                `;
+            }
+            
+            iconHtml += '</div>';
 
-        // Click event untuk detail
-        marker.on('click', () => {
-            this.showTokoDetail(toko.toko_id);
-        });
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: 'custom-marker',
+                iconSize: [25, 25],
+                iconAnchor: [12, 12]
+            });
 
-        return marker;
+            const marker = L.marker([parseFloat(toko.latitude), parseFloat(toko.longitude)], {
+                icon: customIcon,
+                title: toko.nama_toko
+            });
+
+            // Popup content
+            const popupContent = this.createPopupContent(toko);
+            marker.bindPopup(popupContent, {
+                maxWidth: 350,
+                className: 'custom-popup'
+            });
+
+            // Click event untuk detail
+            marker.on('click', () => {
+                this.showTokoDetail(toko.toko_id);
+            });
+
+            return marker;
+            
+        } catch (error) {
+            console.error('Error creating marker for toko:', toko.toko_id, error);
+            return null;
+        }
     }
 
     createPopupContent(toko) {
+        const coordStatus = toko.has_coordinates ? 
+            '<span class="coordinate-status real">GPS Akurat</span>' : 
+            '<span class="coordinate-status estimated">Estimasi</span>';
+            
         return `
             <div class="popup-header">
                 <h5 style="margin: 0; font-size: 16px;">
@@ -235,10 +426,11 @@ class MarketMap {
                         <div class="popup-stat-label">Retur</div>
                     </div>
                 </div>
-                <div style="text-align: center; margin-top: 10px;">
+                <div style="text-align: center; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
                     <span class="badge ${toko.status_aktif === 'Aktif' ? 'badge-success' : 'badge-danger'}">
                         ${toko.status_aktif}
                     </span>
+                    ${coordStatus}
                 </div>
                 <div style="text-align: center; margin-top: 8px;">
                     <button class="btn btn-sm btn-primary" onclick="marketMapInstance.showTokoDetail('${toko.toko_id}')">
@@ -247,6 +439,60 @@ class MarketMap {
                 </div>
             </div>
         `;
+    }
+
+        async handleBulkGeocode() {
+        try {
+            const result = await Swal.fire({
+                title: 'Bulk Geocoding',
+                text: 'Proses ini akan mencari koordinat GPS untuk toko yang belum memiliki koordinat akurat. Lanjutkan?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Proses',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
+                // Show progress
+                Swal.fire({
+                    title: 'Memproses Geocoding...',
+                    text: 'Mohon tunggu, sedang mengambil koordinat GPS...',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const response = await this.fetchWithRetry('/market-map/bulk-geocode', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: response.message,
+                        timer: 3000
+                    });
+                    
+                    // Reload data
+                    this.loadData();
+                } else {
+                    throw new Error(response.message);
+                }
+            }
+        } catch (error) {
+            console.error('Error bulk geocoding:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: 'Bulk geocoding gagal: ' + error.message
+            });
+        }
     }
 
     updateHeatmap() {
@@ -341,54 +587,83 @@ class MarketMap {
         }
     }
 
-    updateStatistics() {
-        // Update info cards
-        const totalToko = this.tokoData.length;
-        const tokoAktif = this.tokoData.filter(t => t.status_aktif === 'Aktif').length;
-        const kecamatanList = [...new Set(this.tokoData.map(t => t.kecamatan))];
-        const wilayahPotensi = kecamatanList.filter(kec => {
-            const tokoKec = this.tokoData.filter(t => t.kecamatan === kec);
-            return tokoKec.length < 3 && tokoKec.length > 0;
-        }).length;
+    updateStatistics(summary = null) {
+        try {
+            if (summary) {
+                // Use summary from API
+                document.getElementById('total-toko').textContent = summary.total_toko || 0;
+                document.getElementById('toko-aktif').textContent = summary.toko_active || 0;
+            } else {
+                // Calculate from local data
+                const totalToko = this.tokoData.length;
+                const tokoAktif = this.tokoData.filter(t => t.status_aktif === 'Aktif').length;
+                
+                document.getElementById('total-toko').textContent = totalToko;
+                document.getElementById('toko-aktif').textContent = tokoAktif;
+            }
+            
+            const kecamatanList = [...new Set(this.tokoData.map(t => t.kecamatan))];
+            const wilayahPotensi = kecamatanList.filter(kec => {
+                const tokoKec = this.tokoData.filter(t => t.kecamatan === kec);
+                return tokoKec.length < 3 && tokoKec.length > 0;
+            }).length;
 
-        document.getElementById('total-toko').textContent = totalToko;
-        document.getElementById('toko-aktif').textContent = tokoAktif;
-        document.getElementById('total-kecamatan').textContent = kecamatanList.length;
-        document.getElementById('wilayah-potensi').textContent = wilayahPotensi;
+            document.getElementById('total-kecamatan').textContent = kecamatanList.length;
+            document.getElementById('wilayah-potensi').textContent = wilayahPotensi;
 
-        // Update wilayah statistics table
-        this.updateWilayahStats();
+            // Update wilayah statistics table
+            this.updateWilayahStats();
+            
+        } catch (error) {
+            console.error('Error updating statistics:', error);
+        }
     }
 
     updateWilayahStats() {
-        const statsContainer = document.getElementById('stats-tbody');
-        
-        // Group by kota/kabupaten
-        const wilayahStats = {};
-        this.tokoData.forEach(toko => {
-            const wilayah = toko.kota_kabupaten;
-            if (!wilayahStats[wilayah]) {
-                wilayahStats[wilayah] = 0;
+        try {
+            const statsContainer = document.getElementById('stats-tbody');
+            if (!statsContainer) return;
+            
+            // Group by kota/kabupaten
+            const wilayahStats = {};
+            this.tokoData.forEach(toko => {
+                const wilayah = toko.kota_kabupaten;
+                if (!wilayahStats[wilayah]) {
+                    wilayahStats[wilayah] = { total: 0, withGPS: 0 };
+                }
+                wilayahStats[wilayah].total++;
+                if (toko.has_coordinates) {
+                    wilayahStats[wilayah].withGPS++;
+                }
+            });
+
+            // Generate table rows
+            let html = '';
+            Object.keys(wilayahStats).forEach(wilayah => {
+                const stats = wilayahStats[wilayah];
+                const gpsPercentage = Math.round((stats.withGPS / stats.total) * 100);
+                html += `
+                    <tr>
+                        <td><strong>${wilayah}</strong></td>
+                        <td><span class="badge badge-primary">${stats.total}</span></td>
+                        <td>
+                            <span class="badge ${gpsPercentage >= 80 ? 'badge-success' : gpsPercentage >= 50 ? 'badge-warning' : 'badge-danger'}">
+                                ${stats.withGPS}/${stats.total}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (html === '') {
+                html = '<tr><td colspan="3" class="text-center">Tidak ada data</td></tr>';
             }
-            wilayahStats[wilayah]++;
-        });
 
-        // Generate table rows
-        let html = '';
-        Object.keys(wilayahStats).forEach(wilayah => {
-            html += `
-                <tr>
-                    <td><strong>${wilayah}</strong></td>
-                    <td><span class="badge badge-primary">${wilayahStats[wilayah]}</span></td>
-                </tr>
-            `;
-        });
-
-        if (html === '') {
-            html = '<tr><td colspan="2" class="text-center">Tidak ada data</td></tr>';
+            statsContainer.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Error updating wilayah stats:', error);
         }
-
-        statsContainer.innerHTML = html;
     }
 
     async loadRecommendations() {
@@ -678,20 +953,36 @@ class MarketMap {
     }
 
     showLoading(show) {
-        // Implement loading indicator if needed
-        if (show) {
-            // Show loading overlay
-        } else {
-            // Hide loading overlay
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.style.display = show ? 'flex' : 'none';
         }
     }
 
     showError(message) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: message
-        });
+        console.error('MarketMap Error:', message);
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: message
+            });
+        } else {
+            this.showFallbackError(message);
+        }
+    }
+
+    showFallbackError(message) {
+        const mapContainer = document.getElementById('market-map');
+        if (mapContainer) {
+            mapContainer.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        }
     }
 }
 
@@ -699,7 +990,13 @@ class MarketMap {
 let marketMapInstance;
 
 document.addEventListener('DOMContentLoaded', function() {
-    marketMapInstance = new MarketMap();
+    try {
+        marketMapInstance = new MarketMap();
+        window.marketMapInstance = marketMapInstance;
+        console.log('MarketMap instance created successfully');
+    } catch (error) {
+        console.error('Failed to create MarketMap instance:', error);
+    }
 });
 
 // Export for global access

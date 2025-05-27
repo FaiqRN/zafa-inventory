@@ -31,4 +31,26 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+
+        /*
+    |--------------------------------------------------------------------------
+    | Geocoding Services
+    |--------------------------------------------------------------------------
+    |
+    | API keys untuk berbagai provider geocoding.
+    | Nominatim (OpenStreetMap) gratis, yang lain perlu registrasi.
+    |
+    */
+
+    'locationiq' => [
+        'key' => env('LOCATIONIQ_API_KEY'),
+    ],
+
+    'opencage' => [
+        'key' => env('OPENCAGE_API_KEY'),
+    ],
+
+    'mapbox' => [
+        'key' => env('MAPBOX_API_KEY'),
+    ],
 ];

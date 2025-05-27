@@ -4,7 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Validator;
+use App\Models\Toko;
+use App\Services\GeocodingService; 
 
 class MarketMapController extends Controller
 {
@@ -22,43 +27,29 @@ class MarketMapController extends Controller
     public function getTokoData()
     {
         try {
-            $tokoData = DB::table('toko')
+            // Gunakan Eloquent Model dengan proper relationships
+            $tokoData = Toko::with(['barangToko', 'pengiriman', 'retur'])
                 ->select([
                     'toko_id',
                     'nama_toko',
-                    'pemilik',
+                    'pemilik', 
                     'alamat',
                     'wilayah_kelurahan',
                     'wilayah_kecamatan',
                     'wilayah_kota_kabupaten',
-                    'nomer_telpon'
+                    'nomer_telpon',
+                    'latitude',
+                    'longitude',
+                    'is_active',
+                    'alamat_lengkap_geocoding'
                 ])
                 ->get();
 
             // Transform data untuk peta
             $mapData = $tokoData->map(function ($toko) {
-                // Generate koordinat dummy berdasarkan wilayah
-                $coordinates = $this->generateCoordinatesByWilayah(
-                    $toko->wilayah_kota_kabupaten,
-                    $toko->wilayah_kecamatan,
-                    $toko->wilayah_kelurahan
-                );
-
-                // Hitung jumlah barang di toko
-                $jumlahBarang = DB::table('barang_toko')
-                    ->where('toko_id', $toko->toko_id)
-                    ->count();
-
-                // Hitung total pengiriman
-                $totalPengiriman = DB::table('pengiriman')
-                    ->where('toko_id', $toko->toko_id)
-                    ->count();
-
-                // Hitung total retur
-                $totalRetur = DB::table('retur')
-                    ->where('toko_id', $toko->toko_id)
-                    ->count();
-
+                // Gunakan koordinat asli dari database, bukan dummy
+                $coordinates = $this->getTokoCoordinates($toko);
+                
                 return [
                     'toko_id' => $toko->toko_id,
                     'nama_toko' => $toko->nama_toko,
@@ -70,18 +61,27 @@ class MarketMapController extends Controller
                     'telpon' => $toko->nomer_telpon,
                     'latitude' => $coordinates['lat'],
                     'longitude' => $coordinates['lng'],
-                    'jumlah_barang' => $jumlahBarang,
-                    'total_pengiriman' => $totalPengiriman,
-                    'total_retur' => $totalRetur,
-                    'status_aktif' => $jumlahBarang > 0 ? 'Aktif' : 'Tidak Aktif'
+                    'jumlah_barang' => $toko->barangToko->count(),
+                    'total_pengiriman' => $toko->pengiriman->count(),
+                    'total_retur' => $toko->retur->count(),
+                    'status_aktif' => $this->getTokoStatus($toko),
+                    'has_coordinates' => $coordinates['has_real_coordinates'],
+                    'coordinate_source' => $coordinates['source']
                 ];
             });
 
             return response()->json([
                 'success' => true,
-                'data' => $mapData
+                'data' => $mapData,
+                'summary' => [
+                    'total_toko' => $mapData->count(),
+                    'toko_with_coordinates' => $mapData->where('has_coordinates', true)->count(),
+                    'toko_active' => $mapData->where('status_aktif', 'Aktif')->count()
+                ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Error fetching toko data for map: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -89,38 +89,128 @@ class MarketMapController extends Controller
         }
     }
 
+        /**
+     * Dapatkan koordinat toko dengan fallback system
+     */
+    private function getTokoCoordinates($toko)
+    {
+        // Prioritas 1: Gunakan koordinat asli dari geocoding
+        if ($toko->latitude && $toko->longitude) {
+            return [
+                'lat' => (float) $toko->latitude,
+                'lng' => (float) $toko->longitude,
+                'has_real_coordinates' => true,
+                'source' => 'geocoded'
+            ];
+        }
+
+        // Prioritas 2: Generate koordinat berdasarkan wilayah sebagai fallback
+        $fallbackCoords = $this->generateFallbackCoordinates(
+            $toko->wilayah_kota_kabupaten,
+            $toko->wilayah_kecamatan,
+            $toko->wilayah_kelurahan
+        );
+
+        return [
+            'lat' => $fallbackCoords['lat'],
+            'lng' => $fallbackCoords['lng'],
+            'has_real_coordinates' => false,
+            'source' => 'estimated'
+        ];
+    }
+
+        /**
+     * Tentukan status toko berdasarkan berbagai kriteria
+     */
+    private function getTokoStatus($toko)
+    {
+        if (!$toko->is_active) {
+            return 'Tidak Aktif';
+        }
+
+        // Toko aktif jika memiliki barang atau ada pengiriman dalam 30 hari terakhir
+        $hasBarang = $toko->barangToko->count() > 0;
+        $hasRecentShipment = $toko->pengiriman()
+            ->where('tanggal_pengiriman', '>=', now()->subDays(30))
+            ->count() > 0;
+
+        return ($hasBarang || $hasRecentShipment) ? 'Aktif' : 'Tidak Aktif';
+    }
+
+    /**
+     * Perbaikan method untuk koordinat fallback
+     */
+    private function generateFallbackCoordinates($kotaKabupaten, $kecamatan, $kelurahan)
+    {
+        // Base coordinates yang lebih akurat untuk wilayah Malang
+        $baseCoordinates = [
+            'Kota Malang' => ['lat' => -7.9666, 'lng' => 112.6326],
+            'Kabupaten Malang' => ['lat' => -8.1844, 'lng' => 112.7456],
+            'Kota Batu' => ['lat' => -7.8767, 'lng' => 112.5326]
+        ];
+
+        // Ambil base coordinate berdasarkan kota/kabupaten
+        $base = $baseCoordinates[$kotaKabupaten] ?? $baseCoordinates['Kota Malang'];
+
+        // Generate offset yang lebih realistic berdasarkan hash nama wilayah
+        $hashKecamatan = crc32($kecamatan);
+        $hashKelurahan = crc32($kelurahan);
+        
+        // Offset dalam radius yang lebih kecil (sekitar 2-3km)
+        $offsetLat = (($hashKecamatan % 500) / 20000) - 0.0125; // ±0.0125 derajat
+        $offsetLng = (($hashKelurahan % 500) / 20000) - 0.0125; // ±0.0125 derajat
+
+        return [
+            'lat' => $base['lat'] + $offsetLat,
+            'lng' => $base['lng'] + $offsetLng
+        ];
+    }
+
+
+
+
     public function getWilayahStatistics()
     {
         try {
-            // Statistik per kecamatan
-            $statistikKecamatan = DB::table('toko')
-                ->select([
-                    'wilayah_kecamatan',
-                    'wilayah_kota_kabupaten',
-                    DB::raw('COUNT(*) as jumlah_toko')
-                ])
-                ->groupBy('wilayah_kecamatan', 'wilayah_kota_kabupaten')
-                ->get();
+            // Statistik per kecamatan dengan join yang lebih efisien
+            $statistikKecamatan = Toko::select([
+                'wilayah_kecamatan',
+                'wilayah_kota_kabupaten',
+                DB::raw('COUNT(*) as jumlah_toko'),
+                DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as toko_aktif'),
+                DB::raw('COUNT(CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN 1 END) as toko_with_coordinates')
+            ])
+            ->groupBy('wilayah_kecamatan', 'wilayah_kota_kabupaten')
+            ->orderBy('jumlah_toko', 'desc')
+            ->get();
 
             // Statistik per kelurahan
-            $statistikKelurahan = DB::table('toko')
-                ->select([
-                    'wilayah_kelurahan',
-                    'wilayah_kecamatan',
-                    'wilayah_kota_kabupaten',
-                    DB::raw('COUNT(*) as jumlah_toko')
-                ])
-                ->groupBy('wilayah_kelurahan', 'wilayah_kecamatan', 'wilayah_kota_kabupaten')
-                ->get();
+            $statistikKelurahan = Toko::select([
+                'wilayah_kelurahan',
+                'wilayah_kecamatan', 
+                'wilayah_kota_kabupaten',
+                DB::raw('COUNT(*) as jumlah_toko'),
+                DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as toko_aktif')
+            ])
+            ->groupBy('wilayah_kelurahan', 'wilayah_kecamatan', 'wilayah_kota_kabupaten')
+            ->orderBy('jumlah_toko', 'desc')
+            ->get();
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'kecamatan' => $statistikKecamatan,
-                    'kelurahan' => $statistikKelurahan
+                    'kelurahan' => $statistikKelurahan,
+                    'summary' => [
+                        'total_kecamatan' => $statistikKecamatan->count(),
+                        'total_kelurahan' => $statistikKelurahan->count(),
+                        'avg_toko_per_kecamatan' => round($statistikKecamatan->avg('jumlah_toko'), 2)
+                    ]
                 ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Error fetching wilayah statistics: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -186,17 +276,26 @@ class MarketMapController extends Controller
     public function getWilayahData()
     {
         try {
-            // Baca file wilayah_malang.json
-            $wilayahPath = resource_path('data/wilayah_malang.json');
-            
-            if (!file_exists($wilayahPath)) {
-                // Fallback: coba dari storage atau public
-                $wilayahPath = public_path('data/wilayah_malang.json');
+            // Coba beberapa lokasi file wilayah_malang.json
+            $possiblePaths = [
+                public_path('data/wilayah_malang.json'),
+                resource_path('data/wilayah_malang.json'),
+                storage_path('app/data/wilayah_malang.json'),
+                base_path('data/wilayah_malang.json')
+            ];
+
+            $wilayahData = null;
+            $usedPath = null;
+
+            foreach ($possiblePaths as $path) {
+                if (File::exists($path)) {
+                    $wilayahData = json_decode(File::get($path), true);
+                    $usedPath = $path;
+                    break;
+                }
             }
 
-            if (file_exists($wilayahPath)) {
-                $wilayahData = json_decode(file_get_contents($wilayahPath), true);
-            } else {
+            if (!$wilayahData) {
                 // Fallback data minimal
                 $wilayahData = [
                     'wilayah' => [
@@ -206,7 +305,7 @@ class MarketMapController extends Controller
                             'kecamatan' => []
                         ],
                         [
-                            'id' => 'kabmalang',
+                            'id' => 'kabmalang', 
                             'nama' => 'Kabupaten Malang',
                             'kecamatan' => []
                         ],
@@ -217,19 +316,29 @@ class MarketMapController extends Controller
                         ]
                     ]
                 ];
+                
+                Log::warning('Wilayah data file not found, using fallback data');
             }
 
             return response()->json([
                 'success' => true,
-                'data' => $wilayahData
+                'data' => $wilayahData,
+                'meta' => [
+                    'source_file' => $usedPath ? basename($usedPath) : 'fallback',
+                    'total_wilayah' => count($wilayahData['wilayah'] ?? [])
+                ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Error loading wilayah data: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
+
+
 
     public function getRecommendations()
     {
@@ -339,7 +448,7 @@ class MarketMapController extends Controller
     public function storeToko(Request $request)
     {
         try {
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'nama_toko' => 'required|string|max:100',
                 'pemilik' => 'required|string|max:100',
                 'alamat' => 'required|string',
@@ -349,11 +458,41 @@ class MarketMapController extends Controller
                 'nomer_telpon' => 'required|string|max:20'
             ]);
 
-            // Generate ID toko
-            $lastToko = DB::table('toko')->orderBy('toko_id', 'desc')->first();
-            $newId = $lastToko ? 'TK' . str_pad((intval(substr($lastToko->toko_id, 2)) + 1), 3, '0', STR_PAD_LEFT) : 'TK001';
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
-            DB::table('toko')->insert([
+            // Generate ID toko menggunakan method yang sama seperti TokoController
+            $lastToko = Toko::orderBy('toko_id', 'desc')->first();
+            
+            if (!$lastToko) {
+                $newId = 'TKO001';
+            } else {
+                $lastId = $lastToko->toko_id;
+                if (preg_match('/^TKO(\d+)$/', $lastId, $matches)) {
+                    $number = intval($matches[1]);
+                    $nextNumber = $number + 1;
+                    $newId = 'TKO' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+                } else {
+                    $newId = 'TKO001';
+                }
+            }
+
+            // Buat alamat lengkap untuk geocoding
+            $fullAddress = $request->alamat . ', ' . 
+                          $request->kelurahan . ', ' . 
+                          $request->kecamatan . ', ' . 
+                          $request->kota_kabupaten . ', Indonesia';
+
+            // Lakukan geocoding
+            $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
+
+            // Simpan toko dengan atau tanpa koordinat
+            $tokoData = [
                 'toko_id' => $newId,
                 'nama_toko' => $request->nama_toko,
                 'pemilik' => $request->pemilik,
@@ -361,19 +500,106 @@ class MarketMapController extends Controller
                 'wilayah_kota_kabupaten' => $request->kota_kabupaten,
                 'wilayah_kecamatan' => $request->kecamatan,
                 'wilayah_kelurahan' => $request->kelurahan,
-                'nomer_telpon' => $request->nomer_telpon
-            ]);
+                'nomer_telpon' => $request->nomer_telpon,
+                'is_active' => true
+            ];
+
+            // Tambahkan koordinat jika geocoding berhasil
+            if ($geocodeResult) {
+                $tokoData['latitude'] = $geocodeResult['latitude'];
+                $tokoData['longitude'] = $geocodeResult['longitude'];
+                $tokoData['alamat_lengkap_geocoding'] = $geocodeResult['formatted_address'];
+            }
+
+            $toko = Toko::create($tokoData);
+
+            $responseMessage = 'Toko berhasil ditambahkan';
+            if ($geocodeResult) {
+                $responseMessage .= ' dengan koordinat GPS';
+            } else {
+                $responseMessage .= ' (koordinat akan diestimasi di peta)';
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Toko berhasil ditambahkan',
-                'data' => ['toko_id' => $newId]
+                'message' => $responseMessage,
+                'data' => [
+                    'toko_id' => $newId,
+                    'geocoded' => $geocodeResult !== null,
+                    'coordinates' => $geocodeResult
+                ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Error adding toko from market map: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
+        /**
+     * Method untuk bulk geocoding toko yang belum memiliki koordinat
+     */
+    public function bulkGeocodeTokos()
+    {
+        try {
+            $tokosWithoutCoordinates = Toko::whereNull('latitude')
+                                          ->orWhereNull('longitude')
+                                          ->limit(10) // Batasi untuk menghindari timeout
+                                          ->get();
+
+            $results = [];
+            $successCount = 0;
+
+            foreach ($tokosWithoutCoordinates as $toko) {
+                $fullAddress = $toko->alamat . ', ' . 
+                              $toko->wilayah_kelurahan . ', ' . 
+                              $toko->wilayah_kecamatan . ', ' . 
+                              $toko->wilayah_kota_kabupaten . ', Indonesia';
+
+                $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
+                
+                if ($geocodeResult) {
+                    $toko->update([
+                        'latitude' => $geocodeResult['latitude'],
+                        'longitude' => $geocodeResult['longitude'],
+                        'alamat_lengkap_geocoding' => $geocodeResult['formatted_address']
+                    ]);
+                    
+                    $successCount++;
+                    $results[] = [
+                        'toko_id' => $toko->toko_id,
+                        'nama_toko' => $toko->nama_toko,
+                        'status' => 'success',
+                        'coordinates' => [$geocodeResult['latitude'], $geocodeResult['longitude']]
+                    ];
+                } else {
+                    $results[] = [
+                        'toko_id' => $toko->toko_id,
+                        'nama_toko' => $toko->nama_toko,
+                        'status' => 'failed'
+                    ];
+                }
+
+                // Delay untuk menghindari rate limiting
+                usleep(500000); // 0.5 detik
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Geocoding selesai. Berhasil: {$successCount}/" . count($tokosWithoutCoordinates),
+                'data' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error bulk geocoding tokos: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
