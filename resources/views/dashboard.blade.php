@@ -102,8 +102,8 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-info dashboard-card" style="background: linear-gradient(135deg, #eb7d07, #f14c05); border: none; color: white;">
-                <h4><i class="fas fa-tachometer-alt mr-2"></i>Dashboard CRM Zafa Potato</h4>
-                <p class="mb-0">Monitor penjualan dan pengiriman kentang olahan secara real-time</p>
+                <h4><i class="fas fa-tachometer-alt mr-2"></i>Dashboard</h4>
+                <p class="mb-0">Monitor penjualan dan pengiriman</p>
             </div>
         </div>
     </div>

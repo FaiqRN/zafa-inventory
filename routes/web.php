@@ -168,15 +168,13 @@ Route::prefix('toko')->group(function() {
     Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
     Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
-    Route::get('/analytics', function () {
-        return view('analytics', [
-            'activemenu' => 'analytics',
-            'breadcrumb' => (object) [
-                'title' => 'analytics',
-                'list' => ['Home', 'Laporan', 'analytics']
-            ]
-        ]);
-    })->name('analytics');
+Route::prefix('analytics')->middleware(['auth', 'nocache'])->group(function() {
+    Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
+    
+    // Analitik 1: Partner Performance
+    Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner.performance');
+    Route::get('/partner-detail/{partnerId}', [AnalyticsController::class, 'getPartnerDetail'])->name('analytics.partner.detail');
+});
 
 
 Route::group(['prefix' => 'market-map'], function() {
