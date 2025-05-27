@@ -230,14 +230,14 @@ class TokoController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage with enhanced geocoding.
+     * Store a newly created resource in storage with enhanced geocoding and interactive map.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
-        // Validasi input
+        // Validasi input - KOORDINAT WAJIB DIISI
         $validator = Validator::make($request->all(), [
             'toko_id' => 'required|string|max:10|unique:toko',
             'nama_toko' => 'required|string|max:100',
@@ -247,6 +247,14 @@ class TokoController extends Controller
             'wilayah_kecamatan' => 'required|string|max:100',
             'wilayah_kelurahan' => 'required|string|max:100',
             'nomer_telpon' => 'required|string|max:20',
+            // VALIDASI KOORDINAT WAJIB DARI PETA INTERAKTIF
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ], [
+            'latitude.required' => 'Koordinat latitude wajib diisi. Silakan pilih lokasi pada peta.',
+            'longitude.required' => 'Koordinat longitude wajib diisi. Silakan pilih lokasi pada peta.',
+            'latitude.between' => 'Koordinat latitude tidak valid.',
+            'longitude.between' => 'Koordinat longitude tidak valid.',
         ]);
 
         if ($validator->fails()) {
@@ -258,24 +266,29 @@ class TokoController extends Controller
         }
 
         try {
-            // Buat alamat lengkap untuk geocoding dengan format yang optimal
+            // Validasi koordinat berada di wilayah Malang Raya
+            $latitude = (float) $request->latitude;
+            $longitude = (float) $request->longitude;
+            
+            if (!GeocodingService::isInMalangRegion($latitude, $longitude)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Koordinat yang dipilih berada di luar wilayah Malang Raya. Silakan pilih lokasi yang sesuai.',
+                    'coordinate_info' => [
+                        'selected_coordinates' => [$latitude, $longitude],
+                        'valid_region' => 'Malang Raya (Kota Malang, Kabupaten Malang, Kota Batu)'
+                    ]
+                ], 422);
+            }
+
+            // Buat alamat lengkap untuk reverse geocoding (opsional)
             $fullAddress = trim($request->alamat . ', ' . 
                           $request->wilayah_kelurahan . ', ' . 
                           $request->wilayah_kecamatan . ', ' . 
                           $request->wilayah_kota_kabupaten . ', Jawa Timur, Indonesia');
 
-            Log::info("Starting enhanced geocoding for: {$request->nama_toko} - {$fullAddress}");
+            Log::info("Storing toko with interactive map coordinates: {$request->nama_toko} - Lat: {$latitude}, Lng: {$longitude}");
 
-            // Lakukan enhanced geocoding
-            $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
-            
-            // Validate geocoding quality
-            $qualityCheck = null;
-            if ($geocodeResult) {
-                $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
-                Log::info("Geocoding quality: {$qualityCheck['quality']} (Score: {$qualityCheck['score']})");
-            }
-            
             // Tambah data toko baru
             $toko = new Toko();
             $toko->toko_id = $request->toko_id;
@@ -288,75 +301,47 @@ class TokoController extends Controller
             $toko->nomer_telpon = $request->nomer_telpon;
             $toko->is_active = true;
             
-            // Set koordinat dan informasi geocoding
-            if ($geocodeResult) {
-                $toko->latitude = $geocodeResult['latitude'];
-                $toko->longitude = $geocodeResult['longitude'];
-                $toko->alamat_lengkap_geocoding = $geocodeResult['formatted_address'];
-                
-                // Simpan metadata geocoding untuk analisis
-                $toko->geocoding_provider = $geocodeResult['provider'];
-                $toko->geocoding_accuracy = $geocodeResult['accuracy'];
-                $toko->geocoding_confidence = $geocodeResult['confidence'] ?? null;
-                $toko->geocoding_quality = $qualityCheck['quality'] ?? null;
-                $toko->geocoding_score = $qualityCheck['score'] ?? null;
-                
-                // Log peringatan jika koordinat di luar wilayah Malang
-                if (!GeocodingService::isInMalangRegion($geocodeResult['latitude'], $geocodeResult['longitude'])) {
-                    Log::warning("Toko {$request->nama_toko} memiliki koordinat di luar wilayah Malang: {$geocodeResult['latitude']}, {$geocodeResult['longitude']} - Provider: {$geocodeResult['provider']}");
-                }
-            } else {
-                Log::warning("Failed to geocode address for toko: {$request->nama_toko} - {$fullAddress}");
-                
-                // Set default info jika geocoding gagal
-                $toko->geocoding_provider = 'failed';
-                $toko->geocoding_accuracy = 'none';
-                $toko->geocoding_quality = 'failed';
-                $toko->geocoding_score = 0;
+            // Set koordinat dari interactive map (PRESISI TINGGI)
+            $toko->latitude = $latitude;
+            $toko->longitude = $longitude;
+            
+            // Set metadata geocoding untuk tracking
+            $toko->geocoding_provider = 'interactive_map';
+            $toko->geocoding_accuracy = 'very high';
+            $toko->geocoding_confidence = 1.0; // Maksimal karena dipilih langsung
+            $toko->geocoding_quality = 'excellent';
+            $toko->geocoding_score = 100; // Skor maksimal
+            
+            // Opsional: Lakukan reverse geocoding untuk mendapatkan alamat formatted
+            $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
+            if ($reverseResult) {
+                $toko->alamat_lengkap_geocoding = $reverseResult['formatted_address'];
             }
             
             $toko->save();
 
-            // Buat response message yang informatif
-            $responseMessage = 'Data toko berhasil ditambahkan';
-            $geocodeInfo = null;
-            
-            if ($geocodeResult) {
-                $qualityBadge = $this->getQualityBadge($qualityCheck['quality']);
-                $regionStatus = GeocodingService::isInMalangRegion($geocodeResult['latitude'], $geocodeResult['longitude']) 
-                    ? '✓ Wilayah Malang' 
-                    : '⚠ Di luar wilayah Malang';
-                
-                $responseMessage .= " dengan koordinat GPS presisi tinggi";
-                $geocodeInfo = [
-                    'latitude' => $geocodeResult['latitude'],
-                    'longitude' => $geocodeResult['longitude'],
-                    'provider' => $geocodeResult['provider'],
-                    'accuracy' => $geocodeResult['accuracy'],
-                    'quality' => $qualityCheck['quality'],
-                    'quality_score' => $qualityCheck['score'],
-                    'confidence' => $geocodeResult['confidence'] ?? 0,
-                    'region_status' => $regionStatus,
-                    'quality_badge' => $qualityBadge,
-                    'formatted_address' => $geocodeResult['formatted_address']
-                ];
-            } else {
-                $responseMessage .= '. Koordinat GPS tidak dapat ditemukan, toko akan menggunakan estimasi lokasi di Market Map.';
-            }
+            Log::info("Toko berhasil disimpan dengan koordinat interaktif: {$toko->toko_id} - ({$latitude}, {$longitude})");
 
             return response()->json([
                 'status' => 'success',
-                'message' => $responseMessage,
+                'message' => 'Data toko berhasil ditambahkan dengan lokasi presisi tinggi dari peta interaktif',
                 'data' => $toko,
-                'geocode_info' => $geocodeInfo,
-                'quality_check' => $qualityCheck
+                'coordinate_info' => [
+                    'source' => 'Interactive Map Selection',
+                    'accuracy' => 'Very High (User Selected)',
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'in_malang_region' => true,
+                    'quality' => 'Excellent',
+                    'score' => 100
+                ]
             ])
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
             
         } catch (\Exception $e) {
-            Log::error('Error saving toko with enhanced geocoding: ' . $e->getMessage());
+            Log::error('Error saving toko with interactive map coordinates: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
@@ -436,7 +421,7 @@ class TokoController extends Controller
     }
 
     /**
-     * Update the specified resource in storage with enhanced geocoding.
+     * Update the specified resource in storage with interactive map support.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $id
@@ -453,7 +438,7 @@ class TokoController extends Controller
             ], 404);
         }
 
-        // Validasi input
+        // Validasi input - KOORDINAT WAJIB DIISI
         $validator = Validator::make($request->all(), [
             'nama_toko' => 'required|string|max:100',
             'pemilik' => 'required|string|max:100',
@@ -462,6 +447,14 @@ class TokoController extends Controller
             'wilayah_kecamatan' => 'required|string|max:100',
             'wilayah_kelurahan' => 'required|string|max:100',
             'nomer_telpon' => 'required|string|max:20',
+            // VALIDASI KOORDINAT WAJIB DARI PETA INTERAKTIF
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ], [
+            'latitude.required' => 'Koordinat latitude wajib diisi. Silakan pilih lokasi pada peta.',
+            'longitude.required' => 'Koordinat longitude wajib diisi. Silakan pilih lokasi pada peta.',
+            'latitude.between' => 'Koordinat latitude tidak valid.',
+            'longitude.between' => 'Koordinat longitude tidak valid.',
         ]);
 
         if ($validator->fails()) {
@@ -473,12 +466,25 @@ class TokoController extends Controller
         }
 
         try {
-            // Cek apakah alamat berubah untuk menentukan perlu geocoding ulang
-            $addressChanged = (
-                $toko->alamat !== $request->alamat ||
-                $toko->wilayah_kelurahan !== $request->wilayah_kelurahan ||
-                $toko->wilayah_kecamatan !== $request->wilayah_kecamatan ||
-                $toko->wilayah_kota_kabupaten !== $request->wilayah_kota_kabupaten
+            // Validasi koordinat berada di wilayah Malang Raya
+            $latitude = (float) $request->latitude;
+            $longitude = (float) $request->longitude;
+            
+            if (!GeocodingService::isInMalangRegion($latitude, $longitude)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Koordinat yang dipilih berada di luar wilayah Malang Raya. Silakan pilih lokasi yang sesuai.',
+                    'coordinate_info' => [
+                        'selected_coordinates' => [$latitude, $longitude],
+                        'valid_region' => 'Malang Raya (Kota Malang, Kabupaten Malang, Kota Batu)'
+                    ]
+                ], 422);
+            }
+
+            // Cek apakah koordinat berubah
+            $coordinatesChanged = (
+                $toko->latitude != $latitude ||
+                $toko->longitude != $longitude
             );
 
             // Update data toko
@@ -490,71 +496,54 @@ class TokoController extends Controller
             $toko->wilayah_kota_kabupaten = $request->wilayah_kota_kabupaten;
             $toko->nomer_telpon = $request->nomer_telpon;
 
-            $geocodeInfo = null;
-            $qualityCheck = null;
-
-            // Lakukan geocoding ulang jika alamat berubah
-            if ($addressChanged) {
-                $fullAddress = trim($request->alamat . ', ' . 
-                              $request->wilayah_kelurahan . ', ' . 
-                              $request->wilayah_kecamatan . ', ' . 
-                              $request->wilayah_kota_kabupaten . ', Jawa Timur, Indonesia');
-
-                Log::info("Address changed for toko {$toko->toko_id}, re-geocoding: {$fullAddress}");
-
-                $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
+            // Update koordinat dari interactive map
+            $toko->latitude = $latitude;
+            $toko->longitude = $longitude;
+            
+            // Update metadata geocoding jika koordinat berubah
+            if ($coordinatesChanged) {
+                $toko->geocoding_provider = 'interactive_map';
+                $toko->geocoding_accuracy = 'very high';
+                $toko->geocoding_confidence = 1.0;
+                $toko->geocoding_quality = 'excellent';
+                $toko->geocoding_score = 100;
                 
-                if ($geocodeResult) {
-                    $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
-                    
-                    // Update koordinat dan metadata
-                    $toko->latitude = $geocodeResult['latitude'];
-                    $toko->longitude = $geocodeResult['longitude'];
-                    $toko->alamat_lengkap_geocoding = $geocodeResult['formatted_address'];
-                    $toko->geocoding_provider = $geocodeResult['provider'];
-                    $toko->geocoding_accuracy = $geocodeResult['accuracy'];
-                    $toko->geocoding_confidence = $geocodeResult['confidence'] ?? null;
-                    $toko->geocoding_quality = $qualityCheck['quality'] ?? null;
-                    $toko->geocoding_score = $qualityCheck['score'] ?? null;
-                    
-                    $geocodeInfo = [
-                        'latitude' => $geocodeResult['latitude'],
-                        'longitude' => $geocodeResult['longitude'],
-                        'provider' => $geocodeResult['provider'],
-                        'accuracy' => $geocodeResult['accuracy'],
-                        'quality' => $qualityCheck['quality'],
-                        'quality_score' => $qualityCheck['score'],
-                        'confidence' => $geocodeResult['confidence'] ?? 0,
-                        'updated' => true
-                    ];
-                    
-                    Log::info("Re-geocoding success: {$geocodeResult['provider']} - Quality: {$qualityCheck['quality']}");
-                } else {
-                    Log::warning("Re-geocoding failed for toko: {$toko->toko_id}");
+                // Opsional: Lakukan reverse geocoding untuk alamat baru
+                $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
+                if ($reverseResult) {
+                    $toko->alamat_lengkap_geocoding = $reverseResult['formatted_address'];
                 }
+                
+                Log::info("Koordinat toko {$toko->toko_id} diperbarui melalui interactive map: ({$latitude}, {$longitude})");
             }
 
             $toko->save();
 
             $responseMessage = 'Data toko berhasil diperbarui';
-            if ($addressChanged && $geocodeInfo) {
-                $responseMessage .= ' dengan koordinat GPS yang diperbarui';
+            if ($coordinatesChanged) {
+                $responseMessage .= ' dengan koordinat presisi tinggi dari peta interaktif';
             }
 
             return response()->json([
                 'status' => 'success',
                 'message' => $responseMessage,
                 'data' => $toko,
-                'geocode_info' => $geocodeInfo,
-                'quality_check' => $qualityCheck,
-                'address_changed' => $addressChanged
+                'coordinate_info' => [
+                    'source' => 'Interactive Map Selection',
+                    'accuracy' => 'Very High (User Selected)',
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'coordinates_changed' => $coordinatesChanged,
+                    'quality' => 'Excellent',
+                    'score' => 100
+                ]
             ])
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
 
         } catch (\Exception $e) {
-            Log::error('Error updating toko: ' . $e->getMessage());
+            Log::error('Error updating toko with interactive map: ' . $e->getMessage());
             
             return response()->json([
                 'status' => 'error',
@@ -612,52 +601,108 @@ class TokoController extends Controller
         }
     }
 
-/**
- * Get toko list for AJAX calls
- */
-public function getList(Request $request)
-{
-    try {
-        // Get all toko data with error handling
-        $data = Toko::select([
-            'toko_id',
-            'nama_toko', 
-            'pemilik',
-            'alamat',
-            'wilayah_kecamatan',
-            'wilayah_kelurahan', 
-            'wilayah_kota_kabupaten',
-            'nomer_telpon',
-            'latitude',
-            'longitude',
-            'is_active',
-            'geocoding_provider',
-            'geocoding_quality',
-            'geocoding_score',
-            'geocoding_confidence'
-        ])
-        ->orderBy('created_at', 'desc')
-        ->get();
-        
-        return response()->json([
-            'status' => 'success',
-            'data' => $data,
-            'count' => $data->count()
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
-        
-    } catch (\Exception $e) {
-        Log::error('Error in getList: ' . $e->getMessage());
-        
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Gagal memuat data toko: ' . $e->getMessage(),
-            'data' => []
-        ], 500);
+    /**
+     * Get toko list for AJAX calls
+     */
+    public function getList(Request $request)
+    {
+        try {
+            // Get all toko data with error handling
+            $data = Toko::select([
+                'toko_id',
+                'nama_toko', 
+                'pemilik',
+                'alamat',
+                'wilayah_kecamatan',
+                'wilayah_kelurahan', 
+                'wilayah_kota_kabupaten',
+                'nomer_telpon',
+                'latitude',
+                'longitude',
+                'is_active',
+                'geocoding_provider',
+                'geocoding_quality',
+                'geocoding_score',
+                'geocoding_confidence'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'count' => $data->count()
+            ])
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+            
+        } catch (\Exception $e) {
+            Log::error('Error in getList: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memuat data toko: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
     }
-}
+
+       /**
+     * Validate coordinates from interactive map
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateMapCoordinates(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Koordinat tidak valid',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $latitude = (float) $request->latitude;
+            $longitude = (float) $request->longitude;
+            
+            // Validasi wilayah Malang Raya
+            $inMalangRegion = GeocodingService::isInMalangRegion($latitude, $longitude);
+            $inIndonesia = GeocodingService::isInIndonesia($latitude, $longitude);
+            
+            // Lakukan reverse geocoding untuk mendapatkan alamat
+            $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
+            
+            return response()->json([
+                'status' => 'success',
+                'validation' => [
+                    'coordinates_valid' => true,
+                    'in_indonesia' => $inIndonesia,
+                    'in_malang_region' => $inMalangRegion,
+                    'coordinates' => [$latitude, $longitude]
+                ],
+                'address_info' => $reverseResult,
+                'message' => $inMalangRegion 
+                    ? 'Lokasi valid dalam wilayah Malang Raya' 
+                    : 'Peringatan: Lokasi berada di luar wilayah Malang Raya'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error validating map coordinates: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat validasi koordinat'
+            ], 500);
+        }
+    }
 
     /**
      * Preview geocoding untuk alamat yang diinput (untuk test sebelum save)

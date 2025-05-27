@@ -118,30 +118,31 @@
                     <p>Market Map</p>
                 </a>
             </li>
-
-            <!-- Pengaturan -->
             <li class="nav-item">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['profile.edit', 'profile.change-password']))? 'active' : '' }}">
-                <i class="nav-icon fas fa-cog"></i>
-                    <p>Pengaturan
-            <i class="fas fa-angle-left right"></i>
-            </p>
-            </a>
-                <ul class="nav nav-treeview">
-            <li class="nav-item">
-                <a href="{{ route('profile.edit') }}" class="nav-link">
-                <i class="fas fa-pencil-alt nav-icon"></i>
-                <p>Edit Profile</p>
+                    <i class="nav-icon fas fa-cog"></i>
+                    <p>
+                        Pengaturan
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
                 </a>
-            </li>
-        <li class="nav-item">
-                <a href="{{ route('profile.change-password') }}" class="nav-link">
-                    <i class="fas fa-sync-alt nav-icon"></i>
-                        <p>Ubah Password</p>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="{{ route('profile.edit') }}" class="nav-link {{ ($activemenu == 'profile.edit')? 'active' : '' }}">
+                            <i class="fas fa-pencil-alt nav-icon"></i>
+                            <p>Edit Profile</p>
                         </a>
-        </li>
-    </ul>
-</li>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('profile.change-password') }}" class="nav-link {{ ($activemenu == 'profile.change-password')? 'active' : '' }}">
+                            <i class="fas fa-sync-alt nav-icon"></i>
+                            <p>Ubah Password</p>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </li>
 </ul>
 </nav>
 </div>

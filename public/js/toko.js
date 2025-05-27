@@ -2,9 +2,212 @@ $(document).ready(function() {
     // ========================================
     // INITIALIZATION
     // ========================================
-    console.log('Loading Enhanced Toko Management System...');
+    console.log('Loading Enhanced Toko Management System with Interactive Map...');
+    
+    // Global variables for map
+    let interactiveMap = null;
+    let currentMarker = null;
+    let isMapInitialized = false;
+    
+    // Malang Region Bounds
+    const MALANG_BOUNDS = {
+        north: -7.4,
+        south: -8.6,
+        east: 113.2,
+        west: 111.8
+    };
+    
+    // Default center (Malang city center)
+    const MALANG_CENTER = [-7.9666, 112.6326];
+    
     loadTokoData();
 
+    // ========================================
+    // INTERACTIVE MAP FUNCTIONS
+    // ========================================
+    
+    function initializeInteractiveMap() {
+        if (isMapInitialized && interactiveMap) {
+            return;
+        }
+        
+        console.log('Initializing interactive map...');
+        
+        // Initialize map centered on Malang
+        interactiveMap = L.map('interactiveMap', {
+            center: MALANG_CENTER,
+            zoom: 12,
+            zoomControl: true,
+            attributionControl: true
+        });
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+            minZoom: 10
+        }).addTo(interactiveMap);
+        
+        // Add boundary rectangle for Malang region
+        const malangBounds = [
+            [MALANG_BOUNDS.south, MALANG_BOUNDS.west],
+            [MALANG_BOUNDS.north, MALANG_BOUNDS.east]
+        ];
+        
+        L.rectangle(malangBounds, {
+            color: '#007bff',
+            weight: 2,
+            fillOpacity: 0.1,
+            dashArray: '5, 5'
+        }).addTo(interactiveMap).bindPopup('Wilayah Malang Raya<br><small>Klik di dalam area ini untuk menentukan lokasi toko</small>');
+        
+        // Map click event - MAIN FEATURE
+        interactiveMap.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            console.log('Map clicked at:', lat, lng);
+            
+            // Validate if coordinates are within Malang region
+            if (isWithinMalangRegion(lat, lng)) {
+                setMapMarker(lat, lng);
+                updateCoordinateFields(lat, lng);
+                showLocationStatus(lat, lng, true);
+            } else {
+                showAlert('warning', 'Lokasi yang dipilih berada di luar wilayah Malang Raya. Silakan pilih lokasi di dalam area yang ditandai.');
+                showLocationStatus(lat, lng, false);
+            }
+        });
+        
+        // Add scale control
+        L.control.scale({
+            position: 'bottomright',
+            imperial: false
+        }).addTo(interactiveMap);
+        
+        // Add custom control for location info
+        const locationControl = L.control({position: 'topright'});
+        locationControl.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'leaflet-control-custom');
+            div.innerHTML = '<div style="background: white; padding: 5px; border-radius: 3px; box-shadow: 0 1px 5px rgba(0,0,0,0.4);"><small><i class="fas fa-info-circle"></i> Klik pada peta untuk menentukan lokasi</small></div>';
+            return div;
+        };
+        locationControl.addTo(interactiveMap);
+        
+        isMapInitialized = true;
+        console.log('✅ Interactive map initialized successfully');
+        
+        // Invalidate size after modal is shown
+        setTimeout(() => {
+            if (interactiveMap) {
+                interactiveMap.invalidateSize();
+            }
+        }, 300);
+    }
+    
+    function setMapMarker(lat, lng) {
+        // Remove existing marker
+        if (currentMarker) {
+            interactiveMap.removeLayer(currentMarker);
+        }
+        
+        // Create custom icon
+        const customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background-color: #dc3545; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+        
+        // Add new marker
+        currentMarker = L.marker([lat, lng], {
+            icon: customIcon,
+            draggable: true
+        }).addTo(interactiveMap);
+        
+        // Marker drag event
+        currentMarker.on('dragend', function(e) {
+            const newLat = e.target.getLatLng().lat;
+            const newLng = e.target.getLatLng().lng;
+            
+            if (isWithinMalangRegion(newLat, newLng)) {
+                updateCoordinateFields(newLat, newLng);
+                showLocationStatus(newLat, newLng, true);
+            } else {
+                // Reset marker to previous valid position
+                showAlert('warning', 'Lokasi tidak valid! Marker dikembalikan ke posisi sebelumnya.');
+                currentMarker.setLatLng([lat, lng]);
+            }
+        });
+        
+        // Add popup to marker
+        currentMarker.bindPopup(`
+            <div style="text-align: center;">
+                <strong><i class="fas fa-store text-primary"></i> Lokasi Toko</strong><br>
+                <small>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}</small><br>
+                <small class="text-muted">Geser marker untuk penyesuaian</small>
+            </div>
+        `).openPopup();
+    }
+    
+    function updateCoordinateFields(lat, lng) {
+        $('#latitude').val(lat.toFixed(8));
+        $('#longitude').val(lng.toFixed(8));
+        $('#coordinate_display').val(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        
+        console.log('Coordinates updated:', lat, lng);
+    }
+    
+    function showLocationStatus(lat, lng, isValid) {
+        const statusDiv = $('#mapStatus');
+        const infoDiv = $('#selectedLocationInfo');
+        
+        if (isValid) {
+            infoDiv.html(`
+                <strong>Koordinat:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
+                <span class="text-success"><i class="fas fa-check-circle"></i> Lokasi valid dalam wilayah Malang Raya</span>
+            `);
+            statusDiv.removeClass('d-none').show();
+            $('#btnValidateLocation').show();
+        } else {
+            infoDiv.html(`
+                <strong>Koordinat:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
+                <span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Lokasi di luar wilayah Malang Raya</span>
+            `);
+            statusDiv.removeClass('d-none').show();
+            $('#btnValidateLocation').hide();
+        }
+    }
+    
+    function isWithinMalangRegion(lat, lng) {
+        return (lat >= MALANG_BOUNDS.south && lat <= MALANG_BOUNDS.north && 
+                lng >= MALANG_BOUNDS.west && lng <= MALANG_BOUNDS.east);
+    }
+    
+    function resetMap() {
+        if (currentMarker) {
+            interactiveMap.removeLayer(currentMarker);
+            currentMarker = null;
+        }
+        
+        $('#latitude').val('');
+        $('#longitude').val('');
+        $('#coordinate_display').val('');
+        $('#mapStatus').hide();
+        $('#btnValidateLocation').hide();
+        
+        // Reset map view
+        interactiveMap.setView(MALANG_CENTER, 12);
+        
+        console.log('Map reset');
+    }
+    
+    function centerMapToMalang() {
+        if (interactiveMap) {
+            interactiveMap.setView(MALANG_CENTER, 12);
+        }
+    }
+    
     // ========================================
     // MAIN DATA LOADING
     // ========================================
@@ -45,6 +248,12 @@ $(document).ready(function() {
                 const qualityClass = getQualityClass(quality);
                 const qualityText = getQualityText(quality);
                 statusBadge = `<span class="badge badge-${qualityClass}">${qualityText}</span>`;
+                
+                // Special badge for interactive map selections
+                if (item.geocoding_provider === 'interactive_map') {
+                    statusBadge = '<span class="badge badge-success"><i class="fas fa-mouse-pointer"></i> Peta Interaktif</span>';
+                }
+                
                 koordinatInfo = `
                     <div class="coordinate-info">
                         <small><i class="fas fa-map-marker-alt text-success"></i> ${parseFloat(item.latitude).toFixed(4)}, ${parseFloat(item.longitude).toFixed(4)}</small>
@@ -76,9 +285,6 @@ $(document).ready(function() {
                         <div class="btn-group btn-group-sm" role="group">
                             <button class="btn btn-info btn-edit" data-id="${item.toko_id}" title="Edit">
                                 <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-warning btn-geocode" data-id="${item.toko_id}" title="Update GPS">
-                                <i class="fas fa-sync-alt"></i>
                             </button>
                             ${hasCoords ? `
                                 <button class="btn btn-success btn-detail" data-id="${item.toko_id}" title="Detail GPS">
@@ -130,358 +336,87 @@ $(document).ready(function() {
     }
 
     // ========================================
-    // MODAL HANDLERS
+    // MODAL HANDLERS WITH MAP INTEGRATION
     // ========================================
     $('#btnTambah').click(function() {
         resetForm();
-        $('#modalTokoLabel').text('Tambah Toko');
+        $('#modalTokoLabel').html('<i class="fas fa-store"></i> Tambah Toko dengan Peta Interaktif');
         $('#mode').val('add');
         generateTokoId();
         loadWilayahKota();
         $('#modalToko').modal('show');
-    });
-
-    // ========================================
-    // GEOCODING FUNCTIONS
-    // ========================================
-    
-    // Individual Geocoding
-    $(document).on('click', '.btn-geocode', function() {
-        const id = $(this).data('id');
-        geocodeSingleToko(id);
-    });
-
-    function geocodeSingleToko(tokoId) {
-        // Get toko data first
-        $.ajax({
-            url: '/toko/' + tokoId,
-            type: 'GET',
-            success: function(response) {
-                if (response.status === 'success') {
-                    const toko = response.data;
-                    const fullAddress = `${toko.alamat}, ${toko.wilayah_kelurahan}, ${toko.wilayah_kecamatan}, ${toko.wilayah_kota_kabupaten}, Jawa Timur, Indonesia`;
-                    
-                    if (confirm(`Lakukan geocoding untuk toko ${toko.nama_toko}?\n\nAlamat: ${fullAddress}`)) {
-                        performGeocode(tokoId, fullAddress);
+        
+        // Initialize map after modal is shown
+        $('#modalToko').on('shown.bs.modal', function() {
+            if (!isMapInitialized) {
+                initializeInteractiveMap();
+            } else {
+                setTimeout(() => {
+                    if (interactiveMap) {
+                        interactiveMap.invalidateSize();
+                        resetMap();
                     }
-                }
-            },
-            error: function() {
-                showAlert('danger', 'Gagal mengambil data toko');
+                }, 100);
             }
         });
-    }
+    });
 
-    function performGeocode(tokoId, address) {
-        showAlert('info', '<i class="fas fa-spinner fa-spin"></i> Melakukan geocoding...');
+    // Map control buttons
+    $('#btnResetMap').click(function() {
+        resetMap();
+    });
+    
+    $('#btnCenterMalang').click(function() {
+        centerMapToMalang();
+    });
+    
+    $('#btnValidateLocation').click(function() {
+        const lat = parseFloat($('#latitude').val());
+        const lng = parseFloat($('#longitude').val());
+        
+        if (lat && lng) {
+            validateMapCoordinates(lat, lng);
+        } else {
+            showAlert('warning', 'Silakan pilih lokasi pada peta terlebih dahulu');
+        }
+    });
+
+    // ========================================
+    // COORDINATE VALIDATION
+    // ========================================
+    function validateMapCoordinates(lat, lng) {
+        $('#btnValidateLocation').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Validasi...');
         
         $.ajax({
-            url: '/toko/geocode',
+            url: '/toko/validate-coordinates',
             type: 'POST',
             data: {
-                toko_id: tokoId,
-                alamat: address,
+                latitude: lat,
+                longitude: lng,
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
                 if (response.status === 'success') {
                     let message = response.message;
-                    if (response.geocode_info) {
-                        const info = response.geocode_info;
-                        message += `<br><small>Provider: ${info.provider} | Quality: ${info.quality} | Score: ${info.quality_score}/100</small>`;
+                    if (response.address_info && response.address_info.formatted_address) {
+                        message += '<br><small><strong>Alamat:</strong> ' + response.address_info.formatted_address + '</small>';
                     }
                     showAlert('success', message);
-                    loadTokoData();
-                } else {
-                    showAlert('danger', response.message);
-                }
-            },
-            error: function(xhr) {
-                const message = xhr.responseJSON?.message || 'Gagal melakukan geocoding';
-                showAlert('danger', message);
-            }
-        });
-    }
-
-    // Batch Geocoding
-    $('#btnBatchGeocode').click(function() {
-        showBatchGeocodeModal();
-    });
-
-    function showBatchGeocodeModal() {
-        if (confirm('Lakukan batch geocoding untuk semua toko yang belum memiliki koordinat GPS akurat?\n\nProses ini mungkin memakan waktu beberapa menit.')) {
-            startBatchGeocode();
-        }
-    }
-
-    function startBatchGeocode() {
-        showAlert('info', '<i class="fas fa-spinner fa-spin"></i> Memulai batch geocoding...');
-        
-        $.ajax({
-            url: '/toko/batch-geocode',
-            type: 'POST',
-            data: {
-                _token: $('meta[name="csrf-token"]').attr('content')
-            },
-            timeout: 300000, // 5 minutes
-            success: function(response) {
-                if (response.status === 'success') {
-                    const summary = response.summary;
-                    const message = `
-                        Batch Geocoding Selesai!<br>
-                        <strong>Berhasil:</strong> ${summary.success_count}<br>
-                        <strong>Gagal:</strong> ${summary.failed_count}<br>
-                        <strong>Total:</strong> ${summary.total_processed}<br>
-                        <strong>Success Rate:</strong> ${summary.success_rate || 0}%
-                    `;
-                    showAlert('success', message);
-                    loadTokoData();
                 } else {
                     showAlert('warning', response.message);
                 }
             },
-            error: function(xhr) {
-                let errorMsg = 'Terjadi kesalahan saat batch geocoding';
-                if (xhr.status === 404) {
-                    errorMsg = 'Endpoint batch geocoding tidak ditemukan';
-                } else if (xhr.status === 500) {
-                    errorMsg = 'Server error saat batch geocoding';
-                }
-                showAlert('danger', errorMsg);
-            }
-        });
-    }
-
-    // Preview Geocoding
-    function previewGeocode() {
-        const alamat = $('#alamat').val();
-        const kelurahan = $('#wilayah_kelurahan').val();
-        const kecamatan = $('#wilayah_kecamatan').val();
-        const kotaKab = $('#wilayah_kota_kabupaten').val();
-        
-        if (!alamat || !kelurahan || !kecamatan || !kotaKab) {
-            showAlert('warning', 'Lengkapi semua field alamat terlebih dahulu');
-            return;
-        }
-        
-        const fullAddress = `${alamat}, ${kelurahan}, ${kecamatan}, ${kotaKab}, Jawa Timur, Indonesia`;
-        
-        $('#btnPreviewGeocode').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Mencari...');
-        
-        $.ajax({
-            url: '/toko/preview-geocode',
-            type: 'POST',
-            data: {
-                alamat: fullAddress,
-                _token: $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(response) {
-                if (response.status === 'success' && response.geocode_info) {
-                    const info = response.geocode_info;
-                    showPreviewResult(info);
-                    showAlert('success', `Koordinat ditemukan dengan kualitas ${info.quality}`);
-                } else {
-                    showPreviewError();
-                    showAlert('warning', 'Koordinat tidak ditemukan');
-                }
-            },
             error: function() {
-                showAlert('danger', 'Gagal melakukan preview geocoding');
+                showAlert('danger', 'Gagal melakukan validasi koordinat');
             },
             complete: function() {
-                $('#btnPreviewGeocode').prop('disabled', false).html('<i class="fas fa-search-location"></i> Preview Lokasi');
+                $('#btnValidateLocation').prop('disabled', false).html('<i class="fas fa-check-circle"></i> Validasi Lokasi');
             }
         });
     }
 
-    function showPreviewResult(info) {
-        if ($('#geocoding-result').length) {
-            const qualityClass = getQualityClass(info.quality);
-            const qualityText = getQualityText(info.quality);
-            
-            $('#geocoding-result').html(`
-                <div class="preview-result">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Koordinat:</strong><br>
-                            <code>${info.latitude}, ${info.longitude}</code>
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Quality:</strong> <span class="badge badge-${qualityClass}">${qualityText}</span><br>
-                            <strong>Provider:</strong> ${info.provider}<br>
-                            <strong>Score:</strong> ${info.quality_score}/100
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <strong>Alamat:</strong><br>
-                            <small class="text-muted">${info.formatted_address}</small>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <button type="button" class="btn btn-sm btn-primary" onclick="openGoogleMaps(${info.latitude}, ${info.longitude})">
-                                <i class="fas fa-external-link-alt"></i> Lihat di Google Maps
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `);
-            $('#geocoding-info').show();
-        }
-    }
-
-    function showPreviewError() {
-        if ($('#geocoding-result').length) {
-            $('#geocoding-result').html(`
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    Koordinat tidak ditemukan. Toko masih bisa disimpan.
-                </div>
-            `);
-            $('#geocoding-info').show();
-        }
-    }
-
-    // Detail Koordinat
-    $(document).on('click', '.btn-detail', function() {
-        const id = $(this).data('id');
-        showDetailKoordinat(id);
-    });
-
-    function showDetailKoordinat(tokoId) {
-        $.ajax({
-            url: '/toko/' + tokoId,
-            type: 'GET',
-            success: function(response) {
-                if (response.status === 'success') {
-                    const toko = response.data;
-                    
-                    if (!toko.latitude || !toko.longitude) {
-                        showAlert('warning', 'Toko ini belum memiliki koordinat GPS');
-                        return;
-                    }
-                    
-                    showDetailModal(toko);
-                }
-            },
-            error: function() {
-                showAlert('danger', 'Gagal mengambil detail koordinat');
-            }
-        });
-    }
-
-    function showDetailModal(toko) {
-        const qualityClass = getQualityClass(toko.geocoding_quality);
-        const qualityText = getQualityText(toko.geocoding_quality);
-        
-        const content = `
-            <div class="detail-content">
-                <h6><i class="fas fa-store"></i> ${toko.nama_toko} (${toko.toko_id})</h6>
-                <hr>
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>Koordinat GPS:</strong><br>
-                        <code class="h5">${toko.latitude}, ${toko.longitude}</code><br>
-                        <span class="badge badge-${qualityClass}">${qualityText}</span>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Provider:</strong> ${toko.geocoding_provider || 'Unknown'}<br>
-                        <strong>Score:</strong> ${toko.geocoding_score || 0}/100<br>
-                        <strong>Confidence:</strong> ${((toko.geocoding_confidence || 0) * 100).toFixed(1)}%
-                    </div>
-                </div>
-                <hr>
-                <div class="row">
-                    <div class="col-12">
-                        <strong>Alamat:</strong><br>
-                        ${toko.alamat}<br>
-                        <small class="text-muted">${toko.wilayah_kelurahan}, ${toko.wilayah_kecamatan}, ${toko.wilayah_kota_kabupaten}</small>
-                    </div>
-                </div>
-                ${toko.alamat_lengkap_geocoding ? `
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <strong>Alamat Hasil Geocoding:</strong><br>
-                            <small class="text-muted">${toko.alamat_lengkap_geocoding}</small>
-                        </div>
-                    </div>
-                ` : ''}
-                <hr>
-                <div class="row">
-                    <div class="col-12">
-                        <button type="button" class="btn btn-primary btn-sm" onclick="openGoogleMaps(${toko.latitude}, ${toko.longitude})">
-                            <i class="fas fa-external-link-alt"></i> Google Maps
-                        </button>
-                        <button type="button" class="btn btn-warning btn-sm ml-2" onclick="geocodeSingleToko('${toko.toko_id}'); $('#detailModal').modal('hide');">
-                            <i class="fas fa-sync-alt"></i> Update Koordinat
-                        </button>
-                        <button type="button" class="btn btn-info btn-sm ml-2" onclick="copyToClipboard('${toko.latitude}, ${toko.longitude}')">
-                            <i class="fas fa-copy"></i> Copy Koordinat
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Create and show modal
-        const modalHtml = `
-            <div class="modal fade" id="detailModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Detail Koordinat GPS</h5>
-                            <button type="button" class="close" data-dismiss="modal">
-                                <span>&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">${content}</div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        $('#detailModal').remove();
-        $('body').append(modalHtml);
-        $('#detailModal').modal('show');
-    }
-
     // ========================================
-    // UTILITY FUNCTIONS
-    // ========================================
-    
-    // Open Google Maps
-    window.openGoogleMaps = function(lat, lng) {
-        const url = `https://www.google.com/maps?q=${lat},${lng}`;
-        window.open(url, '_blank');
-    };
-
-    // Copy to clipboard
-    window.copyToClipboard = function(text) {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => {
-                showAlert('success', 'Koordinat berhasil disalin: ' + text);
-            });
-        } else {
-            // Fallback
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            showAlert('success', 'Koordinat berhasil disalin: ' + text);
-        }
-    };
-
-    // Global function for geocoding
-    window.geocodeSingleToko = geocodeSingleToko;
-
-    // ========================================
-    // FORM FUNCTIONS
+    // FORM FUNCTIONS WITH MAP INTEGRATION
     // ========================================
     function generateTokoId() {
         $.ajax({
@@ -611,32 +546,28 @@ $(document).ready(function() {
         $('#wilayah_kelurahan').val(kelurahanNama);
     });
 
-    // Preview geocoding button
-    $(document).on('click', '#btnPreviewGeocode', previewGeocode);
-
-    // Show/hide preview button
-    $('#alamat, #wilayah_kelurahan, #wilayah_kecamatan, #wilayah_kota_kabupaten').on('input change', function() {
-        const alamat = $('#alamat').val();
-        const kelurahan = $('#wilayah_kelurahan').val();
-        const kecamatan = $('#wilayah_kecamatan').val();
-        const kotaKab = $('#wilayah_kota_kabupaten').val();
-        
-        if (alamat && kelurahan && kecamatan && kotaKab) {
-            $('#btnPreviewGeocode').show();
-        } else {
-            $('#btnPreviewGeocode').hide();
-        }
-        
-        if ($('#geocoding-info').length) {
-            $('#geocoding-info').hide();
-        }
-    });
-
-    // Form submission
+    // Form submission with coordinate validation
     $('#formToko').submit(function(e) {
         e.preventDefault();
         
         clearErrors();
+        
+        // Validate coordinates REQUIRED
+        const lat = $('#latitude').val();
+        const lng = $('#longitude').val();
+        
+        if (!lat || !lng) {
+            showAlert('danger', 'Koordinat GPS wajib diisi! Silakan pilih lokasi toko pada peta.');
+            $('#coordinate_display').addClass('is-invalid');
+            return false;
+        }
+        
+        // Validate within Malang region
+        if (!isWithinMalangRegion(parseFloat(lat), parseFloat(lng))) {
+            showAlert('danger', 'Koordinat berada di luar wilayah Malang Raya! Silakan pilih lokasi yang sesuai.');
+            $('#coordinate_display').addClass('is-invalid');
+            return false;
+        }
         
         // Validate wilayah
         if (!$('#wilayah_kota_kabupaten').val()) {
@@ -675,16 +606,23 @@ $(document).ready(function() {
                 loadTokoData();
                 
                 let message = response.message;
-                if (response.geocode_info) {
-                    const info = response.geocode_info;
-                    message += `<br><small>Geocoding: ${info.provider} | Quality: ${info.quality} | Score: ${info.quality_score}/100</small>`;
+                if (response.coordinate_info) {
+                    const info = response.coordinate_info;
+                    message += `<br><small><strong>Lokasi:</strong> ${info.source} | Akurasi: ${info.accuracy}</small>`;
                 }
                 
                 showAlert('success', message);
             },
             error: function(xhr) {
                 if (xhr.status === 422) {
-                    showValidationErrors(xhr.responseJSON.errors);
+                    const errors = xhr.responseJSON.errors;
+                    showValidationErrors(errors);
+                    
+                    // Special handling for coordinate errors
+                    if (errors.latitude || errors.longitude) {
+                        $('#coordinate_display').addClass('is-invalid');
+                        showAlert('danger', 'Koordinat GPS tidak valid. Silakan pilih lokasi pada peta.');
+                    }
                 } else {
                     showAlert('danger', xhr.responseJSON?.message || 'Terjadi kesalahan');
                 }
@@ -695,7 +633,7 @@ $(document).ready(function() {
         });
     });
 
-    // Edit toko
+    // Edit toko with map integration
     $(document).on('click', '.btn-edit', function() {
         const id = $(this).data('id');
         
@@ -706,7 +644,7 @@ $(document).ready(function() {
             url: '/toko/' + id + '/edit',
             type: 'GET',
             success: function(response) {
-                $('#modalTokoLabel').text('Edit Toko');
+                $('#modalTokoLabel').html('<i class="fas fa-edit"></i> Edit Toko dengan Peta Interaktif');
                 $('#mode').val('edit');
                 
                 const data = response.data;
@@ -715,6 +653,13 @@ $(document).ready(function() {
                 $('#pemilik').val(data.pemilik);
                 $('#alamat').val(data.alamat);
                 $('#nomer_telpon').val(data.nomer_telpon);
+                
+                // Set coordinates if available
+                if (data.latitude && data.longitude) {
+                    $('#latitude').val(data.latitude);
+                    $('#longitude').val(data.longitude);
+                    $('#coordinate_display').val(data.latitude + ', ' + data.longitude);
+                }
                 
                 // Set wilayah values
                 $('#wilayah_kota_kabupaten').val(data.wilayah_kota_kabupaten);
@@ -725,6 +670,25 @@ $(document).ready(function() {
                 setTimeout(() => setWilayahDropdowns(data), 100);
                 
                 $('#modalToko').modal('show');
+                
+                // Initialize map and set existing marker
+                $('#modalToko').on('shown.bs.modal', function() {
+                    if (!isMapInitialized) {
+                        initializeInteractiveMap();
+                    } else {
+                        if (interactiveMap) {
+                            interactiveMap.invalidateSize();
+                        }
+                    }
+                    
+                    // Set existing marker if coordinates exist
+                    if (data.latitude && data.longitude) {
+                        setTimeout(() => {
+                            setMapMarker(parseFloat(data.latitude), parseFloat(data.longitude));
+                            showLocationStatus(parseFloat(data.latitude), parseFloat(data.longitude), true);
+                        }, 300);
+                    }
+                });
             },
             error: function(xhr) {
                 showAlert('danger', xhr.responseJSON?.message || 'Gagal mengambil data toko');
@@ -795,6 +759,143 @@ $(document).ready(function() {
         });
     });
 
+    // Detail koordinat dengan map preview
+    $(document).on('click', '.btn-detail', function() {
+        const id = $(this).data('id');
+        showDetailKoordinat(id);
+    });
+
+    function showDetailKoordinat(tokoId) {
+        $.ajax({
+            url: '/toko/' + tokoId,
+            type: 'GET',
+            success: function(response) {
+                if (response.status === 'success') {
+                    const toko = response.data;
+                    
+                    if (!toko.latitude || !toko.longitude) {
+                        showAlert('warning', 'Toko ini belum memiliki koordinat GPS');
+                        return;
+                    }
+                    
+                    showDetailModal(toko);
+                }
+            },
+            error: function() {
+                showAlert('danger', 'Gagal mengambil detail koordinat');
+            }
+        });
+    }
+
+    function showDetailModal(toko) {
+        const qualityClass = getQualityClass(toko.geocoding_quality);
+        const qualityText = getQualityText(toko.geocoding_quality);
+        
+        // Special handling for interactive map source
+        let sourceInfo = toko.geocoding_provider || 'Unknown';
+        if (toko.geocoding_provider === 'interactive_map') {
+            sourceInfo = '<span class="text-success"><i class="fas fa-mouse-pointer"></i> Peta Interaktif (User Selected)</span>';
+        }
+        
+        const content = `
+            <div class="detail-content">
+                <h6><i class="fas fa-store"></i> ${toko.nama_toko} (${toko.toko_id})</h6>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Koordinat GPS:</strong><br>
+                        <code class="h5">${toko.latitude}, ${toko.longitude}</code><br>
+                        <span class="badge badge-${qualityClass}">${qualityText}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Sumber:</strong><br>${sourceInfo}<br>
+                        <strong>Score:</strong> ${toko.geocoding_score || 0}/100<br>
+                        <strong>Confidence:</strong> ${((toko.geocoding_confidence || 0) * 100).toFixed(1)}%
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <strong>Alamat:</strong><br>
+                        ${toko.alamat}<br>
+                        <small class="text-muted">${toko.wilayah_kelurahan}, ${toko.wilayah_kecamatan}, ${toko.wilayah_kota_kabupaten}</small>
+                    </div>
+                </div>
+                ${toko.alamat_lengkap_geocoding ? `
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <strong>Alamat Hasil Geocoding:</strong><br>
+                            <small class="text-muted">${toko.alamat_lengkap_geocoding}</small>
+                        </div>
+                    </div>
+                ` : ''}
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openGoogleMaps(${toko.latitude}, ${toko.longitude})">
+                            <i class="fas fa-external-link-alt"></i> Google Maps
+                        </button>
+                        <button type="button" class="btn btn-info btn-sm ml-2" onclick="copyToClipboard('${toko.latitude}, ${toko.longitude}')">
+                            <i class="fas fa-copy"></i> Copy Koordinat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Create and show modal
+        const modalHtml = `
+            <div class="modal fade" id="detailModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Detail Koordinat GPS</h5>
+                            <button type="button" class="close" data-dismiss="modal">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">${content}</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#detailModal').remove();
+        $('body').append(modalHtml);
+        $('#detailModal').modal('show');
+    }
+
+    // ========================================
+    // UTILITY FUNCTIONS
+    // ========================================
+    
+    // Open Google Maps
+    window.openGoogleMaps = function(lat, lng) {
+        const url = `https://www.google.com/maps?q=${lat},${lng}`;
+        window.open(url, '_blank');
+    };
+
+    // Copy to clipboard
+    window.copyToClipboard = function(text) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('success', 'Koordinat berhasil disalin: ' + text);
+            });
+        } else {
+            // Fallback
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showAlert('success', 'Koordinat berhasil disalin: ' + text);
+        }
+    };
+
     // ========================================
     // HELPER FUNCTIONS
     // ========================================
@@ -807,13 +908,9 @@ $(document).ready(function() {
         $('#wilayah_kelurahan_id').html('<option value="">-- Pilih Kelurahan --</option>').prop('disabled', true);
         
         $('#wilayah_kota_kabupaten, #wilayah_kecamatan, #wilayah_kelurahan').val('');
-        
-        if ($('#geocoding-info').length) {
-            $('#geocoding-info').hide();
-        }
-        if ($('#btnPreviewGeocode').length) {
-            $('#btnPreviewGeocode').hide();
-        }
+        $('#latitude, #longitude, #coordinate_display').val('');
+        $('#mapStatus').hide();
+        $('#btnValidateLocation').hide();
     }
 
     function clearErrors() {
@@ -842,12 +939,13 @@ $(document).ready(function() {
         
         setTimeout(() => {
             $('.alert').alert('close');
-        }, 5000);
+        }, 8000);
     }
 
     // ========================================
     // INITIALIZATION COMPLETE
     // ========================================
-    console.log('✅ Enhanced Toko Management System loaded successfully!');
-    console.log('🌟 Features: Enhanced Geocoding, Multi-provider, Quality Assessment');
+    console.log('✅ Enhanced Toko Management System with Interactive Map loaded successfully!');
+    console.log('🗺️ Features: Interactive Map, Coordinate Selection, Real-time Validation');
+    console.log('📍 Region: Malang Raya (Kota Malang, Kabupaten Malang, Kota Batu)');
 });
