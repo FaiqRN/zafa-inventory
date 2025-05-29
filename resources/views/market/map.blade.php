@@ -75,15 +75,6 @@
                         </div>
                         <div class="col-md-2">
                             <div class="form-group">
-                                <label>Grid Heatmap:</label>
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="toggle-grid-heatmap" checked>
-                                    <label class="custom-control-label" for="toggle-grid-heatmap">Grid Density</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
                                 <label>Classic Heatmap:</label>
                                 <div class="custom-control custom-switch">
                                     <input type="checkbox" class="custom-control-input" id="toggle-heatmap">
@@ -110,6 +101,8 @@
                             </div>
                         </div>
                         <div class="col-md-2">
+                        </div>
+                        <div class="col-md-2">
                             <div class="form-group">
                                 <label>&nbsp;</label><br>
                                 <div class="btn-group-vertical w-100">
@@ -123,20 +116,6 @@
                                         <i class="fas fa-map-pin"></i> Bulk Geocode
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Grid Controls Information -->
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <div class="alert alert-info">
-                                <h6><i class="fas fa-info-circle mr-2"></i>Grid Heatmap Information:</h6>
-                                <p class="mb-0 small">
-                                    <strong>Grid Heatmap</strong> menampilkan kepadatan toko dalam bentuk blok warna berdasarkan wilayah geografis. 
-                                    Setiap grid mewakili area sekitar 1.1km x 1.1km dengan warna yang menunjukkan jumlah toko di area tersebut.
-                                    Klik pada grid untuk melihat detail toko di area tersebut.
-                                </p>
                             </div>
                         </div>
                     </div>
@@ -762,7 +741,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 infoButton.className = 'grid-info-button';
                 infoButton.style.cssText = `
                     position: absolute;
-                    top: 10px;
+                    top: 80px;
                     left: 10px;
                     z-index: 1000;
                     background: rgba(48, 152, 152, 0.9);
