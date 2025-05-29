@@ -1,0 +1,854 @@
+/* ====================================
+   ENHANCED MARKET MAP - GRID HEATMAP STYLES
+   ==================================== */
+
+/* Grid Heatmap Legend */
+.grid-heatmap-legend {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 2px solid #309898;
+    min-width: 200px;
+    max-width: 280px;
+    backdrop-filter: blur(10px);
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+.grid-heatmap-legend h6 {
+    margin: 0 0 12px 0;
+    color: #309898;
+    font-weight: 600;
+    font-size: 14px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 8px;
+}
+
+.legend-items {
+    margin-bottom: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.legend-item:last-child {
+    margin-bottom: 0;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 20px;
+    height: 16px;
+    margin-right: 10px;
+    border: 1px solid #333;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.legend-controls {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.legend-toggle {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    color: #666;
+    cursor: pointer;
+    margin: 0;
+}
+
+.legend-toggle input[type="checkbox"] {
+    margin-right: 6px;
+    transform: scale(0.9);
+}
+
+.legend-toggle:hover {
+    color: #309898;
+}
+
+/* Grid Popup Styles */
+.grid-popup {
+    font-family: 'Source Sans Pro', sans-serif;
+    min-width: 250px;
+}
+
+.grid-popup .popup-header {
+    background: linear-gradient(135deg, #309898 0%, #00235B 100%);
+    color: white;
+    padding: 10px 12px;
+    margin: -10px -10px 10px -10px;
+    border-radius: 5px 5px 0 0;
+}
+
+.grid-popup .popup-header h6 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.grid-popup .popup-body {
+    padding: 0 2px;
+}
+
+.grid-stats {
+    margin-bottom: 12px;
+}
+
+.grid-stats .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.grid-stats .stat-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.grid-stats .stat-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.grid-stats .stat-value {
+    font-size: 13px;
+    color: #309898;
+    font-weight: 600;
+}
+
+.toko-list {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.toko-list h6 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #333;
+    font-weight: 600;
+}
+
+.toko-list ul {
+    margin: 0;
+    padding-left: 15px;
+    list-style-type: disc;
+}
+
+.toko-list li {
+    font-size: 11px;
+    color: #555;
+    margin-bottom: 3px;
+    line-height: 1.3;
+}
+
+.toko-list li:last-child {
+    margin-bottom: 0;
+}
+
+.toko-list em {
+    color: #888;
+    font-style: italic;
+}
+
+/* Grid Rectangle Hover Effects */
+.leaflet-interactive:hover {
+    cursor: pointer;
+}
+
+/* Enhanced Controls Panel */
+.enhanced-controls {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+}
+
+.enhanced-controls .form-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.enhanced-controls .custom-control-label {
+    font-size: 12px;
+    color: #666;
+}
+
+.enhanced-controls .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #309898;
+    border-color: #309898;
+}
+
+/* Grid Density Colors - Matching Legend */
+.grid-density-high {
+    fill: #dc143c !important;
+    fill-opacity: 0.7 !important;
+}
+
+.grid-density-medium {
+    fill: #ff8c00 !important;
+    fill-opacity: 0.7 !important;
+}
+
+.grid-density-low {
+    fill: #ffd700 !important;
+    fill-opacity: 0.7 !important;
+}
+
+.grid-density-none {
+    fill: transparent !important;
+    fill-opacity: 0 !important;
+}
+
+/* Enhanced Card Styles for Better Integration */
+.enhanced-info-cards .small-box {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.enhanced-info-cards .small-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.enhanced-info-cards .small-box .inner h3 {
+    font-weight: 700;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Enhanced Map Container */
+.enhanced-map-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border: 3px solid #309898;
+}
+
+.enhanced-map-container #market-map {
+    border-radius: 9px;
+}
+
+/* Loading Overlay for Grid Generation */
+.grid-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 8px;
+}
+
+.grid-loading-overlay.active {
+    display: flex;
+}
+
+.grid-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #309898;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+.grid-loading-text {
+    color: #309898;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* Enhanced Analytics Panel */
+.enhanced-analytics {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.enhanced-analytics .card-header {
+    background: linear-gradient(135deg, #309898 0%, #267373 100%);
+    color: white;
+    border-radius: 7px 7px 0 0;
+    font-weight: 600;
+}
+
+.enhanced-analytics .card-body {
+    padding: 15px;
+}
+
+/* Coordinate Status Indicators */
+.coordinate-status {
+    font-size: 8px;
+    padding: 2px 4px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.coordinate-status.real {
+    background: #28a745;
+    color: white;
+}
+
+.coordinate-status.estimated {
+    background: #ffc107;
+    color: #333;
+}
+
+/* Enhanced Modal Styles */
+.enhanced-modal .modal-header {
+    background: linear-gradient(135deg, #309898 0%, #00235B 100%);
+    border-bottom: none;
+}
+
+.enhanced-modal .modal-title {
+    font-weight: 600;
+}
+
+.enhanced-modal .modal-body {
+    padding: 20px;
+}
+
+/* Grid Controls Toggle */
+.grid-controls-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    backdrop-filter: blur(10px);
+}
+
+.grid-controls-panel .control-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.grid-controls-panel .control-item:last-child {
+    margin-bottom: 0;
+}
+
+.grid-controls-panel input[type="checkbox"] {
+    margin-right: 6px;
+    transform: scale(0.9);
+}
+
+.grid-controls-panel label {
+    margin: 0;
+    cursor: pointer;
+    color: #333;
+}
+
+/* Responsive Adjustments for Grid Heatmap */
+@media (max-width: 768px) {
+    .grid-heatmap-legend {
+        min-width: 180px;
+        max-width: 220px;
+        padding: 12px;
+    }
+    
+    .grid-heatmap-legend h6 {
+        font-size: 13px;
+    }
+    
+    .legend-item {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+    
+    .legend-color {
+        width: 16px;
+        height: 14px;
+        margin-right: 8px;
+    }
+    
+    .grid-popup {
+        min-width: 220px;
+    }
+    
+    .grid-popup .popup-header {
+        padding: 8px 10px;
+    }
+    
+    .grid-popup .popup-header h6 {
+        font-size: 13px;
+    }
+    
+    .grid-stats .stat-label,
+    .grid-stats .stat-value {
+        font-size: 11px;
+    }
+    
+    .toko-list h6 {
+        font-size: 12px;
+    }
+    
+    .toko-list li {
+        font-size: 10px;
+    }
+    
+    .enhanced-controls {
+        padding: 12px;
+    }
+    
+    .enhanced-controls .form-group label {
+        font-size: 12px;
+    }
+    
+    .enhanced-controls .custom-control-label {
+        font-size: 11px;
+    }
+    
+    .grid-controls-panel {
+        top: 5px;
+        right: 5px;
+        padding: 8px;
+    }
+    
+    .grid-controls-panel .control-item {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+}
+
+@media (max-width: 576px) {
+    .grid-heatmap-legend {
+        min-width: 160px;
+        max-width: 200px;
+        padding: 10px;
+    }
+    
+    .grid-heatmap-legend h6 {
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .legend-item {
+        font-size: 10px;
+        margin-bottom: 5px;
+    }
+    
+    .legend-color {
+        width: 14px;
+        height: 12px;
+        margin-right: 6px;
+    }
+    
+    .legend-controls {
+        padding-top: 8px;
+        margin-top: 8px;
+    }
+    
+    .legend-toggle {
+        font-size: 10px;
+    }
+    
+    .grid-popup {
+        min-width: 200px;
+    }
+    
+    .grid-popup .popup-header {
+        padding: 6px 8px;
+    }
+    
+    .grid-popup .popup-header h6 {
+        font-size: 12px;
+    }
+    
+    .grid-stats .stat-item {
+        margin-bottom: 4px;
+        padding: 3px 0;
+    }
+    
+    .grid-stats .stat-label,
+    .grid-stats .stat-value {
+        font-size: 10px;
+    }
+    
+    .toko-list {
+        padding-top: 8px;
+        margin-top: 8px;
+    }
+    
+    .toko-list h6 {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+    
+    .toko-list ul {
+        padding-left: 12px;
+    }
+    
+    .toko-list li {
+        font-size: 9px;
+        margin-bottom: 2px;
+    }
+    
+    .enhanced-map-container {
+        border-radius: 8px;
+        border-width: 2px;
+    }
+    
+    .enhanced-map-container #market-map {
+        border-radius: 6px;
+    }
+    
+    .grid-controls-panel {
+        position: static;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+    
+    .grid-controls-panel .control-item {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+}
+
+/* High Contrast Mode Support for Grid Heatmap */
+@media (prefers-contrast: high) {
+    .grid-heatmap-legend {
+        background: white;
+        border: 3px solid black;
+        color: black;
+    }
+    
+    .grid-heatmap-legend h6 {
+        color: black;
+        border-bottom-color: black;
+    }
+    
+    .legend-color {
+        border: 2px solid black;
+    }
+    
+    .grid-popup {
+        border: 2px solid black;
+    }
+    
+    .grid-popup .popup-header {
+        background: black !important;
+        color: white !important;
+    }
+    
+    .coordinate-status.real {
+        background: #000 !important;
+        color: #fff !important;
+        border: 1px solid #fff;
+    }
+    
+    .coordinate-status.estimated {
+        background: #fff !important;
+        color: #000 !important;
+        border: 1px solid #000;
+    }
+    
+    /* High contrast grid colors */
+    .grid-density-high {
+        fill: #000000 !important;
+        stroke: #ffffff !important;
+        stroke-width: 2px !important;
+    }
+    
+    .grid-density-medium {
+        fill: #666666 !important;
+        stroke: #ffffff !important;
+        stroke-width: 2px !important;
+    }
+    
+    .grid-density-low {
+        fill: #cccccc !important;
+        stroke: #000000 !important;
+        stroke-width: 2px !important;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .enhanced-info-cards .small-box {
+        transition: none;
+    }
+    
+    .enhanced-info-cards .small-box:hover {
+        transform: none;
+    }
+    
+    .grid-loading-spinner {
+        animation: none;
+        border: 4px solid #309898;
+    }
+    
+    .legend-toggle:hover {
+        transition: none;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .grid-heatmap-legend {
+        background: rgba(33, 37, 41, 0.95);
+        color: #fff;
+        border-color: #495057;
+    }
+    
+    .grid-heatmap-legend h6 {
+        color: #17a2b8;
+        border-bottom-color: #495057;
+    }
+    
+    .legend-controls {
+        border-top-color: #495057;
+    }
+    
+    .legend-toggle {
+        color: #adb5bd;
+    }
+    
+    .legend-toggle:hover {
+        color: #17a2b8;
+    }
+    
+    .grid-popup {
+        background: #212529;
+        color: #fff;
+    }
+    
+    .grid-popup .popup-header {
+        background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
+    }
+    
+    .grid-stats .stat-item {
+        border-bottom-color: #495057;
+    }
+    
+    .grid-stats .stat-label {
+        color: #adb5bd;
+    }
+    
+    .grid-stats .stat-value {
+        color: #17a2b8;
+    }
+    
+    .toko-list {
+        border-top-color: #495057;
+    }
+    
+    .toko-list h6 {
+        color: #fff;
+    }
+    
+    .toko-list li {
+        color: #adb5bd;
+    }
+    
+    .enhanced-controls {
+        background: rgba(33, 37, 41, 0.95);
+        color: #fff;
+    }
+    
+    .enhanced-controls .form-group label {
+        color: #fff;
+    }
+    
+    .enhanced-controls .custom-control-label {
+        color: #adb5bd;
+    }
+    
+    .enhanced-analytics {
+        background: linear-gradient(135deg, #2c3034 0%, #212529 100%);
+        border-color: #495057;
+        color: #fff;
+    }
+    
+    .enhanced-analytics .card-header {
+        background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
+    }
+    
+    .grid-controls-panel {
+        background: rgba(33, 37, 41, 0.95);
+        color: #fff;
+    }
+    
+    .grid-controls-panel label {
+        color: #adb5bd;
+    }
+    
+    .coordinate-status.real {
+        background: #198754;
+    }
+    
+    .coordinate-status.estimated {
+        background: #ffc107;
+        color: #000;
+    }
+}
+
+/* Print Styles for Grid Heatmap */
+@media print {
+    .grid-heatmap-legend,
+    .grid-controls-panel,
+    .enhanced-controls {
+        background: white !important;
+        color: black !important;
+        border: 1px solid black;
+        box-shadow: none;
+    }
+    
+    .grid-heatmap-legend h6 {
+        color: black !important;
+    }
+    
+    .legend-color {
+        border: 1px solid black !important;
+    }
+    
+    .grid-density-high {
+        fill: #000000 !important;
+        fill-opacity: 0.8 !important;
+    }
+    
+    .grid-density-medium {
+        fill: #666666 !important;
+        fill-opacity: 0.8 !important;
+    }
+    
+    .grid-density-low {
+        fill: #cccccc !important;
+        fill-opacity: 0.8 !important;
+    }
+    
+    .enhanced-map-container {
+        border: 2px solid black;
+        page-break-inside: avoid;
+    }
+    
+    .grid-popup,
+    .grid-controls-panel {
+        display: none !important;
+    }
+}
+
+/* Animation for Grid Generation */
+@keyframes gridGenerate {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.grid-rectangle-animated {
+    animation: gridGenerate 0.5s ease-out;
+}
+
+/* Grid Cell Hover Animation */
+@keyframes gridHover {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1.02);
+    }
+}
+
+.grid-cell-hover {
+    animation: gridHover 0.3s ease-out;
+}
+
+/* Enhanced Tooltip for Grid Cells */
+.grid-tooltip {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    pointer-events: none;
+    position: absolute;
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+.grid-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -4px;
+    border: 4px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Enhanced Button Styles for Grid Controls */
+.grid-control-btn {
+    background: linear-gradient(135deg, #309898 0%, #267373 100%);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.grid-control-btn:hover {
+    background: linear-gradient(135deg, #267373 0%, #1e5a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.grid-control-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.grid-control-btn.disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.grid-control-btn.disabled:hover {
+    transform: none;
+    background: #6c757d;
+}
+
+/* End of Enhanced Market Map Grid Heatmap CSS */

@@ -168,13 +168,7 @@ Route::prefix('toko')->group(function() {
     Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
     Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
-Route::prefix('analytics')->middleware(['auth', 'nocache'])->group(function() {
-    Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
-    
-    // Analitik 1: Partner Performance
-    Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner.performance');
-    Route::get('/partner-detail/{partnerId}', [AnalyticsController::class, 'getPartnerDetail'])->name('analytics.partner.detail');
-});
+
 
 
 Route::group(['prefix' => 'market-map'], function() {
@@ -191,6 +185,11 @@ Route::group(['prefix' => 'market-map'], function() {
     Route::post('/bulk-geocode', [MarketMapController::class, 'bulkGeocodeTokos'])->name('market-map.bulk-geocode');
     Route::get('/geocode-status', [MarketMapController::class, 'getGeocodeStatus'])->name('market-map.geocode-status');
     Route::post('/fix-coordinates/{tokoId}', [MarketMapController::class, 'fixTokoCoordinates'])->name('market-map.fix-coordinates');
+
+        Route::get('/enhanced-toko-data', [MarketMapController::class, 'getEnhancedTokoData'])->name('market-map.enhanced-toko-data');
+    Route::get('/grid-heatmap-data', [MarketMapController::class, 'getGridHeatmapData'])->name('market-map.grid-heatmap-data');
+    Route::get('/enhanced-wilayah-stats', [MarketMapController::class, 'getEnhancedWilayahStatistics'])->name('market-map.enhanced-wilayah-stats');
+    Route::post('/enhanced-bulk-geocode', [MarketMapController::class, 'enhancedBulkGeocodeTokos'])->name('market-map.enhanced-bulk-geocode');
 });
 
 // Route untuk debugging (hanya di development)

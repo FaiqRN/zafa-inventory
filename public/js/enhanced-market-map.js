@@ -1,19 +1,37 @@
 /**
- * Market Map JavaScript - Leaflet Implementation
- * Menampilkan peta persebaran toko dengan visualisasi heatmap dan clustering
+ * Enhanced Market Map JavaScript - Grid-based Heatmap Implementation
+ * Menampilkan peta persebaran toko dengan visualisasi grid heatmap berbasis wilayah
  */
 
-class MarketMap {
+class EnhancedMarketMap {
     constructor() {
         this.map = null;
         this.tokoData = [];
         this.wilayahData = [];
+        this.gridData = [];
         this.markerCluster = null;
         this.heatmapLayer = null;
+        this.gridLayer = null;
         this.markersLayer = null;
         this.isClusterEnabled = true;
         this.isHeatmapEnabled = true;
+        this.isGridHeatmapEnabled = true;
         this.showCoordinateStatus = false;
+        
+        // Heat map configuration
+        this.heatmapConfig = {
+            gridSize: 0.01, // Ukuran grid dalam derajat (sekitar 1.1km)
+            colors: {
+                high: '#dc143c',     // Merah pekat untuk 5+ toko
+                medium: '#ff8c00',   // Oranye untuk 2-4 toko  
+                low: '#ffd700',      // Kuning terang untuk 1 toko
+                none: 'transparent'  // Transparan untuk 0 toko
+            },
+            opacity: 0.7,
+            strokeColor: '#ffffff',
+            strokeWeight: 1,
+            strokeOpacity: 0.8
+        };
         
         // Check dependencies
         if (!this.checkDependencies()) {
@@ -24,11 +42,10 @@ class MarketMap {
         this.init();
     }
 
-        checkDependencies() {
+    checkDependencies() {
         const required = {
             'Leaflet': typeof L !== 'undefined',
             'MarkerCluster': typeof L !== 'undefined' && L.markerClusterGroup,
-            'Heatmap': typeof L !== 'undefined' && L.heatLayer,
             'SweetAlert': typeof Swal !== 'undefined'
         };
 
@@ -49,7 +66,7 @@ class MarketMap {
             this.setupEventListeners();
             this.loadData();
         } catch (error) {
-            console.error('Error initializing MarketMap:', error);
+            console.error('Error initializing Enhanced MarketMap:', error);
             this.showError('Failed to initialize map: ' + error.message);
         }
     }
@@ -81,7 +98,7 @@ class MarketMap {
                     
                     if (count >= 10) {
                         size = 'large';
-                        color = '#ff0000'; // merah untuk density tinggi
+                        color = '#dc143c'; // merah untuk density tinggi
                     } else if (count >= 5) {
                         size = 'medium';
                         color = '#ff8c00'; // oranye untuk density sedang
@@ -105,15 +122,68 @@ class MarketMap {
             // Layer untuk markers individual
             this.markersLayer = L.layerGroup();
             
+            // Layer untuk grid heatmap
+            this.gridLayer = L.layerGroup();
+            
             // Add cluster layer to map by default
             this.map.addLayer(this.markerCluster);
+            this.map.addLayer(this.gridLayer);
             
-            console.log('Map initialized successfully');
+            // Add legend control
+            this.addLegendControl();
+            
+            console.log('Enhanced Map initialized successfully');
             
         } catch (error) {
             console.error('Error initializing map:', error);
             throw new Error('Map initialization failed: ' + error.message);
         }
+    }
+
+    addLegendControl() {
+        const legend = L.control({position: 'bottomright'});
+        
+        legend.onAdd = () => {
+            const div = L.DomUtil.create('div', 'grid-heatmap-legend');
+            div.innerHTML = `
+                <div class="legend-content">
+                    <h6><i class="fas fa-th mr-2"></i>Grid Heatmap Density</h6>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: ${this.heatmapConfig.colors.high};"></span>
+                            <span>Kepadatan Tinggi (5+ toko)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: ${this.heatmapConfig.colors.medium};"></span>
+                            <span>Kepadatan Sedang (2-4 toko)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: ${this.heatmapConfig.colors.low};"></span>
+                            <span>Kepadatan Rendah (1 toko)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: transparent; border: 1px solid #ccc;"></span>
+                            <span>Tidak Ada Toko</span>
+                        </div>
+                    </div>
+                    <div class="legend-controls">
+                        <label class="legend-toggle">
+                            <input type="checkbox" id="toggle-grid-heatmap" checked>
+                            <span>Tampilkan Grid Heatmap</span>
+                        </label>
+                    </div>
+                </div>
+            `;
+            
+            // Add event listener for toggle
+            div.querySelector('#toggle-grid-heatmap').addEventListener('change', (e) => {
+                this.toggleGridHeatmap(e.target.checked);
+            });
+            
+            return div;
+        };
+        
+        legend.addTo(this.map);
     }
 
     setupEventListeners() {
@@ -126,7 +196,7 @@ class MarketMap {
                 });
             }
 
-            // Toggle heatmap
+            // Toggle heatmap (classic points)
             const toggleHeatmap = document.getElementById('toggle-heatmap');
             if (toggleHeatmap) {
                 toggleHeatmap.addEventListener('change', (e) => {
@@ -207,6 +277,7 @@ class MarketMap {
             if (tokoData.success) {
                 this.tokoData = tokoData.data;
                 this.renderMarkers();
+                this.generateGridHeatmap();
                 this.updateStatistics(tokoData.summary);
                 console.log('Loaded', this.tokoData.length, 'toko records');
             } else {
@@ -241,7 +312,7 @@ class MarketMap {
         }
     }
 
-        async fetchWithRetry(url, options = {}, retries = 3) {
+    async fetchWithRetry(url, options = {}, retries = 3) {
         for (let i = 0; i < retries; i++) {
             try {
                 const response = await fetch(url, {
@@ -262,6 +333,204 @@ class MarketMap {
                 console.warn(`Attempt ${i + 1} failed:`, error);
                 if (i === retries - 1) throw error;
                 await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            }
+        }
+    }
+
+    generateGridHeatmap() {
+        try {
+            console.log('Generating grid heatmap...');
+            
+            // Clear existing grid
+            this.gridLayer.clearLayers();
+            
+            if (!this.tokoData || this.tokoData.length === 0) {
+                console.warn('No toko data for grid heatmap');
+                return;
+            }
+
+            // Define bounds for Malang region
+            const bounds = {
+                north: -7.4,    // Batas utara
+                south: -8.6,    // Batas selatan  
+                west: 111.8,    // Batas barat
+                east: 113.2     // Batas timur
+            };
+
+            // Generate grid cells
+            const gridCells = this.createGridCells(bounds);
+            
+            // Count toko in each grid cell
+            const gridCounts = this.countTokoInGrids(gridCells);
+            
+            // Create colored rectangles for each grid
+            gridCounts.forEach(cell => {
+                if (cell.count > 0) {
+                    const color = this.getGridColor(cell.count);
+                    const rectangle = L.rectangle(cell.bounds, {
+                        color: this.heatmapConfig.strokeColor,
+                        weight: this.heatmapConfig.strokeWeight,
+                        opacity: this.heatmapConfig.strokeOpacity,
+                        fillColor: color,
+                        fillOpacity: this.heatmapConfig.opacity
+                    });
+                    
+                    // Add popup with information
+                    const popupContent = this.createGridPopupContent(cell);
+                    rectangle.bindPopup(popupContent);
+                    
+                    // Add hover effects
+                    rectangle.on('mouseover', function() {
+                        this.setStyle({
+                            fillOpacity: 0.9,
+                            weight: 3
+                        });
+                    });
+                    
+                    rectangle.on('mouseout', function() {
+                        this.setStyle({
+                            fillOpacity: 0.7,
+                            weight: 1
+                        });
+                    });
+                    
+                    this.gridLayer.addLayer(rectangle);
+                }
+            });
+            
+            console.log(`Generated ${gridCounts.filter(c => c.count > 0).length} grid cells with toko data`);
+            
+        } catch (error) {
+            console.error('Error generating grid heatmap:', error);
+        }
+    }
+
+    createGridCells(bounds) {
+        const cells = [];
+        const gridSize = this.heatmapConfig.gridSize;
+        
+        for (let lat = bounds.south; lat < bounds.north; lat += gridSize) {
+            for (let lng = bounds.west; lng < bounds.east; lng += gridSize) {
+                cells.push({
+                    bounds: [
+                        [lat, lng],
+                        [lat + gridSize, lng + gridSize]
+                    ],
+                    center: {
+                        lat: lat + gridSize / 2,
+                        lng: lng + gridSize / 2
+                    }
+                });
+            }
+        }
+        
+        return cells;
+    }
+
+    countTokoInGrids(gridCells) {
+        return gridCells.map(cell => {
+            const tokosInCell = this.tokoData.filter(toko => {
+                const lat = parseFloat(toko.latitude);
+                const lng = parseFloat(toko.longitude);
+                
+                if (isNaN(lat) || isNaN(lng)) return false;
+                
+                const [[minLat, minLng], [maxLat, maxLng]] = cell.bounds;
+                
+                return lat >= minLat && lat < maxLat && lng >= minLng && lng < maxLng;
+            });
+            
+            return {
+                ...cell,
+                count: tokosInCell.length,
+                tokos: tokosInCell
+            };
+        });
+    }
+
+    getGridColor(count) {
+        if (count >= 5) {
+            return this.heatmapConfig.colors.high;    // Merah pekat untuk 5+ toko
+        } else if (count >= 2) {
+            return this.heatmapConfig.colors.medium;  // Oranye untuk 2-4 toko
+        } else if (count >= 1) {
+            return this.heatmapConfig.colors.low;     // Kuning terang untuk 1 toko
+        } else {
+            return this.heatmapConfig.colors.none;    // Transparan untuk 0 toko
+        }
+    }
+
+    createGridPopupContent(cell) {
+        const categoryText = this.getCategoryText(cell.count);
+        
+        let content = `
+            <div class="grid-popup">
+                <div class="popup-header">
+                    <h6><i class="fas fa-th mr-2"></i>Grid Wilayah</h6>
+                </div>
+                <div class="popup-body">
+                    <div class="grid-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Jumlah Toko:</span>
+                            <span class="stat-value">${cell.count}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Kategori:</span>
+                            <span class="stat-value">${categoryText}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Koordinat:</span>
+                            <span class="stat-value">${cell.center.lat.toFixed(4)}, ${cell.center.lng.toFixed(4)}</span>
+                        </div>
+                    </div>
+        `;
+        
+        if (cell.count > 0) {
+            content += `
+                    <div class="toko-list">
+                        <h6>Daftar Toko:</h6>
+                        <ul>
+            `;
+            
+            cell.tokos.slice(0, 5).forEach(toko => {
+                content += `<li>${toko.nama_toko} (${toko.kecamatan})</li>`;
+            });
+            
+            if (cell.tokos.length > 5) {
+                content += `<li><em>dan ${cell.tokos.length - 5} toko lainnya...</em></li>`;
+            }
+            
+            content += `
+                        </ul>
+                    </div>
+            `;
+        }
+        
+        content += `
+                </div>
+            </div>
+        `;
+        
+        return content;
+    }
+
+    getCategoryText(count) {
+        if (count >= 5) return 'Kepadatan Tinggi';
+        if (count >= 2) return 'Kepadatan Sedang';
+        if (count >= 1) return 'Kepadatan Rendah';
+        return 'Tidak Ada Toko';
+    }
+
+    toggleGridHeatmap(enabled) {
+        this.isGridHeatmapEnabled = enabled;
+        
+        if (enabled) {
+            if (!this.map.hasLayer(this.gridLayer)) {
+                this.map.addLayer(this.gridLayer);
+            }
+        } else {
+            if (this.map.hasLayer(this.gridLayer)) {
+                this.map.removeLayer(this.gridLayer);
             }
         }
     }
@@ -297,7 +566,7 @@ class MarketMap {
 
             console.log(`Rendered ${validMarkers} markers from ${this.tokoData.length} toko records`);
 
-            // Update heatmap
+            // Update classic heatmap
             if (this.isHeatmapEnabled) {
                 this.updateHeatmap();
             }
@@ -307,7 +576,6 @@ class MarketMap {
             this.showError('Gagal menampilkan marker toko');
         }
     }
-
 
     createTokoMarker(toko) {
         try {
@@ -433,7 +701,7 @@ class MarketMap {
                     ${coordStatus}
                 </div>
                 <div style="text-align: center; margin-top: 8px;">
-                    <button class="btn btn-sm btn-primary" onclick="marketMapInstance.showTokoDetail('${toko.toko_id}')">
+                    <button class="btn btn-sm btn-primary" onclick="enhancedMarketMapInstance.showTokoDetail('${toko.toko_id}')">
                         <i class="fas fa-info-circle"></i> Detail
                     </button>
                 </div>
@@ -441,59 +709,9 @@ class MarketMap {
         `;
     }
 
-        async handleBulkGeocode() {
-        try {
-            const result = await Swal.fire({
-                title: 'Bulk Geocoding',
-                text: 'Proses ini akan mencari koordinat GPS untuk toko yang belum memiliki koordinat akurat. Lanjutkan?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Proses',
-                cancelButtonText: 'Batal'
-            });
-
-            if (result.isConfirmed) {
-                // Show progress
-                Swal.fire({
-                    title: 'Memproses Geocoding...',
-                    text: 'Mohon tunggu, sedang mengambil koordinat GPS...',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                const response = await this.fetchWithRetry('/market-map/bulk-geocode', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                });
-
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: response.message,
-                        timer: 3000
-                    });
-                    
-                    // Reload data
-                    this.loadData();
-                } else {
-                    throw new Error(response.message);
-                }
-            }
-        } catch (error) {
-            console.error('Error bulk geocoding:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Gagal!',
-                text: 'Bulk geocoding gagal: ' + error.message
-            });
-        }
-    }
+    // ... [Continue with remaining methods from original implementation]
+    // Include all other methods like updateHeatmap, toggleHeatmap, toggleCluster, etc.
+    // but keeping the enhanced grid functionality
 
     updateHeatmap() {
         // Remove existing heatmap
@@ -503,29 +721,38 @@ class MarketMap {
 
         if (!this.isHeatmapEnabled) return;
 
-        // Prepare heatmap data
-        const heatmapData = this.tokoData.map(toko => [
+        // Prepare heatmap data for classic point heatmap
+        const heatmapData = this.tokoData.filter(toko => 
+            toko.latitude && toko.longitude && 
+            !isNaN(toko.latitude) && !isNaN(toko.longitude)
+        ).map(toko => [
             toko.latitude,
             toko.longitude,
-            toko.jumlah_barang * 0.1 + 0.5 // intensity based on jumlah barang
+            Math.min(toko.jumlah_barang * 0.1 + 0.5, 1.0) // intensity based on jumlah barang, capped at 1.0
         ]);
 
-        // Create heatmap layer
-        this.heatmapLayer = L.heatLayer(heatmapData, {
-            radius: 30,
-            blur: 20,
-            maxZoom: 15,
-            gradient: {
-                0.0: '#ffffcc',
-                0.2: '#fed976',
-                0.4: '#feb24c',
-                0.6: '#fd8d3c',
-                0.8: '#fc4e2a',
-                1.0: '#e31a1c'
-            }
-        });
+        if (heatmapData.length === 0) return;
 
-        this.map.addLayer(this.heatmapLayer);
+        // Create classic heatmap layer (requires leaflet-heat plugin)
+        if (typeof L.heatLayer !== 'undefined') {
+            this.heatmapLayer = L.heatLayer(heatmapData, {
+                radius: 25,
+                blur: 15,
+                maxZoom: 15,
+                gradient: {
+                    0.0: '#ffffcc',
+                    0.2: '#fed976',
+                    0.4: '#feb24c',
+                    0.6: '#fd8d3c',
+                    0.8: '#fc4e2a',
+                    1.0: '#e31a1c'
+                }
+            });
+
+            this.map.addLayer(this.heatmapLayer);
+        } else {
+            console.warn('Leaflet heatmap plugin not available');
+        }
     }
 
     toggleHeatmap(enabled) {
@@ -553,8 +780,9 @@ class MarketMap {
 
     filterByWilayah(wilayah) {
         if (wilayah === 'all') {
-            // Show all markers
+            // Show all markers and regenerate full grid
             this.renderMarkers();
+            this.generateGridHeatmap();
         } else {
             // Filter markers by wilayah
             const filteredData = this.tokoData.filter(toko => 
@@ -567,13 +795,20 @@ class MarketMap {
             
             filteredData.forEach(toko => {
                 const marker = this.createTokoMarker(toko);
-                
-                if (this.isClusterEnabled) {
-                    this.markerCluster.addLayer(marker);
-                } else {
-                    this.markersLayer.addLayer(marker);
+                if (marker) {
+                    if (this.isClusterEnabled) {
+                        this.markerCluster.addLayer(marker);
+                    } else {
+                        this.markersLayer.addLayer(marker);
+                    }
                 }
             });
+            
+            // Regenerate grid with filtered data
+            const originalData = this.tokoData;
+            this.tokoData = filteredData;
+            this.generateGridHeatmap();
+            this.tokoData = originalData; // Restore original data
             
             // Focus map on filtered area
             if (filteredData.length > 0) {
@@ -582,7 +817,9 @@ class MarketMap {
                     this.markerCluster.getLayers() : 
                     this.markersLayer.getLayers()
                 );
-                this.map.fitBounds(group.getBounds().pad(0.1));
+                if (group.getLayers().length > 0) {
+                    this.map.fitBounds(group.getBounds().pad(0.1));
+                }
             }
         }
     }
@@ -723,6 +960,60 @@ class MarketMap {
         html += '</div>';
         
         container.innerHTML = html;
+    }
+
+    async handleBulkGeocode() {
+        try {
+            const result = await Swal.fire({
+                title: 'Bulk Geocoding',
+                text: 'Proses ini akan mencari koordinat GPS untuk toko yang belum memiliki koordinat akurat. Lanjutkan?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Proses',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
+                // Show progress
+                Swal.fire({
+                    title: 'Memproses Geocoding...',
+                    text: 'Mohon tunggu, sedang mengambil koordinat GPS...',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const response = await this.fetchWithRetry('/market-map/bulk-geocode', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: response.message,
+                        timer: 3000
+                    });
+                    
+                    // Reload data
+                    this.loadData();
+                } else {
+                    throw new Error(response.message);
+                }
+            }
+        } catch (error) {
+            console.error('Error bulk geocoding:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal!',
+                text: 'Bulk geocoding gagal: ' + error.message
+            });
+        }
     }
 
     async showTokoDetail(tokoId) {
@@ -960,7 +1251,7 @@ class MarketMap {
     }
 
     showError(message) {
-        console.error('MarketMap Error:', message);
+        console.error('Enhanced MarketMap Error:', message);
         
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -986,18 +1277,18 @@ class MarketMap {
     }
 }
 
-// Initialize market map when document is ready
-let marketMapInstance;
+// Initialize enhanced market map when document is ready
+let enhancedMarketMapInstance;
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        marketMapInstance = new MarketMap();
-        window.marketMapInstance = marketMapInstance;
-        console.log('MarketMap instance created successfully');
+        enhancedMarketMapInstance = new EnhancedMarketMap();
+        window.enhancedMarketMapInstance = enhancedMarketMapInstance;
+        console.log('Enhanced MarketMap instance created successfully');
     } catch (error) {
-        console.error('Failed to create MarketMap instance:', error);
+        console.error('Failed to create Enhanced MarketMap instance:', error);
     }
 });
 
 // Export for global access
-window.marketMapInstance = marketMapInstance;
+window.enhancedMarketMapInstance = enhancedMarketMapInstance;
