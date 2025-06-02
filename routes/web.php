@@ -7,6 +7,7 @@ use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MarketMapController;
 use App\Http\Controllers\PemesananController;
@@ -51,7 +52,23 @@ Route::prefix('dashboard/api')->group(function() {
     Route::get('/transaksi-terbaru', [DashboardController::class, 'getTransaksiTerbaru']);
     Route::get('/toko-retur-terbanyak', [DashboardController::class, 'getTokoReturTerbanyak']);
 });
-    
+    // Route Analytics
+    Route::group(['prefix' => 'analytics'], function() {
+        Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('/overview', [AnalyticsController::class, 'getOverviewData'])->name('analytics.overview');
+        Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner-performance');
+        Route::get('/inventory-analytics', [AnalyticsController::class, 'getInventoryAnalytics'])->name('analytics.inventory-analytics');
+        Route::get('/product-velocity', [AnalyticsController::class, 'getProductVelocity'])->name('analytics.product-velocity');
+        Route::get('/profitability-analysis', [AnalyticsController::class, 'getProfitabilityAnalysis'])->name('analytics.profitability-analysis');
+        Route::get('/channel-comparison', [AnalyticsController::class, 'getChannelComparison'])->name('analytics.channel-comparison');
+        Route::get('/predictive-analytics', [AnalyticsController::class, 'getPredictiveAnalytics'])->name('analytics.predictive-analytics');
+        
+        // Debug routes
+        Route::get('/test', [AnalyticsController::class, 'testAnalytics'])->name('analytics.test');
+        Route::get('/debug-info', [AnalyticsController::class, 'debugInfo'])->name('analytics.debug-info');
+    });
+
+
     // Route profil
     Route::middleware(['auth'])->group(function () {
         Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'index'])->name('profile');
@@ -168,13 +185,7 @@ Route::prefix('toko')->group(function() {
     Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
     Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
-Route::prefix('analytics')->middleware(['auth', 'nocache'])->group(function() {
-    Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
-    
-    // Analitik 1: Partner Performance
-    Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner.performance');
-    Route::get('/partner-detail/{partnerId}', [AnalyticsController::class, 'getPartnerDetail'])->name('analytics.partner.detail');
-});
+
 
 
 Route::group(['prefix' => 'market-map'], function() {
@@ -191,6 +202,11 @@ Route::group(['prefix' => 'market-map'], function() {
     Route::post('/bulk-geocode', [MarketMapController::class, 'bulkGeocodeTokos'])->name('market-map.bulk-geocode');
     Route::get('/geocode-status', [MarketMapController::class, 'getGeocodeStatus'])->name('market-map.geocode-status');
     Route::post('/fix-coordinates/{tokoId}', [MarketMapController::class, 'fixTokoCoordinates'])->name('market-map.fix-coordinates');
+
+        Route::get('/enhanced-toko-data', [MarketMapController::class, 'getEnhancedTokoData'])->name('market-map.enhanced-toko-data');
+    Route::get('/grid-heatmap-data', [MarketMapController::class, 'getGridHeatmapData'])->name('market-map.grid-heatmap-data');
+    Route::get('/enhanced-wilayah-stats', [MarketMapController::class, 'getEnhancedWilayahStatistics'])->name('market-map.enhanced-wilayah-stats');
+    Route::post('/enhanced-bulk-geocode', [MarketMapController::class, 'enhancedBulkGeocodeTokos'])->name('market-map.enhanced-bulk-geocode');
 });
 
 // Route untuk debugging (hanya di development)
@@ -200,5 +216,5 @@ if (app()->environment(['local', 'development'])) {
         Route::get('/coordinate-stats', [MarketMapController::class, 'getCoordinateStatistics']);
         Route::get('/validate-coordinates', [MarketMapController::class, 'validateAllCoordinates']);
     });
-}
-});
+
+}});
