@@ -118,6 +118,14 @@
                     <p>Market Map</p>
                 </a>
             </li>
+
+            <li class="nav-item">
+                <a href="{{ url('/follow-up-pelanggan') }}" class="nav-link {{ ($activemenu == 'follow-up-pelanggan')? 'active' : '' }}">
+                    <i class="nav-icon fas fa-envelope-open-text"></i>
+                    <p>Follow Up Pelanggan</p>
+                </a>
+            </li>
+
             <li class="nav-item">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['profile.edit', 'profile.change-password']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-cog"></i>

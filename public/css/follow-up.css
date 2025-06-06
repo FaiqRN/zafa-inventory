@@ -1,0 +1,263 @@
+/* Follow Up Pelanggan CSS Styles */
+
+/* Filter Styles */
+.filter-checkbox {
+    transform: scale(1.2);
+    margin-right: 8px;
+}
+
+.filter-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.filter-summary {
+    background: linear-gradient(45deg, #309898, #00235B);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.customer-count-badge {
+    background: #FF9F00;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* Customer Item Styles */
+.customer-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.customer-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.customer-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+}
+
+.detail-btn {
+    background: linear-gradient(45deg, #FF9F00, #F4631E);
+    border: none;
+    color: white;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.detail-btn:hover {
+    background: linear-gradient(45deg, #F4631E, #CB0404);
+    color: white;
+    transform: scale(1.05);
+}
+
+/* Upload Area Styles */
+.upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    background-color: #fafafa;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+    border-color: #FF9F00;
+    background-color: #fff9f0;
+    cursor: pointer;
+}
+
+.upload-area.dragover {
+    border-color: #309898;
+    background-color: #f0f8ff;
+}
+
+/* Image Preview Styles */
+.image-preview-container {
+    position: relative;
+    display: inline-block;
+    margin: 10px;
+}
+
+.remove-image-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.remove-image-btn:hover {
+    background: #c82333;
+    transform: scale(1.1);
+}
+
+/* Riwayat Table Styles */
+.riwayat-table {
+    font-size: 0.9rem;
+}
+
+.riwayat-table img {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.riwayat-table img:hover {
+    transform: scale(1.1);
+}
+
+.riwayat-table .sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Modal Styles */
+.modal-header.bg-primary {
+    background-color: #309898 !important;
+}
+
+.modal-header.bg-success {
+    background-color: #28a745 !important;
+}
+
+.info-item {
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 8px;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .customer-item {
+        padding: 15px 10px;
+    }
+    
+    .detail-btn {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+    }
+    
+    .upload-area {
+        padding: 15px;
+    }
+    
+    .upload-area h5 {
+        font-size: 1rem;
+    }
+    
+    .filter-summary {
+        padding: 8px 12px;
+    }
+    
+    .customer-count-badge {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .riwayat-table {
+        font-size: 0.8rem;
+    }
+    
+    .riwayat-table th,
+    .riwayat-table td {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .customer-badge {
+        font-size: 0.6rem;
+        padding: 1px 4px;
+    }
+}
+
+/* Custom Scrollbar */
+.card-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Loading States */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #309898;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
