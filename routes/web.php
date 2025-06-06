@@ -186,7 +186,15 @@ Route::prefix('toko')->group(function() {
     Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
     Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
-
+    // Route Follow Up Pelanggan
+Route::group(['prefix' => 'follow-up-pelanggan'], function() {
+    Route::get('/', [FollowUpPelangganController::class, 'index'])->name('follow-up-pelanggan.index');
+    Route::get('/data', [FollowUpPelangganController::class, 'getData'])->name('follow-up-pelanggan.data');
+    Route::get('/filtered-customers', [FollowUpPelangganController::class, 'getFilteredCustomers'])->name('follow-up-pelanggan.filtered-customers');
+    Route::post('/send', [FollowUpPelangganController::class, 'sendFollowUp'])->name('follow-up-pelanggan.send');
+    Route::get('/history', [FollowUpPelangganController::class, 'getHistory'])->name('follow-up-pelanggan.history');
+    Route::post('/upload-image', [FollowUpPelangganController::class, 'uploadImage'])->name('follow-up-pelanggan.upload-image');
+});
 
 
 Route::group(['prefix' => 'market-map'], function() {
@@ -208,16 +216,6 @@ Route::group(['prefix' => 'market-map'], function() {
     Route::get('/grid-heatmap-data', [MarketMapController::class, 'getGridHeatmapData'])->name('market-map.grid-heatmap-data');
     Route::get('/enhanced-wilayah-stats', [MarketMapController::class, 'getEnhancedWilayahStatistics'])->name('market-map.enhanced-wilayah-stats');
     Route::post('/enhanced-bulk-geocode', [MarketMapController::class, 'enhancedBulkGeocodeTokos'])->name('market-map.enhanced-bulk-geocode');
-});
-
-    // Route Follow Up Pelanggan
-Route::group(['prefix' => 'follow-up-pelanggan'], function() {
-    Route::get('/', [FollowUpPelangganController::class, 'index'])->name('follow-up-pelanggan.index');
-    Route::get('/data', [FollowUpPelangganController::class, 'getData'])->name('follow-up-pelanggan.data');
-    Route::get('/filtered-customers', [FollowUpPelangganController::class, 'getFilteredCustomers'])->name('follow-up-pelanggan.filtered-customers');
-    Route::post('/send', [FollowUpPelangganController::class, 'sendFollowUp'])->name('follow-up-pelanggan.send');
-    Route::get('/history', [FollowUpPelangganController::class, 'getHistory'])->name('follow-up-pelanggan.history');
-    Route::post('/upload-image', [FollowUpPelangganController::class, 'uploadImage'])->name('follow-up-pelanggan.upload-image');
 });
 
 // Route untuk debugging (hanya di development)
