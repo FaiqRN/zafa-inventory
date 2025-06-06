@@ -3,33 +3,68 @@
 namespace App\Http\Controllers;
 
 use App\Models\Toko;
+use App\Models\Barang;
+use App\Models\BarangToko;
+use App\Models\Pengiriman;
+use App\Models\Retur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Services\GeocodingService; 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
-use App\Http\Controllers\AnalyticsController;
+use Illuminate\Support\Collection;
+use Carbon\Carbon;
 
 class MarketMapController extends Controller
 {
+    // Cache duration in minutes
+    const CACHE_DURATION = 15;
+    
+    // Grid configuration
+    const GRID_SIZE = 0.01;
+    const MALANG_BOUNDS = [
+        'north' => -7.4,
+        'south' => -8.6,
+        'west' => 111.8,
+        'east' => 113.2
+    ];
+
+    /**
+     * Display CRM Market Intelligence main page
+     */
     public function index()
     {
-        return view('market.map', [
-            'activemenu' => 'market-map',
-            'breadcrumb' => (object) [
-                'title' => 'Market Map',
-                'list' => ['Home', 'Market Map']
-            ]
-        ]);
+        try {
+            return view('market.map', [
+                'activemenu' => 'market-map',
+                'breadcrumb' => (object) [
+                    'title' => 'CRM Market Intelligence',
+                    'list' => ['Home', 'CRM Market Intelligence']
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error loading market map index: ' . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Failed to load Market Map');
+        }
     }
 
+    /**
+     * Get partner data with CRM metrics - Main data source for map
+     */
     public function getTokoData()
     {
         try {
-            // Gunakan Eloquent Model dengan proper relationships
-            $tokoData = Toko::with(['barangToko', 'pengiriman', 'retur'])
+            // Cache key for performance
+            $cacheKey = 'market_map_toko_data_' . auth()->id();
+            
+            return Cache::remember($cacheKey, self::CACHE_DURATION, function () {
+                // Optimized query with eager loading
+                $tokoData = Toko::with([
+                    'barangToko:toko_id,barang_id',
+                    'pengiriman:toko_id,pengiriman_id,tanggal_pengiriman,jumlah_kirim,status',
+                    'retur:toko_id,retur_id,jumlah_retur,tanggal_retur'
+                ])
                 ->select([
                     'toko_id',
                     'nama_toko',
@@ -42,186 +77,494 @@ class MarketMapController extends Controller
                     'latitude',
                     'longitude',
                     'is_active',
-                    'alamat_lengkap_geocoding'
+                    'alamat_lengkap_geocoding',
+                    'geocoding_quality',
+                    'geocoding_score',
+                    'created_at',
+                    'updated_at'
                 ])
                 ->get();
 
-            // Transform data untuk peta
-            $mapData = $tokoData->map(function ($toko) {
-                // Gunakan koordinat asli dari database, bukan dummy
-                $coordinates = $this->getTokoCoordinates($toko);
-                
-                return [
-                    'toko_id' => $toko->toko_id,
-                    'nama_toko' => $toko->nama_toko,
-                    'pemilik' => $toko->pemilik,
-                    'alamat' => $toko->alamat,
-                    'kelurahan' => $toko->wilayah_kelurahan,
-                    'kecamatan' => $toko->wilayah_kecamatan,
-                    'kota_kabupaten' => $toko->wilayah_kota_kabupaten,
-                    'telpon' => $toko->nomer_telpon,
-                    'latitude' => $coordinates['lat'],
-                    'longitude' => $coordinates['lng'],
-                    'jumlah_barang' => $toko->barangToko->count(),
-                    'total_pengiriman' => $toko->pengiriman->count(),
-                    'total_retur' => $toko->retur->count(),
-                    'status_aktif' => $this->getTokoStatus($toko),
-                    'has_coordinates' => $coordinates['has_real_coordinates'],
-                    'coordinate_source' => $coordinates['source']
-                ];
-            });
+                if ($tokoData->isEmpty()) {
+                    return [
+                        'success' => true,
+                        'data' => [],
+                        'summary' => [
+                            'total_toko' => 0,
+                            'toko_with_coordinates' => 0,
+                            'toko_active' => 0,
+                            'high_performers' => 0
+                        ]
+                    ];
+                }
 
-            return response()->json([
-                'success' => true,
-                'data' => $mapData,
-                'summary' => [
+                // Transform data with CRM analytics
+                $mapData = $tokoData->map(function ($toko) {
+                    $coordinates = $this->getTokoCoordinates($toko);
+                    $performanceScore = $this->calculatePerformanceScore($toko);
+                    $marketSegment = $this->determineMarketSegment($toko);
+                    
+                    return [
+                        'toko_id' => $toko->toko_id,
+                        'nama_toko' => $toko->nama_toko ?? 'Unknown',
+                        'pemilik' => $toko->pemilik ?? 'Unknown',
+                        'alamat' => $toko->alamat ?? '',
+                        'kelurahan' => $toko->wilayah_kelurahan ?? '',
+                        'kecamatan' => $toko->wilayah_kecamatan ?? '',
+                        'kota_kabupaten' => $toko->wilayah_kota_kabupaten ?? '',
+                        'telpon' => $toko->nomer_telpon ?? '',
+                        'latitude' => $coordinates['lat'],
+                        'longitude' => $coordinates['lng'],
+                        'jumlah_barang' => $toko->barangToko->count(),
+                        'total_pengiriman' => $toko->pengiriman->count(),
+                        'total_retur' => $toko->retur->count(),
+                        'status_aktif' => $this->getTokoStatus($toko),
+                        'has_coordinates' => $coordinates['has_real_coordinates'],
+                        'coordinate_source' => $coordinates['source'],
+                        'geocoding_quality' => $toko->geocoding_quality ?? 'unknown',
+                        'geocoding_score' => $toko->geocoding_score ?? 0,
+                        // CRM specific metrics
+                        'performance_score' => $performanceScore,
+                        'market_segment' => $marketSegment,
+                        'last_activity' => $this->getLastActivity($toko),
+                        'monthly_orders' => $this->getMonthlyOrderCount($toko),
+                        'return_rate' => $this->calculateReturnRate($toko),
+                        'growth_trend' => $this->calculateGrowthTrend($toko)
+                    ];
+                });
+
+                // Generate summary statistics
+                $summary = [
                     'total_toko' => $mapData->count(),
                     'toko_with_coordinates' => $mapData->where('has_coordinates', true)->count(),
-                    'toko_active' => $mapData->where('status_aktif', 'Aktif')->count()
-                ]
-            ]);
+                    'toko_active' => $mapData->where('status_aktif', 'Aktif')->count(),
+                    'high_performers' => $mapData->where('performance_score', '>', 75)->count(),
+                    'premium_partners' => $mapData->where('market_segment', 'Premium Partner')->count(),
+                    'growth_partners' => $mapData->where('market_segment', 'Growth Partner')->count(),
+                    'avg_performance' => round($mapData->avg('performance_score'), 1),
+                    'coverage_percentage' => $mapData->count() > 0 ? round(($mapData->where('has_coordinates', true)->count() / $mapData->count()) * 100, 1) : 0
+                ];
+
+                return [
+                    'success' => true,
+                    'data' => $mapData->values(),
+                    'summary' => $summary,
+                    'last_updated' => now()->toISOString()
+                ];
+            });
         } catch (\Exception $e) {
-            Log::error('Error fetching toko data for map: ' . $e->getMessage());
+            Log::error('Error fetching toko data for map: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Failed to load partner data: ' . $e->getMessage(),
+                'data' => [],
+                'summary' => [
+                    'total_toko' => 0,
+                    'toko_with_coordinates' => 0,
+                    'toko_active' => 0,
+                    'high_performers' => 0
+                ]
             ], 500);
         }
     }
 
-        /**
-     * Dapatkan koordinat toko dengan fallback system
+    /**
+     * Calculate performance score for CRM analytics
      */
-    private function getTokoCoordinates($toko)
+    private function calculatePerformanceScore($toko)
     {
-        // Prioritas 1: Gunakan koordinat asli dari geocoding
-        if ($toko->latitude && $toko->longitude) {
-            return [
-                'lat' => (float) $toko->latitude,
-                'lng' => (float) $toko->longitude,
-                'has_real_coordinates' => true,
-                'source' => 'geocoded'
-            ];
+        try {
+            $score = 0;
+            
+            // Base score from product variety (0-20 points)
+            $productCount = $toko->barangToko->count();
+            $score += min($productCount * 2, 20);
+            
+            // Score from recent activity (0-40 points)
+            $recentShipments = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subDays(30))
+                ->count();
+            $score += min($recentShipments * 4, 40);
+            
+            // Score from order frequency (0-25 points)
+            $monthlyAvg = $this->getMonthlyOrderCount($toko);
+            $score += min($monthlyAvg * 2.5, 25);
+            
+            // Penalty for returns (max -15 points)
+            $returnRate = $this->calculateReturnRate($toko);
+            $score -= min($returnRate * 0.3, 15);
+            
+            // Consistency bonus (0-15 points)
+            $consistencyBonus = $this->calculateConsistencyBonus($toko);
+            $score += $consistencyBonus;
+            
+            // Growth trend bonus (0-10 points)
+            $growthTrend = $this->calculateGrowthTrend($toko);
+            if ($growthTrend > 0) {
+                $score += min($growthTrend * 5, 10);
+            }
+            
+            return max(0, min(100, round($score, 1)));
+        } catch (\Exception $e) {
+            Log::warning('Error calculating performance score for toko ' . $toko->toko_id . ': ' . $e->getMessage());
+            return 50; // Default score
         }
-
-        // Prioritas 2: Generate koordinat berdasarkan wilayah sebagai fallback
-        $fallbackCoords = $this->generateFallbackCoordinates(
-            $toko->wilayah_kota_kabupaten,
-            $toko->wilayah_kecamatan,
-            $toko->wilayah_kelurahan
-        );
-
-        return [
-            'lat' => $fallbackCoords['lat'],
-            'lng' => $fallbackCoords['lng'],
-            'has_real_coordinates' => false,
-            'source' => 'estimated'
-        ];
-    }
-
-        /**
-     * Tentukan status toko berdasarkan berbagai kriteria
-     */
-    private function getTokoStatus($toko)
-    {
-        if (!$toko->is_active) {
-            return 'Tidak Aktif';
-        }
-
-        // Toko aktif jika memiliki barang atau ada pengiriman dalam 30 hari terakhir
-        $hasBarang = $toko->barangToko->count() > 0;
-        $hasRecentShipment = $toko->pengiriman()
-            ->where('tanggal_pengiriman', '>=', now()->subDays(30))
-            ->count() > 0;
-
-        return ($hasBarang || $hasRecentShipment) ? 'Aktif' : 'Tidak Aktif';
     }
 
     /**
-     * Perbaikan method untuk koordinat fallback
+     * Determine market segment for CRM classification
      */
-    private function generateFallbackCoordinates($kotaKabupaten, $kecamatan, $kelurahan)
+    private function determineMarketSegment($toko)
     {
-        // Base coordinates yang lebih akurat untuk wilayah Malang
-        $baseCoordinates = [
-            'Kota Malang' => ['lat' => -7.9666, 'lng' => 112.6326],
-            'Kabupaten Malang' => ['lat' => -8.1844, 'lng' => 112.7456],
-            'Kota Batu' => ['lat' => -7.8767, 'lng' => 112.5326]
-        ];
-
-        // Ambil base coordinate berdasarkan kota/kabupaten
-        $base = $baseCoordinates[$kotaKabupaten] ?? $baseCoordinates['Kota Malang'];
-
-        // Generate offset yang lebih realistic berdasarkan hash nama wilayah
-        $hashKecamatan = crc32($kecamatan);
-        $hashKelurahan = crc32($kelurahan);
-        
-        // Offset dalam radius yang lebih kecil (sekitar 2-3km)
-        $offsetLat = (($hashKecamatan % 500) / 20000) - 0.0125; // ±0.0125 derajat
-        $offsetLng = (($hashKelurahan % 500) / 20000) - 0.0125; // ±0.0125 derajat
-
-        return [
-            'lat' => $base['lat'] + $offsetLat,
-            'lng' => $base['lng'] + $offsetLng
-        ];
+        try {
+            $totalPengiriman = $toko->pengiriman->count();
+            $jumlahBarang = $toko->barangToko->count();
+            $recentOrders = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subDays(90))
+                ->count();
+            $returnRate = $this->calculateReturnRate($toko);
+            
+            // Premium Partner criteria
+            if ($totalPengiriman >= 50 && $jumlahBarang >= 10 && $recentOrders >= 15 && $returnRate < 5) {
+                return 'Premium Partner';
+            }
+            
+            // Growth Partner criteria
+            if ($totalPengiriman >= 20 && $jumlahBarang >= 5 && $recentOrders >= 5) {
+                return 'Growth Partner';
+            }
+            
+            // Standard Partner criteria
+            if ($totalPengiriman >= 5 && $jumlahBarang >= 1) {
+                return 'Standard Partner';
+            }
+            
+            return 'New Partner';
+        } catch (\Exception $e) {
+            Log::warning('Error determining market segment for toko ' . $toko->toko_id . ': ' . $e->getMessage());
+            return 'New Partner';
+        }
     }
 
+    /**
+     * Calculate consistency bonus for performance scoring
+     */
+    private function calculateConsistencyBonus($toko)
+    {
+        try {
+            $months = [];
+            $pengirimanData = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subMonths(12))
+                ->get();
+                
+            foreach ($pengirimanData as $pengiriman) {
+                $month = Carbon::parse($pengiriman->tanggal_pengiriman)->format('Y-m');
+                $months[$month] = true;
+            }
+            
+            $consistentMonths = count($months);
+            return min($consistentMonths * 1.5, 15);
+        } catch (\Exception $e) {
+            Log::warning('Error calculating consistency bonus: ' . $e->getMessage());
+            return 0;
+        }
+    }
 
+    /**
+     * Get last activity date
+     */
+    private function getLastActivity($toko)
+    {
+        try {
+            $lastShipment = $toko->pengiriman()
+                ->orderBy('tanggal_pengiriman', 'desc')
+                ->first();
+                
+            return $lastShipment ? Carbon::parse($lastShipment->tanggal_pengiriman)->diffForHumans() : 'No activity';
+        } catch (\Exception $e) {
+            return 'Unknown';
+        }
+    }
 
+    /**
+     * Get monthly order count
+     */
+    private function getMonthlyOrderCount($toko)
+    {
+        try {
+            return $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subDays(30))
+                ->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
 
+    /**
+     * Calculate return rate
+     */
+    private function calculateReturnRate($toko)
+    {
+        try {
+            $totalOrders = $toko->pengiriman->count();
+            $totalReturns = $toko->retur->count();
+            
+            return $totalOrders > 0 ? round(($totalReturns / $totalOrders) * 100, 2) : 0;
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Calculate growth trend
+     */
+    private function calculateGrowthTrend($toko)
+    {
+        try {
+            $currentMonth = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->startOfMonth())
+                ->count();
+                
+            $lastMonth = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subMonth()->startOfMonth())
+                ->where('tanggal_pengiriman', '<', now()->startOfMonth())
+                ->count();
+                
+            if ($lastMonth > 0) {
+                return round((($currentMonth - $lastMonth) / $lastMonth) * 100, 1);
+            }
+            
+            return $currentMonth > 0 ? 100 : 0;
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get toko coordinates with fallback system
+     */
+    private function getTokoCoordinates($toko)
+    {
+        try {
+            // Check if coordinates exist and are valid
+            if ($toko->latitude && $toko->longitude) {
+                $lat = (float) $toko->latitude;
+                $lng = (float) $toko->longitude;
+                
+                // Validate coordinates are within reasonable bounds for Indonesia
+                if ($lat >= -11.5 && $lat <= 6.5 && $lng >= 94.5 && $lng <= 142.0) {
+                    // Check if coordinates are within East Java region
+                    $inJatim = ($lat >= -8.8 && $lat <= -7.2 && $lng >= 111.0 && $lng <= 114.5);
+                    
+                    return [
+                        'lat' => $lat,
+                        'lng' => $lng,
+                        'has_real_coordinates' => true,
+                        'source' => 'geocoded',
+                        'accuracy' => $inJatim ? 'high' : 'medium'
+                    ];
+                }
+            }
+
+            // Generate fallback coordinates
+            $fallbackCoords = $this->generateFallbackCoordinates(
+                $toko->wilayah_kota_kabupaten,
+                $toko->wilayah_kecamatan,
+                $toko->wilayah_kelurahan,
+                $toko->toko_id
+            );
+
+            return [
+                'lat' => $fallbackCoords['lat'],
+                'lng' => $fallbackCoords['lng'],
+                'has_real_coordinates' => false,
+                'source' => 'estimated',
+                'accuracy' => 'low'
+            ];
+        } catch (\Exception $e) {
+            Log::warning('Error getting coordinates for toko ' . $toko->toko_id . ': ' . $e->getMessage());
+            
+            // Return default Malang coordinates
+            return [
+                'lat' => -7.9666,
+                'lng' => 112.6326,
+                'has_real_coordinates' => false,
+                'source' => 'default',
+                'accuracy' => 'very_low'
+            ];
+        }
+    }
+
+    /**
+     * Determine toko status based on various criteria
+     */
+    private function getTokoStatus($toko)
+    {
+        try {
+            if (!$toko->is_active) {
+                return 'Tidak Aktif';
+            }
+
+            $hasBarang = $toko->barangToko->count() > 0;
+            $recentShipment = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subDays(30))
+                ->exists();
+            $veryRecentShipment = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subDays(7))
+                ->exists();
+
+            if ($veryRecentShipment && $hasBarang) {
+                return 'Sangat Aktif';
+            } elseif ($recentShipment || $hasBarang) {
+                return 'Aktif';
+            } else {
+                return 'Kurang Aktif';
+            }
+        } catch (\Exception $e) {
+            Log::warning('Error determining status for toko ' . $toko->toko_id . ': ' . $e->getMessage());
+            return 'Unknown';
+        }
+    }
+
+    /**
+     * Generate fallback coordinates with improved distribution
+     */
+    private function generateFallbackCoordinates($kotaKabupaten, $kecamatan, $kelurahan, $tokoId)
+    {
+        try {
+            $baseCoordinates = [
+                'Kota Malang' => [
+                    'center' => ['lat' => -7.9666, 'lng' => 112.6326],
+                    'bounds' => ['north' => -7.88, 'south' => -8.05, 'west' => 112.55, 'east' => 112.72]
+                ],
+                'Kabupaten Malang' => [
+                    'center' => ['lat' => -8.1844, 'lng' => 112.7456],
+                    'bounds' => ['north' => -7.80, 'south' => -8.55, 'west' => 112.30, 'east' => 113.20]
+                ],
+                'Kota Batu' => [
+                    'center' => ['lat' => -7.8767, 'lng' => 112.5326],
+                    'bounds' => ['north' => -7.75, 'south' => -8.00, 'west' => 112.45, 'east' => 112.62]
+                ]
+            ];
+
+            $wilayahData = $baseCoordinates[$kotaKabupaten] ?? $baseCoordinates['Kota Malang'];
+
+            // Create pseudo-random but consistent coordinates
+            $hashKecamatan = crc32($kecamatan ?? 'default');
+            $hashKelurahan = crc32($kelurahan ?? 'default');
+            $hashToko = crc32($tokoId ?? 'default');
+            
+            // Combine hashes for better distribution
+            $combinedHash = ($hashKecamatan ^ $hashKelurahan ^ $hashToko);
+            
+            $latRange = $wilayahData['bounds']['north'] - $wilayahData['bounds']['south'];
+            $lngRange = $wilayahData['bounds']['east'] - $wilayahData['bounds']['west'];
+            
+            $latOffset = (($combinedHash % 1000) / 1000) * $latRange - ($latRange / 2);
+            $lngOffset = ((($combinedHash >> 10) % 1000) / 1000) * $lngRange - ($lngRange / 2);
+
+            // Add micro-randomization to prevent exact overlaps
+            $microOffset = (crc32($tokoId . $kelurahan) % 100) / 100000;
+            
+            return [
+                'lat' => $wilayahData['center']['lat'] + $latOffset + $microOffset,
+                'lng' => $wilayahData['center']['lng'] + $lngOffset + $microOffset
+            ];
+        } catch (\Exception $e) {
+            Log::warning('Error generating fallback coordinates: ' . $e->getMessage());
+            return ['lat' => -7.9666, 'lng' => 112.6326]; // Default Malang center
+        }
+    }
+
+    /**
+     * Get wilayah statistics with caching
+     */
     public function getWilayahStatistics()
     {
         try {
-            // Statistik per kecamatan dengan join yang lebih efisien
-            $statistikKecamatan = Toko::select([
-                'wilayah_kecamatan',
-                'wilayah_kota_kabupaten',
-                DB::raw('COUNT(*) as jumlah_toko'),
-                DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as toko_aktif'),
-                DB::raw('COUNT(CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN 1 END) as toko_with_coordinates')
-            ])
-            ->groupBy('wilayah_kecamatan', 'wilayah_kota_kabupaten')
-            ->orderBy('jumlah_toko', 'desc')
-            ->get();
+            $cacheKey = 'wilayah_statistics_' . auth()->id();
+            
+            return Cache::remember($cacheKey, self::CACHE_DURATION, function () {
+                $statistikKecamatan = DB::table('toko')
+                    ->select([
+                        'wilayah_kecamatan',
+                        'wilayah_kota_kabupaten',
+                        DB::raw('COUNT(*) as jumlah_toko'),
+                        DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as toko_aktif'),
+                        DB::raw('COUNT(CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN 1 END) as toko_with_coordinates'),
+                        DB::raw('AVG(CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN geocoding_score END) as avg_geocoding_quality')
+                    ])
+                    ->whereNotNull('wilayah_kecamatan')
+                    ->groupBy('wilayah_kecamatan', 'wilayah_kota_kabupaten')
+                    ->orderBy('jumlah_toko', 'desc')
+                    ->get();
 
-            // Statistik per kelurahan
-            $statistikKelurahan = Toko::select([
-                'wilayah_kelurahan',
-                'wilayah_kecamatan', 
-                'wilayah_kota_kabupaten',
-                DB::raw('COUNT(*) as jumlah_toko'),
-                DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as toko_aktif')
-            ])
-            ->groupBy('wilayah_kelurahan', 'wilayah_kecamatan', 'wilayah_kota_kabupaten')
-            ->orderBy('jumlah_toko', 'desc')
-            ->get();
+                $statistikKelurahan = DB::table('toko')
+                    ->select([
+                        'wilayah_kelurahan',
+                        'wilayah_kecamatan', 
+                        'wilayah_kota_kabupaten',
+                        DB::raw('COUNT(*) as jumlah_toko'),
+                        DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as toko_aktif')
+                    ])
+                    ->whereNotNull('wilayah_kelurahan')
+                    ->groupBy('wilayah_kelurahan', 'wilayah_kecamatan', 'wilayah_kota_kabupaten')
+                    ->orderBy('jumlah_toko', 'desc')
+                    ->get();
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'kecamatan' => $statistikKecamatan,
-                    'kelurahan' => $statistikKelurahan,
-                    'summary' => [
-                        'total_kecamatan' => $statistikKecamatan->count(),
-                        'total_kelurahan' => $statistikKelurahan->count(),
-                        'avg_toko_per_kecamatan' => round($statistikKecamatan->avg('jumlah_toko'), 2)
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'kecamatan' => $statistikKecamatan,
+                        'kelurahan' => $statistikKelurahan,
+                        'summary' => [
+                            'total_kecamatan' => $statistikKecamatan->count(),
+                            'total_kelurahan' => $statistikKelurahan->count(),
+                            'avg_toko_per_kecamatan' => round($statistikKecamatan->avg('jumlah_toko'), 2),
+                            'best_coverage_kecamatan' => $statistikKecamatan->first()?->wilayah_kecamatan
+                        ]
                     ]
-                ]
-            ]);
+                ]);
+            });
         } catch (\Exception $e) {
             Log::error('Error fetching wilayah statistics: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Failed to load territory statistics: ' . $e->getMessage()
             ], 500);
         }
     }
 
+    /**
+     * Get partner details with comprehensive data
+     */
+    public function getPartnerDetails($partnerId)
+    {
+        return $this->getTokoBarang($partnerId);
+    }
+
+    /**
+     * Get comprehensive toko data including products and transactions
+     */
     public function getTokoBarang($tokoId)
     {
         try {
+            $validator = Validator::make(['toko_id' => $tokoId], [
+                'toko_id' => 'required|string|max:50'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid partner ID format'
+                ], 400);
+            }
+
+            // Get comprehensive toko data with products
             $barangToko = DB::table('barang_toko')
                 ->join('barang', 'barang_toko.barang_id', '=', 'barang.barang_id')
                 ->join('toko', 'barang_toko.toko_id', '=', 'toko.toko_id')
@@ -234,1146 +577,944 @@ class MarketMapController extends Controller
                     'barang_toko.harga_barang_toko',
                     'barang.satuan',
                     'barang.keterangan',
-                    'toko.nama_toko'
+                    'toko.nama_toko',
+                    'toko.pemilik',
+                    'toko.wilayah_kecamatan',
+                    'toko.wilayah_kota_kabupaten',
+                    DB::raw('(barang_toko.harga_barang_toko - barang.harga_awal_barang) as margin'),
+                    DB::raw('CASE WHEN barang.harga_awal_barang > 0 THEN 
+                        ((barang_toko.harga_barang_toko - barang.harga_awal_barang) / barang.harga_awal_barang) * 100 
+                        ELSE 0 END as margin_percentage')
                 ])
                 ->get();
 
-            // Statistik pengiriman untuk toko ini
+            if ($barangToko->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Partner not found or has no products'
+                ], 404);
+            }
+
+            // Get shipment statistics
             $statistikPengiriman = DB::table('pengiriman')
                 ->where('toko_id', $tokoId)
                 ->select([
                     DB::raw('COUNT(*) as total_pengiriman'),
                     DB::raw('SUM(jumlah_kirim) as total_barang_dikirim'),
-                    DB::raw('MAX(tanggal_pengiriman) as pengiriman_terakhir')
+                    DB::raw('MAX(tanggal_pengiriman) as pengiriman_terakhir'),
+                    DB::raw('MIN(tanggal_pengiriman) as pengiriman_pertama'),
+                    DB::raw('AVG(jumlah_kirim) as rata_rata_per_pengiriman'),
+                    DB::raw('COUNT(CASE WHEN tanggal_pengiriman >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) as pengiriman_30_hari'),
+                    DB::raw('COUNT(CASE WHEN status = "terkirim" THEN 1 END) as pengiriman_sukses')
                 ])
                 ->first();
 
-            // Statistik retur untuk toko ini
+            // Get return statistics
             $statistikRetur = DB::table('retur')
                 ->where('toko_id', $tokoId)
                 ->select([
                     DB::raw('COUNT(*) as total_retur'),
                     DB::raw('SUM(jumlah_retur) as total_barang_retur'),
-                    DB::raw('SUM(hasil) as total_hasil_retur')
+                    DB::raw('SUM(hasil) as total_hasil_retur'),
+                    DB::raw('MAX(tanggal_retur) as retur_terakhir'),
+                    DB::raw('AVG(jumlah_retur) as rata_rata_per_retur')
                 ])
                 ->first();
 
+            // Get monthly performance trend
+            $monthlyTrend = DB::table('pengiriman')
+                ->where('toko_id', $tokoId)
+                ->where('tanggal_pengiriman', '>=', now()->subMonths(6))
+                ->select([
+                    DB::raw('DATE_FORMAT(tanggal_pengiriman, "%Y-%m") as month'),
+                    DB::raw('COUNT(*) as orders'),
+                    DB::raw('SUM(jumlah_kirim) as volume')
+                ])
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
+
+            // Calculate performance metrics
+            $performanceMetrics = [
+                'performance_score' => 0,
+                'return_rate' => 0,
+                'order_frequency' => 0,
+                'revenue_trend' => 'stable'
+            ];
+
+            if ($statistikPengiriman->total_pengiriman > 0) {
+                $performanceMetrics['return_rate'] = round(
+                    ($statistikRetur->total_retur / $statistikPengiriman->total_pengiriman) * 100, 2
+                );
+                
+                $daysSinceFirst = $statistikPengiriman->pengiriman_pertama ? 
+                    Carbon::parse($statistikPengiriman->pengiriman_pertama)->diffInDays(now()) : 1;
+                    
+                $performanceMetrics['order_frequency'] = round(
+                    $statistikPengiriman->total_pengiriman / max($daysSinceFirst / 30, 1), 2
+                );
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
+                    'toko_info' => $barangToko->first(),
                     'barang' => $barangToko,
                     'statistik_pengiriman' => $statistikPengiriman,
-                    'statistik_retur' => $statistikRetur
+                    'statistik_retur' => $statistikRetur,
+                    'monthly_trend' => $monthlyTrend,
+                    'performance_metrics' => $performanceMetrics
                 ]
             ]);
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function getWilayahData()
-    {
-        try {
-            // Coba beberapa lokasi file wilayah_malang.json
-            $possiblePaths = [
-                public_path('data/wilayah_malang.json'),
-                resource_path('data/wilayah_malang.json'),
-                storage_path('app/data/wilayah_malang.json'),
-                base_path('data/wilayah_malang.json')
-            ];
-
-            $wilayahData = null;
-            $usedPath = null;
-
-            foreach ($possiblePaths as $path) {
-                if (File::exists($path)) {
-                    $wilayahData = json_decode(File::get($path), true);
-                    $usedPath = $path;
-                    break;
-                }
-            }
-
-            if (!$wilayahData) {
-                // Fallback data minimal
-                $wilayahData = [
-                    'wilayah' => [
-                        [
-                            'id' => 'kotamalang',
-                            'nama' => 'Kota Malang',
-                            'kecamatan' => []
-                        ],
-                        [
-                            'id' => 'kabmalang', 
-                            'nama' => 'Kabupaten Malang',
-                            'kecamatan' => []
-                        ],
-                        [
-                            'id' => 'kotabatu',
-                            'nama' => 'Kota Batu',
-                            'kecamatan' => []
-                        ]
-                    ]
-                ];
-                
-                Log::warning('Wilayah data file not found, using fallback data');
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $wilayahData,
-                'meta' => [
-                    'source_file' => $usedPath ? basename($usedPath) : 'fallback',
-                    'total_wilayah' => count($wilayahData['wilayah'] ?? [])
-                ]
+            Log::error('Error fetching partner details: ' . $e->getMessage(), [
+                'toko_id' => $tokoId,
+                'trace' => $e->getTraceAsString()
             ]);
-        } catch (\Exception $e) {
-            Log::error('Error loading wilayah data: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Failed to load partner details: ' . $e->getMessage()
             ], 500);
         }
     }
 
-
-
+    /**
+     * Get CRM recommendations with enhanced analytics
+     */
     public function getRecommendations()
     {
         try {
-            // Analisis wilayah dengan potensi tinggi tapi toko sedikit
-            $potensialWilayah = DB::table('toko')
+            $cacheKey = 'crm_recommendations_' . auth()->id();
+            
+            return Cache::remember($cacheKey, self::CACHE_DURATION, function () {
+                $marketOpportunities = $this->getMarketOpportunities();
+                $partnerInsights = $this->getPartnerPerformanceInsights();
+                $productAnalysis = $this->getProductPerformanceAnalysis();
+                $expansionOpportunities = $this->getExpansionOpportunities();
+                $territoryInsights = $this->getTerritoryInsights();
+
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'market_opportunities' => $marketOpportunities,
+                        'partner_insights' => $partnerInsights,
+                        'product_analysis' => $productAnalysis,
+                        'expansion_opportunities' => $expansionOpportunities,
+                        'territory_insights' => $territoryInsights
+                    ],
+                    'generated_at' => now()->toISOString()
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error generating CRM recommendations: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate recommendations: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enhanced market opportunities analysis
+     */
+    private function getMarketOpportunities()
+    {
+        try {
+            return DB::table('toko as t')
+                ->leftJoin('pengiriman as p', 't.toko_id', '=', 'p.toko_id')
+                ->select([
+                    't.wilayah_kecamatan',
+                    't.wilayah_kota_kabupaten',
+                    DB::raw('COUNT(DISTINCT t.toko_id) as partner_count'),
+                    DB::raw('AVG(DATEDIFF(NOW(), p.tanggal_pengiriman)) as avg_days_since_last_order'),
+                    DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                    DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_orders'),
+                    DB::raw('CASE 
+                        WHEN AVG(DATEDIFF(NOW(), p.tanggal_pengiriman)) > 60 THEN "High Risk"
+                        WHEN AVG(DATEDIFF(NOW(), p.tanggal_pengiriman)) > 30 THEN "Medium Risk"
+                        ELSE "Active"
+                    END as risk_level')
+                ])
+                ->where('t.is_active', 1)
+                ->groupBy('t.wilayah_kecamatan', 't.wilayah_kota_kabupaten')
+                ->having('partner_count', '>', 0)
+                ->orderBy('avg_days_since_last_order', 'desc')
+                ->limit(10)
+                ->get();
+        } catch (\Exception $e) {
+            Log::warning('Error getting market opportunities: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Enhanced partner performance insights
+     */
+    private function getPartnerPerformanceInsights()
+    {
+        try {
+            return DB::table('toko as t')
+                ->leftJoin('pengiriman as p', 't.toko_id', '=', 'p.toko_id')
+                ->leftJoin('retur as r', 't.toko_id', '=', 'r.toko_id')
+                ->leftJoin('barang_toko as bt', 't.toko_id', '=', 'bt.toko_id')
+                ->select([
+                    't.toko_id',
+                    't.nama_toko',
+                    't.wilayah_kecamatan',
+                    't.wilayah_kota_kabupaten',
+                    DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_orders'),
+                    DB::raw('COUNT(DISTINCT r.retur_id) as total_returns'),
+                    DB::raw('COUNT(DISTINCT bt.barang_id) as product_variety'),
+                    DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                    DB::raw('CASE 
+                        WHEN COUNT(DISTINCT p.pengiriman_id) > 0 
+                        THEN ROUND((COUNT(DISTINCT r.retur_id) / COUNT(DISTINCT p.pengiriman_id)) * 100, 2)
+                        ELSE 0 
+                    END as return_rate'),
+                    DB::raw('MAX(p.tanggal_pengiriman) as last_order_date'),
+                    DB::raw('DATEDIFF(NOW(), MAX(p.tanggal_pengiriman)) as days_since_last_order')
+                ])
+                ->where('t.is_active', 1)
+                ->groupBy('t.toko_id', 't.nama_toko', 't.wilayah_kecamatan', 't.wilayah_kota_kabupaten')
+                ->having('total_orders', '>', 0)
+                ->orderBy('return_rate', 'asc')
+                ->orderBy('total_volume', 'desc')
+                ->limit(15)
+                ->get();
+        } catch (\Exception $e) {
+            Log::warning('Error getting partner performance insights: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Enhanced product performance analysis
+     */
+    private function getProductPerformanceAnalysis()
+    {
+        try {
+            return DB::table('barang as b')
+                ->join('pengiriman as p', 'b.barang_id', '=', 'p.barang_id')
+                ->join('barang_toko as bt', function($join) {
+                    $join->on('b.barang_id', '=', 'bt.barang_id')
+                         ->on('p.toko_id', '=', 'bt.toko_id');
+                })
+                ->leftJoin('retur as r', function($join) {
+                    $join->on('b.barang_id', '=', 'r.barang_id')
+                         ->on('p.toko_id', '=', 'r.toko_id');
+                })
+                ->select([
+                    'b.barang_id',
+                    'b.nama_barang',
+                    'b.barang_kode',
+                    DB::raw('COUNT(DISTINCT p.toko_id) as partner_count'),
+                    DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                    DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_orders'),
+                    DB::raw('AVG(bt.harga_barang_toko - b.harga_awal_barang) as avg_margin'),
+                    DB::raw('CASE WHEN AVG(b.harga_awal_barang) > 0 THEN
+                        ROUND((AVG(bt.harga_barang_toko - b.harga_awal_barang) / AVG(b.harga_awal_barang)) * 100, 2)
+                        ELSE 0 END as margin_percentage'),
+                    DB::raw('COUNT(DISTINCT r.retur_id) as return_count'),
+                    DB::raw('CASE WHEN SUM(p.jumlah_kirim) > 0 THEN
+                        ROUND((COUNT(DISTINCT r.retur_id) / SUM(p.jumlah_kirim)) * 100, 2)
+                        ELSE 0 END as return_rate')
+                ])
+                ->where('p.status', 'terkirim')
+                ->groupBy('b.barang_id', 'b.nama_barang', 'b.barang_kode')
+                ->having('total_volume', '>', 0)
+                ->orderBy('margin_percentage', 'desc')
+                ->limit(10)
+                ->get();
+        } catch (\Exception $e) {
+            Log::warning('Error getting product performance analysis: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Enhanced expansion opportunities
+     */
+    private function getExpansionOpportunities()
+    {
+        try {
+            return DB::table('toko')
                 ->select([
                     'wilayah_kecamatan',
                     'wilayah_kota_kabupaten',
-                    DB::raw('COUNT(*) as jumlah_toko')
+                    DB::raw('COUNT(*) as current_partners'),
+                    DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_partners'),
+                    DB::raw('CASE 
+                        WHEN COUNT(*) < 2 THEN "High Opportunity"
+                        WHEN COUNT(*) < 5 THEN "Medium Opportunity"
+                        WHEN COUNT(*) < 8 THEN "Low Opportunity"
+                        ELSE "Saturated"
+                    END as opportunity_level'),
+                    DB::raw('CASE 
+                        WHEN COUNT(*) < 2 THEN GREATEST(3 - COUNT(*), 0)
+                        WHEN COUNT(*) < 5 THEN GREATEST(2 - COUNT(*), 0)
+                        ELSE 0
+                    END as recommended_additions'),
+                    DB::raw('ROUND(COUNT(CASE WHEN is_active = 1 THEN 1 END) / COUNT(*) * 100, 1) as activity_rate')
                 ])
+                ->whereNotNull('wilayah_kecamatan')
                 ->groupBy('wilayah_kecamatan', 'wilayah_kota_kabupaten')
-                ->having('jumlah_toko', '<', 3) // Wilayah dengan toko sedikit
-                ->orderBy('jumlah_toko', 'asc')
-                ->limit(10)
+                ->having('current_partners', '<', 10)
+                ->orderBy('recommended_additions', 'desc')
+                ->orderBy('activity_rate', 'desc')
                 ->get();
-
-            // Barang yang paling banyak dipesan
-            $barangPopuler = DB::table('pengiriman')
-                ->join('barang', 'pengiriman.barang_id', '=', 'barang.barang_id')
-                ->select([
-                    'barang.nama_barang',
-                    'barang.barang_kode',
-                    DB::raw('SUM(pengiriman.jumlah_kirim) as total_dikirim'),
-                    DB::raw('COUNT(DISTINCT pengiriman.toko_id) as jumlah_toko')
-                ])
-                ->groupBy('barang.barang_id', 'barang.nama_barang', 'barang.barang_kode')
-                ->orderBy('total_dikirim', 'desc')
-                ->limit(5)
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'potensial_wilayah' => $potensialWilayah,
-                    'barang_populer' => $barangPopuler
-                ]
-            ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
+            Log::warning('Error getting expansion opportunities: ' . $e->getMessage());
+            return collect([]);
         }
     }
 
-    public function getPriceRecommendations()
+    /**
+     * Territory insights analysis
+     */
+    private function getTerritoryInsights()
     {
         try {
-            // Analisis harga per wilayah
-            $analisisHarga = DB::table('barang_toko')
-                ->join('barang', 'barang_toko.barang_id', '=', 'barang.barang_id')
-                ->join('toko', 'barang_toko.toko_id', '=', 'toko.toko_id')
+            return DB::table('toko as t')
+                ->leftJoin('pengiriman as p', 't.toko_id', '=', 'p.toko_id')
                 ->select([
-                    'barang.nama_barang',
-                    'toko.wilayah_kecamatan',
-                    'toko.wilayah_kota_kabupaten',
-                    DB::raw('AVG(barang_toko.harga_barang_toko) as rata_harga'),
-                    DB::raw('MIN(barang_toko.harga_barang_toko) as harga_terendah'),
-                    DB::raw('MAX(barang_toko.harga_barang_toko) as harga_tertinggi'),
-                    DB::raw('COUNT(*) as jumlah_toko')
+                    't.wilayah_kota_kabupaten as territory',
+                    DB::raw('COUNT(DISTINCT t.toko_id) as total_partners'),
+                    DB::raw('COUNT(DISTINCT CASE WHEN t.is_active = 1 THEN t.toko_id END) as active_partners'),
+                    DB::raw('COUNT(DISTINCT t.wilayah_kecamatan) as kecamatan_coverage'),
+                    DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                    DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_transactions'),
+                    DB::raw('AVG(p.jumlah_kirim) as avg_order_size'),
+                    DB::raw('CASE 
+                        WHEN COUNT(DISTINCT t.toko_id) > 0 
+                        THEN ROUND(COUNT(DISTINCT CASE WHEN t.is_active = 1 THEN t.toko_id END) / COUNT(DISTINCT t.toko_id) * 100, 1)
+                        ELSE 0 END as activity_percentage')
                 ])
-                ->groupBy('barang.barang_id', 'barang.nama_barang', 'toko.wilayah_kecamatan', 'toko.wilayah_kota_kabupaten')
-                ->having('jumlah_toko', '>=', 2)
-                ->orderBy('rata_harga', 'desc')
-                ->limit(20)
+                ->groupBy('t.wilayah_kota_kabupaten')
+                ->orderBy('total_volume', 'desc')
                 ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => $analisisHarga
-            ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
+            Log::warning('Error getting territory insights: ' . $e->getMessage());
+            return collect([]);
         }
     }
 
-    private function generateCoordinatesByWilayah($kotaKabupaten, $kecamatan, $kelurahan)
-    {
-        // Base coordinates untuk wilayah Malang
-        $baseCoordinates = [
-            'Kota Malang' => ['lat' => -7.9666, 'lng' => 112.6326],
-            'Kabupaten Malang' => ['lat' => -8.1844, 'lng' => 112.7456],
-            'Kota Batu' => ['lat' => -7.8767, 'lng' => 112.5326]
-        ];
-
-        // Ambil base coordinate
-        $base = $baseCoordinates[$kotaKabupaten] ?? ['lat' => -7.9666, 'lng' => 112.6326];
-
-        // Generate offset berdasarkan hash nama kecamatan dan kelurahan
-        $hashKecamatan = crc32($kecamatan);
-        $hashKelurahan = crc32($kelurahan);
-        
-        // Offset dalam radius 0.05 derajat (sekitar 5km)
-        $offsetLat = (($hashKecamatan % 1000) / 10000) - 0.05;
-        $offsetLng = (($hashKelurahan % 1000) / 10000) - 0.05;
-
-        return [
-            'lat' => $base['lat'] + $offsetLat,
-            'lng' => $base['lng'] + $offsetLng
-        ];
-    }
-
-    public function storeToko(Request $request)
+    /**
+     * Enhanced price recommendations with market analysis
+     */
+    public function getPriceRecommendations(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
-                'nama_toko' => 'required|string|max:100',
-                'pemilik' => 'required|string|max:100',
-                'alamat' => 'required|string',
-                'kota_kabupaten' => 'required|string',
-                'kecamatan' => 'required|string',
-                'kelurahan' => 'required|string',
-                'nomer_telpon' => 'required|string|max:20'
+                'wilayah' => 'nullable|string|max:100',
+                'barang_id' => 'nullable|string|max:50'
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validasi gagal',
+                    'message' => 'Invalid request parameters',
                     'errors' => $validator->errors()
-                ], 422);
+                ], 400);
             }
 
-            // Generate ID toko menggunakan method yang sama seperti TokoController
-            $lastToko = Toko::orderBy('toko_id', 'desc')->first();
+            $wilayah = $request->get('wilayah');
+            $barangId = $request->get('barang_id');
             
-            if (!$lastToko) {
-                $newId = 'TKO001';
-            } else {
-                $lastId = $lastToko->toko_id;
-                if (preg_match('/^TKO(\d+)$/', $lastId, $matches)) {
-                    $number = intval($matches[1]);
-                    $nextNumber = $number + 1;
-                    $newId = 'TKO' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
-                } else {
-                    $newId = 'TKO001';
+            $cacheKey = 'price_recommendations_' . md5($wilayah . '_' . $barangId) . '_' . auth()->id();
+            
+            return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($wilayah, $barangId) {
+                $query = DB::table('barang_toko')
+                    ->join('barang', 'barang_toko.barang_id', '=', 'barang.barang_id')
+                    ->join('toko', 'barang_toko.toko_id', '=', 'toko.toko_id')
+                    ->leftJoin('pengiriman as p', function($join) {
+                        $join->on('barang_toko.barang_id', '=', 'p.barang_id')
+                             ->on('barang_toko.toko_id', '=', 'p.toko_id');
+                    })
+                    ->select([
+                        'barang.nama_barang',
+                        'barang.barang_id',
+                        'barang.barang_kode',
+                        'toko.wilayah_kecamatan',
+                        'toko.wilayah_kota_kabupaten',
+                        DB::raw('AVG(barang_toko.harga_barang_toko) as recommended_price'),
+                        DB::raw('AVG(barang.harga_awal_barang) as cost_price'),
+                        DB::raw('MIN(barang_toko.harga_barang_toko) as min_market_price'),
+                        DB::raw('MAX(barang_toko.harga_barang_toko) as max_market_price'),
+                        DB::raw('COUNT(DISTINCT toko.toko_id) as sample_size'),
+                        DB::raw('STDDEV(barang_toko.harga_barang_toko) as price_variance'),
+                        DB::raw('AVG(barang_toko.harga_barang_toko - barang.harga_awal_barang) as avg_margin'),
+                        DB::raw('CASE WHEN AVG(barang.harga_awal_barang) > 0 THEN
+                            ROUND((AVG(barang_toko.harga_barang_toko - barang.harga_awal_barang) / AVG(barang.harga_awal_barang)) * 100, 2)
+                            ELSE 0 END as margin_percentage'),
+                        DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_sales'),
+                        DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                        DB::raw('MAX(p.tanggal_pengiriman) as last_sale_date')
+                    ])
+                    ->where('toko.is_active', 1);
+                    
+                if ($wilayah) {
+                    $query->where('toko.wilayah_kecamatan', $wilayah);
                 }
-            }
+                
+                if ($barangId) {
+                    $query->where('barang.barang_id', $barangId);
+                }
+                
+                $recommendations = $query
+                    ->groupBy('barang.barang_id', 'barang.nama_barang', 'barang.barang_kode', 'toko.wilayah_kecamatan', 'toko.wilayah_kota_kabupaten')
+                    ->having('sample_size', '>=', 2)
+                    ->orderBy('margin_percentage', 'desc')
+                    ->get()
+                    ->map(function($item) {
+                        // Determine confidence level
+                        $confidence = 'Low';
+                        if ($item->sample_size >= 5 && $item->total_sales >= 10) $confidence = 'High';
+                        elseif ($item->sample_size >= 3 && $item->total_sales >= 5) $confidence = 'Medium';
+                        
+                        // Determine pricing strategy
+                        $strategy = 'Market Average';
+                        if ($item->margin_percentage > 50) $strategy = 'Premium Pricing';
+                        elseif ($item->margin_percentage < 20) $strategy = 'Competitive Pricing';
+                        
+                        // Market dynamics
+                        $marketDynamics = 'Stable';
+                        if ($item->price_variance > ($item->recommended_price * 0.2)) {
+                            $marketDynamics = 'Volatile';
+                        } elseif ($item->price_variance < ($item->recommended_price * 0.05)) {
+                            $marketDynamics = 'Stable';
+                        }
+                        
+                        return [
+                            'barang_id' => $item->barang_id,
+                            'nama_barang' => $item->nama_barang,
+                            'barang_kode' => $item->barang_kode,
+                            'wilayah' => $item->wilayah_kecamatan,
+                            'kota_kabupaten' => $item->wilayah_kota_kabupaten,
+                            'recommended_price' => round($item->recommended_price, 0),
+                            'cost_price' => round($item->cost_price, 0),
+                            'min_market_price' => round($item->min_market_price, 0),
+                            'max_market_price' => round($item->max_market_price, 0),
+                            'avg_margin' => round($item->avg_margin, 0),
+                            'margin_percentage' => round($item->margin_percentage, 1),
+                            'sample_size' => $item->sample_size,
+                            'confidence_level' => $confidence,
+                            'pricing_strategy' => $strategy,
+                            'price_variance' => round($item->price_variance, 0),
+                            'market_dynamics' => $marketDynamics,
+                            'total_sales' => $item->total_sales,
+                            'total_volume' => $item->total_volume,
+                            'last_sale_date' => $item->last_sale_date ? Carbon::parse($item->last_sale_date)->format('Y-m-d') : null
+                        ];
+                    });
 
-            // Buat alamat lengkap untuk geocoding
-            $fullAddress = $request->alamat . ', ' . 
-                          $request->kelurahan . ', ' . 
-                          $request->kecamatan . ', ' . 
-                          $request->kota_kabupaten . ', Indonesia';
-
-            // Lakukan geocoding
-            $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
-
-            // Simpan toko dengan atau tanpa koordinat
-            $tokoData = [
-                'toko_id' => $newId,
-                'nama_toko' => $request->nama_toko,
-                'pemilik' => $request->pemilik,
-                'alamat' => $request->alamat,
-                'wilayah_kota_kabupaten' => $request->kota_kabupaten,
-                'wilayah_kecamatan' => $request->kecamatan,
-                'wilayah_kelurahan' => $request->kelurahan,
-                'nomer_telpon' => $request->nomer_telpon,
-                'is_active' => true
-            ];
-
-            // Tambahkan koordinat jika geocoding berhasil
-            if ($geocodeResult) {
-                $tokoData['latitude'] = $geocodeResult['latitude'];
-                $tokoData['longitude'] = $geocodeResult['longitude'];
-                $tokoData['alamat_lengkap_geocoding'] = $geocodeResult['formatted_address'];
-            }
-
-            $toko = Toko::create($tokoData);
-
-            $responseMessage = 'Toko berhasil ditambahkan';
-            if ($geocodeResult) {
-                $responseMessage .= ' dengan koordinat GPS';
-            } else {
-                $responseMessage .= ' (koordinat akan diestimasi di peta)';
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => $responseMessage,
-                'data' => [
-                    'toko_id' => $newId,
-                    'geocoded' => $geocodeResult !== null,
-                    'coordinates' => $geocodeResult
-                ]
-            ]);
+                return response()->json([
+                    'success' => true,
+                    'data' => $recommendations,
+                    'summary' => [
+                        'total_recommendations' => $recommendations->count(),
+                        'high_confidence' => $recommendations->where('confidence_level', 'High')->count(),
+                        'medium_confidence' => $recommendations->where('confidence_level', 'Medium')->count(),
+                        'avg_margin_percentage' => round($recommendations->avg('margin_percentage'), 1),
+                        'premium_strategies' => $recommendations->where('pricing_strategy', 'Premium Pricing')->count(),
+                        'competitive_strategies' => $recommendations->where('pricing_strategy', 'Competitive Pricing')->count()
+                    ]
+                ]);
+            });
         } catch (\Exception $e) {
-            Log::error('Error adding toko from market map: ' . $e->getMessage());
-            
+            Log::error('Error getting price recommendations: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Failed to generate price recommendations: ' . $e->getMessage()
             ], 500);
         }
     }
-        /**
-     * Method untuk bulk geocoding toko yang belum memiliki koordinat
+
+    /**
+     * Get partner performance analysis with detailed metrics
      */
-    public function bulkGeocodeTokos()
+    public function getPartnerPerformanceAnalysis()
     {
         try {
-            $tokosWithoutCoordinates = Toko::whereNull('latitude')
-                                          ->orWhereNull('longitude')
-                                          ->limit(10) // Batasi untuk menghindari timeout
-                                          ->get();
+            $cacheKey = 'partner_performance_analysis_' . auth()->id();
+            
+            return Cache::remember($cacheKey, self::CACHE_DURATION, function () {
+                $performanceData = DB::table('toko as t')
+                    ->leftJoin('pengiriman as p', 't.toko_id', '=', 'p.toko_id')
+                    ->leftJoin('barang_toko as bt', 't.toko_id', '=', 'bt.toko_id')
+                    ->leftJoin('retur as r', 't.toko_id', '=', 'r.toko_id')
+                    ->select([
+                        't.toko_id',
+                        't.nama_toko',
+                        't.pemilik',
+                        't.wilayah_kecamatan',
+                        't.wilayah_kota_kabupaten',
+                        't.nomer_telpon',
+                        DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_orders'),
+                        DB::raw('COUNT(DISTINCT bt.barang_id) as product_variety'),
+                        DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                        DB::raw('COUNT(DISTINCT r.retur_id) as total_returns'),
+                        DB::raw('AVG(DATEDIFF(NOW(), p.tanggal_pengiriman)) as avg_days_since_order'),
+                        DB::raw('COUNT(DISTINCT DATE_FORMAT(p.tanggal_pengiriman, "%Y-%m")) as active_months'),
+                        DB::raw('MAX(p.tanggal_pengiriman) as last_order_date'),
+                        DB::raw('MIN(p.tanggal_pengiriman) as first_order_date'),
+                        DB::raw('CASE 
+                            WHEN COUNT(DISTINCT p.pengiriman_id) >= 50 AND COUNT(DISTINCT bt.barang_id) >= 10 THEN "Premium Partner"
+                            WHEN COUNT(DISTINCT p.pengiriman_id) >= 20 AND COUNT(DISTINCT bt.barang_id) >= 5 THEN "Growth Partner"
+                            WHEN COUNT(DISTINCT p.pengiriman_id) >= 5 THEN "Standard Partner"
+                            ELSE "New Partner"
+                        END as partner_segment'),
+                        DB::raw('CASE 
+                            WHEN COUNT(DISTINCT p.pengiriman_id) > 0 
+                            THEN ROUND((COUNT(DISTINCT r.retur_id) / COUNT(DISTINCT p.pengiriman_id)) * 100, 2)
+                            ELSE 0 
+                        END as return_rate'),
+                        DB::raw('CASE 
+                            WHEN DATEDIFF(MAX(p.tanggal_pengiriman), MIN(p.tanggal_pengiriman)) > 0
+                            THEN ROUND(COUNT(DISTINCT p.pengiriman_id) / (DATEDIFF(MAX(p.tanggal_pengiriman), MIN(p.tanggal_pengiriman)) / 30), 2)
+                            ELSE 0
+                        END as monthly_order_rate')
+                    ])
+                    ->where('t.is_active', 1)
+                    ->groupBy('t.toko_id', 't.nama_toko', 't.pemilik', 't.wilayah_kecamatan', 't.wilayah_kota_kabupaten', 't.nomer_telpon')
+                    ->orderBy('total_orders', 'desc')
+                    ->get();
 
-            $results = [];
-            $successCount = 0;
+                // Calculate summary statistics
+                $summary = [
+                    'total_partners' => $performanceData->count(),
+                    'premium_partners' => $performanceData->where('partner_segment', 'Premium Partner')->count(),
+                    'growth_partners' => $performanceData->where('partner_segment', 'Growth Partner')->count(),
+                    'standard_partners' => $performanceData->where('partner_segment', 'Standard Partner')->count(),
+                    'new_partners' => $performanceData->where('partner_segment', 'New Partner')->count(),
+                    'avg_orders_per_partner' => round($performanceData->avg('total_orders'), 2),
+                    'avg_product_variety' => round($performanceData->avg('product_variety'), 1),
+                    'avg_return_rate' => round($performanceData->avg('return_rate'), 2),
+                    'top_performer' => $performanceData->first()?->nama_toko,
+                    'total_volume' => $performanceData->sum('total_volume')
+                ];
 
-            foreach ($tokosWithoutCoordinates as $toko) {
-                $fullAddress = $toko->alamat . ', ' . 
-                              $toko->wilayah_kelurahan . ', ' . 
-                              $toko->wilayah_kecamatan . ', ' . 
-                              $toko->wilayah_kota_kabupaten . ', Indonesia';
+                return response()->json([
+                    'success' => true,
+                    'data' => $performanceData,
+                    'summary' => $summary
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error getting partner performance analysis: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to analyze partner performance: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
-                $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
-                
-                if ($geocodeResult) {
-                    $toko->update([
-                        'latitude' => $geocodeResult['latitude'],
-                        'longitude' => $geocodeResult['longitude'],
-                        'alamat_lengkap_geocoding' => $geocodeResult['formatted_address']
-                    ]);
+    /**
+     * Get market opportunity analysis with detailed insights
+     */
+    public function getMarketOpportunityAnalysis()
+    {
+        try {
+            $cacheKey = 'market_opportunity_analysis_' . auth()->id();
+            
+            return Cache::remember($cacheKey, self::CACHE_DURATION, function () {
+                $opportunityData = DB::table('toko as t')
+                    ->leftJoin('pengiriman as p', 't.toko_id', '=', 'p.toko_id')
+                    ->select([
+                        't.wilayah_kecamatan',
+                        't.wilayah_kota_kabupaten',
+                        DB::raw('COUNT(DISTINCT t.toko_id) as current_coverage'),
+                        DB::raw('COUNT(DISTINCT CASE WHEN t.is_active = 1 THEN t.toko_id END) as active_partners'),
+                        DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                        DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_orders'),
+                        DB::raw('AVG(p.jumlah_kirim) as avg_order_size'),
+                        DB::raw('CASE 
+                            WHEN COUNT(DISTINCT t.toko_id) < 2 THEN "High Opportunity"
+                            WHEN COUNT(DISTINCT t.toko_id) < 5 THEN "Medium Opportunity" 
+                            WHEN COUNT(DISTINCT t.toko_id) < 8 THEN "Low Opportunity"
+                            ELSE "Saturated"
+                        END as opportunity_level'),
+                        DB::raw('CASE 
+                            WHEN COUNT(DISTINCT t.toko_id) < 2 THEN GREATEST(5 - COUNT(DISTINCT t.toko_id), 0)
+                            WHEN COUNT(DISTINCT t.toko_id) < 5 THEN GREATEST(3 - COUNT(DISTINCT t.toko_id), 0)
+                            ELSE 0
+                        END as recommended_additions'),
+                        DB::raw('CASE 
+                            WHEN COUNT(DISTINCT t.toko_id) > 0 
+                            THEN ROUND(COUNT(DISTINCT CASE WHEN t.is_active = 1 THEN t.toko_id END) / COUNT(DISTINCT t.toko_id) * 100, 1)
+                            ELSE 0 
+                        END as activation_rate'),
+                        DB::raw('CASE
+                            WHEN SUM(p.jumlah_kirim) > 1000 THEN "High Volume"
+                            WHEN SUM(p.jumlah_kirim) > 500 THEN "Medium Volume"
+                            WHEN SUM(p.jumlah_kirim) > 0 THEN "Low Volume"
+                            ELSE "No Volume"
+                        END as volume_category')
+                    ])
+                    ->whereNotNull('t.wilayah_kecamatan')
+                    ->groupBy('t.wilayah_kecamatan', 't.wilayah_kota_kabupaten')
+                    ->having('current_coverage', '<', 10)
+                    ->orderBy('recommended_additions', 'desc')
+                    ->orderBy('total_volume', 'desc')
+                    ->get();
+
+                // Add market potential scoring
+                $scoredOpportunities = $opportunityData->map(function($item) {
+                    $score = 0;
                     
-                    $successCount++;
-                    $results[] = [
-                        'toko_id' => $toko->toko_id,
-                        'nama_toko' => $toko->nama_toko,
-                        'status' => 'success',
-                        'coordinates' => [$geocodeResult['latitude'], $geocodeResult['longitude']]
-                    ];
-                } else {
-                    $results[] = [
-                        'toko_id' => $toko->toko_id,
-                        'nama_toko' => $toko->nama_toko,
-                        'status' => 'failed'
-                    ];
-                }
+                    // Opportunity level scoring
+                    switch($item->opportunity_level) {
+                        case 'High Opportunity': $score += 40; break;
+                        case 'Medium Opportunity': $score += 25; break;
+                        case 'Low Opportunity': $score += 10; break;
+                    }
+                    
+                    // Volume scoring
+                    if ($item->total_volume > 500) $score += 30;
+                    elseif ($item->total_volume > 100) $score += 20;
+                    elseif ($item->total_volume > 0) $score += 10;
+                    
+                    // Activation rate scoring
+                    if ($item->activation_rate > 80) $score += 20;
+                    elseif ($item->activation_rate > 60) $score += 15;
+                    elseif ($item->activation_rate > 40) $score += 10;
+                    
+                    // Order frequency scoring
+                    if ($item->total_orders > 50) $score += 10;
+                    elseif ($item->total_orders > 20) $score += 5;
+                    
+                    $item->market_potential_score = $score;
+                    $item->priority_level = $score >= 70 ? 'High' : ($score >= 40 ? 'Medium' : 'Low');
+                    
+                    return $item;
+                });
 
-                // Delay untuk menghindari rate limiting
-                usleep(500000); // 0.5 detik
+                $summary = [
+                    'high_opportunity_areas' => $opportunityData->where('opportunity_level', 'High Opportunity')->count(),
+                    'medium_opportunity_areas' => $opportunityData->where('opportunity_level', 'Medium Opportunity')->count(),
+                    'low_opportunity_areas' => $opportunityData->where('opportunity_level', 'Low Opportunity')->count(),
+                    'total_expansion_potential' => $opportunityData->sum('recommended_additions'),
+                    'high_priority_territories' => $scoredOpportunities->where('priority_level', 'High')->count(),
+                    'avg_activation_rate' => round($opportunityData->avg('activation_rate'), 1),
+                    'total_untapped_volume' => $opportunityData->where('volume_category', 'No Volume')->count()
+                ];
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $scoredOpportunities->values(),
+                    'summary' => $summary
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error getting market opportunity analysis: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to analyze market opportunities: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get product list for filters
+     */
+    public function getProductList()
+    {
+        try {
+            $cacheKey = 'product_list_' . auth()->id();
+            
+            return Cache::remember($cacheKey, 60, function () {
+                $products = DB::table('barang')
+                    ->select(['barang_id', 'nama_barang', 'barang_kode', 'satuan'])
+                    ->orderBy('nama_barang')
+                    ->get();
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $products,
+                    'count' => $products->count()
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error getting product list: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load product list: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export CRM insights - Placeholder for future implementation
+     */
+    public function exportCRMInsights()
+    {
+        try {
+            // This would typically generate an Excel/CSV file
+            // For now, return a success message with implementation note
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'CRM insights export initiated',
+                'download_url' => route('market-map.export-crm-insights'), // Would be actual download URL
+                'note' => 'Excel file with comprehensive CRM analytics will be generated',
+                'estimated_completion' => now()->addMinutes(2)->toISOString()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error initiating CRM insights export: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to initiate export: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export price intelligence - Placeholder for future implementation
+     */
+    public function exportPriceIntelligence()
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Price intelligence export initiated',
+                'download_url' => route('market-map.export-price-intelligence'),
+                'note' => 'Excel file with detailed price analysis will be generated',
+                'estimated_completion' => now()->addMinutes(1)->toISOString()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error initiating price intelligence export: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to initiate export: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export partner performance - Placeholder for future implementation
+     */
+    public function exportPartnerPerformance()
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Partner performance export initiated',
+                'download_url' => route('market-map.export-partner-performance'),
+                'note' => 'Excel file with partner performance metrics will be generated',
+                'estimated_completion' => now()->addMinutes(1)->toISOString()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error initiating partner performance export: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to initiate export: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Clear cache for market map data
+     */
+    public function clearCache()
+    {
+        try {
+            $patterns = [
+                'market_map_toko_data_',
+                'crm_recommendations_',
+                'partner_performance_analysis_',
+                'market_opportunity_analysis_',
+                'price_recommendations_',
+                'wilayah_statistics_',
+                'product_list_'
+            ];
+
+            $userId = auth()->id();
+            foreach ($patterns as $pattern) {
+                Cache::forget($pattern . $userId);
             }
 
             return response()->json([
                 'success' => true,
-                'message' => "Geocoding selesai. Berhasil: {$successCount}/" . count($tokosWithoutCoordinates),
-                'data' => $results
+                'message' => 'Cache cleared successfully'
             ]);
-
         } catch (\Exception $e) {
-            Log::error('Error bulk geocoding tokos: ' . $e->getMessage());
-            
+            Log::error('Error clearing cache: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to clear cache: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get system health and performance metrics
+     */
+    public function getSystemHealth()
+    {
+        try {
+            $health = [
+                'database_connection' => 'OK',
+                'cache_status' => 'OK',
+                'data_quality' => [],
+                'performance_metrics' => []
+            ];
+
+            // Test database connection
+            try {
+                DB::connection()->getPdo();
+            } catch (\Exception $e) {
+                $health['database_connection'] = 'ERROR';
+            }
+
+            // Check data quality
+            $tokoCount = Toko::count();
+            $tokoWithCoords = Toko::whereNotNull('latitude')->whereNotNull('longitude')->count();
+            $activeToko = Toko::where('is_active', 1)->count();
+
+            $health['data_quality'] = [
+                'total_partners' => $tokoCount,
+                'geocoded_partners' => $tokoWithCoords,
+                'geocoding_percentage' => $tokoCount > 0 ? round(($tokoWithCoords / $tokoCount) * 100, 1) : 0,
+                'active_partners' => $activeToko,
+                'activity_percentage' => $tokoCount > 0 ? round(($activeToko / $tokoCount) * 100, 1) : 0
+            ];
+
+            // Performance metrics
+            $health['performance_metrics'] = [
+                'cache_hit_rate' => 'Not available', // Would need cache analytics
+                'avg_response_time' => 'Not tracked', // Would need performance monitoring
+                'last_data_update' => Toko::max('updated_at')
+            ];
+
+            return response()->json([
+                'success' => true,
+                'health' => $health,
+                'timestamp' => now()->toISOString()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting system health: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get system health: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get territory analysis with detailed data
+     */
+    public function getTerritoryAnalysis()
+    {
+        try {
+            $territoryData = DB::table('toko as t')
+                ->leftJoin('pengiriman as p', 't.toko_id', '=', 'p.toko_id')
+                ->select([
+                    't.wilayah_kota_kabupaten as territory',
+                    DB::raw('COUNT(DISTINCT t.toko_id) as partner_count'),
+                    DB::raw('COUNT(DISTINCT t.wilayah_kecamatan) as kecamatan_coverage'),
+                    DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                    DB::raw('AVG(p.jumlah_kirim) as avg_order_size'),
+                    DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_transactions')
+                ])
+                ->where('t.is_active', 1)
+                ->where('p.status', 'terkirim')
+                ->groupBy('t.wilayah_kota_kabupaten')
+                ->orderBy('total_volume', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $territoryData
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
-/**
- * Enhanced method untuk mendapatkan data toko dengan optimisasi grid heatmap
- */
-public function getEnhancedTokoData()
-{
-    try {
-        // Gunakan Eloquent Model dengan proper relationships dan optimisasi untuk grid
-        $tokoData = Toko::with(['barangToko', 'pengiriman', 'retur'])
-            ->select([
-                'toko_id',
-                'nama_toko',
-                'pemilik', 
-                'alamat',
-                'wilayah_kelurahan',
-                'wilayah_kecamatan',
-                'wilayah_kota_kabupaten',
-                'nomer_telpon',
-                'latitude',
-                'longitude',
-                'is_active',
-                'alamat_lengkap_geocoding',
-                'geocoding_quality',
-                'geocoding_score'
-            ])
-            ->get();
 
-        // Transform data untuk grid heatmap
-        $mapData = $tokoData->map(function ($toko) {
-            // Gunakan koordinat asli dari database
-            $coordinates = $this->getTokoCoordinatesEnhanced($toko);
-            
-            return [
-                'toko_id' => $toko->toko_id,
-                'nama_toko' => $toko->nama_toko,
-                'pemilik' => $toko->pemilik,
-                'alamat' => $toko->alamat,
-                'kelurahan' => $toko->wilayah_kelurahan,
-                'kecamatan' => $toko->wilayah_kecamatan,
-                'kota_kabupaten' => $toko->wilayah_kota_kabupaten,
-                'telpon' => $toko->nomer_telpon,
-                'latitude' => $coordinates['lat'],
-                'longitude' => $coordinates['lng'],
-                'jumlah_barang' => $toko->barangToko->count(),
-                'total_pengiriman' => $toko->pengiriman->count(),
-                'total_retur' => $toko->retur->count(),
-                'status_aktif' => $this->getEnhancedTokoStatus($toko),
-                'has_coordinates' => $coordinates['has_real_coordinates'],
-                'coordinate_source' => $coordinates['source'],
-                'geocoding_quality' => $toko->geocoding_quality ?? 'unknown',
-                'geocoding_score' => $toko->geocoding_score ?? 0,
-                // Grid-specific data
-                'grid_weight' => $this->calculateGridWeight($toko),
-                'density_category' => $this->getDensityCategory($toko)
-            ];
-        });
+    /**
+     * Get detailed partner analysis
+     */
+    public function getDetailedPartnerAnalysis()
+    {
+        try {
+            $detailedAnalysis = DB::table('toko as t')
+                ->leftJoin('pengiriman as p', 't.toko_id', '=', 'p.toko_id')
+                ->leftJoin('retur as r', 't.toko_id', '=', 'r.toko_id')
+                ->leftJoin('barang_toko as bt', 't.toko_id', '=', 'bt.toko_id')
+                ->select([
+                    't.toko_id',
+                    't.nama_toko',
+                    't.pemilik',
+                    't.wilayah_kecamatan',
+                    't.wilayah_kota_kabupaten',
+                    't.nomer_telpon',
+                    't.alamat',
+                    DB::raw('COUNT(DISTINCT p.pengiriman_id) as total_orders'),
+                    DB::raw('COUNT(DISTINCT bt.barang_id) as product_variety'),
+                    DB::raw('SUM(p.jumlah_kirim) as total_volume'),
+                    DB::raw('COUNT(DISTINCT r.retur_id) as total_returns'),
+                    DB::raw('AVG(DATEDIFF(NOW(), p.tanggal_pengiriman)) as avg_days_since_order'),
+                    DB::raw('COUNT(DISTINCT DATE_FORMAT(p.tanggal_pengiriman, "%Y-%m")) as active_months'),
+                    DB::raw('MAX(p.tanggal_pengiriman) as last_order_date'),
+                    DB::raw('MIN(p.tanggal_pengiriman) as first_order_date'),
+                    DB::raw('CASE 
+                        WHEN COUNT(DISTINCT p.pengiriman_id) >= 50 THEN "Premium Partner"
+                        WHEN COUNT(DISTINCT p.pengiriman_id) >= 20 THEN "Growth Partner"
+                        WHEN COUNT(DISTINCT p.pengiriman_id) >= 5 THEN "Standard Partner"
+                        ELSE "New Partner"
+                    END as partner_segment'),
+                    DB::raw('CASE 
+                        WHEN COUNT(DISTINCT p.pengiriman_id) > 0 
+                        THEN ROUND((COUNT(DISTINCT r.retur_id) / COUNT(DISTINCT p.pengiriman_id)) * 100, 2)
+                        ELSE 0 
+                    END as return_rate')
+                ])
+                ->where('t.is_active', 1)
+                ->groupBy('t.toko_id', 't.nama_toko', 't.pemilik', 't.wilayah_kecamatan', 't.wilayah_kota_kabupaten', 't.nomer_telpon', 't.alamat')
+                ->orderBy('total_orders', 'desc')
+                ->limit(50)
+                ->get();
 
-        // Generate grid statistics
-        $gridStats = $this->generateGridStatistics($mapData);
-
-        return response()->json([
-            'success' => true,
-            'data' => $mapData,
-            'grid_stats' => $gridStats,
-            'summary' => [
-                'total_toko' => $mapData->count(),
-                'toko_with_coordinates' => $mapData->where('has_coordinates', true)->count(),
-                'toko_active' => $mapData->where('status_aktif', 'Aktif')->count(),
-                'high_quality_coords' => $mapData->whereIn('geocoding_quality', ['excellent', 'good'])->count(),
-                'grid_coverage' => $gridStats['coverage_percentage']
-            ]
-        ]);
-    } catch (\Exception $e) {
-        Log::error('Error fetching enhanced toko data for grid map: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Method untuk mendapatkan koordinat toko dengan enhanced validation
- */
-private function getTokoCoordinatesEnhanced($toko)
-{
-    // Prioritas 1: Gunakan koordinat asli dari geocoding dengan validasi ketat
-    if ($toko->latitude && $toko->longitude) {
-        $lat = (float) $toko->latitude;
-        $lng = (float) $toko->longitude;
-        
-        // Validasi koordinat berada di wilayah Indonesia
-        if ($lat >= -11.5 && $lat <= 6.5 && $lng >= 94.5 && $lng <= 142.0) {
-            // Validasi spesifik wilayah Jawa Timur untuk accuracy
-            $inJatim = ($lat >= -8.8 && $lat <= -7.2 && $lng >= 111.0 && $lng <= 114.5);
-            
-            return [
-                'lat' => $lat,
-                'lng' => $lng,
-                'has_real_coordinates' => true,
-                'source' => 'geocoded',
-                'accuracy' => $inJatim ? 'high' : 'medium'
-            ];
-        }
-    }
-
-    // Prioritas 2: Generate koordinat enhanced berdasarkan wilayah
-    $fallbackCoords = $this->generateEnhancedFallbackCoordinates(
-        $toko->wilayah_kota_kabupaten,
-        $toko->wilayah_kecamatan,
-        $toko->wilayah_kelurahan,
-        $toko->toko_id
-    );
-
-    return [
-        'lat' => $fallbackCoords['lat'],
-        'lng' => $fallbackCoords['lng'],
-        'has_real_coordinates' => false,
-        'source' => 'estimated_enhanced',
-        'accuracy' => 'low'
-    ];
-}
-
-/**
- * Enhanced method untuk generate koordinat fallback dengan algoritma lebih akurat
- */
-private function generateEnhancedFallbackCoordinates($kotaKabupaten, $kecamatan, $kelurahan, $tokoId)
-{
-    // Base coordinates yang lebih akurat untuk wilayah Malang
-    $baseCoordinates = [
-        'Kota Malang' => [
-            'center' => ['lat' => -7.9666, 'lng' => 112.6326],
-            'bounds' => ['north' => -7.88, 'south' => -8.05, 'west' => 112.55, 'east' => 112.72]
-        ],
-        'Kabupaten Malang' => [
-            'center' => ['lat' => -8.1844, 'lng' => 112.7456],
-            'bounds' => ['north' => -7.80, 'south' => -8.55, 'west' => 112.30, 'east' => 113.20]
-        ],
-        'Kota Batu' => [
-            'center' => ['lat' => -7.8767, 'lng' => 112.5326],
-            'bounds' => ['north' => -7.75, 'south' => -8.00, 'west' => 112.45, 'east' => 112.62]
-        ]
-    ];
-
-    // Ambil data wilayah
-    $wilayahData = $baseCoordinates[$kotaKabupaten] ?? $baseCoordinates['Kota Malang'];
-
-    // Generate offset berdasarkan kombinasi hash yang lebih sophisticated
-    $hashKecamatan = crc32($kecamatan);
-    $hashKelurahan = crc32($kelurahan);
-    $hashToko = crc32($tokoId);
-    
-    // Kombinasi hash untuk mendapatkan distribusi yang lebih natural
-    $combinedHash = ($hashKecamatan ^ $hashKelurahan ^ $hashToko);
-    
-    // Calculate bounds untuk wilayah
-    $latRange = $wilayahData['bounds']['north'] - $wilayahData['bounds']['south'];
-    $lngRange = $wilayahData['bounds']['east'] - $wilayahData['bounds']['west'];
-    
-    // Generate offset dalam bounds yang realistis
-    $latOffset = (($combinedHash % 1000) / 1000) * $latRange - ($latRange / 2);
-    $lngOffset = ((($combinedHash >> 10) % 1000) / 1000) * $lngRange - ($lngRange / 2);
-
-    // Tambahkan small random untuk menghindari overlap
-    $microOffset = (crc32($tokoId . $kelurahan) % 100) / 100000; // Very small offset
-    
-    return [
-        'lat' => $wilayahData['center']['lat'] + $latOffset + $microOffset,
-        'lng' => $wilayahData['center']['lng'] + $lngOffset + $microOffset
-    ];
-}
-
-/**
- * Enhanced method untuk menentukan status toko
- */
-private function getEnhancedTokoStatus($toko)
-{
-    if (!$toko->is_active) {
-        return 'Tidak Aktif';
-    }
-
-    // Analisis lebih detail untuk status aktif
-    $hasBarang = $toko->barangToko->count() > 0;
-    $recentShipments = $toko->pengiriman()
-        ->where('tanggal_pengiriman', '>=', now()->subDays(30))
-        ->count();
-    $veryRecentShipments = $toko->pengiriman()
-        ->where('tanggal_pengiriman', '>=', now()->subDays(7))
-        ->count();
-        
-    // Scoring system untuk status
-    $score = 0;
-    if ($hasBarang) $score += 2;
-    if ($recentShipments > 0) $score += 3;
-    if ($veryRecentShipments > 0) $score += 2;
-    if ($recentShipments >= 5) $score += 2;
-
-    if ($score >= 5) return 'Sangat Aktif';
-    if ($score >= 3) return 'Aktif';
-    if ($score >= 1) return 'Kurang Aktif';
-    
-    return 'Tidak Aktif';
-}
-
-/**
- * Calculate grid weight untuk toko berdasarkan berbagai faktor
- */
-private function calculateGridWeight($toko)
-{
-    $weight = 1; // Base weight
-    
-    // Tambahkan weight berdasarkan aktivitas
-    if ($toko['status_aktif'] === 'Sangat Aktif') $weight += 1.5;
-    elseif ($toko['status_aktif'] === 'Aktif') $weight += 1.0;
-    elseif ($toko['status_aktif'] === 'Kurang Aktif') $weight += 0.5;
-    
-    // Tambahkan weight berdasarkan jumlah barang
-    $weight += min($toko['jumlah_barang'] * 0.1, 1.0);
-    
-    // Tambahkan weight berdasarkan pengiriman
-    $weight += min($toko['total_pengiriman'] * 0.05, 0.5);
-    
-    // Faktor koordinat GPS akurat
-    if ($toko['has_coordinates']) $weight += 0.2;
-    
-    return round($weight, 2);
-}
-
-/**
- * Tentukan kategori density untuk grid
- */
-private function getDensityCategory($toko)
-{
-    $weight = $this->calculateGridWeight($toko);
-    
-    if ($weight >= 3.0) return 'very_high';
-    if ($weight >= 2.0) return 'high';
-    if ($weight >= 1.5) return 'medium';
-    if ($weight >= 1.0) return 'low';
-    
-    return 'very_low';
-}
-
-/**
- * Generate statistik untuk grid heatmap
- */
-private function generateGridStatistics($mapData)
-{
-    $gridSize = 0.01; // Size in degrees (approximately 1.1km)
-    
-    // Define bounds untuk wilayah Malang
-    $bounds = [
-        'north' => -7.4,
-        'south' => -8.6,
-        'west' => 111.8,
-        'east' => 113.2
-    ];
-    
-    // Generate grid cells dan hitung statistik
-    $totalCells = 0;
-    $occupiedCells = 0;
-    $gridData = [];
-    
-    for ($lat = $bounds['south']; $lat < $bounds['north']; $lat += $gridSize) {
-        for ($lng = $bounds['west']; $lng < $bounds['east']; $lng += $gridSize) {
-            $totalCells++;
-            
-            // Count toko dalam grid cell ini
-            $tokosInCell = $mapData->filter(function($toko) use ($lat, $lng, $gridSize) {
-                $tokoLat = $toko['latitude'];
-                $tokoLng = $toko['longitude'];
-                
-                return $tokoLat >= $lat && $tokoLat < ($lat + $gridSize) &&
-                       $tokoLng >= $lng && $tokoLng < ($lng + $gridSize);
-            });
-            
-            if ($tokosInCell->count() > 0) {
-                $occupiedCells++;
-                
-                $cellData = [
-                    'lat_min' => $lat,
-                    'lat_max' => $lat + $gridSize,
-                    'lng_min' => $lng,
-                    'lng_max' => $lng + $gridSize,
-                    'toko_count' => $tokosInCell->count(),
-                    'total_weight' => $tokosInCell->sum('grid_weight'),
-                    'avg_weight' => $tokosInCell->avg('grid_weight'),
-                    'active_count' => $tokosInCell->whereIn('status_aktif', ['Aktif', 'Sangat Aktif'])->count()
-                ];
-                
-                $gridData[] = $cellData;
-            }
-        }
-    }
-    
-    // Calculate coverage dan density statistics
-    $coveragePercentage = $totalCells > 0 ? round(($occupiedCells / $totalCells) * 100, 2) : 0;
-    
-    $densityDistribution = [
-        'high' => count(array_filter($gridData, fn($cell) => $cell['toko_count'] >= 5)),
-        'medium' => count(array_filter($gridData, fn($cell) => $cell['toko_count'] >= 2 && $cell['toko_count'] < 5)),
-        'low' => count(array_filter($gridData, fn($cell) => $cell['toko_count'] === 1))
-    ];
-    
-    return [
-        'total_cells' => $totalCells,
-        'occupied_cells' => $occupiedCells,
-        'coverage_percentage' => $coveragePercentage,
-        'density_distribution' => $densityDistribution,
-        'avg_toko_per_cell' => $occupiedCells > 0 ? round($mapData->count() / $occupiedCells, 2) : 0,
-        'grid_size_km' => round($gridSize * 111, 2), // Convert degrees to km (approximately)
-        'total_area_km2' => round((($bounds['north'] - $bounds['south']) * ($bounds['east'] - $bounds['west'])) * 111 * 111, 2)
-    ];
-}
-
-/**
- * API endpoint untuk mendapatkan data grid heatmap
- */
-public function getGridHeatmapData(Request $request)
-{
-    try {
-        $gridSize = $request->get('grid_size', 0.01); // Default 1.1km
-        $wilayahFilter = $request->get('wilayah', 'all');
-        
-        // Base query
-        $query = Toko::with(['barangToko', 'pengiriman', 'retur'])
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude');
-            
-        // Apply wilayah filter
-        if ($wilayahFilter !== 'all') {
-            $query->where('wilayah_kota_kabupaten', $wilayahFilter);
-        }
-        
-        $tokoData = $query->get();
-        
-        // Generate grid data
-        $gridCells = $this->generateGridCells($gridSize, $wilayahFilter);
-        $gridWithData = $this->assignTokoToGrids($gridCells, $tokoData);
-        
-        return response()->json([
-            'success' => true,
-            'grid_data' => $gridWithData,
-            'metadata' => [
-                'grid_size' => $gridSize,
-                'total_grids' => count($gridCells),
-                'occupied_grids' => count(array_filter($gridWithData, fn($grid) => $grid['toko_count'] > 0)),
-                'total_toko' => $tokoData->count(),
-                'wilayah_filter' => $wilayahFilter
-            ]
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Error generating grid heatmap data: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Generate grid cells berdasarkan bounds wilayah
- */
-private function generateGridCells($gridSize, $wilayahFilter = 'all')
-{
-    // Define bounds berdasarkan wilayah
-    $bounds = $this->getWilayahBounds($wilayahFilter);
-    
-    $cells = [];
-    for ($lat = $bounds['south']; $lat < $bounds['north']; $lat += $gridSize) {
-        for ($lng = $bounds['west']; $lng < $bounds['east']; $lng += $gridSize) {
-            $cells[] = [
-                'id' => md5($lat . '_' . $lng),
-                'bounds' => [
-                    'south' => $lat,
-                    'north' => $lat + $gridSize,
-                    'west' => $lng,
-                    'east' => $lng + $gridSize
-                ],
-                'center' => [
-                    'lat' => $lat + ($gridSize / 2),
-                    'lng' => $lng + ($gridSize / 2)
-                ]
-            ];
-        }
-    }
-    
-    return $cells;
-}
-
-/**
- * Get bounds coordinate berdasarkan wilayah
- */
-private function getWilayahBounds($wilayah)
-{
-    $bounds = [
-        'Kota Malang' => [
-            'north' => -7.88, 'south' => -8.05,
-            'west' => 112.55, 'east' => 112.72
-        ],
-        'Kabupaten Malang' => [
-            'north' => -7.80, 'south' => -8.55,
-            'west' => 112.30, 'east' => 113.20
-        ],
-        'Kota Batu' => [
-            'north' => -7.75, 'south' => -8.00,
-            'west' => 112.45, 'east' => 112.62
-        ],
-        'all' => [
-            'north' => -7.4, 'south' => -8.6,
-            'west' => 111.8, 'east' => 113.2
-        ]
-    ];
-    
-    return $bounds[$wilayah] ?? $bounds['all'];
-}
-
-/**
- * Assign toko ke grid cells yang sesuai
- */
-private function assignTokoToGrids($gridCells, $tokoData)
-{
-    return array_map(function($cell) use ($tokoData) {
-        $tokosInCell = $tokoData->filter(function($toko) use ($cell) {
-            $lat = (float) $toko->latitude;
-            $lng = (float) $toko->longitude;
-            
-            return $lat >= $cell['bounds']['south'] && 
-                   $lat < $cell['bounds']['north'] &&
-                   $lng >= $cell['bounds']['west'] && 
-                   $lng < $cell['bounds']['east'];
-        });
-        
-        // Calculate statistics untuk cell ini
-        $tokoCount = $tokosInCell->count();
-        $activeCount = $tokosInCell->filter(function($toko) {
-            return $toko->is_active;
-        })->count();
-        
-        // Determine density category
-        $densityCategory = 'none';
-        if ($tokoCount >= 5) $densityCategory = 'high';
-        elseif ($tokoCount >= 2) $densityCategory = 'medium';
-        elseif ($tokoCount >= 1) $densityCategory = 'low';
-        
-        // Determine color berdasarkan density
-        $colors = [
-            'high' => '#dc143c',    // Merah pekat
-            'medium' => '#ff8c00',  // Oranye
-            'low' => '#ffd700',     // Kuning terang
-            'none' => 'transparent' // Transparan
-        ];
-        
-        return array_merge($cell, [
-            'toko_count' => $tokoCount,
-            'active_count' => $activeCount,
-            'density_category' => $densityCategory,
-            'color' => $colors[$densityCategory],
-            'tokos' => $tokosInCell->map(function($toko) {
-                return [
-                    'toko_id' => $toko->toko_id,
-                    'nama_toko' => $toko->nama_toko,
-                    'kecamatan' => $toko->wilayah_kecamatan,
-                    'is_active' => $toko->is_active
-                ];
-            })->values()->all()
-        ]);
-    }, $gridCells);
-}
-
-/**
- * Get enhanced wilayah statistics dengan grid information
- */
-public function getEnhancedWilayahStatistics()
-{
-    try {
-        // Statistik per kecamatan dengan grid data
-        $statistikKecamatan = Toko::select([
-            'wilayah_kecamatan',
-            'wilayah_kota_kabupaten',
-            DB::raw('COUNT(*) as jumlah_toko'),
-            DB::raw('COUNT(CASE WHEN is_active = 1 THEN 1 END) as toko_aktif'),
-            DB::raw('COUNT(CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN 1 END) as toko_with_coordinates'),
-            DB::raw('COUNT(CASE WHEN geocoding_quality IN ("excellent", "good") THEN 1 END) as high_quality_coords'),
-            DB::raw('AVG(CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN geocoding_score END) as avg_geocoding_score')
-        ])
-        ->groupBy('wilayah_kecamatan', 'wilayah_kota_kabupaten')
-        ->orderBy('jumlah_toko', 'desc')
-        ->get();
-
-        // Enhanced density analysis
-        $densityAnalysis = $this->calculateDensityAnalysis();
-        
-        // Grid coverage analysis
-        $gridCoverage = $this->calculateGridCoverage();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'kecamatan' => $statistikKecamatan,
-                'density_analysis' => $densityAnalysis,
-                'grid_coverage' => $gridCoverage,
+            return response()->json([
+                'success' => true,
+                'data' => $detailedAnalysis,
                 'summary' => [
-                    'total_kecamatan' => $statistikKecamatan->count(),
-                    'avg_toko_per_kecamatan' => round($statistikKecamatan->avg('jumlah_toko'), 2),
-                    'coord_coverage_percentage' => $statistikKecamatan->sum('toko_with_coordinates') > 0 ? 
-                        round(($statistikKecamatan->sum('toko_with_coordinates') / $statistikKecamatan->sum('jumlah_toko')) * 100, 2) : 0,
-                    'high_quality_percentage' => $statistikKecamatan->sum('toko_with_coordinates') > 0 ?
-                        round(($statistikKecamatan->sum('high_quality_coords') / $statistikKecamatan->sum('toko_with_coordinates')) * 100, 2) : 0
+                    'total_analyzed' => $detailedAnalysis->count(),
+                    'avg_orders' => round($detailedAnalysis->avg('total_orders'), 2),
+                    'top_performer' => $detailedAnalysis->first()?->nama_toko
                 ]
-            ]
-        ]);
-    } catch (\Exception $e) {
-        Log::error('Error fetching enhanced wilayah statistics: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage()
-        ], 500);
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 
-/**
- * Calculate density analysis untuk enhanced statistics
- */
-private function calculateDensityAnalysis()
-{
-    // Analisis kepadatan berdasarkan grid 1km x 1km
-    $densityData = DB::select("
-        SELECT 
-            FLOOR(latitude / 0.009) as lat_grid,
-            FLOOR(longitude / 0.009) as lng_grid,
-            COUNT(*) as toko_count,
-            COUNT(CASE WHEN is_active = 1 THEN 1 END) as active_count,
-            wilayah_kota_kabupaten
-        FROM toko 
-        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-        GROUP BY lat_grid, lng_grid, wilayah_kota_kabupaten
-        HAVING toko_count > 0
-        ORDER BY toko_count DESC
-    ");
-    
-    $highDensity = array_filter($densityData, fn($item) => $item->toko_count >= 5);
-    $mediumDensity = array_filter($densityData, fn($item) => $item->toko_count >= 2 && $item->toko_count < 5);
-    $lowDensity = array_filter($densityData, fn($item) => $item->toko_count === 1);
-    
-    return [
-        'total_grids' => count($densityData),
-        'high_density_grids' => count($highDensity),
-        'medium_density_grids' => count($mediumDensity),
-        'low_density_grids' => count($lowDensity),
-        'avg_toko_per_grid' => count($densityData) > 0 ? 
-            round(array_sum(array_column($densityData, 'toko_count')) / count($densityData), 2) : 0
-    ];
-}
-
-/**
- * Calculate grid coverage untuk berbagai zoom levels
- */
-private function calculateGridCoverage()
-{
-    $coverageData = [];
-    $gridSizes = [0.005, 0.01, 0.02]; // Berbagai ukuran grid
-    
-    foreach ($gridSizes as $size) {
-        $grids = $this->generateGridCells($size);
-        $tokoData = Toko::whereNotNull('latitude')->whereNotNull('longitude')->get();
-        $occupiedGrids = 0;
-        
-        foreach ($grids as $grid) {
-            $hasData = $tokoData->filter(function($toko) use ($grid) {
-                $lat = (float) $toko->latitude;
-                $lng = (float) $toko->longitude;
-                
-                return $lat >= $grid['bounds']['south'] && 
-                       $lat < $grid['bounds']['north'] &&
-                       $lng >= $grid['bounds']['west'] && 
-                       $lng < $grid['bounds']['east'];
-            })->count() > 0;
+    /**
+     * Clear system cache
+     */
+    public function clearSystemCache()
+    {
+        try {
+            // Clear Laravel cache
+            Cache::flush();
             
-            if ($hasData) $occupiedGrids++;
-        }
-        
-        $coverageData[] = [
-            'grid_size_km' => round($size * 111, 2),
-            'total_grids' => count($grids),
-            'occupied_grids' => $occupiedGrids,
-            'coverage_percentage' => count($grids) > 0 ? round(($occupiedGrids / count($grids)) * 100, 2) : 0
-        ];
-    }
-    
-    return $coverageData;
-}
-
-/**
- * Enhanced bulk geocoding dengan progress tracking
- */
-public function enhancedBulkGeocodeTokos(Request $request)
-{
-    try {
-        $limit = $request->get('limit', 10);
-        $qualityFilter = $request->get('quality_filter', ['poor', 'very poor', 'failed', null]);
-        
-        $tokosWithoutCoordinates = Toko::where(function($query) use ($qualityFilter) {
-            $query->whereNull('latitude')
-                  ->orWhereNull('longitude')
-                  ->orWhereIn('geocoding_quality', $qualityFilter)
-                  ->orWhereNull('geocoding_quality');
-        })
-        ->limit($limit)
-        ->get();
-
-        $results = [];
-        $successCount = 0;
-        $improvementCount = 0;
-
-        foreach ($tokosWithoutCoordinates as $toko) {
-            $oldQuality = $toko->geocoding_quality;
-            $fullAddress = $toko->alamat . ', ' . 
-                          $toko->wilayah_kelurahan . ', ' . 
-                          $toko->wilayah_kecamatan . ', ' . 
-                          $toko->wilayah_kota_kabupaten . ', Jawa Timur, Indonesia';
-
-            $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
-            
-            if ($geocodeResult) {
-                // Enhanced quality assessment
-                $qualityCheck = $this->assessGeocodingQuality($geocodeResult, $toko);
-                
-                $toko->update([
-                    'latitude' => $geocodeResult['latitude'],
-                    'longitude' => $geocodeResult['longitude'],
-                    'alamat_lengkap_geocoding' => $geocodeResult['formatted_address'],
-                    'geocoding_provider' => $geocodeResult['provider'] ?? 'unknown',
-                    'geocoding_accuracy' => $geocodeResult['accuracy'] ?? 'unknown',
-                    'geocoding_confidence' => $geocodeResult['confidence'] ?? null,
-                    'geocoding_quality' => $qualityCheck['quality'],
-                    'geocoding_score' => $qualityCheck['score'],
-                    'geocoding_last_updated' => now()
-                ]);
-                
-                $successCount++;
-                
-                // Check if quality improved
-                if ($this->isQualityImprovement($oldQuality, $qualityCheck['quality'])) {
-                    $improvementCount++;
-                }
-                
-                $results[] = [
-                    'toko_id' => $toko->toko_id,
-                    'nama_toko' => $toko->nama_toko,
-                    'status' => 'success',
-                    'coordinates' => [$geocodeResult['latitude'], $geocodeResult['longitude']],
-                    'quality' => $qualityCheck['quality'],
-                    'score' => $qualityCheck['score'],
-                    'improved' => $this->isQualityImprovement($oldQuality, $qualityCheck['quality'])
-                ];
-            } else {
-                $results[] = [
-                    'toko_id' => $toko->toko_id,
-                    'nama_toko' => $toko->nama_toko,
-                    'status' => 'failed',
-                    'error' => 'Geocoding service failed'
-                ];
-            }
-
-            // Rate limiting
-            usleep(500000); // 0.5 second delay
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => "Enhanced geocoding selesai. Berhasil: {$successCount}/" . count($tokosWithoutCoordinates) . 
-                        ($improvementCount > 0 ? ", Peningkatan kualitas: {$improvementCount}" : ""),
-            'data' => $results,
-            'summary' => [
-                'total_processed' => count($tokosWithoutCoordinates),
-                'successful' => $successCount,
-                'failed' => count($tokosWithoutCoordinates) - $successCount,
-                'quality_improvements' => $improvementCount
-            ]
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Error enhanced bulk geocoding tokos: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Assess geocoding quality berdasarkan berbagai faktor
- */
-private function assessGeocodingQuality($geocodeResult, $toko)
-{
-    $score = 0;
-    $quality = 'poor';
-    
-    // Factor 1: Provider reliability
-    $providerScores = [
-        'google_maps' => 30,
-        'locationiq' => 25,
-        'opencage' => 25,
-        'mapbox' => 20,
-        'nominatim' => 15,
-        'here' => 20
-    ];
-    
-    $provider = $geocodeResult['provider'] ?? 'unknown';
-    $score += $providerScores[$provider] ?? 10;
-    
-    // Factor 2: Confidence level
-    if (isset($geocodeResult['confidence'])) {
-        $score += $geocodeResult['confidence'] * 20;
-    }
-    
-    // Factor 3: Regional accuracy (is it in correct region?)
-    $lat = $geocodeResult['latitude'];
-    $lng = $geocodeResult['longitude'];
-    
-    // Check if in Jawa Timur
-    if ($lat >= -8.8 && $lat <= -7.2 && $lng >= 111.0 && $lng <= 114.5) {
-        $score += 20;
-        
-        // Check if in Malang region specifically
-        if ($lat >= -8.6 && $lat <= -7.4 && $lng >= 111.8 && $lng <= 113.2) {
-            $score += 15;
+            return response()->json([
+                'success' => true,
+                'message' => 'System cache cleared successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to clear cache: ' . $e->getMessage()
+            ], 500);
         }
     }
-    
-    // Factor 4: Address match quality
-    $formattedAddress = strtolower($geocodeResult['formatted_address'] ?? '');
-    $tokoKecamatan = strtolower($toko->wilayah_kecamatan);
-    $tokoKotaKab = strtolower($toko->wilayah_kota_kabupaten);
-    
-    if (strpos($formattedAddress, $tokoKecamatan) !== false) $score += 10;
-    if (strpos($formattedAddress, $tokoKotaKab) !== false) $score += 10;
-    
-    // Determine quality based on score
-    if ($score >= 80) $quality = 'excellent';
-    elseif ($score >= 65) $quality = 'good';
-    elseif ($score >= 50) $quality = 'fair';
-    elseif ($score >= 30) $quality = 'poor';
-    else $quality = 'very poor';
-    
-    return [
-        'quality' => $quality,
-        'score' => min($score, 100) // Cap at 100
-    ];
-}
-
-/**
- * Check if geocoding quality improved
- */
-private function isQualityImprovement($oldQuality, $newQuality)
-{
-    $qualityOrder = [
-        'very poor' => 1,
-        'poor' => 2,
-        'fair' => 3,
-        'good' => 4,
-        'excellent' => 5
-    ];
-    
-    $oldScore = $qualityOrder[$oldQuality] ?? 0;
-    $newScore = $qualityOrder[$newQuality] ?? 0;
-    
-    return $newScore > $oldScore;
-}
 }

@@ -188,33 +188,65 @@ Route::prefix('toko')->group(function() {
 
 
 
-Route::group(['prefix' => 'market-map'], function() {
-    Route::get('/', [MarketMapController::class, 'index'])->name('market-map.index');
-    Route::get('/toko-data', [MarketMapController::class, 'getTokoData'])->name('market-map.toko-data');
-    Route::get('/wilayah-statistics', [MarketMapController::class, 'getWilayahStatistics'])->name('market-map.wilayah-statistics');
-    Route::get('/toko-barang/{tokoId}', [MarketMapController::class, 'getTokoBarang'])->name('market-map.toko-barang');
-    Route::get('/recommendations', [MarketMapController::class, 'getRecommendations'])->name('market-map.recommendations');
-    Route::get('/price-recommendations', [MarketMapController::class, 'getPriceRecommendations'])->name('market-map.price-recommendations');
-    Route::post('/store-toko', [MarketMapController::class, 'storeToko'])->name('market-map.store-toko');
-    Route::get('/wilayah-data', [MarketMapController::class, 'getWilayahData'])->name('market-map.wilayah-data');
-    
-    // Routes tambahan untuk geocoding
-    Route::post('/bulk-geocode', [MarketMapController::class, 'bulkGeocodeTokos'])->name('market-map.bulk-geocode');
-    Route::get('/geocode-status', [MarketMapController::class, 'getGeocodeStatus'])->name('market-map.geocode-status');
-    Route::post('/fix-coordinates/{tokoId}', [MarketMapController::class, 'fixTokoCoordinates'])->name('market-map.fix-coordinates');
-
+    // ===============================
+    // MARKET MAP CRM ROUTES 
+    // ===============================
+    Route::group(['prefix' => 'market-map'], function() {
+        // Main CRM Market Map
+        Route::get('/', [MarketMapController::class, 'index'])->name('market-map.index');
+        
+        // Core CRM Data APIs
+        Route::get('/toko-data', [MarketMapController::class, 'getTokoData'])->name('market-map.toko-data');
+        Route::get('/wilayah-statistics', [MarketMapController::class, 'getWilayahStatistics'])->name('market-map.wilayah-statistics');
+        Route::get('/partner-details/{tokoId}', [MarketMapController::class, 'getTokoBarang'])->name('market-map.partner-details');
+        
+        // CRM Intelligence & Recommendations
+        Route::get('/recommendations', [MarketMapController::class, 'getRecommendations'])->name('market-map.recommendations');
+        Route::get('/price-recommendations', [MarketMapController::class, 'getPriceRecommendations'])->name('market-map.price-recommendations');
+        Route::get('/partner-performance', [MarketMapController::class, 'getPartnerPerformanceAnalysis'])->name('market-map.partner-performance');
+        Route::get('/market-opportunities', [MarketMapController::class, 'getMarketOpportunityAnalysis'])->name('market-map.market-opportunities');
+        
+        // Geographic & Territory Analysis
+        Route::get('/territory-analysis', [MarketMapController::class, 'getTerritoryAnalysis'])->name('market-map.territory-analysis');
+        Route::get('/expansion-opportunities', [MarketMapController::class, 'getExpansionOpportunities'])->name('market-map.expansion-opportunities');
+        Route::get('/competitive-analysis', [MarketMapController::class, 'getCompetitiveAnalysis'])->name('market-map.competitive-analysis');
+        
+        // Enhanced Geographic Data
         Route::get('/enhanced-toko-data', [MarketMapController::class, 'getEnhancedTokoData'])->name('market-map.enhanced-toko-data');
-    Route::get('/grid-heatmap-data', [MarketMapController::class, 'getGridHeatmapData'])->name('market-map.grid-heatmap-data');
-    Route::get('/enhanced-wilayah-stats', [MarketMapController::class, 'getEnhancedWilayahStatistics'])->name('market-map.enhanced-wilayah-stats');
-    Route::post('/enhanced-bulk-geocode', [MarketMapController::class, 'enhancedBulkGeocodeTokos'])->name('market-map.enhanced-bulk-geocode');
-});
-
-// Route untuk debugging (hanya di development)
-if (app()->environment(['local', 'development'])) {
-    Route::group(['prefix' => 'debug/market-map'], function() {
-        Route::get('/test-geocoding', [MarketMapController::class, 'testGeocodingService']);
-        Route::get('/coordinate-stats', [MarketMapController::class, 'getCoordinateStatistics']);
-        Route::get('/validate-coordinates', [MarketMapController::class, 'validateAllCoordinates']);
+        Route::get('/grid-heatmap-data', [MarketMapController::class, 'getGridHeatmapData'])->name('market-map.grid-heatmap-data');
+        Route::get('/enhanced-wilayah-stats', [MarketMapController::class, 'getEnhancedWilayahStatistics'])->name('market-map.enhanced-wilayah-stats');
+        
+        // Reference Data
+        Route::get('/wilayah-data', [MarketMapController::class, 'getWilayahData'])->name('market-map.wilayah-data');
+        Route::get('/product-list', [MarketMapController::class, 'getProductList'])->name('market-map.product-list');
+        
+        // CRM Export & Reporting
+        Route::get('/export-crm-insights', [MarketMapController::class, 'exportCRMInsights'])->name('market-map.export-crm-insights');
+        Route::get('/export-price-intelligence', [MarketMapController::class, 'exportPriceIntelligence'])->name('market-map.export-price-intelligence');
+        Route::get('/export-partner-performance', [MarketMapController::class, 'exportPartnerPerformance'])->name('market-map.export-partner-performance');
+        
+        // Geocoding & Data Quality (kept for maintaining coordinate accuracy)
+        Route::post('/bulk-geocode', [MarketMapController::class, 'bulkGeocodeTokos'])->name('market-map.bulk-geocode');
+        Route::get('/geocode-status', [MarketMapController::class, 'getGeocodeStatus'])->name('market-map.geocode-status');
+        Route::post('/enhanced-bulk-geocode', [MarketMapController::class, 'enhancedBulkGeocodeTokos'])->name('market-map.enhanced-bulk-geocode');
+        Route::post('/fix-coordinates/{tokoId}', [MarketMapController::class, 'fixTokoCoordinates'])->name('market-map.fix-coordinates');
+        
+        // *** REMOVED: Toko creation routes (no longer needed for CRM focus) ***
+        Route::get('/market-map/system-health', [MarketMapController::class, 'getSystemHealth'])->name('market-map.system-health');
+Route::get('/market-map/territory-analysis', [MarketMapController::class, 'getTerritoryAnalysis'])->name('market-map.territory-analysis');
+Route::get('/market-map/detailed-partner-analysis', [MarketMapController::class, 'getDetailedPartnerAnalysis'])->name('market-map.detailed-partner-analysis');
+Route::post('/market-map/clear-cache', [MarketMapController::class, 'clearSystemCache'])->name('market-map.clear-cache');
+        
+        // Route::post('/store-toko', [MarketMapController::class, 'storeToko'])->name('market-map.store-toko');
     });
 
-}});
+    // Route untuk debugging (hanya di development)
+    if (app()->environment(['local', 'development'])) {
+        Route::group(['prefix' => 'debug/market-map'], function() {
+            Route::get('/test-geocoding', [MarketMapController::class, 'testGeocodingService']);
+            Route::get('/coordinate-stats', [MarketMapController::class, 'getCoordinateStatistics']);
+            Route::get('/validate-coordinates', [MarketMapController::class, 'validateAllCoordinates']);
+            Route::get('/crm-test-data', [MarketMapController::class, 'generateTestCRMData']);
+        });
+    }
+});
