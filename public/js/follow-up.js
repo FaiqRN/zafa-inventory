@@ -1,6 +1,6 @@
 /**
  * Follow Up Pelanggan JavaScript Module
- * Zafa Potato CRM System
+ * Zafa Potato CRM System - Database Integrated (No Dummy Data)
  */
 
 // Global Variables
@@ -26,7 +26,7 @@ function initializeFollowUp() {
     // Setup image upload functionality
     setupImageUpload();
     
-    console.log('Follow Up Pelanggan module initialized');
+    console.log('Follow Up Pelanggan module initialized (Database Mode)');
 }
 
 /**
@@ -101,7 +101,7 @@ function updateFilters() {
 }
 
 /**
- * Load Filtered Customers
+ * Load Filtered Customers from Database
  */
 function loadFilteredCustomers() {
     if (selectedFilters.length === 0) {
@@ -115,200 +115,39 @@ function loadFilteredCustomers() {
         return;
     }
     
-    // Simulasi data customer yang lebih lengkap berdasarkan filter
-    const allCustomers = getAllCustomersData();
+    // Show loading
+    showLoadingState('#customerList');
+    $('#defaultCustomerState').hide();
+    $('#noCustomerData').hide();
     
-    // Filter customers berdasarkan selected filters
-    filteredCustomers = allCustomers.filter(customer => {
-        return selectedFilters.includes(customer.customerType) || selectedFilters.includes(customer.orderSource);
-    });
-    
-    displayCustomers(filteredCustomers);
-}
-
-/**
- * Get All Customers Data (Dummy Data)
- */
-function getAllCustomersData() {
-    return [
-        // Pelanggan Lama + WhatsApp
-        { 
-            id: 1, 
-            name: 'Budi Santoso', 
-            phone: '+62 812-3456-7890', 
-            email: 'budi@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganLama', 
-            orderSource: 'whatsapp', 
-            lastOrder: '2025-05-28', 
-            totalOrders: 5, 
-            totalSpent: 'Rp 450,000', 
-            address: 'Jl. Merdeka No. 123, Malang', 
-            lastProduct: 'Kentang Goreng Crispy - 2kg', 
-            notes: 'Pelanggan setia, sering pesan via WhatsApp' 
+    $.ajax({
+        url: '/follow-up-pelanggan/filtered-customers',
+        type: 'GET',
+        data: {
+            filters: selectedFilters,
+            search: $('#searchCustomer').val() || ''
         },
-        { 
-            id: 2, 
-            name: 'Ahmad Rizki', 
-            phone: '+62 821-5678-9012', 
-            email: 'ahmad@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganLama', 
-            orderSource: 'whatsapp', 
-            lastOrder: '2025-05-25', 
-            totalOrders: 8, 
-            totalSpent: 'Rp 720,000', 
-            address: 'Jl. Veteran No. 78, Malang', 
-            lastProduct: 'Kentang Bumbu Balado - 3kg', 
-            notes: 'Pelanggan VIP, aktif di WhatsApp grup' 
+        success: function(response) {
+            hideLoadingState('#customerList');
+            
+            if (response.status === 'success') {
+                filteredCustomers = response.data;
+                displayCustomers(filteredCustomers);
+            } else {
+                console.error('Error loading customers:', response);
+                showErrorMessage('Gagal memuat data customer');
+            }
         },
-        // Pelanggan Lama + Shopee
-        { 
-            id: 3, 
-            name: 'Andi Wijaya', 
-            phone: '+62 819-1122-3344', 
-            email: 'andi@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganLama', 
-            orderSource: 'shopee', 
-            lastOrder: '2025-05-27', 
-            totalOrders: 6, 
-            totalSpent: 'Rp 520,000', 
-            address: 'Jl. Kawi No. 15, Malang', 
-            lastProduct: 'Kentang Spicy - 2.5kg', 
-            notes: 'Suka varian pedas, loyal customer Shopee' 
-        },
-        { 
-            id: 4, 
-            name: 'Sari Dewi', 
-            phone: '+62 857-9988-7766', 
-            email: 'sari@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganLama', 
-            orderSource: 'shopee', 
-            lastOrder: '2025-05-26', 
-            totalOrders: 7, 
-            totalSpent: 'Rp 630,000', 
-            address: 'Jl. Ijen No. 22, Malang', 
-            lastProduct: 'Paket Family - 5kg', 
-            notes: 'Pelanggan setia Shopee, sering review positif' 
-        },
-        // Pelanggan Lama + Instagram
-        { 
-            id: 5, 
-            name: 'Joko Susilo', 
-            phone: '+62 813-4455-6677', 
-            email: 'joko@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganLama', 
-            orderSource: 'instagram', 
-            lastOrder: '2025-05-29', 
-            totalOrders: 4, 
-            totalSpent: 'Rp 380,000', 
-            address: 'Jl. Semeru No. 88, Malang', 
-            lastProduct: 'Kentang BBQ - 2kg', 
-            notes: 'Aktif follower Instagram, suka story produk' 
-        },
-        // Pelanggan Lama + Langsung
-        { 
-            id: 6, 
-            name: 'Maya Sari', 
-            phone: '+62 822-1133-4455', 
-            email: 'maya@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganLama', 
-            orderSource: 'langsung', 
-            lastOrder: '2025-05-30', 
-            totalOrders: 9, 
-            totalSpent: 'Rp 810,000', 
-            address: 'Jl. Gajayana No. 55, Malang', 
-            lastProduct: 'Kentang Original - 4kg', 
-            notes: 'Pelanggan tetap toko, datang rutin setiap minggu' 
-        },
-        // Pelanggan Baru + Shopee
-        { 
-            id: 7, 
-            name: 'Siti Nurhaliza', 
-            phone: '+62 856-7890-1234', 
-            email: 'siti@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganBaru', 
-            orderSource: 'shopee', 
-            lastOrder: '2025-05-30', 
-            totalOrders: 2, 
-            totalSpent: 'Rp 180,000', 
-            address: 'Jl. Diponegoro No. 45, Malang', 
-            lastProduct: 'Paket Kentang Premium - 1kg', 
-            notes: 'Baru mencoba produk via Shopee' 
-        },
-        { 
-            id: 8, 
-            name: 'Dewi Sartika', 
-            phone: '+62 813-2468-1357', 
-            email: 'dewi@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganBaru', 
-            orderSource: 'shopee', 
-            lastOrder: '2025-06-01', 
-            totalOrders: 1, 
-            totalSpent: 'Rp 85,000', 
-            address: 'Jl. Brawijaya No. 90, Malang', 
-            lastProduct: 'Kentang Original - 1kg', 
-            notes: 'Customer baru, pertama kali beli di Shopee' 
-        },
-        // Pelanggan Baru + WhatsApp
-        { 
-            id: 9, 
-            name: 'Lina Maharani', 
-            phone: '+62 878-5544-3322', 
-            email: 'lina@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganBaru', 
-            orderSource: 'whatsapp', 
-            lastOrder: '2025-06-02', 
-            totalOrders: 1, 
-            totalSpent: 'Rp 125,000', 
-            address: 'Jl. Tlogomas No. 33, Malang', 
-            lastProduct: 'Kentang Cheese - 1.5kg', 
-            notes: 'Dapat referral dari teman via WhatsApp' 
-        },
-        // Pelanggan Baru + Instagram
-        { 
-            id: 10, 
-            name: 'Rina Putri', 
-            phone: '+62 895-6677-8899', 
-            email: 'rina@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganBaru', 
-            orderSource: 'instagram', 
-            lastOrder: '2025-06-03', 
-            totalOrders: 1, 
-            totalSpent: 'Rp 95,000', 
-            address: 'Jl. Sukarno Hatta No. 77, Malang', 
-            lastProduct: 'Kentang Mini - 1kg', 
-            notes: 'Tertarik dari post Instagram, first timer' 
-        },
-        // Pelanggan Baru + Langsung
-        { 
-            id: 11, 
-            name: 'Toni Hermawan', 
-            phone: '+62 812-9988-7766', 
-            email: 'toni@email.com', 
-            avatar: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=100&h=100&fit=crop&crop=face', 
-            customerType: 'pelangganBaru', 
-            orderSource: 'langsung', 
-            lastOrder: '2025-06-04', 
-            totalOrders: 1, 
-            totalSpent: 'Rp 150,000', 
-            address: 'Jl. Raya Tlogomas No. 12, Malang', 
-            lastProduct: 'Paket Starter - 2kg', 
-            notes: 'Baru kenal produk, langsung datang ke toko' 
+        error: function(xhr, status, error) {
+            hideLoadingState('#customerList');
+            console.error('AJAX Error:', error);
+            showErrorMessage('Terjadi kesalahan saat memuat data customer');
         }
-    ];
+    });
 }
 
 /**
- * Display Customers in List
+ * Display Customers in List (without avatars)
  */
 function displayCustomers(customers) {
     const customerList = $('#customerList');
@@ -329,25 +168,29 @@ function displayCustomers(customers) {
     customerList.empty();
     
     customers.forEach(customer => {
-        const customerTypeLabel = customer.customerType === 'pelangganLama' ? 'Lama' : 'Baru';
-        const customerTypeBadge = customer.customerType === 'pelangganLama' ? 'primary' : 'success';
+        const customerTypeLabel = getCustomerTypeLabel(customer.customerType);
+        const customerTypeBadge = getCustomerTypeBadge(customer.customerType);
         
         const customerItem = `
-            <div class="customer-item p-3 border-bottom slide-in">
+            <div class="customer-item p-3 border-bottom slide-in" data-customer-type="${customer.customerType}">
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center flex-grow-1">
-                        <img src="${customer.avatar}" alt="${customer.name}" class="img-circle mr-3" style="width: 50px; height: 50px; object-fit: cover;">
+                        <div class="customer-initial-small">
+                            <span class="initial-text-small">${customer.initial || getInitialFromName(customer.name)}</span>
+                        </div>
                         <div>
                             <h6 class="mb-1 font-weight-bold">${customer.name}</h6>
                             <p class="mb-1 text-muted small">${customer.phone}</p>
                             <div>
-                                <span class="badge badge-${customerTypeBadge} customer-badge mr-1">${customerTypeLabel}</span>
+                                <span class="badge ${customerTypeBadge} customer-badge mr-1">${customerTypeLabel}</span>
                                 <span class="badge badge-info customer-badge">${customer.orderSource}</span>
                             </div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <button type="button" class="btn detail-btn btn-sm" onclick="showCustomerDetail(${customer.id})">
+                        <small class="text-muted d-block">${customer.totalOrders} pesanan</small>
+                        <small class="text-success d-block font-weight-bold">${customer.totalSpent}</small>
+                        <button type="button" class="btn detail-btn btn-sm mt-1" onclick="showCustomerDetail('${customer.id}')">
                             Detail
                         </button>
                     </div>
@@ -363,30 +206,30 @@ function displayCustomers(customers) {
 }
 
 /**
- * Show Customer Detail Modal
+ * Show Customer Detail Modal (without avatar)
  */
 function showCustomerDetail(customerId) {
     const customer = filteredCustomers.find(c => c.id === customerId);
     if (!customer) return;
     
     // Populate modal with customer data
-    $('#modalCustomerAvatar').attr('src', customer.avatar);
+    $('#modalCustomerInitial').text(customer.initial || getInitialFromName(customer.name));
     $('#modalCustomerName').text(customer.name);
     $('#modalCustomerPhone').text(customer.phone);
-    $('#modalCustomerEmail').text(customer.email);
-    $('#modalCustomerAddress').text(customer.address);
+    $('#modalCustomerEmail').text(customer.email || '-');
+    $('#modalCustomerAddress').text(customer.address || '-');
     $('#modalCustomerLastOrder').text(customer.lastOrder);
     $('#modalCustomerTotalOrders').text(customer.totalOrders + ' pesanan');
     $('#modalCustomerTotalSpent').text(customer.totalSpent);
-    $('#modalCustomerLastProduct').text(customer.lastProduct);
-    $('#modalCustomerNotes').text(customer.notes);
+    $('#modalCustomerLastProduct').text(customer.lastProduct || '-');
+    $('#modalCustomerNotes').text(customer.notes || '-');
     
     // Set badges
-    const customerTypeLabel = customer.customerType === 'pelangganLama' ? 'Pelanggan Lama' : 'Pelanggan Baru';
-    const customerTypeBadge = customer.customerType === 'pelangganLama' ? 'primary' : 'success';
+    const customerTypeLabel = getCustomerTypeLabel(customer.customerType);
+    const customerTypeBadge = getCustomerTypeBadge(customer.customerType);
     
     const badges = `
-        <span class="badge badge-${customerTypeBadge} mb-1">${customerTypeLabel}</span><br>
+        <span class="badge ${customerTypeBadge} mb-1">${customerTypeLabel}</span><br>
         <span class="badge badge-info">${customer.orderSource}</span>
     `;
     $('#modalCustomerBadges').html(badges);
@@ -445,8 +288,9 @@ function handleImageFiles(files) {
             
             const reader = new FileReader();
             reader.onload = function(e) {
-                addImagePreview(e.target.result, file.name);
+                addImagePreview(e.target.result, file.name, file);
                 uploadedImages.push({
+                    file: file,
                     data: e.target.result,
                     name: file.name,
                     size: file.size
@@ -463,7 +307,7 @@ function handleImageFiles(files) {
 /**
  * Add Image Preview
  */
-function addImagePreview(src, name) {
+function addImagePreview(src, name, file) {
     const previewArea = $('#imagePreviewArea');
     const previewContainer = $('#imagePreviewContainer');
     
@@ -476,6 +320,8 @@ function addImagePreview(src, name) {
             </button>
             <div class="text-center mt-1">
                 <small class="text-muted">${name}</small>
+                <br>
+                <small class="text-muted">${formatFileSize(file.size)}</small>
             </div>
         </div>
     `;
@@ -547,16 +393,34 @@ function showPreview() {
     
     // Show message
     const message = $('#followUpMessage').val() || '<em class="text-muted">Tidak ada pesan teks</em>';
-    $('#previewMessage').html(message);
+    $('#previewMessage').html(message.replace(/\n/g, '<br>'));
 }
 
 /**
- * Send Mass Follow Up
+ * Send Mass Follow Up via API
  */
 function sendMassFollowUp() {
     const message = $('#followUpMessage').val();
+    const targetType = determineTargetType();
     
-    // Simulasi pengiriman
+    if (filteredCustomers.length === 0) {
+        Swal.fire('Error', 'Tidak ada customer yang dipilih', 'error');
+        return;
+    }
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+    formData.append('message', message);
+    formData.append('target_type', targetType);
+    formData.append('customers', JSON.stringify(filteredCustomers));
+    
+    // Add images
+    uploadedImages.forEach((imageData, index) => {
+        formData.append(`images[${index}]`, imageData.file);
+    });
+    
+    // Show loading
     Swal.fire({
         title: 'Mengirim Follow Up...',
         text: `Mengirim ke ${filteredCustomers.length} customer`,
@@ -566,37 +430,82 @@ function sendMassFollowUp() {
         }
     });
     
-    // Simulasi delay pengiriman
-    setTimeout(() => {
-        Swal.fire('Berhasil!', `Follow up berhasil dikirim ke ${filteredCustomers.length} customer`, 'success');
+    // Send request
+    $.ajax({
+        url: '/follow-up-pelanggan/send',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.status === 'success') {
+                Swal.fire({
+                    title: 'Berhasil!',
+                    text: response.message,
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    // Show detailed results if there were failures
+                    if (response.summary.failed > 0) {
+                        showSendResults(response.results);
+                    }
+                });
+                
+                // Reset form and reload history
+                resetForm();
+                loadRiwayatData();
+                
+                // Close modal
+                $('#previewModal').modal('hide');
+            } else {
+                Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Send follow up error:', error);
+            let errorMessage = 'Terjadi kesalahan saat mengirim follow up';
+            
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            
+            Swal.fire('Error', errorMessage, 'error');
+        }
+    });
+}
+
+/**
+ * Show detailed send results
+ */
+function showSendResults(results) {
+    let resultHtml = '<div class="table-responsive"><table class="table table-sm">';
+    resultHtml += '<thead><tr><th>Customer</th><th>Phone</th><th>Status</th><th>Keterangan</th></tr></thead><tbody>';
+    
+    results.forEach(result => {
+        const statusBadge = result.status === 'success' ? 'badge-success' : 'badge-danger';
+        const statusText = result.status === 'success' ? 'Berhasil' : 'Gagal';
+        const keterangan = result.status === 'success' ? 
+            (result.message_id ? `ID: ${result.message_id}` : 'Terkirim') : 
+            (result.error || 'Error tidak diketahui');
         
-        // Buat entry riwayat baru
-        const newRiwayat = {
-            id: 'FU' + String(Date.now()).slice(-3),
-            tanggal: new Date().toLocaleString('id-ID', {
-                year: 'numeric',
-                month: '2-digit', 
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            }),
-            pesan: message || 'Pesan dengan gambar',
-            gambar: uploadedImages.length > 0 ? uploadedImages[0].data : null,
-            dikirimKe: filteredCustomers.map(c => c.name).join(', ')
-        };
-        
-        // Tambahkan ke riwayat (simulasi)
-        const currentRiwayat = getCurrentRiwayatData();
-        currentRiwayat.unshift(newRiwayat);
-        displayRiwayat(currentRiwayat);
-        
-        // Reset form
-        resetForm();
-        
-        // Close modal
-        $('#previewModal').modal('hide');
-        
-    }, 2000);
+        resultHtml += `
+            <tr>
+                <td>${result.customer}</td>
+                <td>${result.phone}</td>
+                <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                <td><small>${keterangan}</small></td>
+            </tr>
+        `;
+    });
+    
+    resultHtml += '</tbody></table></div>';
+    
+    Swal.fire({
+        title: 'Detail Hasil Pengiriman',
+        html: resultHtml,
+        width: '80%',
+        confirmButtonText: 'Tutup'
+    });
 }
 
 /**
@@ -613,48 +522,30 @@ function resetForm() {
 }
 
 /**
- * Get Current Riwayat Data
- */
-function getCurrentRiwayatData() {
-    return [
-        {
-            id: 'FU001',
-            tanggal: '2025-06-04 14:30',
-            pesan: 'Halo! Terima kasih sudah menjadi pelanggan setia Zafa Potato. Ada promo spesial untuk Anda! 🥔',
-            gambar: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=100&h=100&fit=crop',
-            dikirimKe: 'Budi Santoso, Ahmad Rizki, Andi Wijaya, Sari Dewi, Joko Susilo'
-        },
-        {
-            id: 'FU002',
-            tanggal: '2025-06-03 10:15',
-            pesan: 'Produk kentang premium baru sudah tersedia! Jangan sampai kehabisan 😊',
-            gambar: null,
-            dikirimKe: 'Siti Nurhaliza, Dewi Sartika, Lina Maharani'
-        },
-        {
-            id: 'FU003',
-            tanggal: '2025-06-02 16:45',
-            pesan: 'Stok kentang balado terbatas. Buruan pesan sebelum habis!',
-            gambar: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=100&h=100&fit=crop',
-            dikirimKe: 'Ahmad Rizki, Dewi Sartika, Rina Putri, Toni Hermawan, Maya Sari, Agus Pranoto, Linda Wati, Hendra Kusuma'
-        },
-        {
-            id: 'FU004',
-            tanggal: '2025-06-01 09:20',
-            pesan: 'Selamat pagi! Weekend ini ada diskon 20% untuk pembelian minimal 2kg',
-            gambar: null,
-            dikirimKe: 'Budi Santoso, Siti Nurhaliza, Ahmad Rizki, Dewi Sartika, Andi Wijaya, Sari Dewi, Joko Susilo, Lina Maharani, Rina Putri, Toni Hermawan, Maya Sari, Agus Pranoto, Linda Wati, Hendra Kusuma, Dini Pratiwi'
-        }
-    ];
-}
-
-/**
- * Load Riwayat Data
+ * Load Riwayat Data from Database
  */
 function loadRiwayatData() {
-    // Data dummy riwayat pemesanan dengan nama customer individual
-    const riwayatData = getCurrentRiwayatData();
-    displayRiwayat(riwayatData);
+    showLoadingState('#riwayatTableBody');
+    
+    $.ajax({
+        url: '/follow-up-pelanggan/history',
+        type: 'GET',
+        success: function(response) {
+            hideLoadingState('#riwayatTableBody');
+            
+            if (response.status === 'success') {
+                displayRiwayat(response.data);
+            } else {
+                console.error('Error loading history:', response);
+                showErrorMessage('Gagal memuat riwayat');
+            }
+        },
+        error: function(xhr, status, error) {
+            hideLoadingState('#riwayatTableBody');
+            console.error('AJAX Error:', error);
+            showErrorMessage('Terjadi kesalahan saat memuat riwayat');
+        }
+    });
 }
 
 /**
@@ -678,27 +569,17 @@ function displayRiwayat(data) {
             `<img src="${item.gambar}" alt="Gambar" style="width: 40px; height: 40px; object-fit: cover;" class="img-thumbnail" onclick="showFullImage('${item.gambar}')">` : 
             '<span class="text-muted">-</span>';
         
-        // Format daftar nama customer dengan maksimal tampil 3 nama + jumlah lainnya
-        const customerNames = item.dikirimKe.split(', ');
-        let displayNames = '';
-        
-        if (customerNames.length <= 3) {
-            displayNames = customerNames.join(', ');
-        } else {
-            const visibleNames = customerNames.slice(0, 3).join(', ');
-            const remainingCount = customerNames.length - 3;
-            displayNames = `${visibleNames} +${remainingCount} lainnya`;
-        }
-        
         const row = `
             <tr class="slide-in">
                 <td class="font-weight-bold text-primary">${item.id}</td>
                 <td class="small">${item.tanggal}</td>
                 <td class="small">${item.pesan.length > 50 ? item.pesan.substring(0, 50) + '...' : item.pesan}</td>
                 <td class="text-center">${imageHtml}</td>
-                <td class="small" title="${item.dikirimKe}">
-                    <span class="text-info">${displayNames}</span>
+                <td class="small">
+                    <div class="mb-1">${item.customerName}</div>
+                    <small class="text-muted">${item.phone}</small>
                 </td>
+                <td class="small">${item.status}</td>
             </tr>
         `;
         tableBody.append(row);
@@ -706,8 +587,48 @@ function displayRiwayat(data) {
 }
 
 /**
- * Utility Functions
+ * Helper Functions
  */
+
+// Get customer type label
+function getCustomerTypeLabel(type) {
+    const labels = {
+        'pelangganLama': 'Lama',
+        'pelangganBaru': 'Baru',
+        'pelangganTidakKembali': 'Tidak Kembali',
+        'keseluruhan': 'Keseluruhan'
+    };
+    return labels[type] || 'Unknown';
+}
+
+// Get customer type badge class
+function getCustomerTypeBadge(type) {
+    const badges = {
+        'pelangganLama': 'badge-primary',
+        'pelangganBaru': 'badge-success',
+        'pelangganTidakKembali': 'badge-warning',
+        'keseluruhan': 'badge-secondary'
+    };
+    return badges[type] || 'badge-secondary';
+}
+
+// Get initial from name
+function getInitialFromName(name) {
+    const words = name.split(' ');
+    if (words.length >= 2) {
+        return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+}
+
+// Determine target type from selected filters
+function determineTargetType() {
+    if (selectedFilters.includes('pelangganLama')) return 'pelangganLama';
+    if (selectedFilters.includes('pelangganBaru')) return 'pelangganBaru';
+    if (selectedFilters.includes('pelangganTidakKembali')) return 'pelangganTidakKembali';
+    if (selectedFilters.includes('keseluruhan')) return 'keseluruhan';
+    return 'keseluruhan';
+}
 
 // Format file size
 function formatFileSize(bytes) {
@@ -716,15 +637,6 @@ function formatFileSize(bytes) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Format currency
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0
-    }).format(amount);
 }
 
 // Show loading state
@@ -736,6 +648,11 @@ function showLoadingState(element) {
 // Hide loading state
 function hideLoadingState(element) {
     $(element).find('.loading-overlay').remove();
+}
+
+// Show error message
+function showErrorMessage(message) {
+    Swal.fire('Error', message, 'error');
 }
 
 // Debounce function for search
@@ -764,4 +681,4 @@ window.FollowUpModule = {
 };
 
 // Console log for debugging
-console.log('Follow Up Pelanggan JavaScript loaded successfully');
+console.log('Follow Up Pelanggan JavaScript loaded successfully (Database Mode)');

@@ -53,4 +53,12 @@ return [
     'mapbox' => [
         'key' => env('MAPBOX_API_KEY'),
     ],
+        'wablas' => [
+        'api_url' => env('WABLAS_API_URL', 'https://console.wablas.com/api'),
+        'token' => env('WABLAS_TOKEN'),
+        'device_id' => env('WABLAS_DEVICE_ID'),
+        'timeout' => env('WABLAS_TIMEOUT', 30),
+        'retry_attempts' => env('WABLAS_RETRY_ATTEMPTS', 3),
+        'retry_delay' => env('WABLAS_RETRY_DELAY', 5), // seconds
+    ],
 ];

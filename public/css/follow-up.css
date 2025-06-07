@@ -1,4 +1,4 @@
-/* Follow Up Pelanggan CSS Styles */
+/* Follow Up Pelanggan CSS Styles - Final Version (No Avatar, Database Integrated) */
 
 /* Filter Styles */
 .filter-checkbox {
@@ -17,6 +17,7 @@
     padding: 10px 15px;
     border-radius: 8px;
     margin-bottom: 15px;
+    animation: slideInDown 0.3s ease-out;
 }
 
 .customer-count-badge {
@@ -28,20 +29,102 @@
     font-weight: bold;
 }
 
+/* Customer Initial Circle Styles (Main Modal) */
+.customer-initial-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+
+.customer-initial-circle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+.initial-text {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Customer Initial Circle Styles (List Items) */
+.customer-initial-small {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.customer-initial-small:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.initial-text-small {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Dynamic colors based on customer type */
+.customer-item[data-customer-type="pelangganLama"] .customer-initial-small {
+    background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+}
+
+.customer-item[data-customer-type="pelangganBaru"] .customer-initial-small {
+    background: linear-gradient(135deg, #34a853 0%, #137333 100%);
+}
+
+.customer-item[data-customer-type="pelangganTidakKembali"] .customer-initial-small {
+    background: linear-gradient(135deg, #fbbc04 0%, #ea8600 100%);
+}
+
+.customer-item[data-customer-type="keseluruhan"] .customer-initial-small {
+    background: linear-gradient(135deg, #9aa0a6 0%, #5f6368 100%);
+}
+
 /* Customer Item Styles */
 .customer-item {
     transition: all 0.3s ease;
     cursor: pointer;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .customer-item:hover {
     background-color: #f8f9fa;
     transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.customer-item.selected {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: 2px solid #2196f3;
+    transform: translateX(3px);
 }
 
 .customer-badge {
     font-size: 0.7rem;
     padding: 2px 6px;
+    border-radius: 12px;
 }
 
 .detail-btn {
@@ -58,6 +141,7 @@
     background: linear-gradient(45deg, #F4631E, #CB0404);
     color: white;
     transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(244, 99, 30, 0.3);
 }
 
 /* Upload Area Styles */
@@ -74,11 +158,14 @@
     border-color: #FF9F00;
     background-color: #fff9f0;
     cursor: pointer;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .upload-area.dragover {
     border-color: #309898;
     background-color: #f0f8ff;
+    transform: scale(1.02);
 }
 
 /* Image Preview Styles */
@@ -86,6 +173,14 @@
     position: relative;
     display: inline-block;
     margin: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.image-preview-container:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .remove-image-btn {
@@ -101,31 +196,48 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
+    z-index: 10;
 }
 
 .remove-image-btn:hover {
     background: #c82333;
-    transform: scale(1.1);
+    transform: scale(1.2);
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
 }
 
-/* Riwayat Table Styles */
+/* Enhanced Riwayat Table Styles */
 .riwayat-table {
     font-size: 0.9rem;
 }
 
 .riwayat-table img {
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.3s ease;
+    border-radius: 4px;
 }
 
 .riwayat-table img:hover {
-    transform: scale(1.1);
+    transform: scale(1.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 100;
+    position: relative;
 }
 
 .riwayat-table .sticky-top {
     position: sticky;
     top: 0;
     z-index: 10;
+    background: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.riwayat-table tr {
+    transition: all 0.2s ease;
+}
+
+.riwayat-table tr:hover {
+    background-color: #f5f5f5;
+    transform: scale(1.01);
 }
 
 /* Modal Styles */
@@ -140,10 +252,191 @@
 .info-item {
     border-bottom: 1px solid #f0f0f0;
     padding-bottom: 8px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.info-item:hover {
+    background-color: #f8f9fa;
+    padding: 8px;
+    border-radius: 4px;
 }
 
 .info-item:last-child {
     border-bottom: none;
+}
+
+/* Status Badges */
+.badge-pelanggan-lama {
+    background: linear-gradient(45deg, #4285f4, #1a73e8);
+    color: white;
+}
+
+.badge-pelanggan-baru {
+    background: linear-gradient(45deg, #34a853, #137333);
+    color: white;
+}
+
+.badge-pelanggan-tidak-kembali {
+    background: linear-gradient(45deg, #fbbc04, #ea8600);
+    color: white;
+}
+
+.badge-keseluruhan {
+    background: linear-gradient(45deg, #9aa0a6, #5f6368);
+    color: white;
+}
+
+/* Loading States */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 8px;
+    backdrop-filter: blur(2px);
+}
+
+.loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #309898;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Enhanced Button Styles */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-success:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-primary:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Card Enhancements */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-bottom: 2px solid #e9ecef;
+}
+
+/* Search Bar Enhancement */
+.input-group-sm .form-control {
+    border-radius: 20px 0 0 20px;
+}
+
+.input-group-sm .btn {
+    border-radius: 0 20px 20px 0;
+}
+
+/* Custom Scrollbar */
+.card-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+    transition: background 0.3s ease;
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Pulse animation for active elements */
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(48, 152, 152, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(48, 152, 152, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(48, 152, 152, 0);
+    }
 }
 
 /* Responsive Design */
@@ -172,9 +465,26 @@
     .customer-count-badge {
         font-size: 0.7rem;
     }
-}
+    
+    .customer-initial-small {
+        width: 40px;
+        height: 40px;
+        margin-right: 10px;
+    }
+    
+    .initial-text-small {
+        font-size: 1rem;
+    }
+    
+    .customer-initial-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .initial-text {
+        font-size: 2rem;
+    }
 
-@media (max-width: 576px) {
     .riwayat-table {
         font-size: 0.8rem;
     }
@@ -183,81 +493,82 @@
     .riwayat-table td {
         padding: 0.5rem 0.25rem;
     }
-    
+}
+
+@media (max-width: 576px) {
     .customer-badge {
         font-size: 0.6rem;
         padding: 1px 4px;
     }
-}
-
-/* Custom Scrollbar */
-.card-body::-webkit-scrollbar {
-    width: 6px;
-}
-
-.card-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.card-body::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-.card-body::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Animation Classes */
-.fade-in {
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.slide-in {
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from { 
-        opacity: 0;
-        transform: translateY(-10px);
+    
+    .customer-initial-small {
+        width: 35px;
+        height: 35px;
     }
-    to { 
-        opacity: 1;
-        transform: translateY(0);
+    
+    .initial-text-small {
+        font-size: 0.9rem;
+    }
+
+    .modal-dialog {
+        margin: 10px;
+    }
+
+    .card {
+        margin-bottom: 15px;
     }
 }
 
-/* Loading States */
-.loading-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+/* Empty State Improvements */
+#defaultCustomerState,
+#noCustomerData,
+#noRiwayatMessage {
+    transition: all 0.3s ease;
+    border-radius: 8px;
 }
 
-.loading-spinner {
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #309898;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
+#defaultCustomerState:hover,
+#noCustomerData:hover,
+#noRiwayatMessage:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.01);
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* Success and Error States */
+.alert {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    color: #721c24;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    color: #0c5460;
+}
+
+/* Final touches */
+.text-muted {
+    color: #6c757d !important;
+}
+
+.font-weight-bold {
+    font-weight: 600 !important;
+}
+
+.text-primary {
+    color: #309898 !important;
+}
+
+.text-success {
+    color: #28a745 !important;
 }

@@ -187,13 +187,34 @@ Route::prefix('toko')->group(function() {
     Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
     // Route Follow Up Pelanggan
+// Route Follow Up Pelanggan (Updated)
 Route::group(['prefix' => 'follow-up-pelanggan'], function() {
     Route::get('/', [FollowUpPelangganController::class, 'index'])->name('follow-up-pelanggan.index');
-    Route::get('/data', [FollowUpPelangganController::class, 'getData'])->name('follow-up-pelanggan.data');
+    
+    // Customer data endpoints
     Route::get('/filtered-customers', [FollowUpPelangganController::class, 'getFilteredCustomers'])->name('follow-up-pelanggan.filtered-customers');
+    Route::get('/customer-detail/{id}', [FollowUpPelangganController::class, 'getCustomerDetail'])->name('follow-up-pelanggan.customer-detail');
+    
+    // Follow up actions
     Route::post('/send', [FollowUpPelangganController::class, 'sendFollowUp'])->name('follow-up-pelanggan.send');
+    Route::post('/send-individual', [FollowUpPelangganController::class, 'sendIndividualFollowUp'])->name('follow-up-pelanggan.send-individual');
+    
+    // History and tracking
     Route::get('/history', [FollowUpPelangganController::class, 'getHistory'])->name('follow-up-pelanggan.history');
+    Route::get('/status/{id}', [FollowUpPelangganController::class, 'getFollowUpStatus'])->name('follow-up-pelanggan.status');
+    Route::post('/update-status', [FollowUpPelangganController::class, 'updateMessageStatus'])->name('follow-up-pelanggan.update-status');
+    
+    // File handling
     Route::post('/upload-image', [FollowUpPelangganController::class, 'uploadImage'])->name('follow-up-pelanggan.upload-image');
+    Route::delete('/delete-image/{id}', [FollowUpPelangganController::class, 'deleteImage'])->name('follow-up-pelanggan.delete-image');
+    
+    // Analytics and reports
+    Route::get('/analytics', [FollowUpPelangganController::class, 'getAnalytics'])->name('follow-up-pelanggan.analytics');
+    Route::get('/export', [FollowUpPelangganController::class, 'exportHistory'])->name('follow-up-pelanggan.export');
+    
+    // WhatsApp device status
+    Route::get('/device-status', [FollowUpPelangganController::class, 'getDeviceStatus'])->name('follow-up-pelanggan.device-status');
+    Route::post('/test-connection', [FollowUpPelangganController::class, 'testWhatsAppConnection'])->name('follow-up-pelanggan.test-connection');
 });
 
 

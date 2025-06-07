@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Pemesanan;
 use App\Observers\PemesananObserver;
+use App\Services\WablasService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -16,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
     {
         Excel::macro('storeMultiple', function (...$args) {
             // Helper macro for Excel
+        });
+
+        $this->app->singleton(WablasService::class, function ($app) {
+            return new WablasService();
         });
     }
 

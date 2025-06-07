@@ -10,6 +10,8 @@
 @push('css')
     <!-- Follow Up Custom CSS -->
     <link rel="stylesheet" href="{{ asset('css/follow-up.css') }}">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.7.12/sweetalert2.min.css">
 @endpush
 
 @section('content')
@@ -50,17 +52,31 @@
                                 Jenis Customer
                             </h6>
                             <div class="form-check mb-2">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="keseluruhan" value="keseluruhan">
+                                <label class="form-check-label" for="keseluruhan">
+                                    <span class="badge badge-secondary customer-badge mr-1">ALL</span>
+                                    Keseluruhan Customer
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="pelangganLama" value="pelangganLama">
                                 <label class="form-check-label" for="pelangganLama">
                                     <span class="badge badge-primary customer-badge mr-1">VIP</span>
-                                    Pelanggan Lama
+                                    Pelanggan Lama (≥3 transaksi)
                                 </label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="pelangganBaru" value="pelangganBaru">
                                 <label class="form-check-label" for="pelangganBaru">
                                     <span class="badge badge-success customer-badge mr-1">NEW</span>
-                                    Pelanggan Baru
+                                    Pelanggan Baru (1 bulan terakhir)
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="pelangganTidakKembali" value="pelangganTidakKembali">
+                                <label class="form-check-label" for="pelangganTidakKembali">
+                                    <span class="badge badge-warning customer-badge mr-1">⚠️</span>
+                                    Pelanggan Tidak Kembali (>2 bulan)
                                 </label>
                             </div>
                         </div>
@@ -74,6 +90,13 @@
                                 <label class="form-check-label" for="shopee">
                                     <span class="badge badge-warning customer-badge mr-1">🛒</span>
                                     Shopee
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input filter-checkbox" type="checkbox" id="tokopedia" value="tokopedia">
+                                <label class="form-check-label" for="tokopedia">
+                                    <span class="badge badge-warning customer-badge mr-1">🛒</span>
+                                    Tokopedia
                                 </label>
                             </div>
                             <div class="form-check mb-2">
@@ -126,7 +149,7 @@
                     <div class="upload-area" id="uploadArea">
                         <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">Drag & Drop gambar atau klik untuk pilih</h5>
-                        <p class="text-muted mb-3">Format: JPG, PNG, GIF - Maksimal 5MB</p>
+                        <p class="text-muted mb-3">Format: JPG, PNG, GIF - Maksimal 5MB per file</p>
                         <input type="file" id="imageInput" multiple accept="image/*" style="display: none;">
                         <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('imageInput').click()">
                             <i class="fas fa-folder-open mr-1"></i>
@@ -137,7 +160,7 @@
                     <!-- Image Preview Area -->
                     <div id="imagePreviewArea" class="mt-3" style="display: none;">
                         <h6 class="font-weight-bold mb-2">Preview Gambar:</h6>
-                        <div id="imagePreviewContainer"></div>
+                        <div id="imagePreviewContainer" class="d-flex flex-wrap"></div>
                     </div>
                 </div>
             </div>
@@ -165,6 +188,11 @@
                             </small>
                         </div>
                         
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Tips:</strong> Anda bisa mengirim pesan teks saja, gambar saja, atau kombinasi keduanya. Minimal salah satu harus diisi.
+                        </div>
+                        
                         <div class="text-right">
                             <button type="button" class="btn btn-secondary mr-2" id="previewBtn">
                                 <i class="fas fa-eye mr-1"></i>
@@ -187,7 +215,7 @@
                         Riwayat Follow Up
                     </h5>
                     <div class="card-tools">
-                        <button type="button" class="btn btn-tool" id="refreshRiwayatBtn">
+                        <button type="button" class="btn btn-tool" id="refreshRiwayatBtn" title="Refresh">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
@@ -197,21 +225,22 @@
                         <table class="table table-striped table-sm riwayat-table">
                             <thead class="bg-light sticky-top">
                                 <tr>
-                                    <th style="width: 50px;">ID</th>
+                                    <th style="width: 80px;">ID</th>
                                     <th style="width: 120px;">Tanggal</th>
                                     <th>Pesan</th>
                                     <th style="width: 80px;">Gambar</th>
-                                    <th style="width: 200px;">Dikirim Ke</th>
+                                    <th style="width: 150px;">Customer</th>
+                                    <th style="width: 100px;">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="riwayatTableBody">
-                                <!-- Data riwayat akan dimuat via JavaScript -->
+                                <!-- Data riwayat akan dimuat via AJAX -->
                             </tbody>
                         </table>
                     </div>
                     
                     <!-- No Data Message -->
-                    <div id="noRiwayatMessage" class="text-center p-4">
+                    <div id="noRiwayatMessage" class="text-center p-4" style="display: none;">
                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">Belum Ada Riwayat</h5>
                         <p class="text-muted">Riwayat follow up akan muncul setelah Anda mengirim pesan</p>
@@ -234,8 +263,20 @@
                 </div>
                 
                 <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                    <!-- Search Bar -->
+                    <div class="p-3 border-bottom">
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" id="searchCustomer" placeholder="Cari nama, phone, email...">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" onclick="loadFilteredCustomers()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div id="customerList">
-                        <!-- Customer data akan dimuat via JavaScript -->
+                        <!-- Customer data akan dimuat via AJAX -->
                     </div>
                     
                     <!-- Default State -->
@@ -257,7 +298,7 @@
     </div>
 </div>
 
-<!-- Customer Detail Modal -->
+<!-- Customer Detail Modal (tanpa avatar) -->
 <div class="modal fade" id="customerDetailModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -273,7 +314,9 @@
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-3 text-center">
-                        <img id="modalCustomerAvatar" src="" alt="Customer" class="img-circle img-fluid mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                        <div class="customer-initial-circle mb-3">
+                            <span id="modalCustomerInitial" class="initial-text"></span>
+                        </div>
                         <div id="modalCustomerBadges"></div>
                     </div>
                     <div class="col-md-9">
@@ -351,7 +394,7 @@
             <div class="modal-body">
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle mr-2"></i>
-                    Pesan ini akan dikirim ke <strong id="previewTargetCount">0</strong> customer
+                    Pesan ini akan dikirim via WhatsApp ke <strong id="previewTargetCount">0</strong> customer
                 </div>
                 
                 <div class="card">
@@ -391,9 +434,14 @@
         </div>
     </div>
 </div>
+
+<!-- CSRF Token -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 
 @push('js')
+    <!-- SweetAlert2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.7.12/sweetalert2.min.js"></script>
     <!-- Follow Up Custom JavaScript -->
     <script src="{{ asset('js/follow-up.js') }}"></script>
 @endpush
