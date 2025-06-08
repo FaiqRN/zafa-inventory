@@ -16,7 +16,7 @@
 
 @section('content')
 <div class="container-fluid">
-    <!-- Header Card -->
+    <!-- Header Card with Device Status -->
     <div class="card card-outline card-primary">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -26,8 +26,24 @@
                         Follow Up Pelanggan
                     </h3>
                 </div>
-                <div class="badge badge-warning p-2" style="font-size: 1rem;">
-                    🥔 Zafa Potato CRM
+                <div class="d-flex align-items-center">
+                    <!-- WhatsApp Device Status Indicator -->
+                    <div id="deviceStatusIndicator" class="mr-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-secondary rounded-circle mr-2" style="width: 8px; height: 8px;"></div>
+                            <small class="text-muted">Checking WhatsApp...</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Test Connection Button -->
+                    <button type="button" class="btn btn-sm btn-outline-success mr-2" id="testConnectionBtn" title="Test WhatsApp Connection">
+                        <i class="fas fa-wifi mr-1"></i>
+                        Test
+                    </button>
+                    
+                    <div class="badge badge-warning p-2" style="font-size: 1rem;">
+                        🥔 Zafa Potato CRM
+                    </div>
                 </div>
             </div>
         </div>
@@ -142,7 +158,7 @@
                 <div class="card-header">
                     <h5 class="card-title">
                         <i class="fas fa-image mr-2"></i>
-                        Upload Gambar (Opsional)
+                        Upload Gambar WhatsApp (Opsional)
                     </h5>
                 </div>
                 <div class="card-body">
@@ -170,7 +186,7 @@
                 <div class="card-header">
                     <h5 class="card-title">
                         <i class="fas fa-comment-alt mr-2"></i>
-                        Tulis Pesan Follow Up
+                        Tulis Pesan WhatsApp
                     </h5>
                 </div>
                 <div class="card-body">
@@ -182,7 +198,9 @@
                                 Pesan untuk Customer
                             </label>
                             <textarea class="form-control" id="followUpMessage" name="message" rows="5" 
-                                placeholder="Contoh: Halo! Terima kasih sudah menjadi pelanggan setia Zafa Potato. Ada promo spesial untuk Anda! 🥔"></textarea>
+                                placeholder="Contoh: Halo! Terima kasih sudah menjadi pelanggan setia Zafa Potato. Ada promo spesial untuk Anda! 🥔
+
+Tips: Gunakan emoji untuk membuat pesan lebih menarik 😊"></textarea>
                             <small class="form-text text-muted">
                                 <span id="charCount">0</span>/1000 karakter
                             </small>
@@ -190,7 +208,7 @@
                         
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle mr-2"></i>
-                            <strong>Tips:</strong> Anda bisa mengirim pesan teks saja, gambar saja, atau kombinasi keduanya. Minimal salah satu harus diisi.
+                            <strong>Tips WhatsApp:</strong> Anda bisa mengirim pesan teks saja, gambar saja, atau kombinasi keduanya. Pesan akan dikirim langsung ke WhatsApp customer.
                         </div>
                         
                         <div class="text-right">
@@ -212,7 +230,7 @@
                 <div class="card-header">
                     <h5 class="card-title">
                         <i class="fas fa-history mr-2"></i>
-                        Riwayat Follow Up
+                        Riwayat Follow Up WhatsApp
                     </h5>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" id="refreshRiwayatBtn" title="Refresh">
@@ -243,7 +261,7 @@
                     <div id="noRiwayatMessage" class="text-center p-4" style="display: none;">
                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">Belum Ada Riwayat</h5>
-                        <p class="text-muted">Riwayat follow up akan muncul setelah Anda mengirim pesan</p>
+                        <p class="text-muted">Riwayat follow up akan muncul setelah Anda mengirim pesan WhatsApp</p>
                     </div>
                 </div>
             </div>
@@ -268,7 +286,7 @@
                         <div class="input-group input-group-sm">
                             <input type="text" class="form-control" id="searchCustomer" placeholder="Cari nama, phone, email...">
                             <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" type="button" onclick="loadFilteredCustomers()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="if(typeof loadFilteredCustomers === 'function') loadFilteredCustomers()">
                                     <i class="fas fa-search"></i>
                                 </button>
                             </div>
@@ -369,9 +387,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-                <button type="button" class="btn btn-primary" id="sendIndividualBtn">
-                    <i class="fas fa-paper-plane mr-1"></i>
-                    Kirim Follow Up Individual
+                <button type="button" class="btn btn-success" id="sendIndividualBtn">
+                    <i class="fab fa-whatsapp mr-1"></i>
+                    Kirim WhatsApp Individual
                 </button>
             </div>
         </div>
@@ -384,8 +402,8 @@
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title">
-                    <i class="fas fa-eye mr-2"></i>
-                    Preview Pesan Follow Up
+                    <i class="fab fa-whatsapp mr-2"></i>
+                    Preview Pesan WhatsApp
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
@@ -393,13 +411,13 @@
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">
-                    <i class="fas fa-info-circle mr-2"></i>
+                    <i class="fab fa-whatsapp mr-2"></i>
                     Pesan ini akan dikirim via WhatsApp ke <strong id="previewTargetCount">0</strong> customer
                 </div>
                 
                 <div class="card">
                     <div class="card-header bg-light">
-                        <strong>Preview Pesan:</strong>
+                        <strong>Preview Pesan WhatsApp:</strong>
                     </div>
                     <div class="card-body">
                         <div id="previewImages" class="mb-3"></div>
@@ -410,8 +428,8 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
                 <button type="button" class="btn btn-success" id="confirmSendBtn">
-                    <i class="fas fa-paper-plane mr-1"></i>
-                    Kirim Sekarang
+                    <i class="fab fa-whatsapp mr-1"></i>
+                    Kirim WhatsApp Sekarang
                 </button>
             </div>
         </div>

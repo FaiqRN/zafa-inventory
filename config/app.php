@@ -185,5 +185,5 @@ return [
     'aliases' => Facade::defaultAliases()->merge([
         'DataTables' => Yajra\DataTables\Facades\DataTables::class,
     ])->toArray(),
-
+'admin_phone' => env('APP_ADMIN_PHONE', '6282245454528'),
 ];

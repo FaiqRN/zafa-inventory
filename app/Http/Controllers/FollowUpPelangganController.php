@@ -7,21 +7,15 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Http;
 use App\Models\FollowUp;
 use App\Models\Pemesanan;
 use App\Models\Customer;
-use App\Services\WablasService;
 use Carbon\Carbon;
 
 class FollowUpPelangganController extends Controller
 {
-    protected $wablasService;
-
-    public function __construct(WablasService $wablasService)
-    {
-        $this->wablasService = $wablasService;
-    }
-
     /**
      * Display the follow up pelanggan page
      */
@@ -50,321 +44,82 @@ class FollowUpPelangganController extends Controller
      */
     public function getFilteredCustomers(Request $request)
     {
-        $filters = $request->get('filters', []);
-        $search = $request->get('search');
-        
-        if (empty($filters)) {
+        try {
+            $filters = $request->get('filters', []);
+            $search = $request->get('search');
+            
+            if (empty($filters)) {
+                return response()->json([
+                    'status' => 'success',
+                    'data' => []
+                ]);
+            }
+
+            $customers = collect();
+
+            foreach ($filters as $filter) {
+                try {
+                    switch ($filter) {
+                        case 'pelangganLama':
+                            $customers = $customers->merge($this->getPelangganLama());
+                            break;
+                        case 'pelangganBaru':
+                            $customers = $customers->merge($this->getPelangganBaru());
+                            break;
+                        case 'pelangganTidakKembali':
+                            $customers = $customers->merge($this->getPelangganTidakKembali());
+                            break;
+                        case 'keseluruhan':
+                            $customers = $customers->merge($this->getKeseluruhanPelanggan());
+                            break;
+                        case 'shopee':
+                        case 'tokopedia':
+                        case 'whatsapp':
+                        case 'instagram':
+                        case 'langsung':
+                            $customers = $customers->merge($this->getPelangganBySource($filter));
+                            break;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error processing filter {$filter}: " . $e->getMessage());
+                    continue;
+                }
+            }
+
+            // Remove duplicates based on phone number
+            $customers = $customers->unique('phone');
+
+            // Apply search filter
+            if ($search) {
+                $customers = $customers->filter(function ($customer) use ($search) {
+                    return stripos($customer['name'], $search) !== false ||
+                           stripos($customer['phone'], $search) !== false ||
+                           stripos($customer['email'], $search) !== false;
+                });
+            }
+
             return response()->json([
                 'status' => 'success',
-                'data' => []
+                'data' => $customers->values()->all()
             ]);
+
+        } catch (\Exception $e) {
+            Log::error('getFilteredCustomers error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat memuat data customer: ' . $e->getMessage()
+            ], 500);
         }
-
-        $customers = collect();
-
-        foreach ($filters as $filter) {
-            switch ($filter) {
-                case 'pelangganLama':
-                    $customers = $customers->merge($this->getPelangganLama());
-                    break;
-                case 'pelangganBaru':
-                    $customers = $customers->merge($this->getPelangganBaru());
-                    break;
-                case 'pelangganTidakKembali':
-                    $customers = $customers->merge($this->getPelangganTidakKembali());
-                    break;
-                case 'keseluruhan':
-                    $customers = $customers->merge($this->getKeseluruhanPelanggan());
-                    break;
-                case 'shopee':
-                case 'tokopedia':
-                case 'whatsapp':
-                case 'instagram':
-                case 'langsung':
-                    $customers = $customers->merge($this->getPelangganBySource($filter));
-                    break;
-            }
-        }
-
-        // Remove duplicates based on phone number
-        $customers = $customers->unique('phone');
-
-        // Apply search filter
-        if ($search) {
-            $customers = $customers->filter(function ($customer) use ($search) {
-                return stripos($customer['name'], $search) !== false ||
-                       stripos($customer['phone'], $search) !== false ||
-                       stripos($customer['email'], $search) !== false;
-            });
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $customers->values()->all()
-        ]);
     }
 
     /**
-     * Get Pelanggan Lama (>3 transaksi)
-     * Berdasarkan kesamaan nama_pemesanan, no_tlp_pemesan, email_pemesan
-     */
-    private function getPelangganLama()
-    {
-        // Ambil data dengan GROUP BY untuk mencari yang memiliki transaksi >3
-        $pelangganLama = DB::table('pemesanan')
-            ->select([
-                'nama_pemesan as name',
-                'no_telp_pemesan as phone',
-                'email_pemesan as email',
-                'alamat_pemesan as address',
-                'pemesanan_dari as orderSource',
-                DB::raw('COUNT(*) as totalOrders'),
-                DB::raw('SUM(total) as totalSpent'),
-                DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
-                DB::raw('MAX(pemesanan_id) as lastOrderId')
-            ])
-            ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan')
-            ->havingRaw('COUNT(*) >= 3')
-            ->get();
-
-        return $pelangganLama->map(function ($customer) {
-            // Get last product info
-            $lastOrder = Pemesanan::where('pemesanan_id', $customer->lastOrderId)
-                ->with('barang')
-                ->first();
-
-            return [
-                'id' => 'lama_' . md5($customer->phone),
-                'name' => $customer->name,
-                'phone' => $customer->phone,
-                'email' => $customer->email,
-                'address' => $customer->address,
-                'lastOrder' => Carbon::parse($customer->lastOrder)->format('Y-m-d'),
-                'totalOrders' => $customer->totalOrders,
-                'totalSpent' => 'Rp ' . number_format($customer->totalSpent, 0, ',', '.'),
-                'customerType' => 'pelangganLama',
-                'orderSource' => $customer->orderSource,
-                'lastProduct' => $lastOrder ? $lastOrder->barang->nama_barang ?? 'Unknown Product' : 'Unknown Product',
-                'notes' => 'Pelanggan setia dengan ' . $customer->totalOrders . ' transaksi',
-                'initial' => $this->getCustomerInitial($customer->name)
-            ];
-        });
-    }
-
-    /**
-     * Get Pelanggan Baru (1 bulan terakhir, hanya 1 kali transaksi)
-     */
-    private function getPelangganBaru()
-    {
-        $oneMonthAgo = Carbon::now()->subMonth();
-
-        $pelangganBaru = DB::table('pemesanan')
-            ->select([
-                'nama_pemesan as name',
-                'no_telp_pemesan as phone',
-                'email_pemesan as email',
-                'alamat_pemesan as address',
-                'pemesanan_dari as orderSource',
-                'tanggal_pemesanan as lastOrder',
-                'total as totalSpent',
-                'pemesanan_id as lastOrderId'
-            ])
-            ->where('tanggal_pemesanan', '>=', $oneMonthAgo)
-            ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan')
-            ->havingRaw('COUNT(*) = 1')
-            ->get();
-
-        return $pelangganBaru->map(function ($customer) {
-            $lastOrder = Pemesanan::where('pemesanan_id', $customer->lastOrderId)
-                ->with('barang')
-                ->first();
-
-            return [
-                'id' => 'baru_' . md5($customer->phone),
-                'name' => $customer->name,
-                'phone' => $customer->phone,
-                'email' => $customer->email,
-                'address' => $customer->address,
-                'lastOrder' => Carbon::parse($customer->lastOrder)->format('Y-m-d'),
-                'totalOrders' => 1,
-                'totalSpent' => 'Rp ' . number_format($customer->totalSpent, 0, ',', '.'),
-                'customerType' => 'pelangganBaru',
-                'orderSource' => $customer->orderSource,
-                'lastProduct' => $lastOrder ? $lastOrder->barang->nama_barang ?? 'Unknown Product' : 'Unknown Product',
-                'notes' => 'Pelanggan baru, bergabung dalam 1 bulan terakhir',
-                'initial' => $this->getCustomerInitial($customer->name)
-            ];
-        });
-    }
-
-    /**
-     * Get Pelanggan Tidak Kembali (>2 bulan tidak transaksi)
-     */
-    private function getPelangganTidakKembali()
-    {
-        $twoMonthsAgo = Carbon::now()->subMonths(2);
-
-        $pelangganTidakKembali = DB::table('pemesanan')
-            ->select([
-                'nama_pemesan as name',
-                'no_telp_pemesan as phone',
-                'email_pemesan as email',
-                'alamat_pemesan as address',
-                'pemesanan_dari as orderSource',
-                DB::raw('COUNT(*) as totalOrders'),
-                DB::raw('SUM(total) as totalSpent'),
-                DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
-                DB::raw('MAX(pemesanan_id) as lastOrderId')
-            ])
-            ->where('tanggal_pemesanan', '<', $twoMonthsAgo)
-            ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan')
-            ->get();
-
-        return $pelangganTidakKembali->map(function ($customer) {
-            $lastOrder = Pemesanan::where('pemesanan_id', $customer->lastOrderId)
-                ->with('barang')
-                ->first();
-
-            return [
-                'id' => 'tidak_kembali_' . md5($customer->phone),
-                'name' => $customer->name,
-                'phone' => $customer->phone,
-                'email' => $customer->email,
-                'address' => $customer->address,
-                'lastOrder' => Carbon::parse($customer->lastOrder)->format('Y-m-d'),
-                'totalOrders' => $customer->totalOrders,
-                'totalSpent' => 'Rp ' . number_format($customer->totalSpent, 0, ',', '.'),
-                'customerType' => 'pelangganTidakKembali',
-                'orderSource' => $customer->orderSource,
-                'lastProduct' => $lastOrder ? $lastOrder->barang->nama_barang ?? 'Unknown Product' : 'Unknown Product',
-                'notes' => 'Tidak bertransaksi >2 bulan, perlu follow up',
-                'initial' => $this->getCustomerInitial($customer->name)
-            ];
-        });
-    }
-
-    /**
-     * Get Keseluruhan Pelanggan (dari pemesanan dan data_customer)
-     */
-    private function getKeseluruhanPelanggan()
-    {
-        // Dari table pemesanan
-        $fromPemesanan = DB::table('pemesanan')
-            ->select([
-                'nama_pemesan as name',
-                'no_telp_pemesan as phone',
-                'email_pemesan as email',
-                'alamat_pemesan as address',
-                'pemesanan_dari as orderSource',
-                DB::raw('COUNT(*) as totalOrders'),
-                DB::raw('SUM(total) as totalSpent'),
-                DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
-                DB::raw('MAX(pemesanan_id) as lastOrderId'),
-                DB::raw("'pemesanan' as source_table")
-            ])
-            ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan', 'alamat_pemesan', 'pemesanan_dari')
-            ->get();
-
-        // Dari table data_customer
-        $fromCustomer = DB::table('data_customer')
-            ->leftJoin('pemesanan', 'data_customer.pemesanan_id', '=', 'pemesanan.pemesanan_id')
-            ->select([
-                'data_customer.nama as name',
-                'data_customer.no_tlp as phone',
-                'data_customer.email as email',
-                'data_customer.alamat as address',
-                DB::raw('COALESCE(pemesanan.pemesanan_dari, "manual") as orderSource'),
-                DB::raw('CASE WHEN pemesanan.pemesanan_id IS NOT NULL THEN 1 ELSE 0 END as totalOrders'),
-                DB::raw('COALESCE(pemesanan.total, 0) as totalSpent'),
-                DB::raw('COALESCE(pemesanan.tanggal_pemesanan, data_customer.created_at) as lastOrder'),
-                'pemesanan.pemesanan_id as lastOrderId',
-                DB::raw("'customer' as source_table")
-            ])
-            ->whereNotNull('data_customer.nama')
-            ->get();
-
-        $allCustomers = $fromPemesanan->merge($fromCustomer);
-
-        return $allCustomers->map(function ($customer) {
-            $lastOrder = null;
-            if ($customer->lastOrderId) {
-                $lastOrder = Pemesanan::where('pemesanan_id', $customer->lastOrderId)
-                    ->with('barang')
-                    ->first();
-            }
-
-            return [
-                'id' => 'all_' . md5($customer->phone . $customer->source_table),
-                'name' => $customer->name,
-                'phone' => $customer->phone,
-                'email' => $customer->email,
-                'address' => $customer->address,
-                'lastOrder' => $customer->lastOrder ? Carbon::parse($customer->lastOrder)->format('Y-m-d') : '-',
-                'totalOrders' => $customer->totalOrders,
-                'totalSpent' => 'Rp ' . number_format($customer->totalSpent, 0, ',', '.'),
-                'customerType' => 'keseluruhan',
-                'orderSource' => $customer->orderSource,
-                'lastProduct' => $lastOrder ? $lastOrder->barang->nama_barang ?? 'Unknown Product' : 'No Purchase',
-                'notes' => 'Data ' . ($customer->source_table === 'pemesanan' ? 'dari transaksi' : 'customer manual'),
-                'initial' => $this->getCustomerInitial($customer->name)
-            ];
-        });
-    }
-
-    /**
-     * Get customers by order source
-     */
-    private function getPelangganBySource($source)
-    {
-        $customers = DB::table('pemesanan')
-            ->select([
-                'nama_pemesan as name',
-                'no_telp_pemesan as phone',
-                'email_pemesan as email',
-                'alamat_pemesan as address',
-                'pemesanan_dari as orderSource',
-                DB::raw('COUNT(*) as totalOrders'),
-                DB::raw('SUM(total) as totalSpent'),
-                DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
-                DB::raw('MAX(pemesanan_id) as lastOrderId')
-            ])
-            ->where('pemesanan_dari', $source)
-            ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan')
-            ->get();
-
-        return $customers->map(function ($customer) {
-            $lastOrder = Pemesanan::where('pemesanan_id', $customer->lastOrderId)
-                ->with('barang')
-                ->first();
-
-            return [
-                'id' => $customer->orderSource . '_' . md5($customer->phone),
-                'name' => $customer->name,
-                'phone' => $customer->phone,
-                'email' => $customer->email,
-                'address' => $customer->address,
-                'lastOrder' => Carbon::parse($customer->lastOrder)->format('Y-m-d'),
-                'totalOrders' => $customer->totalOrders,
-                'totalSpent' => 'Rp ' . number_format($customer->totalSpent, 0, ',', '.'),
-                'customerType' => $this->determineCustomerType($customer->totalOrders, $customer->lastOrder),
-                'orderSource' => $customer->orderSource,
-                'lastProduct' => $lastOrder ? $lastOrder->barang->nama_barang ?? 'Unknown Product' : 'Unknown Product',
-                'notes' => 'Customer dari ' . $customer->orderSource,
-                'initial' => $this->getCustomerInitial($customer->name)
-            ];
-        });
-    }
-
-    /**
-     * Send follow up message
+     * Send follow up message with FIXED WhatsApp broadcast
      */
     public function sendFollowUp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'customers' => 'required|array|min:1',
-            'customers.*' => 'required|array',
-            'customers.*.phone' => 'required|string',
-            'customers.*.name' => 'required|string',
+            'customers' => 'required|string',
             'message' => 'nullable|string|max:1000',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -379,183 +134,708 @@ class FollowUpPelangganController extends Controller
             ], 422);
         }
 
-        $customers = $request->customers;
-        $message = $request->message;
-        $targetType = $request->target_type;
-        $imagePaths = [];
-
-        // Handle image uploads
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('follow-up-images', $imageName, 'public');
-                $imagePaths[] = $imagePath;
+        try {
+            // Decode customers JSON
+            $customers = json_decode($request->customers, true);
+            if (!$customers || !is_array($customers)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Data customer tidak valid'
+                ], 422);
             }
-        }
 
-        $successCount = 0;
-        $failedCount = 0;
-        $results = [];
+            $message = $request->message;
+            $targetType = $request->target_type;
+            $imagePaths = [];
+            $imageUrls = [];
 
-        foreach ($customers as $customer) {
-            try {
-                // Validate phone number
-                if (!$this->wablasService->validatePhoneNumber($customer['phone'])) {
-                    $results[] = [
-                        'customer' => $customer['name'],
-                        'phone' => $customer['phone'],
-                        'status' => 'failed',
-                        'error' => 'Invalid phone number format'
-                    ];
-                    $failedCount++;
-                    continue;
+            // Handle image uploads
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('follow-up-images', $imageName, 'public');
+                    $imagePaths[] = $imagePath;
+                    $imageUrls[] = asset('storage/' . $imagePath);
                 }
+            }
 
-                // Create follow up record
-                $followUp = FollowUp::create([
-                    'customer_name' => $customer['name'],
-                    'phone_number' => $customer['phone'],
-                    'customer_email' => $customer['email'] ?? null,
-                    'target_type' => $targetType,
-                    'message' => $message,
-                    'images' => $imagePaths,
-                    'source_channel' => $customer['orderSource'] ?? null,
-                    'status' => 'pending'
-                ]);
+            // Check if we have something to send
+            if (empty($message) && empty($imagePaths)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Pesan atau gambar harus diisi minimal salah satu'
+                ], 422);
+            }
 
-                // Send message via WhatsApp
-                if (!empty($message) && !empty($imagePaths)) {
-                    // Send both message and images
-                    $imageUrls = array_map(function($path) {
-                        return asset('storage/' . $path);
-                    }, $imagePaths);
-                    
-                    $wablasResult = $this->wablasService->sendMessageWithImages(
-                        $customer['phone'],
-                        $message,
-                        $imageUrls
-                    );
-                } elseif (!empty($message)) {
-                    // Send text only
-                    $wablasResult = $this->wablasService->sendMessage($customer['phone'], $message);
-                } elseif (!empty($imagePaths)) {
-                    // Send images only
-                    $imageUrls = array_map(function($path) {
-                        return asset('storage/' . $path);
-                    }, $imagePaths);
-                    
-                    $wablasResult = $this->wablasService->sendMultipleImages($customer['phone'], $imageUrls);
-                } else {
-                    throw new \Exception('No message or images to send');
-                }
+            // Check WhatsApp device status first (CRITICAL)
+            $deviceStatus = $this->checkWablasDeviceStatus();
+            if (!$deviceStatus['isConnected']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'WhatsApp device tidak terhubung. Status: ' . $deviceStatus['message'] . '. Silakan scan QR code di device settings.'
+                ], 500);
+            }
 
-                // Update follow up record based on result
-                if (isset($wablasResult['success']) && $wablasResult['success']) {
-                    $followUp->update([
-                        'status' => 'sent',
-                        'sent_at' => now(),
-                        'wablas_message_id' => $wablasResult['message_id'] ?? null,
-                        'wablas_response' => $wablasResult['response']
-                    ]);
-                    
-                    $results[] = [
-                        'customer' => $customer['name'],
-                        'phone' => $customer['phone'],
-                        'status' => 'success',
-                        'message_id' => $wablasResult['message_id'] ?? null
-                    ];
-                    $successCount++;
-                } else {
-                    $followUp->update([
-                        'status' => 'failed',
-                        'error_message' => $wablasResult['error'] ?? 'Unknown error',
-                        'wablas_response' => $wablasResult['response']
-                    ]);
-                    
-                    $results[] = [
-                        'customer' => $customer['name'],
-                        'phone' => $customer['phone'],
-                        'status' => 'failed',
-                        'error' => $wablasResult['error'] ?? 'Unknown error'
-                    ];
-                    $failedCount++;
-                }
+            Log::info("Starting WhatsApp broadcast to " . count($customers) . " customers");
 
-            } catch (\Exception $e) {
-                Log::error('Follow up send error: ' . $e->getMessage());
+            $successCount = 0;
+            $failedCount = 0;
+            $results = [];
+
+            // FIXED: Use batch processing for better performance
+            $customerBatches = array_chunk($customers, 5); // Process 5 customers at a time
+            
+            foreach ($customerBatches as $batchIndex => $batch) {
+                Log::info("Processing batch " . ($batchIndex + 1) . " of " . count($customerBatches));
                 
-                $results[] = [
-                    'customer' => $customer['name'],
-                    'phone' => $customer['phone'],
-                    'status' => 'failed',
-                    'error' => $e->getMessage()
-                ];
-                $failedCount++;
-            }
-        }
+                foreach ($batch as $customer) {
+                    try {
+                        // Validate required customer data
+                        if (empty($customer['phone']) || empty($customer['name'])) {
+                            $results[] = [
+                                'customer' => $customer['name'] ?? 'Unknown',
+                                'phone' => $customer['phone'] ?? 'Unknown',
+                                'status' => 'failed',
+                                'error' => 'Data customer tidak lengkap'
+                            ];
+                            $failedCount++;
+                            continue;
+                        }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => "Follow up selesai. Berhasil: {$successCount}, Gagal: {$failedCount}",
-            'summary' => [
-                'total' => count($customers),
-                'success' => $successCount,
-                'failed' => $failedCount
-            ],
-            'results' => $results
-        ]);
+                        // Format and validate phone number (CRITICAL FIX)
+                        $phone = $this->formatPhoneNumber($customer['phone']);
+                        if (!$this->validatePhoneNumber($phone)) {
+                            $results[] = [
+                                'customer' => $customer['name'],
+                                'phone' => $customer['phone'],
+                                'status' => 'failed',
+                                'error' => 'Format nomor telepon tidak valid: ' . $phone
+                            ];
+                            $failedCount++;
+                            continue;
+                        }
+
+                        // Create follow up record in database first
+                        $followUpData = [
+                            'customer_name' => $customer['name'],
+                            'phone_number' => $phone,
+                            'customer_email' => $customer['email'] ?? null,
+                            'target_type' => $targetType,
+                            'message' => $message,
+                            'images' => !empty($imagePaths) ? json_encode($imagePaths) : null,
+                            'source_channel' => $customer['orderSource'] ?? null,
+                            'status' => 'pending',
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+
+                        $followUpId = DB::table('follow_up')->insertGetId($followUpData);
+
+                        // FIXED: Send via WhatsApp API with proper error handling
+                        $whatsappResult = $this->sendWhatsAppMessageFixed($phone, $message, $imageUrls, $customer['name']);
+                        
+                        if ($whatsappResult['success']) {
+                            // Update status to sent
+                            DB::table('follow_up')
+                                ->where('follow_up_id', $followUpId)
+                                ->update([
+                                    'status' => 'sent',
+                                    'sent_at' => now(),
+                                    'wablas_message_id' => $whatsappResult['message_id'] ?? null,
+                                    'wablas_response' => json_encode($whatsappResult['response']),
+                                    'updated_at' => now()
+                                ]);
+                            
+                            $results[] = [
+                                'customer' => $customer['name'],
+                                'phone' => $phone,
+                                'status' => 'success',
+                                'message_id' => $whatsappResult['message_id'] ?? null,
+                                'follow_up_id' => $followUpId
+                            ];
+                            $successCount++;
+                            
+                            Log::info("Successfully sent WhatsApp to {$customer['name']} ({$phone})");
+                        } else {
+                            // Update status to failed
+                            DB::table('follow_up')
+                                ->where('follow_up_id', $followUpId)
+                                ->update([
+                                    'status' => 'failed',
+                                    'error_message' => $whatsappResult['error'] ?? 'Unknown error',
+                                    'wablas_response' => json_encode($whatsappResult['response']),
+                                    'updated_at' => now()
+                                ]);
+                            
+                            $results[] = [
+                                'customer' => $customer['name'],
+                                'phone' => $phone,
+                                'status' => 'failed',
+                                'error' => $whatsappResult['error'] ?? 'Gagal mengirim pesan'
+                            ];
+                            $failedCount++;
+                            
+                            Log::error("Failed to send WhatsApp to {$customer['name']} ({$phone}): " . $whatsappResult['error']);
+                        }
+
+                        // FIXED: Add proper delay between messages (CRITICAL for rate limiting)
+                        sleep(3); // 3 second delay between each message
+
+                    } catch (\Exception $e) {
+                        Log::error('Follow up send error for customer ' . ($customer['name'] ?? 'unknown') . ': ' . $e->getMessage());
+                        
+                        // Update database if record was created
+                        if (isset($followUpId)) {
+                            DB::table('follow_up')
+                                ->where('follow_up_id', $followUpId)
+                                ->update([
+                                    'status' => 'failed',
+                                    'error_message' => $e->getMessage(),
+                                    'updated_at' => now()
+                                ]);
+                        }
+                        
+                        $results[] = [
+                            'customer' => $customer['name'] ?? 'Unknown',
+                            'phone' => $customer['phone'] ?? 'Unknown',
+                            'status' => 'failed',
+                            'error' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+                        ];
+                        $failedCount++;
+                    }
+                }
+                
+                // Add delay between batches
+                if ($batchIndex < count($customerBatches) - 1) {
+                    Log::info("Waiting 5 seconds before next batch...");
+                    sleep(5); // 5 second delay between batches
+                }
+            }
+
+            Log::info("WhatsApp broadcast completed. Success: {$successCount}, Failed: {$failedCount}");
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Follow up selesai. Berhasil: {$successCount}, Gagal: {$failedCount}",
+                'summary' => [
+                    'total' => count($customers),
+                    'success' => $successCount,
+                    'failed' => $failedCount
+                ],
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Send follow up error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
     }
+
+    /**
+     * FIXED: Send WhatsApp message via Wablas API with proper Texas Wablas v2 format
+     */
+    private function sendWhatsAppMessageFixed($phone, $message, $imageUrls = [], $customerName = 'Customer')
+    {
+        try {
+            $wablasToken = env('WABLAS_TOKEN');
+            $wablasSecretKey = env('WABLAS_SECRET_KEY');
+            $wablasUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
+            
+            if (empty($wablasToken) || empty($wablasSecretKey)) {
+                return [
+                    'success' => false,
+                    'error' => 'Wablas token atau secret key tidak dikonfigurasi',
+                    'response' => null
+                ];
+            }
+
+            $results = [];
+            $hasError = false;
+            $lastMessageId = null;
+
+            // FIXED: Use proper Texas Wablas authorization format
+            $authToken = $wablasToken . '.' . $wablasSecretKey;
+
+            Log::info("Sending WhatsApp to {$phone} using Texas Wablas v2");
+
+            // Send text message if provided
+            if (!empty($message)) {
+                $textResult = $this->sendWablasTextMessageFixed($wablasUrl, $authToken, $phone, $message);
+                $results[] = $textResult;
+                
+                if (!$textResult['success']) {
+                    $hasError = true;
+                    Log::error("Failed to send text message to {$phone}: " . $textResult['error']);
+                } else {
+                    $lastMessageId = $textResult['message_id'];
+                    Log::info("Successfully sent text message to {$phone}, message_id: {$lastMessageId}");
+                }
+
+                // Add delay between text and images
+                if (!empty($imageUrls)) {
+                    sleep(2);
+                }
+            }
+
+            // Send images if provided
+            if (!empty($imageUrls)) {
+                foreach ($imageUrls as $index => $imageUrl) {
+                    $caption = ($index === 0) ? "Gambar untuk {$customerName}" : '';
+                    $imageResult = $this->sendWablasImageMessageFixed($wablasUrl, $authToken, $phone, $imageUrl, $caption);
+                    $results[] = $imageResult;
+                    
+                    if (!$imageResult['success']) {
+                        $hasError = true;
+                        Log::error("Failed to send image {$index} to {$phone}: " . $imageResult['error']);
+                    } else {
+                        $lastMessageId = $imageResult['message_id'];
+                        Log::info("Successfully sent image {$index} to {$phone}, message_id: {$lastMessageId}");
+                    }
+                    
+                    // Delay between images
+                    if ($index < count($imageUrls) - 1) {
+                        sleep(2);
+                    }
+                }
+            }
+
+            return [
+                'success' => !$hasError,
+                'message_id' => $lastMessageId,
+                'error' => $hasError ? 'Beberapa pesan gagal dikirim' : null,
+                'response' => $results
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('sendWhatsAppMessageFixed error: ' . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'response' => null
+            ];
+        }
+    }
+
+    /**
+     * FIXED: Send text message via Wablas with proper Texas Wablas v2 API
+     */
+    private function sendWablasTextMessageFixed($apiUrl, $authToken, $phone, $message)
+    {
+        try {
+            // FIXED: Use proper Texas Wablas v2 API endpoint and format
+            $payload = [
+                "data" => [
+                    [
+                        'phone' => $phone,
+                        'message' => $message
+                    ]
+                ]
+            ];
+            
+            Log::info("Sending text message to {$phone} via Texas Wablas v2", [
+                'url' => $apiUrl . '/v2/send-message',
+                'payload' => $payload
+            ]);
+            
+            $response = Http::timeout(60) // Increased timeout
+                ->withHeaders([
+                    'Authorization' => $authToken,
+                    'Content-Type' => 'application/json'
+                ])
+                ->post($apiUrl . '/v2/send-message', $payload);
+
+            Log::info("Texas Wablas response for {$phone}", [
+                'status_code' => $response->status(),
+                'response_body' => $response->body()
+            ]);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                
+                // FIXED: Handle Texas Wablas response format correctly
+                if (isset($responseData['status']) && $responseData['status'] === true) {
+                    $messageId = null;
+                    
+                    // Extract message ID from response
+                    if (isset($responseData['data']['messages'][0]['id'])) {
+                        $messageId = $responseData['data']['messages'][0]['id'];
+                    } elseif (isset($responseData['data']['device_id'])) {
+                        // Alternative format for some responses
+                        $messageId = $responseData['data']['device_id'] . '_' . time();
+                    }
+                    
+                    return [
+                        'success' => true,
+                        'message_id' => $messageId,
+                        'response' => $responseData
+                    ];
+                } else {
+                    return [
+                        'success' => false,
+                        'error' => $responseData['message'] ?? 'Unknown error from Texas Wablas',
+                        'response' => $responseData
+                    ];
+                }
+            } else {
+                $errorBody = $response->body();
+                Log::error('Texas Wablas send message failed', [
+                    'status' => $response->status(),
+                    'response' => $errorBody,
+                    'payload' => $payload
+                ]);
+                
+                return [
+                    'success' => false,
+                    'error' => 'HTTP Error: ' . $response->status() . ' - ' . $errorBody,
+                    'response' => $response->json()
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('sendWablasTextMessageFixed error: ' . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'response' => null
+            ];
+        }
+    }
+
+    /**
+     * FIXED: Send image message via Wablas with proper Texas Wablas v2 API
+     */
+    private function sendWablasImageMessageFixed($apiUrl, $authToken, $phone, $imageUrl, $caption = '')
+    {
+        try {
+            // FIXED: Use proper Texas Wablas v2 API endpoint and format
+            $payload = [
+                "data" => [
+                    [
+                        'phone' => $phone,
+                        'image' => $imageUrl,
+                        'caption' => $caption
+                    ]
+                ]
+            ];
+            
+            Log::info("Sending image to {$phone} via Texas Wablas v2", [
+                'url' => $apiUrl . '/v2/send-image',
+                'payload' => $payload
+            ]);
+            
+            $response = Http::timeout(60) // Increased timeout for images
+                ->withHeaders([
+                    'Authorization' => $authToken,
+                    'Content-Type' => 'application/json'
+                ])
+                ->post($apiUrl . '/v2/send-image', $payload);
+
+            Log::info("Texas Wablas image response for {$phone}", [
+                'status_code' => $response->status(),
+                'response_body' => $response->body()
+            ]);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                
+                if (isset($responseData['status']) && $responseData['status'] === true) {
+                    $messageId = null;
+                    
+                    // Extract message ID from response
+                    if (isset($responseData['data']['messages'][0]['id'])) {
+                        $messageId = $responseData['data']['messages'][0]['id'];
+                    } elseif (isset($responseData['data']['device_id'])) {
+                        $messageId = $responseData['data']['device_id'] . '_' . time();
+                    }
+                    
+                    return [
+                        'success' => true,
+                        'message_id' => $messageId,
+                        'response' => $responseData
+                    ];
+                } else {
+                    return [
+                        'success' => false,
+                        'error' => $responseData['message'] ?? 'Unknown error from Texas Wablas',
+                        'response' => $responseData
+                    ];
+                }
+            } else {
+                return [
+                    'success' => false,
+                    'error' => 'HTTP Error: ' . $response->status() . ' - ' . $response->body(),
+                    'response' => $response->json()
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'response' => null
+            ];
+        }
+    }
+
+    /**
+     * FIXED: Check Wablas device status with proper Texas Wablas format
+     */
+    private function checkWablasDeviceStatus()
+    {
+        try {
+            $wablasToken = env('WABLAS_TOKEN');
+            $wablasSecretKey = env('WABLAS_SECRET_KEY');
+            $wablasUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
+            
+            if (empty($wablasToken) || empty($wablasSecretKey)) {
+                return [
+                    'isConnected' => false,
+                    'message' => 'Token atau secret key tidak dikonfigurasi'
+                ];
+            }
+
+            // FIXED: Use proper Texas Wablas authorization format
+            $authToken = $wablasToken . '.' . $wablasSecretKey;
+
+            Log::info("Checking Texas Wablas device status");
+
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Authorization' => $authToken,
+                ])
+                ->get($wablasUrl . '/device/info');
+
+            Log::info("Device status response", [
+                'status_code' => $response->status(),
+                'response_body' => $response->body()
+            ]);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                
+                // FIXED: Handle Texas Wablas device status response format
+                $isConnected = false;
+                $status = 'unknown';
+                
+                if (isset($responseData['status']) && $responseData['status'] === true) {
+                    if (isset($responseData['data']['status'])) {
+                        $status = $responseData['data']['status'];
+                        $isConnected = ($status === 'connected');
+                    }
+                }
+                
+                Log::info("Device status parsed: connected={$isConnected}, status={$status}");
+                
+                return [
+                    'isConnected' => $isConnected,
+                    'message' => $status,
+                    'response' => $responseData
+                ];
+            } else {
+                Log::error('Texas Wablas device status check failed', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+                
+                return [
+                    'isConnected' => false,
+                    'message' => 'HTTP Error: ' . $response->status() . ' - ' . $response->body()
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('checkWablasDeviceStatus error: ' . $e->getMessage());
+            
+            return [
+                'isConnected' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get device status for frontend
+     */
+    public function getDeviceStatus()
+    {
+        try {
+            $deviceStatus = $this->checkWablasDeviceStatus();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $deviceStatus
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengecek status device: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * FIXED: Test WhatsApp connection
+     */
+    public function testWhatsAppConnection()
+    {
+        try {
+            $testPhone = env('APP_ADMIN_PHONE', '6282245454528');
+            $testMessage = 'Test koneksi Zafa Potato CRM (Texas Wablas v2 FIXED) - ' . now()->format('Y-m-d H:i:s');
+            
+            Log::info("Testing Texas Wablas v2 FIXED connection to: " . $testPhone);
+            
+            $result = $this->sendWhatsAppMessageFixed($testPhone, $testMessage);
+            
+            Log::info("Texas Wablas v2 FIXED test result: " . json_encode($result));
+            
+            return response()->json([
+                'status' => $result['success'] ? 'success' : 'error',
+                'message' => $result['success'] ? 
+                    'Koneksi Texas Wablas v2 berhasil! Pesan test telah dikirim.' : 
+                    'Koneksi gagal: ' . $result['error'],
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Test Texas Wablas connection error: " . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Test koneksi gagal: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * FIXED: Format phone number to proper Indonesian format
+     */
+    private function formatPhoneNumber($phone)
+    {
+        // Remove all non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Handle empty phone
+        if (empty($phone)) {
+            return '';
+        }
+        
+        // If starts with 0, replace with 62
+        if (substr($phone, 0, 1) === '0') {
+            $phone = '62' . substr($phone, 1);
+        }
+        
+        // If doesn't start with 62, add 62
+        if (substr($phone, 0, 2) !== '62') {
+            $phone = '62' . $phone;
+        }
+        
+        return $phone;
+    }
+
+    /**
+     * FIXED: Validate phone number format
+     */
+    private function validatePhoneNumber($phone)
+    {
+        // Must start with 62 and be 12-15 digits total
+        $phoneLength = strlen($phone);
+        return $phoneLength >= 12 && $phoneLength <= 15 && substr($phone, 0, 2) === '62' && is_numeric($phone);
+    }
+
+    // ... (rest of the methods remain the same: getHistory, uploadImage, getPelangganLama, etc.)
+    // I'll continue with the existing methods from your original code...
 
     /**
      * Get follow up history
      */
     public function getHistory(Request $request)
     {
-        $customerId = $request->get('customer_id');
-        $targetType = $request->get('target_type');
-        $status = $request->get('status');
-        $dateFrom = $request->get('date_from');
-        $dateTo = $request->get('date_to');
+        try {
+            $customerId = $request->get('customer_id');
+            $targetType = $request->get('target_type');
+            $status = $request->get('status');
+            $dateFrom = $request->get('date_from');
+            $dateTo = $request->get('date_to');
 
-        $query = FollowUp::with(['pemesanan', 'customer']);
+            if (!Schema::hasTable('follow_up')) {
+                return response()->json([
+                    'status' => 'success',
+                    'data' => []
+                ]);
+            }
 
-        // Apply filters
-        if ($customerId) {
-            $query->where('customer_id', $customerId);
+            $query = DB::table('follow_up');
+
+            if ($customerId) {
+                $query->where('customer_id', $customerId);
+            }
+
+            if ($targetType) {
+                $query->where('target_type', $targetType);
+            }
+
+            if ($status) {
+                $query->where('status', $status);
+            }
+
+            if ($dateFrom && $dateTo) {
+                $query->whereBetween('created_at', [$dateFrom, $dateTo]);
+            }
+
+            $history = $query->orderBy('created_at', 'desc')
+                           ->limit(50)
+                           ->get();
+
+            $formattedHistory = $history->map(function ($item) {
+                $images = null;
+                if ($item->images) {
+                    $imageArray = json_decode($item->images, true);
+                    if (is_array($imageArray) && !empty($imageArray)) {
+                        $images = asset('storage/' . $imageArray[0]);
+                    }
+                }
+
+                $statusLabels = [
+                    'pending' => '<span class="badge badge-warning">Menunggu</span>',
+                    'sent' => '<span class="badge badge-info">Terkirim</span>',
+                    'delivered' => '<span class="badge badge-primary">Diterima</span>',
+                    'read' => '<span class="badge badge-success">Dibaca</span>',
+                    'failed' => '<span class="badge badge-danger">Gagal</span>'
+                ];
+
+                return [
+                    'id' => 'FU' . str_pad($item->follow_up_id, 4, '0', STR_PAD_LEFT),
+                    'tanggal' => Carbon::parse($item->created_at)->format('Y-m-d H:i'),
+                    'customerName' => $item->customer_name,
+                    'phone' => $item->phone_number,
+                    'pesan' => $item->message ?: 'Pesan dengan gambar',
+                    'gambar' => $images,
+                    'targetType' => $this->getTargetTypeLabel($item->target_type),
+                    'status' => $statusLabels[$item->status] ?? '<span class="badge badge-secondary">Unknown</span>',
+                    'sourceChannel' => $item->source_channel
+                ];
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $formattedHistory->toArray()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('getHistory error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => []
+            ]);
         }
-
-        if ($targetType) {
-            $query->where('target_type', $targetType);
-        }
-
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        if ($dateFrom && $dateTo) {
-            $query->whereBetween('created_at', [$dateFrom, $dateTo]);
-        }
-
-        $history = $query->orderBy('created_at', 'desc')->get();
-
-        $formattedHistory = $history->map(function ($item) {
-            return [
-                'id' => $item->follow_up_id,
-                'tanggal' => $item->created_at->format('Y-m-d H:i'),
-                'customerName' => $item->customer_name,
-                'phone' => $item->phone_number,
-                'pesan' => $item->message ?: 'Pesan dengan gambar',
-                'gambar' => !empty($item->images) ? asset('storage/' . $item->images[0]) : null,
-                'targetType' => $item->target_type_label,
-                'status' => $item->status_label,
-                'sourceChannel' => $item->source_channel
-            ];
-        });
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $formattedHistory
-        ]);
     }
 
     /**
@@ -598,10 +878,378 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * Get customer initial for display
+     * Get Pelanggan Lama (>3 transaksi)
+     */
+    private function getPelangganLama()
+    {
+        try {
+            if (!DB::table('pemesanan')->exists()) {
+                return collect([]);
+            }
+
+            $pelangganLama = DB::table('pemesanan')
+                ->select([
+                    'nama_pemesan as name',
+                    'no_telp_pemesan as phone',
+                    'email_pemesan as email',
+                    'alamat_pemesan as address',
+                    'pemesanan_dari as orderSource',
+                    DB::raw('COUNT(*) as totalOrders'),
+                    DB::raw('SUM(total) as totalSpent'),
+                    DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
+                    DB::raw('MAX(pemesanan_id) as lastOrderId')
+                ])
+                ->whereNotNull('nama_pemesan')
+                ->whereNotNull('no_telp_pemesan')
+                ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan', 'alamat_pemesan', 'pemesanan_dari')
+                ->havingRaw('COUNT(*) >= 3')
+                ->get();
+
+            return $pelangganLama->map(function ($customer) {
+                $lastProduct = 'Unknown Product';
+                try {
+                    $lastOrder = DB::table('pemesanan')
+                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                        ->select('barang.nama_barang')
+                        ->first();
+                    
+                    if ($lastOrder && $lastOrder->nama_barang) {
+                        $lastProduct = $lastOrder->nama_barang;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
+                }
+
+                return [
+                    'id' => 'lama_' . md5($customer->phone ?? 'unknown'),
+                    'name' => $customer->name ?? 'Unknown',
+                    'phone' => $customer->phone ?? '',
+                    'email' => $customer->email ?? '',
+                    'address' => $customer->address ?? '',
+                    'lastOrder' => $customer->lastOrder ? Carbon::parse($customer->lastOrder)->format('Y-m-d') : '-',
+                    'totalOrders' => $customer->totalOrders ?? 0,
+                    'totalSpent' => 'Rp ' . number_format($customer->totalSpent ?? 0, 0, ',', '.'),
+                    'customerType' => 'pelangganLama',
+                    'orderSource' => $customer->orderSource ?? 'unknown',
+                    'lastProduct' => $lastProduct,
+                    'notes' => 'Pelanggan setia dengan ' . ($customer->totalOrders ?? 0) . ' transaksi',
+                    'initial' => $this->getCustomerInitial($customer->name ?? 'UN')
+                ];
+            });
+
+        } catch (\Exception $e) {
+            Log::error('getPelangganLama error: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get Pelanggan Baru (1 bulan terakhir, hanya 1 kali transaksi)
+     */
+    private function getPelangganBaru()
+    {
+        try {
+            if (!DB::table('pemesanan')->exists()) {
+                return collect([]);
+            }
+
+            $oneMonthAgo = Carbon::now()->subMonth();
+
+            $pelangganBaru = DB::table('pemesanan')
+                ->select([
+                    'nama_pemesan as name',
+                    'no_telp_pemesan as phone',
+                    'email_pemesan as email',
+                    'alamat_pemesan as address',
+                    'pemesanan_dari as orderSource',
+                    'tanggal_pemesanan as lastOrder',
+                    'total as totalSpent',
+                    'pemesanan_id as lastOrderId'
+                ])
+                ->where('tanggal_pemesanan', '>=', $oneMonthAgo)
+                ->whereNotNull('nama_pemesan')
+                ->whereNotNull('no_telp_pemesan')
+                ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan', 'alamat_pemesan', 'pemesanan_dari', 'tanggal_pemesanan', 'total', 'pemesanan_id')
+                ->havingRaw('COUNT(*) = 1')
+                ->get();
+
+            return $pelangganBaru->map(function ($customer) {
+                $lastProduct = 'Unknown Product';
+                try {
+                    $lastOrder = DB::table('pemesanan')
+                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                        ->select('barang.nama_barang')
+                        ->first();
+                    
+                    if ($lastOrder && $lastOrder->nama_barang) {
+                        $lastProduct = $lastOrder->nama_barang;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
+                }
+
+                return [
+                    'id' => 'baru_' . md5($customer->phone ?? 'unknown'),
+                    'name' => $customer->name ?? 'Unknown',
+                    'phone' => $customer->phone ?? '',
+                    'email' => $customer->email ?? '',
+                    'address' => $customer->address ?? '',
+                    'lastOrder' => $customer->lastOrder ? Carbon::parse($customer->lastOrder)->format('Y-m-d') : '-',
+                    'totalOrders' => 1,
+                    'totalSpent' => 'Rp ' . number_format($customer->totalSpent ?? 0, 0, ',', '.'),
+                    'customerType' => 'pelangganBaru',
+                    'orderSource' => $customer->orderSource ?? 'unknown',
+                    'lastProduct' => $lastProduct,
+                    'notes' => 'Pelanggan baru, bergabung dalam 1 bulan terakhir',
+                    'initial' => $this->getCustomerInitial($customer->name ?? 'UN')
+                ];
+            });
+
+        } catch (\Exception $e) {
+            Log::error('getPelangganBaru error: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get Pelanggan Tidak Kembali (>2 bulan tidak transaksi)
+     */
+    private function getPelangganTidakKembali()
+    {
+        try {
+            if (!DB::table('pemesanan')->exists()) {
+                return collect([]);
+            }
+
+            $twoMonthsAgo = Carbon::now()->subMonths(2);
+
+            $pelangganTidakKembali = DB::table('pemesanan')
+                ->select([
+                    'nama_pemesan as name',
+                    'no_telp_pemesan as phone',
+                    'email_pemesan as email',
+                    'alamat_pemesan as address',
+                    'pemesanan_dari as orderSource',
+                    DB::raw('COUNT(*) as totalOrders'),
+                    DB::raw('SUM(total) as totalSpent'),
+                    DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
+                    DB::raw('MAX(pemesanan_id) as lastOrderId')
+                ])
+                ->where('tanggal_pemesanan', '<', $twoMonthsAgo)
+                ->whereNotNull('nama_pemesan')
+                ->whereNotNull('no_telp_pemesan')
+                ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan', 'alamat_pemesan', 'pemesanan_dari')
+                ->get();
+
+            return $pelangganTidakKembali->map(function ($customer) {
+                $lastProduct = 'Unknown Product';
+                try {
+                    $lastOrder = DB::table('pemesanan')
+                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                        ->select('barang.nama_barang')
+                        ->first();
+                    
+                    if ($lastOrder && $lastOrder->nama_barang) {
+                        $lastProduct = $lastOrder->nama_barang;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
+                }
+
+                return [
+                    'id' => 'tidak_kembali_' . md5($customer->phone ?? 'unknown'),
+                    'name' => $customer->name ?? 'Unknown',
+                    'phone' => $customer->phone ?? '',
+                    'email' => $customer->email ?? '',
+                    'address' => $customer->address ?? '',
+                    'lastOrder' => $customer->lastOrder ? Carbon::parse($customer->lastOrder)->format('Y-m-d') : '-',
+                    'totalOrders' => $customer->totalOrders ?? 0,
+                    'totalSpent' => 'Rp ' . number_format($customer->totalSpent ?? 0, 0, ',', '.'),
+                    'customerType' => 'pelangganTidakKembali',
+                    'orderSource' => $customer->orderSource ?? 'unknown',
+                    'lastProduct' => $lastProduct,
+                    'notes' => 'Tidak bertransaksi >2 bulan, perlu follow up',
+                    'initial' => $this->getCustomerInitial($customer->name ?? 'UN')
+                ];
+            });
+
+        } catch (\Exception $e) {
+            Log::error('getPelangganTidakKembali error: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get Keseluruhan Pelanggan (dari pemesanan dan data_customer)
+     */
+    private function getKeseluruhanPelanggan()
+    {
+        try {
+            $allCustomers = collect();
+
+            if (DB::table('pemesanan')->exists()) {
+                $fromPemesanan = DB::table('pemesanan')
+                    ->select([
+                        'nama_pemesan as name',
+                        'no_telp_pemesan as phone',
+                        'email_pemesan as email',
+                        'alamat_pemesan as address',
+                        'pemesanan_dari as orderSource',
+                        DB::raw('COUNT(*) as totalOrders'),
+                        DB::raw('SUM(total) as totalSpent'),
+                        DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
+                        DB::raw('MAX(pemesanan_id) as lastOrderId'),
+                        DB::raw("'pemesanan' as source_table")
+                    ])
+                    ->whereNotNull('nama_pemesan')
+                    ->whereNotNull('no_telp_pemesan')
+                    ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan', 'alamat_pemesan', 'pemesanan_dari')
+                    ->get();
+
+                $allCustomers = $allCustomers->merge($fromPemesanan);
+            }
+
+            if (Schema::hasTable('data_customer') && DB::table('data_customer')->exists()) {
+                $fromCustomer = DB::table('data_customer')
+                    ->leftJoin('pemesanan', 'data_customer.pemesanan_id', '=', 'pemesanan.pemesanan_id')
+                    ->select([
+                        'data_customer.nama as name',
+                        'data_customer.no_tlp as phone',
+                        'data_customer.email as email',
+                        'data_customer.alamat as address',
+                        DB::raw('COALESCE(pemesanan.pemesanan_dari, "manual") as orderSource'),
+                        DB::raw('CASE WHEN pemesanan.pemesanan_id IS NOT NULL THEN 1 ELSE 0 END as totalOrders'),
+                        DB::raw('COALESCE(pemesanan.total, 0) as totalSpent'),
+                        DB::raw('COALESCE(pemesanan.tanggal_pemesanan, data_customer.created_at) as lastOrder'),
+                        'pemesanan.pemesanan_id as lastOrderId',
+                        DB::raw("'customer' as source_table")
+                    ])
+                    ->whereNotNull('data_customer.nama')
+                    ->get();
+
+                $allCustomers = $allCustomers->merge($fromCustomer);
+            }
+
+            return $allCustomers->map(function ($customer) {
+                $lastProduct = 'No Purchase';
+                if ($customer->lastOrderId) {
+                    try {
+                        $lastOrder = DB::table('pemesanan')
+                            ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                            ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                            ->select('barang.nama_barang')
+                            ->first();
+                        
+                        if ($lastOrder && $lastOrder->nama_barang) {
+                            $lastProduct = $lastOrder->nama_barang;
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
+                    }
+                }
+
+                return [
+                    'id' => 'all_' . md5(($customer->phone ?? '') . ($customer->source_table ?? '')),
+                    'name' => $customer->name ?? 'Unknown',
+                    'phone' => $customer->phone ?? '',
+                    'email' => $customer->email ?? '',
+                    'address' => $customer->address ?? '',
+                    'lastOrder' => $customer->lastOrder ? Carbon::parse($customer->lastOrder)->format('Y-m-d') : '-',
+                    'totalOrders' => $customer->totalOrders ?? 0,
+                    'totalSpent' => 'Rp ' . number_format($customer->totalSpent ?? 0, 0, ',', '.'),
+                    'customerType' => 'keseluruhan',
+                    'orderSource' => $customer->orderSource ?? 'unknown',
+                    'lastProduct' => $lastProduct,
+                    'notes' => 'Data ' . (($customer->source_table ?? '') === 'pemesanan' ? 'dari transaksi' : 'customer manual'),
+                    'initial' => $this->getCustomerInitial($customer->name ?? 'UN')
+                ];
+            });
+
+        } catch (\Exception $e) {
+            Log::error('getKeseluruhanPelanggan error: ' . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Get customers by order source
+     */
+    private function getPelangganBySource($source)
+    {
+        try {
+            if (!DB::table('pemesanan')->exists()) {
+                return collect([]);
+            }
+
+            $customers = DB::table('pemesanan')
+                ->select([
+                    'nama_pemesan as name',
+                    'no_telp_pemesan as phone',
+                    'email_pemesan as email',
+                    'alamat_pemesan as address',
+                    'pemesanan_dari as orderSource',
+                    DB::raw('COUNT(*) as totalOrders'),
+                    DB::raw('SUM(total) as totalSpent'),
+                    DB::raw('MAX(tanggal_pemesanan) as lastOrder'),
+                    DB::raw('MAX(pemesanan_id) as lastOrderId')
+                ])
+                ->where('pemesanan_dari', $source)
+                ->whereNotNull('nama_pemesan')
+                ->whereNotNull('no_telp_pemesan')
+                ->groupBy('nama_pemesan', 'no_telp_pemesan', 'email_pemesan', 'alamat_pemesan', 'pemesanan_dari')
+                ->get();
+
+            return $customers->map(function ($customer) use ($source) {
+                $lastProduct = 'Unknown Product';
+                try {
+                    $lastOrder = DB::table('pemesanan')
+                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                        ->select('barang.nama_barang')
+                        ->first();
+                    
+                    if ($lastOrder && $lastOrder->nama_barang) {
+                        $lastProduct = $lastOrder->nama_barang;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
+                }
+
+                return [
+                    'id' => $source . '_' . md5($customer->phone ?? 'unknown'),
+                    'name' => $customer->name ?? 'Unknown',
+                    'phone' => $customer->phone ?? '',
+                    'email' => $customer->email ?? '',
+                    'address' => $customer->address ?? '',
+                    'lastOrder' => $customer->lastOrder ? Carbon::parse($customer->lastOrder)->format('Y-m-d') : '-',
+                    'totalOrders' => $customer->totalOrders ?? 0,
+                    'totalSpent' => 'Rp ' . number_format($customer->totalSpent ?? 0, 0, ',', '.'),
+                    'customerType' => $this->determineCustomerType($customer->totalOrders ?? 0, $customer->lastOrder),
+                    'orderSource' => $customer->orderSource ?? $source,
+                    'lastProduct' => $lastProduct,
+                    'notes' => 'Customer dari ' . $source,
+                    'initial' => $this->getCustomerInitial($customer->name ?? 'UN')
+                ];
+            });
+
+        } catch (\Exception $e) {
+            Log::error("getPelangganBySource({$source}) error: " . $e->getMessage());
+            return collect([]);
+        }
+    }
+
+    /**
+     * Helper Methods
      */
     private function getCustomerInitial($name)
     {
+        if (empty($name)) {
+            return 'UN';
+        }
+        
         $words = explode(' ', trim($name));
         if (count($words) >= 2) {
             return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
@@ -609,423 +1257,213 @@ class FollowUpPelangganController extends Controller
         return strtoupper(substr($name, 0, 2));
     }
 
-    /**
-     * Determine customer type based on orders and date
-     */
     private function determineCustomerType($totalOrders, $lastOrder)
     {
-        $lastOrderDate = Carbon::parse($lastOrder);
-        $oneMonthAgo = Carbon::now()->subMonth();
-        $twoMonthsAgo = Carbon::now()->subMonths(2);
+        if (!$lastOrder) {
+            return 'keseluruhan';
+        }
 
-        if ($totalOrders >= 3) {
-            return 'pelangganLama';
-        } elseif ($totalOrders === 1 && $lastOrderDate->gte($oneMonthAgo)) {
-            return 'pelangganBaru';
-        } elseif ($lastOrderDate->lt($twoMonthsAgo)) {
-            return 'pelangganTidakKembali';
-        } else {
+        try {
+            $lastOrderDate = Carbon::parse($lastOrder);
+            $oneMonthAgo = Carbon::now()->subMonth();
+            $twoMonthsAgo = Carbon::now()->subMonths(2);
+
+            if ($totalOrders >= 3) {
+                return 'pelangganLama';
+            } elseif ($totalOrders === 1 && $lastOrderDate->gte($oneMonthAgo)) {
+                return 'pelangganBaru';
+            } elseif ($lastOrderDate->lt($twoMonthsAgo)) {
+                return 'pelangganTidakKembali';
+            } else {
+                return 'keseluruhan';
+            }
+        } catch (\Exception $e) {
             return 'keseluruhan';
         }
     }
 
-    /**
-     * Send individual follow up to specific customer
-     */
-    public function sendIndividualFollowUp(Request $request)
+    private function getTargetTypeLabel($targetType)
     {
-        $validator = Validator::make($request->all(), [
-            'customer_id' => 'required|string',
-            'customer_name' => 'required|string',
-            'phone' => 'required|string',
-            'email' => 'nullable|email',
-            'message' => 'nullable|string|max:1000',
-            'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $customerId = $request->customer_id;
-            $customerName = $request->customer_name;
-            $phone = $request->phone;
-            $email = $request->email;
-            $message = $request->message;
-            $imagePaths = [];
-
-            // Handle image uploads
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $image) {
-                    $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                    $imagePath = $image->storeAs('follow-up-images', $imageName, 'public');
-                    $imagePaths[] = $imagePath;
-                }
-            }
-
-            // Validate phone number
-            if (!$this->wablasService->validatePhoneNumber($phone)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Format nomor telepon tidak valid'
-                ], 422);
-            }
-
-            // Create follow up record
-            $followUp = FollowUp::create([
-                'customer_name' => $customerName,
-                'phone_number' => $phone,
-                'customer_email' => $email,
-                'target_type' => 'individual',
-                'message' => $message,
-                'images' => $imagePaths,
-                'status' => 'pending'
-            ]);
-
-            // Send message via WhatsApp
-            if (!empty($message) && !empty($imagePaths)) {
-                // Send both message and images
-                $imageUrls = array_map(function($path) {
-                    return asset('storage/' . $path);
-                }, $imagePaths);
-                
-                $wablasResult = $this->wablasService->sendMessageWithImages($phone, $message, $imageUrls);
-            } elseif (!empty($message)) {
-                // Send text only
-                $wablasResult = $this->wablasService->sendMessage($phone, $message);
-            } elseif (!empty($imagePaths)) {
-                // Send images only
-                $imageUrls = array_map(function($path) {
-                    return asset('storage/' . $path);
-                }, $imagePaths);
-                
-                $wablasResult = $this->wablasService->sendMultipleImages($phone, $imageUrls);
-            } else {
-                throw new \Exception('No message or images to send');
-            }
-
-            // Update follow up record based on result
-            if (isset($wablasResult['success']) && $wablasResult['success']) {
-                $followUp->update([
-                    'status' => 'sent',
-                    'sent_at' => now(),
-                    'wablas_message_id' => $wablasResult['message_id'] ?? null,
-                    'wablas_response' => $wablasResult['response']
-                ]);
-
-                // Dispatch job to track message status
-                if ($wablasResult['message_id']) {
-                    \App\Jobs\UpdateMessageStatusJob::dispatch($followUp->follow_up_id)
-                        ->delay(now()->addMinutes(2));
-                }
-
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Follow up berhasil dikirim!',
-                    'data' => [
-                        'follow_up_id' => $followUp->follow_up_id,
-                        'message_id' => $wablasResult['message_id'] ?? null
-                    ]
-                ]);
-            } else {
-                $followUp->update([
-                    'status' => 'failed',
-                    'error_message' => $wablasResult['error'] ?? 'Unknown error',
-                    'wablas_response' => $wablasResult['response']
-                ]);
-
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Gagal mengirim follow up: ' . ($wablasResult['error'] ?? 'Unknown error')
-                ], 500);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Individual follow up send error: ' . $e->getMessage());
-            
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
-        }
+        $labels = [
+            'pelangganLama' => 'Pelanggan Lama',
+            'pelangganBaru' => 'Pelanggan Baru',
+            'pelangganTidakKembali' => 'Pelanggan Tidak Kembali',
+            'keseluruhan' => 'Keseluruhan'
+        ];
+        
+        return $labels[$targetType] ?? 'Unknown';
     }
 
     /**
-     * Get follow up status
+     * Debug function to check database tables and data
      */
-    public function getFollowUpStatus($id)
+    public function debugDatabase()
     {
         try {
-            $followUp = FollowUp::find($id);
+            $debug = [];
             
-            if (!$followUp) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Follow up tidak ditemukan'
-                ], 404);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'id' => $followUp->follow_up_id,
-                    'customer_name' => $followUp->customer_name,
-                    'phone_number' => $followUp->phone_number,
-                    'message_status' => $followUp->status,
-                    'sent_at' => $followUp->sent_at,
-                    'delivered_at' => $followUp->delivered_at,
-                    'read_at' => $followUp->read_at,
-                    'wablas_message_id' => $followUp->wablas_message_id,
-                    'error_message' => $followUp->error_message
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get WhatsApp device status
-     */
-    public function getDeviceStatus()
-    {
-        try {
-            $deviceStatus = $this->wablasService->getDeviceStatus();
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => $deviceStatus
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal mengecek status device: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Test WhatsApp connection
-     */
-    public function testWhatsAppConnection()
-    {
-        try {
-            // Test dengan mengirim pesan ke nomor admin/test
-            $testPhone = config('app.admin_phone', '6281234567890');
-            $testMessage = 'Test koneksi Zafa Potato CRM - ' . now()->format('Y-m-d H:i:s');
-            
-            $result = $this->wablasService->sendMessage($testPhone, $testMessage);
-            
-            return response()->json([
-                'status' => $result['success'] ? 'success' : 'error',
-                'message' => $result['success'] ? 'Koneksi berhasil!' : 'Koneksi gagal: ' . $result['error'],
-                'data' => $result
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Test koneksi gagal: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get analytics data
-     */
-    public function getAnalytics(Request $request)
-    {
-        try {
-            $dateFrom = $request->get('date_from', Carbon::now()->subDays(30)->format('Y-m-d'));
-            $dateTo = $request->get('date_to', Carbon::now()->format('Y-m-d'));
-
-            // Overall statistics
-            $totalSent = FollowUp::whereBetween('created_at', [$dateFrom, $dateTo])->count();
-            $totalDelivered = FollowUp::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->where('status', 'delivered')->count();
-            $totalRead = FollowUp::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->where('status', 'read')->count();
-            $totalFailed = FollowUp::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->where('status', 'failed')->count();
-
-            // Daily statistics
-            $dailyStats = FollowUp::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->selectRaw('DATE(created_at) as date, COUNT(*) as total, 
-                           SUM(CASE WHEN status = "delivered" THEN 1 ELSE 0 END) as delivered,
-                           SUM(CASE WHEN status = "read" THEN 1 ELSE 0 END) as read,
-                           SUM(CASE WHEN status = "failed" THEN 1 ELSE 0 END) as failed')
-                ->groupBy('date')
-                ->orderBy('date')
-                ->get();
-
-            // Target type statistics
-            $targetTypeStats = FollowUp::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->selectRaw('target_type, COUNT(*) as total')
-                ->groupBy('target_type')
-                ->get();
-
-            // Source channel statistics
-            $sourceChannelStats = FollowUp::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->selectRaw('source_channel, COUNT(*) as total')
-                ->whereNotNull('source_channel')
-                ->groupBy('source_channel')
-                ->get();
-
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'summary' => [
-                        'total_sent' => $totalSent,
-                        'total_delivered' => $totalDelivered,
-                        'total_read' => $totalRead,
-                        'total_failed' => $totalFailed,
-                        'delivery_rate' => $totalSent > 0 ? round(($totalDelivered / $totalSent) * 100, 2) : 0,
-                        'read_rate' => $totalSent > 0 ? round(($totalRead / $totalSent) * 100, 2) : 0
-                    ],
-                    'daily_stats' => $dailyStats,
-                    'target_type_stats' => $targetTypeStats,
-                    'source_channel_stats' => $sourceChannelStats
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal memuat analytics: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Export follow up history
-     */
-    public function exportHistory(Request $request)
-    {
-        try {
-            $dateFrom = $request->get('date_from');
-            $dateTo = $request->get('date_to');
-            $status = $request->get('status');
-            $targetType = $request->get('target_type');
-
-            $query = FollowUp::with(['pemesanan', 'customer']);
-
-            if ($dateFrom && $dateTo) {
-                $query->whereBetween('created_at', [$dateFrom, $dateTo]);
-            }
-
-            if ($status) {
-                $query->where('status', $status);
-            }
-
-            if ($targetType) {
-                $query->where('target_type', $targetType);
-            }
-
-            $followUps = $query->orderBy('created_at', 'desc')->get();
-
-            $csvData = [];
-            $csvData[] = [
-                'ID',
-                'Tanggal Kirim',
-                'Nama Customer',
-                'Nomor HP',
-                'Email',
-                'Pesan',
-                'Status',
-                'Target Type',
-                'Source Channel',
-                'Tanggal Terkirim',
-                'Tanggal Diterima',
-                'Tanggal Dibaca',
-                'Error Message'
+            $debug['tables_exist'] = [
+                'pemesanan' => Schema::hasTable('pemesanan'),
+                'data_customer' => Schema::hasTable('data_customer'),
+                'barang' => Schema::hasTable('barang'),
+                'follow_up' => Schema::hasTable('follow_up')
             ];
-
-            foreach ($followUps as $followUp) {
-                $csvData[] = [
-                    $followUp->follow_up_id,
-                    $followUp->created_at->format('Y-m-d H:i:s'),
-                    $followUp->customer_name,
-                    $followUp->phone_number,
-                    $followUp->customer_email,
-                    $followUp->message,
-                    $followUp->status,
-                    $followUp->target_type,
-                    $followUp->source_channel,
-                    $followUp->sent_at ? $followUp->sent_at->format('Y-m-d H:i:s') : '',
-                    $followUp->delivered_at ? $followUp->delivered_at->format('Y-m-d H:i:s') : '',
-                    $followUp->read_at ? $followUp->read_at->format('Y-m-d H:i:s') : '',
-                    $followUp->error_message
-                ];
+            
+            if (Schema::hasTable('pemesanan')) {
+                $debug['pemesanan_count'] = DB::table('pemesanan')->count();
+                $debug['pemesanan_sample'] = DB::table('pemesanan')->limit(3)->get();
             }
-
-            $filename = 'follow_up_history_' . now()->format('Y_m_d_H_i_s') . '.csv';
-            $temp_file = tempnam(sys_get_temp_dir(), $filename);
-
-            $file = fopen($temp_file, 'w');
-            foreach ($csvData as $row) {
-                fputcsv($file, $row);
+            
+            if (Schema::hasTable('follow_up')) {
+                $debug['follow_up_count'] = DB::table('follow_up')->count();
+                $debug['follow_up_sample'] = DB::table('follow_up')->limit(3)->get();
             }
-            fclose($file);
-
-            return response()->download($temp_file, $filename)->deleteFileAfterSend(true);
-
+            
+            // Test Wablas configuration
+            $debug['wablas_config'] = [
+                'token_exists' => !empty(env('WABLAS_TOKEN')),
+                'secret_key_exists' => !empty(env('WABLAS_SECRET_KEY')),
+                'api_url' => env('WABLAS_API_URL', 'https://texas.wablas.com/api')
+            ];
+            
+            // Test device status
+            $debug['device_status'] = $this->checkWablasDeviceStatus();
+            
+            try {
+                $debug['pelangganLama_count'] = $this->getPelangganLama()->count();
+            } catch (\Exception $e) {
+                $debug['pelangganLama_error'] = $e->getMessage();
+            }
+            
+            try {
+                $debug['pelangganBaru_count'] = $this->getPelangganBaru()->count();
+            } catch (\Exception $e) {
+                $debug['pelangganBaru_error'] = $e->getMessage();
+            }
+            
+            try {
+                $debug['pelangganTidakKembali_count'] = $this->getPelangganTidakKembali()->count();
+            } catch (\Exception $e) {
+                $debug['pelangganTidakKembali_error'] = $e->getMessage();
+            }
+            
+            try {
+                $debug['keseluruhan_count'] = $this->getKeseluruhanPelanggan()->count();
+            } catch (\Exception $e) {
+                $debug['keseluruhan_error'] = $e->getMessage();
+            }
+            
+            return response()->json([
+                'status' => 'success',
+                'debug' => $debug
+            ]);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal export data: ' . $e->getMessage()
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ], 500);
         }
     }
 
     /**
-     * Delete uploaded image
+     * Debug Wablas Connection - Tambahkan method ini ke FollowUpPelangganController
      */
-    public function deleteImage($id)
+    public function debugWablas()
     {
         try {
-            $followUp = FollowUp::find($id);
+            $debug = [];
             
-            if (!$followUp) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Follow up tidak ditemukan'
-                ], 404);
-            }
-
-            // Delete image files
-            if (!empty($followUp->images)) {
-                foreach ($followUp->images as $imagePath) {
-                    if (Storage::disk('public')->exists($imagePath)) {
-                        Storage::disk('public')->delete($imagePath);
-                    }
+            // 1. Check environment variables
+            $debug['env_config'] = [
+                'WABLAS_API_URL' => env('WABLAS_API_URL'),
+                'WABLAS_TOKEN_EXISTS' => !empty(env('WABLAS_TOKEN')),
+                'WABLAS_TOKEN_PREVIEW' => env('WABLAS_TOKEN') ? substr(env('WABLAS_TOKEN'), 0, 20) . '...' : 'NOT SET',
+                'WABLAS_SECRET_KEY_EXISTS' => !empty(env('WABLAS_SECRET_KEY')),
+                'WABLAS_SECRET_KEY_PREVIEW' => env('WABLAS_SECRET_KEY') ? substr(env('WABLAS_SECRET_KEY'), 0, 10) . '...' : 'NOT SET',
+                'WABLAS_DEVICE_ID' => env('WABLAS_DEVICE_ID'),
+                'APP_ADMIN_PHONE' => env('APP_ADMIN_PHONE'),
+            ];
+            
+            $wablasToken = env('WABLAS_TOKEN');
+            $wablasSecretKey = env('WABLAS_SECRET_KEY', '');
+            $wablasUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
+            
+            if (!empty($wablasToken)) {
+                $authToken = $wablasToken . '.' . $wablasSecretKey;
+                
+                // 2. Test device info endpoint
+                try {
+                    $response = Http::timeout(15)
+                        ->withHeaders([
+                            'Authorization' => $authToken,
+                        ])
+                        ->get($wablasUrl . '/device/info');
+                    
+                    $debug['device_info_test'] = [
+                        'url' => $wablasUrl . '/device/info',
+                        'auth_token_preview' => substr($authToken, 0, 30) . '...',
+                        'status_code' => $response->status(),
+                        'success' => $response->successful(),
+                        'response_body' => $response->json(),
+                        'raw_response' => $response->body()
+                    ];
+                } catch (\Exception $e) {
+                    $debug['device_info_test'] = [
+                        'error' => $e->getMessage(),
+                        'success' => false
+                    ];
                 }
+                
+                // 3. Test v2 API send message FIXED
+                try {
+                    $payload = [
+                        "data" => [
+                            [
+                                'phone' => '6282245454528',
+                                'message' => 'Test API v2 FIXED - ' . now()->format('H:i:s')
+                            ]
+                        ]
+                    ];
+                    
+                    $testResponse = Http::timeout(15)
+                        ->withHeaders([
+                            'Authorization' => $authToken,
+                            'Content-Type' => 'application/json'
+                        ])
+                        ->post($wablasUrl . '/v2/send-message', $payload);
+                    
+                    $debug['send_message_v2_fixed_test'] = [
+                        'url' => $wablasUrl . '/v2/send-message',
+                        'payload' => $payload,
+                        'status_code' => $testResponse->status(),
+                        'success' => $testResponse->successful(),
+                        'response_body' => $testResponse->json(),
+                        'raw_response' => $testResponse->body()
+                    ];
+                } catch (\Exception $e) {
+                    $debug['send_message_v2_fixed_test'] = [
+                        'error' => $e->getMessage(),
+                        'success' => false
+                    ];
+                }
+                
+            } else {
+                $debug['error'] = 'WABLAS_TOKEN not configured';
             }
-
-            // Update record
-            $followUp->update(['images' => null]);
-
+            
             return response()->json([
                 'status' => 'success',
-                'message' => 'Gambar berhasil dihapus'
-            ]);
-
+                'debug' => $debug
+            ], 200, [], JSON_PRETTY_PRINT);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Gagal menghapus gambar: ' . $e->getMessage()
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ], 500);
         }
     }
-
 }
