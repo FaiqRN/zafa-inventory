@@ -63,11 +63,13 @@ return [
     |
     */
     'wablas' => [
-        // Core API Configuration
+        // Core API Configuration (FIXED)
         'api_url' => env('WABLAS_API_URL', 'https://texas.wablas.com/api'),
-        'token' => env('WABLAS_TOKEN'),
-        'secret_key' => env('WABLAS_SECRET_KEY'),
+        'token' => env('WABLAS_TOKEN'),  // FIXED: Hanya token yang digunakan untuk authorization
         'device_id' => env('WABLAS_DEVICE_ID'),
+        
+        // DEPRECATED: Secret key tidak digunakan di Wablas v2
+        // 'secret_key' => env('WABLAS_SECRET_KEY'),  // Tidak digunakan lagi
         
         // Timeout and Retry Configuration
         'timeout' => env('WABLAS_TIMEOUT', 60),
@@ -85,16 +87,6 @@ return [
         'allowed_image_types' => ['jpeg', 'jpg', 'png', 'gif'],
         'max_images_per_message' => env('WABLAS_MAX_IMAGES', 5),
         
-        // Webhook Configuration
-        'webhook_url' => env('WABLAS_WEBHOOK_URL'),
-        'webhook_secret' => env('WABLAS_WEBHOOK_SECRET'),
-        'webhook_enabled' => env('WABLAS_WEBHOOK_ENABLED', false),
-        
-        // Advanced Features
-        'enable_status_tracking' => env('WABLAS_ENABLE_STATUS_TRACKING', true),
-        'enable_delivery_reports' => env('WABLAS_ENABLE_DELIVERY_REPORTS', true),
-        'enable_read_receipts' => env('WABLAS_ENABLE_READ_RECEIPTS', true),
-        
         // Debug and Logging
         'debug_mode' => env('WABLAS_DEBUG_MODE', false),
         'log_requests' => env('WABLAS_LOG_REQUESTS', true),
@@ -110,21 +102,28 @@ return [
         
         // Message Templates (Optional)
         'templates' => [
-            'test_message' => 'Test pesan dari Zafa Potato CRM - {timestamp}',
+            'test_message' => 'Test pesan dari Zafa Potato CRM (Wablas v2 FIXED) - {timestamp}',
             'welcome_message' => 'Selamat datang di Zafa Potato! Terima kasih telah bergabung dengan kami.',
             'follow_up_template' => 'Halo {name}, terima kasih sudah menjadi pelanggan setia Zafa Potato!',
             'promo_template' => 'Halo {name}! Ada promo spesial untuk Anda: {promo_details}',
         ],
         
-        // API Endpoints (Texas Wablas v2)
+        // API Endpoints (Wablas v2 FIXED)
         'endpoints' => [
-            'send_message' => '/v2/send-message',
-            'send_image' => '/v2/send-image',
-            'send_document' => '/v2/send-document',
-            'device_info' => '/device/info',
-            'device_scan' => '/device/scan',
-            'message_status' => '/report/message',
-            'webhook_register' => '/webhook/register',
+            'send_message' => '/send-message',        // FIXED: Endpoint yang benar
+            'send_image' => '/send-image',            // FIXED: Endpoint yang benar
+            'send_document' => '/send-document',
+            'device_status' => '/device/status',      // FIXED: Endpoint yang benar
+            'device_info' => '/device/info',          // Alternative endpoint
+            'device_qr' => '/device/qr',
+            'message_status' => '/message/status',    // FIXED: Endpoint untuk cek status
+        ],
+        
+        // Authorization Configuration (FIXED)
+        'auth' => [
+            'header_name' => 'Authorization',         // FIXED: Header name yang benar
+            'header_format' => 'token_only',          // FIXED: Hanya token, bukan Bearer token
+            'use_secret_key' => false,               // FIXED: Secret key tidak digunakan
         ],
         
         // Error Handling
@@ -155,11 +154,9 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Additional Configuration Helpers
+    | Admin Configuration
     |--------------------------------------------------------------------------
     */
-    
-    // Admin Configuration
     'admin' => [
         'phone' => env('APP_ADMIN_PHONE', '6282245454528'),
         'email' => env('APP_ADMIN_EMAIL', 'admin@zafapotato.com'),
@@ -168,20 +165,5 @@ return [
             'high_failure_rate' => true,
             'daily_summary' => true,
         ],
-    ],
-    
-    // Queue Configuration for WhatsApp
-    'queue' => [
-        'whatsapp_queue' => env('WHATSAPP_QUEUE_NAME', 'whatsapp'),
-        'default_delay' => env('WHATSAPP_QUEUE_DELAY', 0),
-        'max_retries' => env('WHATSAPP_QUEUE_RETRIES', 3),
-        'retry_delay' => env('WHATSAPP_QUEUE_RETRY_DELAY', 300), // 5 minutes
-    ],
-    
-    // Cache Configuration
-    'cache' => [
-        'device_status_ttl' => env('CACHE_DEVICE_STATUS_TTL', 300), // 5 minutes
-        'customer_data_ttl' => env('CACHE_CUSTOMER_DATA_TTL', 1800), // 30 minutes
-        'message_templates_ttl' => env('CACHE_MESSAGE_TEMPLATES_TTL', 3600), // 1 hour
     ],
 ];

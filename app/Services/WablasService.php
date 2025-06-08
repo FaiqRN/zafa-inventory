@@ -9,63 +9,49 @@ class WablasService
 {
     private $apiUrl;
     private $token;
-    private $secretKey;
 
     public function __construct()
     {
         $this->apiUrl = config('services.wablas.api_url') ?? env('WABLAS_API_URL', 'https://texas.wablas.com/api');
         $this->token = config('services.wablas.token') ?? env('WABLAS_TOKEN');
-        $this->secretKey = config('services.wablas.secret_key') ?? env('WABLAS_SECRET_KEY');
         
         // DEBUG: Log configuration values (remove in production)
-        Log::info('WablasService Config Debug', [
+        Log::info('WablasService Config (FINAL FIX)', [
             'api_url' => $this->apiUrl,
             'token_exists' => !empty($this->token),
             'token_preview' => $this->token ? substr($this->token, 0, 20) . '...' : 'NOT SET',
-            'secret_key_exists' => !empty($this->secretKey),
-            'secret_key_preview' => $this->secretKey ? substr($this->secretKey, 0, 4) . '...' : 'NOT SET'
         ]);
     }
 
     /**
-     * Get proper authorization header for Texas Wablas v2
+     * FINAL FIX: Get proper authorization headers
      */
-    private function getAuthToken()
+    private function getHeaders()
     {
-        if (empty($this->token) || empty($this->secretKey)) {
-            Log::error('WablasService: Missing token or secret key', [
-                'token_empty' => empty($this->token),
-                'secret_key_empty' => empty($this->secretKey)
-            ]);
+        if (empty($this->token)) {
+            Log::error('WablasService: Missing token');
             return null;
         }
         
-        $authToken = trim($this->token) . '.' . trim($this->secretKey);
-        
-        // DEBUG: Log auth token format (remove in production)
-        Log::info('WablasService Auth Token Debug', [
-            'auth_token_preview' => substr($authToken, 0, 30) . '...',
-            'auth_token_length' => strlen($authToken),
-            'token_length' => strlen($this->token),
-            'secret_key_length' => strlen($this->secretKey)
-        ]);
-        
-        return $authToken;
+        return [
+            'Authorization' => $this->token,
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json'
+        ];
     }
 
-
     /**
-     * Send text message using Texas Wablas v2 API
+     * FINAL FIX: Send text message (sudah terbukti berhasil dari test)
      */
     public function sendMessage($phone, $message)
     {
         try {
-            $authToken = $this->getAuthToken();
+            $headers = $this->getHeaders();
             
-            if (!$authToken) {
+            if (!$headers) {
                 return [
                     'success' => false,
-                    'error' => 'Token atau secret key tidak dikonfigurasi',
+                    'error' => 'Token tidak dikonfigurasi',
                     'response' => null
                 ];
             }
@@ -79,31 +65,133 @@ class WablasService
                 ];
             }
 
-            // Use Texas Wablas v2 API format
+            // FINAL FIX: Format yang sudah terbukti berhasil dari test
             $payload = [
-                "data" => [
-                    [
-                        'phone' => $formattedPhone,
-                        'message' => $message
-                    ]
-                ]
+                'phone' => $formattedPhone,
+                'message' => $message
             ];
 
-            Log::info('WablasService: Sending message', [
+            Log::info('WablasService: Sending message (FINAL FIX)', [
                 'phone' => $formattedPhone,
                 'message_length' => strlen($message),
+                'url' => $this->apiUrl . '/send-message',
                 'payload' => $payload
             ]);
 
             $response = Http::timeout(60)
-                ->withHeaders([
-                    'Authorization' => $authToken,
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ])
-                ->post($this->apiUrl . '/v2/send-message', $payload);
+                ->withHeaders($headers)
+                ->post($this->apiUrl . '/send-message', $payload);
 
-            Log::info('WablasService: Send message response', [
+            Log::info('WablasService: Send message response (FINAL FIX)', [
+                'status_code' => $response->status(),
+                'response_body' => $response->body(),
+                'successful' => $response->successful()
+            ]);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                
+                // FINAL FIX: Handle response format berdasarkan test yang berhasil
+                if (isset($responseData['status']) && $responseData['status'] === true) {
+                    $messageId = null;
+                    
+                    // Extract message ID dari berbagai format response
+                    if (isset($responseData['data']['messages'][0]['id'])) {
+                        $messageId = $responseData['data']['messages'][0]['id'];
+                    } elseif (isset($responseData['data']['id'])) {
+                        $messageId = $responseData['data']['id'];
+                    } elseif (isset($responseData['id'])) {
+                        $messageId = $responseData['id'];
+                    } elseif (isset($responseData['message_id'])) {
+                        $messageId = $responseData['message_id'];
+                    } else {
+                        $messageId = 'sent_' . time();
+                    }
+                    
+                    return [
+                        'success' => true,
+                        'message_id' => $messageId,
+                        'response' => $responseData
+                    ];
+                } else {
+                    return [
+                        'success' => false,
+                        'error' => $responseData['message'] ?? 'Unknown error from Wablas',
+                        'response' => $responseData
+                    ];
+                }
+            } else {
+                $errorBody = $response->body();
+                Log::error('WablasService: HTTP Error', [
+                    'status' => $response->status(),
+                    'response' => $errorBody
+                ]);
+                
+                return [
+                    'success' => false,
+                    'error' => 'HTTP Error: ' . $response->status() . ' - ' . $errorBody,
+                    'response' => $response->json()
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('WablasService: Send message error', [
+                'error' => $e->getMessage(),
+                'phone' => $phone,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'response' => null
+            ];
+        }
+    }
+
+    /**
+     * FINAL FIX: Send image (menggunakan format yang sama dengan send message)
+     */
+    public function sendImage($phone, $imageUrl, $caption = '')
+    {
+        try {
+            $headers = $this->getHeaders();
+            
+            if (!$headers) {
+                return [
+                    'success' => false,
+                    'error' => 'Token tidak dikonfigurasi',
+                    'response' => null
+                ];
+            }
+
+            $formattedPhone = $this->formatPhoneNumber($phone);
+            if (!$this->validatePhoneNumber($formattedPhone)) {
+                return [
+                    'success' => false,
+                    'error' => 'Format nomor telepon tidak valid: ' . $formattedPhone,
+                    'response' => null
+                ];
+            }
+
+            // FINAL FIX: Format yang konsisten dengan send message
+            $payload = [
+                'phone' => $formattedPhone,
+                'image' => $imageUrl,
+                'caption' => $caption
+            ];
+
+            Log::info('WablasService: Sending image (FINAL FIX)', [
+                'phone' => $formattedPhone,
+                'image_url' => $imageUrl,
+                'caption_length' => strlen($caption),
+                'url' => $this->apiUrl . '/send-image'
+            ]);
+
+            $response = Http::timeout(60)
+                ->withHeaders($headers)
+                ->post($this->apiUrl . '/send-image', $payload);
+
+            Log::info('WablasService: Send image response (FINAL FIX)', [
                 'status_code' => $response->status(),
                 'response_body' => $response->body()
             ]);
@@ -116,8 +204,12 @@ class WablasService
                     
                     if (isset($responseData['data']['messages'][0]['id'])) {
                         $messageId = $responseData['data']['messages'][0]['id'];
-                    } elseif (isset($responseData['data']['device_id'])) {
-                        $messageId = $responseData['data']['device_id'] . '_' . time();
+                    } elseif (isset($responseData['data']['id'])) {
+                        $messageId = $responseData['data']['id'];
+                    } elseif (isset($responseData['id'])) {
+                        $messageId = $responseData['id'];
+                    } else {
+                        $messageId = 'image_' . time();
                     }
                     
                     return [
@@ -128,7 +220,7 @@ class WablasService
                 } else {
                     return [
                         'success' => false,
-                        'error' => $responseData['message'] ?? 'Unknown error from Texas Wablas',
+                        'error' => $responseData['message'] ?? 'Unknown error from Wablas',
                         'response' => $responseData
                     ];
                 }
@@ -140,7 +232,7 @@ class WablasService
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('WablasService: Send message error', [
+            Log::error('WablasService: Send image error', [
                 'error' => $e->getMessage(),
                 'phone' => $phone
             ]);
@@ -154,89 +246,133 @@ class WablasService
     }
 
     /**
-     * Send image with caption using Texas Wablas v2 API
+     * FINAL FIX: Get device status - coba send test message untuk validasi
      */
-    public function sendImage($phone, $imageUrl, $caption = '')
+    public function getDeviceStatus()
     {
         try {
-            if (empty($this->token) || empty($this->secretKey)) {
+            $headers = $this->getHeaders();
+            
+            if (!$headers) {
                 return [
                     'success' => false,
-                    'error' => 'Token atau secret key tidak dikonfigurasi',
-                    'response' => null
+                    'error' => 'Token tidak dikonfigurasi',
+                    'isConnected' => false,
+                    'status' => 'no_token',
+                    'message' => 'Token tidak dikonfigurasi'
                 ];
             }
 
-            $formattedPhone = $this->formatPhoneNumber($phone);
-            if (!$this->validatePhoneNumber($formattedPhone)) {
-                return [
-                    'success' => false,
-                    'error' => 'Format nomor telepon tidak valid: ' . $formattedPhone,
-                    'response' => null
-                ];
-            }
-
-            // FIXED: Use Texas Wablas v2 API format for images
-            $payload = [
-                "data" => [
-                    [
-                        'phone' => $formattedPhone,
-                        'image' => $imageUrl,
-                        'caption' => $caption
-                    ]
-                ]
+            // FINAL FIX: Karena endpoint status tidak bekerja, gunakan method alternatif
+            // Coba kirim test message untuk validasi device connection
+            $testResult = $this->validateDeviceByTestMessage();
+            
+            return [
+                'success' => $testResult['connected'],
+                'isConnected' => $testResult['connected'],
+                'status' => $testResult['connected'] ? 'connected' : 'disconnected',
+                'message' => $testResult['message'],
+                'response' => $testResult
             ];
 
-            Log::info('Sending image via Texas Wablas v2', [
-                'phone' => $formattedPhone,
-                'image_url' => $imageUrl,
-                'caption_length' => strlen($caption)
+        } catch (\Exception $e) {
+            Log::error('WablasService: Exception checking device status', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'isConnected' => false,
+                'status' => 'exception',
+                'message' => $e->getMessage()
+            ];
+        }
+    }
 
-            $response = Http::timeout(60)
-                ->withHeaders([
-                    'Authorization' => $this->getAuthToken(),
-                    'Content-Type' => 'application/json'
-                ])
-                ->post($this->apiUrl . '/v2/send-image', $payload);
+    /**
+     * FINAL FIX: Validate device connection dengan test message minimal
+     */
+    private function validateDeviceByTestMessage()
+    {
+        try {
+            $headers = $this->getHeaders();
+            
+            // Test dengan payload minimal untuk validasi
+            $testPayload = [
+                'phone' => '6282245454528', // Admin phone
+                'message' => 'Device validation test - ' . date('H:i:s')
+            ];
+
+            Log::info('WablasService: Validating device connection (FINAL FIX)');
+
+            $response = Http::timeout(30)
+                ->withHeaders($headers)
+                ->post($this->apiUrl . '/send-message', $testPayload);
 
             if ($response->successful()) {
                 $responseData = $response->json();
                 
                 if (isset($responseData['status']) && $responseData['status'] === true) {
-                    $messageId = null;
-                    
-                    if (isset($responseData['data']['messages'][0]['id'])) {
-                        $messageId = $responseData['data']['messages'][0]['id'];
-                    } elseif (isset($responseData['data']['device_id'])) {
-                        $messageId = $responseData['data']['device_id'] . '_' . time();
-                    }
-                    
                     return [
-                        'success' => true,
-                        'message_id' => $messageId,
-                        'response' => $responseData
+                        'connected' => true,
+                        'message' => 'Device connected and ready',
+                        'test_response' => $responseData
                     ];
                 } else {
                     return [
-                        'success' => false,
-                        'error' => $responseData['message'] ?? 'Unknown error from Texas Wablas',
-                        'response' => $responseData
+                        'connected' => false,
+                        'message' => $responseData['message'] ?? 'Device validation failed',
+                        'test_response' => $responseData
                     ];
                 }
             } else {
                 return [
-                    'success' => false,
-                    'error' => 'HTTP Error: ' . $response->status() . ' - ' . $response->body(),
-                    'response' => $response->json()
+                    'connected' => false,
+                    'message' => 'HTTP Error: ' . $response->status(),
+                    'test_response' => $response->body()
                 ];
             }
+
         } catch (\Exception $e) {
-            Log::error('Wablas send image error: ' . $e->getMessage());
+            Log::error('validateDeviceByTestMessage error: ' . $e->getMessage());
+            
+            return [
+                'connected' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+                'test_response' => null
+            ];
+        }
+    }
+
+    /**
+     * FINAL FIX: Test connection
+     */
+    public function testConnection($testPhone = null)
+    {
+        try {
+            $testPhone = $testPhone ?: '6282245454528';
+            $testMessage = 'Test koneksi Wablas FINAL FIX - ' . now()->format('Y-m-d H:i:s');
+            
+            Log::info("Testing Wablas connection (FINAL FIX) to: {$testPhone}");
+            
+            // Langsung test send message (sudah terbukti berhasil)
+            $result = $this->sendMessage($testPhone, $testMessage);
+            
+            return [
+                'success' => $result['success'],
+                'message' => $result['success'] ? 
+                    'Test berhasil! Pesan telah dikirim ke ' . $testPhone : 
+                    'Test gagal: ' . $result['error'],
+                'data' => $result
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Test connection error (FINAL FIX): ' . $e->getMessage());
             return [
                 'success' => false,
-                'error' => $e->getMessage(),
-                'response' => null
+                'error' => $e->getMessage()
             ];
         }
     }
@@ -263,93 +399,6 @@ class WablasService
     }
 
     /**
-     * Send bulk messages using Texas Wablas v2 batch API
-     */
-    public function sendBulkMessages($messages)
-    {
-        try {
-            if (empty($this->token) || empty($this->secretKey)) {
-                return [
-                    'success' => false,
-                    'error' => 'Token atau secret key tidak dikonfigurasi',
-                    'response' => null
-                ];
-            }
-
-            // Prepare bulk data
-            $bulkData = [];
-            foreach ($messages as $msg) {
-                $formattedPhone = $this->formatPhoneNumber($msg['phone']);
-                if ($this->validatePhoneNumber($formattedPhone)) {
-                    $bulkData[] = [
-                        'phone' => $formattedPhone,
-                        'message' => $msg['message']
-                    ];
-                }
-            }
-
-            if (empty($bulkData)) {
-                return [
-                    'success' => false,
-                    'error' => 'Tidak ada nomor valid untuk dikirim',
-                    'response' => null
-                ];
-            }
-
-            // Split into chunks of 100 (Texas Wablas limit)
-            $chunks = array_chunk($bulkData, 100);
-            $allResults = [];
-
-            foreach ($chunks as $chunkIndex => $chunk) {
-                $payload = ["data" => $chunk];
-
-                Log::info("Sending bulk chunk {$chunkIndex} via Texas Wablas v2", [
-                    'chunk_size' => count($chunk),
-                    'total_chunks' => count($chunks)
-                ]);
-
-                $response = Http::timeout(120) // Longer timeout for bulk
-                    ->withHeaders([
-                        'Authorization' => $this->getAuthToken(),
-                        'Content-Type' => 'application/json'
-                    ])
-                    ->post($this->apiUrl . '/v2/send-message', $payload);
-
-                if ($response->successful()) {
-                    $responseData = $response->json();
-                    $allResults[] = $responseData;
-                } else {
-                    $allResults[] = [
-                        'success' => false,
-                        'error' => 'HTTP Error: ' . $response->status(),
-                        'response' => $response->json()
-                    ];
-                }
-
-                // Delay between chunks to prevent rate limiting
-                if ($chunkIndex < count($chunks) - 1) {
-                    sleep(5); // 5 second delay between chunks
-                }
-            }
-
-            return [
-                'success' => true,
-                'results' => $allResults,
-                'total_chunks' => count($chunks),
-                'total_messages' => count($bulkData)
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Wablas bulk send error: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'response' => null
-            ];
-        }
-    }
-
-    /**
      * Send message with images combined
      */
     public function sendMessageWithImages($phone, $message, $images = [])
@@ -372,190 +421,6 @@ class WablasService
         }
         
         return $results;
-    }
-
-    /**
-     * Check message status (if supported by Texas Wablas)
-     */
-    public function checkMessageStatus($messageId)
-    {
-        try {
-            if (empty($this->token) || empty($this->secretKey)) {
-                return [
-                    'success' => false,
-                    'error' => 'Token atau secret key tidak dikonfigurasi'
-                ];
-            }
-
-            $response = Http::timeout(30)
-                ->withHeaders([
-                    'Authorization' => $this->getAuthToken(),
-                ])
-                ->get($this->apiUrl . '/report/message', [
-                    'message_id' => $messageId
-                ]);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'response' => $response->json()
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'error' => 'HTTP Error: ' . $response->status()
-                ];
-            }
-        } catch (\Exception $e) {
-            Log::error('Wablas check status error: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Get device status using Texas Wablas v2
-     */
-    public function getDeviceStatus()
-    {
-        try {
-            $authToken = $this->getAuthToken();
-            
-            if (!$authToken) {
-                return [
-                    'success' => false,
-                    'error' => 'Token atau secret key tidak dikonfigurasi',
-                    'debug' => [
-                        'token_exists' => !empty($this->token),
-                        'secret_key_exists' => !empty($this->secretKey)
-                    ]
-                ];
-            }
-
-            Log::info('WablasService: Checking device status', [
-                'url' => $this->apiUrl . '/device/info',
-                'auth_preview' => substr($authToken, 0, 30) . '...'
-            ]);
-
-            $response = Http::timeout(30)
-                ->withHeaders([
-                    'Authorization' => $authToken,
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json'
-                ])
-                ->get($this->apiUrl . '/device/info');
-
-            // DEBUG: Log full response details
-            Log::info('WablasService Response Debug', [
-                'status_code' => $response->status(),
-                'headers' => $response->headers(),
-                'body' => $response->body(),
-                'successful' => $response->successful()
-            ]);
-
-            if ($response->successful()) {
-                $responseData = $response->json();
-                
-                // Parse Texas Wablas device status format
-                $isConnected = false;
-                $status = 'unknown';
-                
-                if (isset($responseData['status']) && $responseData['status'] === true) {
-                    if (isset($responseData['data']['status'])) {
-                        $status = $responseData['data']['status'];
-                        $isConnected = ($status === 'connected');
-                    }
-                }
-                
-                return [
-                    'success' => true,
-                    'isConnected' => $isConnected,
-                    'status' => $status,
-                    'response' => $responseData
-                ];
-            } else {
-                Log::error('WablasService: HTTP Error', [
-                    'status_code' => $response->status(),
-                    'response_body' => $response->body(),
-                    'auth_token_used' => substr($authToken, 0, 30) . '...'
-                ]);
-                
-                return [
-                    'success' => false,
-                    'error' => 'HTTP Error: ' . $response->status() . ' - ' . $response->body(),
-                    'debug' => [
-                        'status_code' => $response->status(),
-                        'response_body' => $response->body(),
-                        'url' => $this->apiUrl . '/device/info',
-                        'auth_preview' => substr($authToken, 0, 30) . '...'
-                    ]
-                ];
-            }
-        } catch (\Exception $e) {
-            Log::error('WablasService: Exception occurred', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'debug' => [
-                    'exception' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            ];
-        }
-    }
-
-    /**
-     * Test connection to Texas Wablas
-     */
-    public function testConnection($testPhone = null)
-    {
-        try {
-            $testPhone = $testPhone ?: config('app.admin_phone', '6282245454528');
-            $testMessage = 'Test koneksi Texas Wablas v2 - ' . now()->format('Y-m-d H:i:s');
-            
-            Log::info("Testing Texas Wablas connection to: {$testPhone}");
-            
-            // First check device status
-            $deviceStatus = $this->getDeviceStatus();
-            if (!$deviceStatus['success']) {
-                return [
-                    'success' => false,
-                    'error' => 'Gagal mengecek status device: ' . $deviceStatus['error']
-                ];
-            }
-            
-            if (!$deviceStatus['isConnected']) {
-                return [
-                    'success' => false,
-                    'error' => 'Device WhatsApp tidak terhubung. Status: ' . $deviceStatus['status']
-                ];
-            }
-            
-            // Send test message
-            $result = $this->sendMessage($testPhone, $testMessage);
-            
-            return [
-                'success' => $result['success'],
-                'message' => $result['success'] ? 
-                    'Test berhasil! Pesan telah dikirim ke ' . $testPhone : 
-                    'Test gagal: ' . $result['error'],
-                'data' => $result
-            ];
-            
-        } catch (\Exception $e) {
-            Log::error('Test connection error: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
     }
 
     /**
@@ -591,45 +456,5 @@ class WablasService
         return $phoneLength >= 12 && $phoneLength <= 15 && 
                substr($formatted, 0, 2) === '62' && 
                is_numeric($formatted);
-    }
-
-    /**
-     * Generate QR Code for device connection
-     */
-    public function generateQRCode()
-    {
-        try {
-            if (empty($this->token) || empty($this->secretKey)) {
-                return [
-                    'success' => false,
-                    'error' => 'Token atau secret key tidak dikonfigurasi'
-                ];
-            }
-
-            $response = Http::timeout(30)
-                ->withHeaders([
-                    'Authorization' => $this->getAuthToken(),
-                ])
-                ->get($this->apiUrl . '/device/scan');
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'qr_url' => $this->apiUrl . '/device/scan?token=' . $this->getAuthToken(),
-                    'response' => $response->body()
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'error' => 'HTTP Error: ' . $response->status()
-                ];
-            }
-        } catch (\Exception $e) {
-            Log::error('Generate QR Code error: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
     }
 }

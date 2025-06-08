@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Services\WablasService;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 
 class WhatsAppDebugCommand extends Command
 {
@@ -12,14 +13,15 @@ class WhatsAppDebugCommand extends Command
                            {--check-config : Check configuration only}
                            {--check-device : Check device status only}
                            {--test-send : Send test message}
-                           {--phone= : Phone number for test message}';
+                           {--phone= : Phone number for test message}
+                           {--test-endpoints : Test all endpoints}';
 
-    protected $description = 'Debug WhatsApp integration with Texas Wablas';
+    protected $description = 'Debug WhatsApp integration with Wablas v2 (FIXED VERSION)';
 
     public function handle()
     {
-        $this->info('🔍 Texas Wablas WhatsApp Debug Tool');
-        $this->info('================================');
+        $this->info('🔍 Wablas v2 WhatsApp Debug Tool (FIXED VERSION)');
+        $this->info('==================================================');
 
         // STEP 1: Debug Environment Loading
         $this->debugEnvironment();
@@ -39,9 +41,15 @@ class WhatsAppDebugCommand extends Command
             return 0;
         }
 
+        if ($this->option('test-endpoints')) {
+            $this->testAllEndpoints();
+            return 0;
+        }
+
         // Default: run all checks
         $this->checkConfiguration();
         $this->checkDeviceStatus();
+        $this->testBasicConnection();
         
         return 0;
     }
@@ -49,7 +57,7 @@ class WhatsAppDebugCommand extends Command
     private function debugEnvironment()
     {
         $this->newLine();
-        $this->info('🔧 Environment Debug:');
+        $this->info('🔧 Environment Debug (FIXED):');
         
         // Check if .env is loaded
         $envPath = base_path('.env');
@@ -66,30 +74,26 @@ class WhatsAppDebugCommand extends Command
         $this->info("⚙️  Config values:");
         $this->line("   services.wablas.api_url: " . (config('services.wablas.api_url') ?: '❌ NOT SET'));
         $this->line("   services.wablas.token: " . (config('services.wablas.token') ? '✅ SET' : '❌ NOT SET'));
-        $this->line("   services.wablas.secret_key: " . (config('services.wablas.secret_key') ? '✅ SET' : '❌ NOT SET'));
-        $this->line("   services.wablas.device_id: " . (config('services.wablas.device_id') ?: '❌ NOT SET'));
+        
+        // FIXED: Show proper authorization format for Wablas v2
+        $token = env('WABLAS_TOKEN');
+        if ($token) {
+            $this->info("🔐 Authorization Header Format (FIXED):");
+            $this->line("   Authorization: " . substr($token, 0, 30) . '...');
+            $this->warn("   ⚠️  NOTE: Wablas v2 uses token directly, NOT token + secret key!");
+        }
     }
 
     private function checkConfiguration()
     {
         $this->newLine();
-        $this->info('⚙️  Checking Configuration...');
-
-        // Force reload configuration
-        Config::set('services.wablas', [
-            'api_url' => env('WABLAS_API_URL', 'https://texas.wablas.com/api'),
-            'token' => env('WABLAS_TOKEN'),
-            'secret_key' => env('WABLAS_SECRET_KEY'),
-            'device_id' => env('WABLAS_DEVICE_ID'),
-            'timeout' => env('WABLAS_TIMEOUT', 60),
-        ]);
+        $this->info('⚙️  Checking Configuration (FIXED for Wablas v2)...');
 
         $config = [
-            'API URL' => config('services.wablas.api_url'),
-            'Token' => config('services.wablas.token') ? 'SET (' . strlen(config('services.wablas.token')) . ' characters)' : 'NOT SET',
-            'Secret Key' => config('services.wablas.secret_key') ? 'SET (' . strlen(config('services.wablas.secret_key')) . ' characters)' : 'NOT SET',
-            'Device ID' => config('services.wablas.device_id') ?: 'NOT SET',
-            'Timeout' => config('services.wablas.timeout') . ' seconds',
+            'API URL' => env('WABLAS_API_URL', 'https://texas.wablas.com/api'),
+            'Token' => env('WABLAS_TOKEN') ? 'SET (' . strlen(env('WABLAS_TOKEN')) . ' characters)' : 'NOT SET',
+            'Device ID' => env('WABLAS_DEVICE_ID') ?: 'NOT SET',
+            'Admin Phone' => env('APP_ADMIN_PHONE') ?: 'NOT SET',
         ];
 
         $allConfigured = true;
@@ -100,64 +104,152 @@ class WhatsAppDebugCommand extends Command
         }
 
         if ($allConfigured) {
-            $this->info('✅ All configurations are set');
-            
-            // Test manual authorization token building
-            $token = config('services.wablas.token');
-            $secretKey = config('services.wablas.secret_key');
-            $authToken = $token . '.' . $secretKey;
-            $this->info("🔐 Authorization Token Preview: " . substr($authToken, 0, 50) . '...');
-            
+            $this->info('✅ All required configurations are set');
+            $this->warn('💡 IMPORTANT: Wablas v2 only requires TOKEN, secret key is not used in API calls!');
         } else {
             $this->error('❌ Some configurations are missing');
-            $this->info('💡 Check your .env file and make sure all WABLAS_* variables are set');
+            $this->info('💡 Check your .env file and make sure WABLAS_TOKEN is set');
         }
     }
 
     private function checkDeviceStatus()
     {
         $this->newLine();
-        $this->info('📱 Checking Device Status...');
+        $this->info('📱 Checking Device Status (FIXED for Wablas v2)...');
 
         try {
-            // Force create new instance with fresh config
-            $wablasService = new WablasService();
+            $token = env('WABLAS_TOKEN');
+            $apiUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
             
-            $result = $wablasService->getDeviceStatus();
+            if (empty($token)) {
+                $this->error('❌ Token not configured');
+                return;
+            }
 
-            if ($result['success']) {
-                $this->info('✅ Device status check successful');
-                $this->line("   Connection: " . ($result['isConnected'] ? '🟢 Connected' : '🔴 Disconnected'));
-                $this->line("   Status: " . ($result['status'] ?? 'unknown'));
-                
-                if (isset($result['response'])) {
-                    $this->info('📊 Raw response:');
-                    $this->line('   ' . json_encode($result['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-                }
-            } else {
-                $this->error('❌ Failed to check device status');
-                $this->error('Error: ' . $result['error']);
-                
-                if (isset($result['debug'])) {
-                    $this->info('🔍 Debug information:');
-                    foreach ($result['debug'] as $key => $value) {
-                        $this->line("   {$key}: " . (is_array($value) ? json_encode($value) : $value));
+            // FIXED: Use proper Wablas v2 authorization and endpoint
+            $headers = [
+                'Authorization' => $token,  // FIXED: Token saja, bukan token + secret
+                'Accept' => 'application/json'
+            ];
+
+            // Try multiple possible endpoints for device status
+            $endpoints = [
+                '/device/status',
+                '/device',
+                '/status',
+                '/device/info'
+            ];
+
+            $deviceConnected = false;
+            $workingEndpoint = null;
+            $lastResponse = null;
+
+            foreach ($endpoints as $endpoint) {
+                try {
+                    $fullUrl = $apiUrl . $endpoint;
+                    $this->line("   Testing endpoint: {$fullUrl}");
+                    
+                    $response = Http::timeout(15)
+                        ->withHeaders($headers)
+                        ->get($fullUrl);
+
+                    $this->line("   Response code: " . $response->status());
+                    
+                    if ($response->successful()) {
+                        $responseData = $response->json();
+                        $lastResponse = $responseData;
+                        $workingEndpoint = $endpoint;
+                        
+                        // Check various possible response formats
+                        if (isset($responseData['status']) && $responseData['status'] === true) {
+                            $deviceConnected = true;
+                            break;
+                        } elseif (isset($responseData['device_status']) && in_array(strtolower($responseData['device_status']), ['connected', 'ready', 'authenticated'])) {
+                            $deviceConnected = true;
+                            break;
+                        } elseif (isset($responseData['connected']) && $responseData['connected'] === true) {
+                            $deviceConnected = true;
+                            break;
+                        }
                     }
+                } catch (\Exception $e) {
+                    $this->line("   Error: " . $e->getMessage());
+                    continue;
                 }
             }
+
+            if ($workingEndpoint) {
+                $this->info("✅ Working endpoint found: {$workingEndpoint}");
+                $this->line("   Device status: " . ($deviceConnected ? '🟢 Connected' : '🔴 Disconnected'));
+                
+                if ($lastResponse) {
+                    $this->info('📊 Raw response:');
+                    $this->line('   ' . json_encode($lastResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                }
+                
+                if (!$deviceConnected) {
+                    $this->warn('⚠️  Device not connected. Please scan QR code in Wablas dashboard.');
+                }
+            } else {
+                $this->error('❌ No working device status endpoint found');
+                $this->info('💡 Possible solutions:');
+                $this->line('   1. Check if your token is valid');
+                $this->line('   2. Verify API URL is correct');
+                $this->line('   3. Check Wablas dashboard for device status');
+            }
+
         } catch (\Exception $e) {
             $this->error('❌ Exception occurred: ' . $e->getMessage());
-            $this->line('   File: ' . $e->getFile());
-            $this->line('   Line: ' . $e->getLine());
+        }
+    }
+
+    private function testBasicConnection()
+    {
+        $this->newLine();
+        $this->info('🔗 Testing Basic Connection (FIXED)...');
+
+        try {
+            $token = env('WABLAS_TOKEN');
+            $apiUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
+            
+            if (empty($token)) {
+                $this->error('❌ Token not configured');
+                return;
+            }
+
+            // FIXED: Test dengan format yang benar
+            $headers = [
+                'Authorization' => $token,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ];
+
+            $response = Http::timeout(10)
+                ->withHeaders($headers)
+                ->get($apiUrl . '/device/status');
+
+            $this->line("Connection test result:");
+            $this->line("   Status Code: " . $response->status());
+            $this->line("   Success: " . ($response->successful() ? '✅ Yes' : '❌ No'));
+            
+            if ($response->successful()) {
+                $this->info('✅ Basic connection to Wablas v2 successful');
+            } else {
+                $this->error('❌ Connection failed');
+                $this->line("   Response: " . $response->body());
+            }
+
+        } catch (\Exception $e) {
+            $this->error('❌ Connection test failed: ' . $e->getMessage());
         }
     }
 
     private function sendTestMessage()
     {
         $this->newLine();
-        $this->info('📤 Sending Test Message...');
+        $this->info('📤 Sending Test Message (FIXED for Wablas v2)...');
 
-        $phone = $this->option('phone') ?: config('services.admin.phone', '6282245454528');
+        $phone = $this->option('phone') ?: env('APP_ADMIN_PHONE', '6282245454528');
         
         if (!$phone) {
             $this->error('❌ No phone number specified. Use --phone=62812345678 or set APP_ADMIN_PHONE in .env');
@@ -165,25 +257,110 @@ class WhatsAppDebugCommand extends Command
         }
 
         try {
-            $wablasService = new WablasService();
+            $token = env('WABLAS_TOKEN');
+            $apiUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
             
-            $message = "🧪 Test message from Zafa Potato CRM\n";
+            if (empty($token)) {
+                $this->error('❌ Token not configured');
+                return;
+            }
+
+            // FIXED: Format yang benar untuk Wablas v2
+            $headers = [
+                'Authorization' => $token,  // FIXED: Token saja
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ];
+
+            $message = "🧪 Test message from Zafa Potato CRM (Wablas v2 FIXED)\n";
             $message .= "⏰ Time: " . now()->format('Y-m-d H:i:s') . "\n";
             $message .= "🔧 Source: Artisan Command\n";
             $message .= "✅ WhatsApp integration is working!";
 
-            $result = $wablasService->sendMessage($phone, $message);
+            // FIXED: Payload format yang benar (tidak dalam wrapper "data")
+            $payload = [
+                'phone' => $phone,
+                'message' => $message
+            ];
 
-            if ($result['success']) {
-                $this->info('✅ Test message sent successfully');
-                $this->line("   Phone: {$phone}");
-                $this->line("   Message ID: " . ($result['message_id'] ?? 'N/A'));
+            $this->line("Sending to: {$phone}");
+            $this->line("Endpoint: {$apiUrl}/send-message");
+            $this->line("Payload: " . json_encode($payload, JSON_PRETTY_PRINT));
+
+            $response = Http::timeout(30)
+                ->withHeaders($headers)
+                ->post($apiUrl . '/send-message', $payload);
+
+            $this->line("Response Status: " . $response->status());
+            $this->line("Response Body: " . $response->body());
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                
+                if (isset($responseData['status']) && $responseData['status'] == true) {
+                    $this->info('✅ Test message sent successfully');
+                    
+                    $messageId = $responseData['data']['id'] ?? $responseData['id'] ?? 'unknown';
+                    $this->line("   Message ID: {$messageId}");
+                } else {
+                    $this->error('❌ Message not sent successfully');
+                    $this->line("   Error: " . ($responseData['message'] ?? 'Unknown error'));
+                }
             } else {
                 $this->error('❌ Failed to send test message');
-                $this->error('Error: ' . $result['error']);
+                $this->line("   HTTP Status: " . $response->status());
+                $this->line("   Response: " . $response->body());
             }
+
         } catch (\Exception $e) {
             $this->error('❌ Exception occurred: ' . $e->getMessage());
+        }
+    }
+
+    private function testAllEndpoints()
+    {
+        $this->newLine();
+        $this->info('🔍 Testing All Wablas v2 Endpoints...');
+
+        $token = env('WABLAS_TOKEN');
+        $apiUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
+        
+        if (empty($token)) {
+            $this->error('❌ Token not configured');
+            return;
+        }
+
+        $headers = [
+            'Authorization' => $token,
+            'Accept' => 'application/json'
+        ];
+
+        $endpoints = [
+            'Device Status' => '/device/status',
+            'Device Info' => '/device/info', 
+            'Device' => '/device',
+            'Status' => '/status',
+            'QR Code' => '/device/qr'
+        ];
+
+        foreach ($endpoints as $name => $endpoint) {
+            try {
+                $this->line("Testing {$name} ({$endpoint})...");
+                
+                $response = Http::timeout(10)
+                    ->withHeaders($headers)
+                    ->get($apiUrl . $endpoint);
+
+                $status = $response->successful() ? '✅ OK' : '❌ FAIL';
+                $this->line("   {$status} - Status: {$response->status()}");
+                
+                if (!$response->successful()) {
+                    $this->line("   Error: " . $response->body());
+                }
+                
+            } catch (\Exception $e) {
+                $this->line("   ❌ EXCEPTION - " . $e->getMessage());
+            }
         }
     }
 }
