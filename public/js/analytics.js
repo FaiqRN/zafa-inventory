@@ -1,295 +1,15 @@
 /**
- * ANALYTICS DEBUG MODE
- * Tambahkan di bagian atas analytics.js atau gunakan sebagai file terpisah
+ * ZAFA POTATO ANALYTICS CHARTS
+ * Complete Chart Creation and Data Visualization
+ * Implementasi lengkap untuk semua 6 analitik
  */
 
-// Mode debug - set ke true untuk testing
-const DEBUG_MODE = true;
-
-// Override function loadOverviewData untuk testing
-function loadOverviewDataDebug() {
-    return new Promise(function(resolve, reject) {
-        console.log('Loading overview data (DEBUG MODE)...');
-        
-        // Data sample untuk testing
-        const sampleResponse = {
-            success: true,
-            kpi: {
-                total_partners: 38,
-                total_revenue: 125000000,
-                avg_sales_rate: 78.5,
-                total_pengiriman: 156,
-                partners_growth: 12.5,
-                revenue_growth: 18.2,
-                sales_rate_growth: 5.1,
-                pengiriman_growth: 8.7
-            },
-            monthly_revenue: [
-                {month: 'Jan 2024', total_revenue: 18500000},
-                {month: 'Feb 2024', total_revenue: 22300000},
-                {month: 'Mar 2024', total_revenue: 26100000},
-                {month: 'Apr 2024', total_revenue: 19800000},
-                {month: 'May 2024', total_revenue: 24500000},
-                {month: 'Jun 2024', total_revenue: 28200000}
-            ],
-            channel_distribution: {
-                b2b_percentage: 75,
-                b2c_percentage: 25,
-                b2b_revenue: 93750000,
-                b2c_revenue: 31250000
-            },
-            regional_data: [
-                {wilayah: 'Malang Kota', total_partners: 12, total_revenue: 45000000, sales_rate: 82.5},
-                {wilayah: 'Malang Kabupaten', total_partners: 18, total_revenue: 52000000, sales_rate: 75.2},
-                {wilayah: 'Kota Batu', total_partners: 8, total_revenue: 28000000, sales_rate: 88.1}
-            ]
-        };
-        
-        // Simulasi loading delay
-        setTimeout(function() {
-            console.log('Sample overview data loaded:', sampleResponse);
-            
-            // Update KPIs
-            updateElement('totalPartners', sampleResponse.kpi.total_partners);
-            updateElement('totalRevenue', formatCurrency(sampleResponse.kpi.total_revenue));
-            updateElement('avgSalesRate', sampleResponse.kpi.avg_sales_rate + '%');
-            updateElement('totalPengiriman', sampleResponse.kpi.total_pengiriman);
-            
-            // Update change indicators
-            updateElement('partnersChange', '+' + sampleResponse.kpi.partners_growth + '%');
-            updateElement('revenueChange', '+' + sampleResponse.kpi.revenue_growth + '%');
-            updateElement('salesRateChange', '+' + sampleResponse.kpi.sales_rate_growth + '%');
-            updateElement('pengirimanChange', '+' + sampleResponse.kpi.pengiriman_growth + '%');
-            
-            // Create charts
-            createOverviewRevenueChart(sampleResponse.monthly_revenue);
-            createOverviewChannelChart(sampleResponse.channel_distribution);
-            createOverviewRegionalChart(sampleResponse.regional_data);
-            
-            resolve(sampleResponse);
-        }, 1000);
-    });
-}
-
-// Override loadAllAnalytics untuk debug mode
-function loadAllAnalyticsDebug() {
-    console.log('Loading all analytics (DEBUG MODE)...');
-    showLoading();
-    
-    // Load semua data sample
-    Promise.all([
-        loadOverviewDataDebug(),
-        loadPartnerPerformanceDataDebug(),
-        loadInventoryDataDebug(),
-        loadProductVelocityDataDebug(),
-        loadProfitabilityDataDebug(),
-        loadChannelComparisonDataDebug(),
-        loadPredictiveDataDebug()
-    ])
-    .then(function() {
-        hideLoading();
-        console.log('All analytics data loaded successfully (DEBUG MODE)');
-        showSuccessMessage('Debug data loaded successfully!');
-    })
-    .catch(function(error) {
-        hideLoading();
-        console.error('Error loading analytics data (DEBUG MODE):', error);
-        showErrorMessage('Failed to load debug data');
-    });
-}
-
-// Sample data untuk section lainnya
-function loadPartnerPerformanceDataDebug() {
-    return new Promise(function(resolve) {
-        setTimeout(function() {
-            const sampleData = {
-                summary: {avg_sales_rate: 75.8, need_attention: 3, total_partners: 38},
-                partners: [
-                    {nama_toko: 'Toko Makmur', sales_rate: 95.2, grade: 'A+'},
-                    {nama_toko: 'Warung Berkah', sales_rate: 88.7, grade: 'A'},
-                    {nama_toko: 'Toko Sejahtera', sales_rate: 82.1, grade: 'A'},
-                    {nama_toko: 'Mini Market Jaya', sales_rate: 76.5, grade: 'B'},
-                    {nama_toko: 'Toko Merdeka', sales_rate: 71.2, grade: 'B'}
-                ],
-                grade_distribution: {'A+': 5, 'A': 12, 'B': 18, 'C': 3},
-                performance_trends: [
-                    {month: 'Jan', avg_performance: 72.1},
-                    {month: 'Feb', avg_performance: 74.5},
-                    {month: 'Mar', avg_performance: 76.8},
-                    {month: 'Apr', avg_performance: 75.2},
-                    {month: 'May', avg_performance: 78.1}
-                ]
-            };
-            
-            // Update KPIs
-            updateElement('partnerAvgSales', sampleData.summary.avg_sales_rate + '%');
-            updateElement('needAttention', sampleData.summary.need_attention);
-            updateElement('totalActivePartners', sampleData.summary.total_partners);
-            
-            // Create charts
-            createPartnerRankingChart(sampleData.partners);
-            createGradeDistributionChart(sampleData.grade_distribution);
-            createPerformanceTrendChart(sampleData.performance_trends);
-            
-            resolve(sampleData);
-        }, 800);
-    });
-}
-
-function loadInventoryDataDebug() {
-    return new Promise(function(resolve) {
-        setTimeout(function() {
-            const sampleData = {
-                summary: {
-                    avg_turnover_rate: 2.8,
-                    avg_efficiency: 87.5,
-                    waste_reduction_potential: 12.5,
-                    retur_rate: 8.2
-                }
-            };
-            
-            updateElement('avgTurnoverRate', sampleData.summary.avg_turnover_rate + 'x');
-            updateElement('inventoryEfficiency', sampleData.summary.avg_efficiency + '%');
-            updateElement('wasteReduction', sampleData.summary.waste_reduction_potential + '%');
-            updateElement('returRate', sampleData.summary.retur_rate + '%');
-            
-            resolve(sampleData);
-        }, 600);
-    });
-}
-
-function loadProductVelocityDataDebug() {
-    return new Promise(function(resolve) {
-        setTimeout(function() {
-            const sampleData = {
-                category_stats: {
-                    hot_sellers: 8,
-                    good_movers: 15,
-                    slow_movers: 12,
-                    dead_stock: 3
-                }
-            };
-            
-            updateElement('hotSellers', sampleData.category_stats.hot_sellers);
-            updateElement('goodMovers', sampleData.category_stats.good_movers);
-            updateElement('slowMovers', sampleData.category_stats.slow_movers);
-            updateElement('deadStock', sampleData.category_stats.dead_stock);
-            
-            resolve(sampleData);
-        }, 700);
-    });
-}
-
-function loadProfitabilityDataDebug() {
-    return new Promise(function(resolve) {
-        setTimeout(function() {
-            const sampleData = {
-                summary: {
-                    avg_roi: 24.8,
-                    avg_profit_margin: 18.5,
-                    hidden_costs_impact: 15.2,
-                    total_net_profit: 42500000
-                }
-            };
-            
-            updateElement('avgROI', sampleData.summary.avg_roi + '%');
-            updateElement('profitMargin', sampleData.summary.avg_profit_margin + '%');
-            updateElement('hiddenCostsImpact', sampleData.summary.hidden_costs_impact + '%');
-            updateElement('netProfit', formatCurrency(sampleData.summary.total_net_profit));
-            
-            resolve(sampleData);
-        }, 900);
-    });
-}
-
-function loadChannelComparisonDataDebug() {
-    return new Promise(function(resolve) {
-        setTimeout(function() {
-            const sampleData = {
-                channel_metrics: {
-                    b2b_revenue: 93750000,
-                    b2c_revenue: 31250000
-                },
-                summary: {
-                    dominant_channel: 'B2B',
-                    channel_diversity: 65.4
-                }
-            };
-            
-            updateElement('b2bRevenue', formatCurrency(sampleData.channel_metrics.b2b_revenue));
-            updateElement('b2cRevenue', formatCurrency(sampleData.channel_metrics.b2c_revenue));
-            updateElement('dominantChannel', sampleData.summary.dominant_channel);
-            updateElement('channelDiversity', sampleData.summary.channel_diversity + '%');
-            
-            resolve(sampleData);
-        }, 750);
-    });
-}
-
-function loadPredictiveDataDebug() {
-    return new Promise(function(resolve) {
-        setTimeout(function() {
-            const sampleData = {
-                summary: {
-                    forecast_accuracy: 78.5,
-                    demand_growth_trend: 15.2,
-                    partners_at_risk: 3,
-                    new_opportunities: 7
-                }
-            };
-            
-            updateElement('predictionAccuracy', sampleData.summary.forecast_accuracy + '%');
-            updateElement('demandGrowth', '+' + sampleData.summary.demand_growth_trend + '%');
-            updateElement('partnersAtRisk', sampleData.summary.partners_at_risk);
-            updateElement('newOpportunities', sampleData.summary.new_opportunities);
-            
-            resolve(sampleData);
-        }, 1100);
-    });
-}
-
-// Test function untuk dipanggil dari console
-function enableDebugMode() {
-    console.log('=== ENABLING DEBUG MODE ===');
-    
-    // Override functions
-    window.loadOverviewData = loadOverviewDataDebug;
-    window.loadAllAnalytics = loadAllAnalyticsDebug;
-    window.refreshAllAnalytics = loadAllAnalyticsDebug;
-    
-    console.log('Debug mode enabled. Call loadAllAnalytics() to test.');
-    
-    // Auto load
-    setTimeout(function() {
-        console.log('Auto-loading debug data...');
-        loadAllAnalyticsDebug();
-    }, 1000);
-}
-
-// Auto-enable debug mode jika DEBUG_MODE = true
-if (DEBUG_MODE) {
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Auto-enabling debug mode...');
-        enableDebugMode();
-    });
-}
-/**
- * ANALYTICS DASHBOARD JAVASCRIPT
- * Zafa Potato Analytics CRM System
- * Complete implementation for analytics dashboard functionality
- */
-
-// Global variables
+// Global chart instances
 let analyticsCharts = {};
-let currentFilters = {
-    periode: '1_tahun',
-    wilayah: 'all',
-    produk: 'all'
-};
 
 // Chart color schemes
-const COLORS = {
-    primary: '#0078d4',
+const CHART_COLORS = {
+    primary: '#309898',
     success: '#28a745',
     warning: '#ffc107',
     danger: '#dc3545',
@@ -299,488 +19,44 @@ const COLORS = {
     dark: '#343a40'
 };
 
-const GRADIENTS = {
-    blue: ['#0078d4', '#106ebe'],
-    green: ['#28a745', '#20c997'],
-    orange: ['#ffc107', '#fd7e14'],
-    red: ['#dc3545', '#e74c3c'],
-    purple: ['#6f42c1', '#e83e8c']
+const GRADE_COLORS = {
+    'A+': '#28a745',
+    'A': '#309898', 
+    'B': '#ffc107',
+    'C': '#dc3545',
+    'D': '#6c757d'
 };
 
-// Chart.js global configuration
+const VELOCITY_COLORS = {
+    'Hot Seller': '#28a745',
+    'Good Mover': '#309898',
+    'Slow Mover': '#ffc107',
+    'Dead Stock': '#dc3545'
+};
+
+// Chart configuration defaults
 Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
 Chart.defaults.font.size = 12;
 Chart.defaults.color = '#6c757d';
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing Analytics Dashboard...');
-    initializeDashboard();
-    setupEventHandlers();
-    updateCurrentTimestamp();
-    loadAllAnalytics();
-});
-
 /**
- * Initialize dashboard components
+ * ===== ANALITIK 1: OVERVIEW CHARTS =====
  */
-function initializeDashboard() {
-    // Show overview section by default
-    showSection('overview');
-    
-    // Setup CSRF token for AJAX requests
-    const token = document.querySelector('meta[name="csrf-token"]');
-    if (token) {
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': token.getAttribute('content')
-            }
-        });
-    }
-    
-    console.log('Dashboard initialized successfully');
+
+function createOverviewCharts(data) {
+    createOverviewRevenueChart(data.monthly_revenue || []);
+    createOverviewChannelChart(data.channel_distribution || {});
+    createOverviewRegionalChart(data.regional_data || []);
 }
 
-/**
- * Update current timestamp with real-time
- */
-function updateCurrentTimestamp() {
-    const now = new Date();
-    const options = {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Jakarta'
-    };
-    
-    const timestamp = now.toLocaleDateString('id-ID', options) + ' WIB';
-    const timestampElement = document.getElementById('currentTimestamp');
-    if (timestampElement) {
-        timestampElement.textContent = timestamp;
-    }
-    
-    // Update every minute
-    setTimeout(updateCurrentTimestamp, 60000);
-}
-
-/**
- * Setup all event handlers
- */
-function setupEventHandlers() {
-    // Navigation button handlers
-    document.querySelectorAll('.nav-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const section = this.getAttribute('data-section');
-            switchToSection(section);
-        });
-    });
-    
-    // Filter change handlers
-    const filterElements = ['periodeFilter', 'wilayahFilter', 'produkFilter'];
-    filterElements.forEach(function(filterId) {
-        const element = document.getElementById(filterId);
-        if (element) {
-            element.addEventListener('change', function() {
-                updateFilters();
-                debounceLoadData();
-            });
-        }
-    });
-    
-    // Window resize handler with debounce
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(function() {
-            resizeAllCharts();
-        }, 250);
-    });
-    
-    // Print event handlers
-    window.addEventListener('beforeprint', handleBeforePrint);
-    window.addEventListener('afterprint', handleAfterPrint);
-    
-    console.log('Event handlers setup completed');
-}
-
-/**
- * Switch to specific analytics section
- */
-function switchToSection(sectionName) {
-    console.log('Switching to section:', sectionName);
-    
-    // Update navigation active state
-    document.querySelectorAll('.nav-btn').forEach(function(btn) {
-        btn.classList.remove('active');
-    });
-    
-    const activeBtn = document.querySelector('[data-section="' + sectionName + '"]');
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-    }
-    
-    // Update content visibility
-    document.querySelectorAll('.analytics-section').forEach(function(section) {
-        section.classList.remove('active');
-    });
-    
-    const activeSection = document.getElementById(sectionName + '-section');
-    if (activeSection) {
-        activeSection.classList.add('active');
-    }
-    
-    // Refresh charts in active section with delay
-    setTimeout(function() {
-        resizeChartsInSection(sectionName);
-    }, 150);
-}
-
-/**
- * Show specific section (alias for switchToSection)
- */
-function showSection(sectionName) {
-    switchToSection(sectionName);
-}
-
-/**
- * Update current filters from form inputs
- */
-function updateFilters() {
-    const periodeEl = document.getElementById('periodeFilter');
-    const wilayahEl = document.getElementById('wilayahFilter');
-    const produkEl = document.getElementById('produkFilter');
-    
-    currentFilters = {
-        periode: periodeEl ? periodeEl.value : '1_tahun',
-        wilayah: wilayahEl ? wilayahEl.value : 'all',
-        produk: produkEl ? produkEl.value : 'all'
-    };
-    
-    console.log('Filters updated:', currentFilters);
-}
-
-/**
- * Debounced data loading to prevent excessive API calls
- */
-const debounceLoadData = debounce(function() {
-    loadAllAnalytics();
-}, 800);
-
-/**
- * Load all analytics data with error handling
- */
-function loadAllAnalytics() {
-    console.log('Loading all analytics data...');
-    showLoading();
-    
-    const loadPromises = [
-        loadOverviewData(),
-        loadPartnerPerformanceData(),
-        loadInventoryData(),
-        loadProductVelocityData(),
-        loadProfitabilityData(),
-        loadChannelComparisonData(),
-        loadPredictiveData()
-    ];
-    
-    Promise.all(loadPromises)
-        .then(function() {
-            hideLoading();
-            console.log('All analytics data loaded successfully');
-        })
-        .catch(function(error) {
-            hideLoading();
-            console.error('Error loading analytics data:', error);
-            showErrorMessage('Failed to load analytics data. Please try again.');
-        });
-}
-
-/**
- * Refresh all analytics data (called by refresh button)
- */
-function refreshAllAnalytics() {
-    console.log('Refreshing all analytics...');
-    
-    // Destroy existing charts
-    Object.keys(analyticsCharts).forEach(function(key) {
-        if (analyticsCharts[key] && typeof analyticsCharts[key].destroy === 'function') {
-            analyticsCharts[key].destroy();
-            delete analyticsCharts[key];
-        }
-    });
-    
-    // Update timestamp
-    updateCurrentTimestamp();
-    
-    // Reload all data
-    loadAllAnalytics();
-    
-    // Show success message
-    showSuccessMessage('Analytics data refreshed successfully');
-}
-
-// ===== DATA LOADING FUNCTIONS =====
-
-/**
- * Load overview dashboard data
- */
-function loadOverviewData() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            url: '/analytics/overview',
-            method: 'GET',
-            data: currentFilters,
-            success: function(response) {
-                console.log('Overview data loaded:', response);
-                
-                // Update KPIs with real data
-                const kpi = response.kpi || {};
-                updateElement('totalPartners', kpi.total_partners || 0);
-                updateElement('totalRevenue', formatCurrency(kpi.total_revenue || 0));
-                updateElement('avgSalesRate', (kpi.avg_sales_rate || 0) + '%');
-                updateElement('totalPengiriman', kpi.total_pengiriman || 0);
-                
-                // Update change indicators
-                updateElement('partnersChange', '+' + (kpi.partners_growth || 0) + '%');
-                updateElement('revenueChange', '+' + (kpi.revenue_growth || 0) + '%');
-                updateElement('salesRateChange', '+' + (kpi.sales_rate_growth || 0) + '%');
-                updateElement('pengirimanChange', '+' + (kpi.pengiriman_growth || 0) + '%');
-                
-                // Create charts with real data
-                createOverviewRevenueChart(response.monthly_revenue || []);
-                createOverviewChannelChart(response.channel_distribution || {});
-                createOverviewRegionalChart(response.regional_data || []);
-                
-                resolve(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading overview data:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-/**
- * Load partner performance analytics data
- */
-function loadPartnerPerformanceData() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            url: '/analytics/partner-performance',
-            method: 'GET',
-            data: currentFilters,
-            success: function(response) {
-                console.log('Partner performance data loaded:', response);
-                
-                // Update KPIs
-                const summary = response.summary || {};
-                updateElement('partnerAvgSales', (summary.avg_sales_rate || 0) + '%');
-                updateElement('needAttention', summary.need_attention || 0);
-                updateElement('totalActivePartners', summary.total_partners || 0);
-                
-                // Create charts
-                createPartnerRankingChart(response.partners || []);
-                createGradeDistributionChart(response.grade_distribution || []);
-                createPerformanceTrendChart(response.performance_trends || []);
-                
-                resolve(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading partner performance data:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-/**
- * Load inventory analytics data
- */
-function loadInventoryData() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            url: '/analytics/inventory-analytics',
-            method: 'GET',
-            data: currentFilters,
-            success: function(response) {
-                console.log('Inventory data loaded:', response);
-                
-                // Update KPIs
-                const summary = response.summary || {};
-                updateElement('avgTurnoverRate', (summary.avg_turnover_rate || 0) + 'x');
-                updateElement('inventoryEfficiency', (summary.avg_efficiency || 0) + '%');
-                updateElement('wasteReduction', (summary.waste_reduction_potential || 0) + '%');
-                updateElement('returRate', (summary.retur_rate || 0) + '%');
-                
-                // Create charts
-                createInventoryTurnoverChart(response.inventory_data || []);
-                createOptimalVsActualChart(response.inventory_data || []);
-                createInventoryEfficiencyTrendChart(response.monthly_efficiency || []);
-                
-                resolve(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading inventory data:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-/**
- * Load product velocity analytics data
- */
-function loadProductVelocityData() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            url: '/analytics/product-velocity',
-            method: 'GET',
-            data: currentFilters,
-            success: function(response) {
-                console.log('Product velocity data loaded:', response);
-                
-                // Update KPIs
-                const categoryStats = response.category_stats || {};
-                updateElement('hotSellers', categoryStats.hot_sellers || 0);
-                updateElement('goodMovers', categoryStats.good_movers || 0);
-                updateElement('slowMovers', categoryStats.slow_movers || 0);
-                updateElement('deadStock', categoryStats.dead_stock || 0);
-                
-                // Create charts
-                createProductVelocityChart(response.products || []);
-                createVelocityCategoryChart(categoryStats);
-                createRegionalPreferenceChart(response.regional_preferences || []);
-                
-                resolve(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading product velocity data:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-/**
- * Load profitability analysis data
- */
-function loadProfitabilityData() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            url: '/analytics/profitability-analysis',
-            method: 'GET',
-            data: currentFilters,
-            success: function(response) {
-                console.log('Profitability data loaded:', response);
-                
-                // Update KPIs
-                const summary = response.summary || {};
-                updateElement('avgROI', (summary.avg_roi || 0) + '%');
-                updateElement('profitMargin', (summary.avg_profit_margin || 0) + '%');
-                updateElement('hiddenCostsImpact', (summary.hidden_costs_impact || 0) + '%');
-                updateElement('netProfit', formatCurrency(summary.total_net_profit || 0));
-                
-                // Create charts
-                createProfitabilityRankingChart(response.profitability_data || []);
-                createCostBreakdownChart(response.cost_breakdown || {});
-                createProfitabilityTrendChart(response.monthly_trend || []);
-                
-                resolve(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading profitability data:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-/**
- * Load channel comparison data
- */
-function loadChannelComparisonData() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            url: '/analytics/channel-comparison',
-            method: 'GET',
-            data: currentFilters,
-            success: function(response) {
-                console.log('Channel comparison data loaded:', response);
-                
-                // Update KPIs
-                const channelMetrics = response.channel_metrics || {};
-                const summary = response.summary || {};
-                
-                updateElement('b2bRevenue', formatCurrency(channelMetrics.b2b_revenue || 0));
-                updateElement('b2cRevenue', formatCurrency(channelMetrics.b2c_revenue || 0));
-                updateElement('dominantChannel', summary.dominant_channel || 'B2B');
-                updateElement('channelDiversity', (summary.channel_diversity || 0) + '%');
-                
-                // Create charts
-                createChannelComparisonChart(channelMetrics);
-                createChannelTrendChart(response.monthly_comparison || []);
-                createChannelMetricsChart(channelMetrics);
-                
-                resolve(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading channel comparison data:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-/**
- * Load predictive analytics data
- */
-function loadPredictiveData() {
-    return new Promise(function(resolve, reject) {
-        $.ajax({
-            url: '/analytics/predictive-analytics',
-            method: 'GET',
-            data: currentFilters,
-            success: function(response) {
-                console.log('Predictive data loaded:', response);
-                
-                // Update KPIs
-                const summary = response.summary || {};
-                updateElement('predictionAccuracy', (summary.forecast_accuracy || 0) + '%');
-                updateElement('demandGrowth', '+' + (summary.demand_growth_trend || 0) + '%');
-                updateElement('partnersAtRisk', summary.partners_at_risk || 0);
-                updateElement('newOpportunities', summary.new_opportunities || 0);
-                
-                // Create charts
-                createDemandForecastChart(response.demand_forecast || []);
-                createRiskAssessmentChart(response.risk_assessment || []);
-                createAIRecommendations(response.recommendations || []);
-                
-                resolve(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading predictive data:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-// ===== CHART CREATION FUNCTIONS =====
-
-/**
- * Create overview revenue trend chart
- */
 function createOverviewRevenueChart(monthlyData) {
     const ctx = document.getElementById('overviewRevenueChart');
     if (!ctx) return;
     
     destroyChart('overviewRevenue');
     
-    const labels = monthlyData.map(item => item.month || item.label);
-    const data = monthlyData.map(item => parseFloat(item.total_revenue || item.value || 0));
+    const labels = monthlyData.map(item => item.month);
+    const data = monthlyData.map(item => parseFloat(item.total_revenue || 0));
     
     analyticsCharts.overviewRevenue = new Chart(ctx, {
         type: 'line',
@@ -789,14 +65,15 @@ function createOverviewRevenueChart(monthlyData) {
             datasets: [{
                 label: 'Revenue (Rp)',
                 data: data,
-                borderColor: COLORS.primary,
-                backgroundColor: createGradient(ctx, GRADIENTS.blue),
+                borderColor: CHART_COLORS.primary,
+                backgroundColor: createGradient(ctx, CHART_COLORS.primary, 0.1),
                 fill: true,
                 tension: 0.4,
                 pointRadius: 6,
-                pointBackgroundColor: COLORS.primary,
+                pointBackgroundColor: CHART_COLORS.primary,
                 pointBorderColor: '#ffffff',
-                pointBorderWidth: 2
+                pointBorderWidth: 2,
+                pointHoverRadius: 8
             }]
         },
         options: {
@@ -805,6 +82,11 @@ function createOverviewRevenueChart(monthlyData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: CHART_COLORS.primary,
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
                             return 'Revenue: ' + formatCurrency(context.parsed.y);
@@ -815,20 +97,29 @@ function createOverviewRevenueChart(monthlyData) {
             scales: {
                 y: {
                     beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
                     ticks: {
                         callback: function(value) {
                             return formatCurrencyShort(value);
                         }
                     }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
                 }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
             }
         }
     });
 }
 
-/**
- * Create overview channel distribution chart
- */
 function createOverviewChannelChart(channelData) {
     const ctx = document.getElementById('overviewChannelChart');
     if (!ctx) return;
@@ -844,8 +135,9 @@ function createOverviewChannelChart(channelData) {
             labels: ['B2B Konsinyasi', 'B2C Direct Sales'],
             datasets: [{
                 data: [b2bPercentage, b2cPercentage],
-                backgroundColor: [COLORS.primary, COLORS.success],
-                borderWidth: 0,
+                backgroundColor: [CHART_COLORS.primary, CHART_COLORS.success],
+                borderWidth: 4,
+                borderColor: '#ffffff',
                 hoverOffset: 10
             }]
         },
@@ -857,66 +149,102 @@ function createOverviewChannelChart(channelData) {
                     position: 'bottom',
                     labels: { 
                         padding: 20, 
-                        usePointStyle: true 
+                        usePointStyle: true,
+                        font: { size: 14 }
                     }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             return context.label + ': ' + context.parsed + '%';
                         }
                     }
                 }
-            }
+            },
+            cutout: '60%'
         }
     });
 }
 
-/**
- * Create overview regional performance chart
- */
 function createOverviewRegionalChart(regionalData) {
     const ctx = document.getElementById('overviewRegionalChart');
     if (!ctx) return;
     
     destroyChart('overviewRegional');
     
-    const labels = regionalData.map(item => item.wilayah || item.region || 'Unknown');
-    const data = regionalData.map(item => parseFloat(item.sales_rate || item.performance || 0));
-    const colors = generateColors(labels.length);
+    const labels = regionalData.map(item => item.wilayah || 'Unknown');
+    const salesData = regionalData.map(item => parseFloat(item.sales_rate || 0));
+    const revenueData = regionalData.map(item => parseFloat(item.total_revenue || 0));
     
     analyticsCharts.overviewRegional = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Sales Rate (%)',
-                data: data,
-                backgroundColor: colors,
-                borderRadius: 8,
-                borderSkipped: false
-            }]
+            datasets: [
+                {
+                    label: 'Sales Rate (%)',
+                    data: salesData,
+                    backgroundColor: CHART_COLORS.primary,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Revenue (Millions)',
+                    data: revenueData.map(val => val / 1000000),
+                    backgroundColor: CHART_COLORS.success,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    yAxisID: 'y1'
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: {
+                    position: 'top',
+                    align: 'end'
+                },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y + '%';
+                            if (context.datasetIndex === 0) {
+                                return 'Sales Rate: ' + context.parsed.y + '%';
+                            } else {
+                                return 'Revenue: ' + formatCurrency(context.parsed.y * 1000000);
+                            }
                         }
                     }
                 }
             },
             scales: {
                 y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
                     beginAtZero: true,
                     max: 100,
+                    title: { display: true, text: 'Sales Rate (%)' },
                     ticks: {
                         callback: function(value) {
                             return value + '%';
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Revenue (Millions)' },
+                    grid: { drawOnChartArea: false },
+                    ticks: {
+                        callback: function(value) {
+                            return 'Rp ' + value + 'M';
                         }
                     }
                 },
@@ -929,8 +257,15 @@ function createOverviewRegionalChart(regionalData) {
 }
 
 /**
- * Create partner ranking chart
+ * ===== ANALITIK 2: PARTNER PERFORMANCE CHARTS =====
  */
+
+function createPartnerCharts(data) {
+    createPartnerRankingChart(data.partners || []);
+    createGradeDistributionChart(data.grade_distribution || {});
+    createPerformanceTrendChart(data.performance_trends || []);
+}
+
 function createPartnerRankingChart(partners) {
     const ctx = document.getElementById('partnerRankingChart');
     if (!ctx) return;
@@ -940,7 +275,7 @@ function createPartnerRankingChart(partners) {
     const topPartners = partners.slice(0, 10);
     const labels = topPartners.map(p => p.nama_toko || 'Partner');
     const data = topPartners.map(p => parseFloat(p.sales_rate || 0));
-    const colors = topPartners.map(p => getGradeColor(p.grade));
+    const colors = topPartners.map(p => GRADE_COLORS[p.grade] || CHART_COLORS.secondary);
     
     analyticsCharts.partnerRanking = new Chart(ctx, {
         type: 'bar',
@@ -957,23 +292,26 @@ function createPartnerRankingChart(partners) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            indexAxis: 'y', // Horizontal bar chart
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const partnerIndex = context.dataIndex;
                             const partner = topPartners[partnerIndex];
                             return [
-                                'Sales Rate: ' + context.parsed.y + '%',
-                                'Grade: ' + (partner.grade || 'N/A')
+                                'Sales Rate: ' + context.parsed.x + '%',
+                                'Grade: ' + (partner.grade || 'N/A'),
+                                'Revenue: ' + formatCurrency(partner.total_revenue || 0)
                             ];
                         }
                     }
                 }
             },
             scales: {
-                y: {
+                x: {
                     beginAtZero: true,
                     max: 100,
                     ticks: {
@@ -982,17 +320,20 @@ function createPartnerRankingChart(partners) {
                         }
                     }
                 },
-                x: {
-                    ticks: { maxRotation: 45 }
+                y: {
+                    ticks: { 
+                        maxRotation: 0,
+                        callback: function(value, index) {
+                            const label = this.getLabelForValue(value);
+                            return label.length > 15 ? label.substring(0, 15) + '...' : label;
+                        }
+                    }
                 }
             }
         }
     });
 }
 
-/**
- * Create grade distribution chart
- */
 function createGradeDistributionChart(gradeDistribution) {
     const ctx = document.getElementById('gradeDistributionChart');
     if (!ctx) return;
@@ -1002,7 +343,9 @@ function createGradeDistributionChart(gradeDistribution) {
     const labels = Object.keys(gradeDistribution).length > 0 ? 
         Object.keys(gradeDistribution) : ['A+', 'A', 'B', 'C'];
     const data = Object.keys(gradeDistribution).length > 0 ? 
-        Object.values(gradeDistribution) : [3, 5, 8, 2];
+        Object.values(gradeDistribution) : [5, 12, 18, 3];
+    
+    const colors = labels.map(grade => GRADE_COLORS[grade] || CHART_COLORS.secondary);
     
     analyticsCharts.gradeDistribution = new Chart(ctx, {
         type: 'doughnut',
@@ -1010,8 +353,9 @@ function createGradeDistributionChart(gradeDistribution) {
             labels: labels,
             datasets: [{
                 data: data,
-                backgroundColor: [COLORS.success, COLORS.primary, COLORS.warning, COLORS.danger],
-                borderWidth: 0,
+                backgroundColor: colors,
+                borderWidth: 4,
+                borderColor: '#ffffff',
                 hoverOffset: 8
             }]
         },
@@ -1023,26 +367,34 @@ function createGradeDistributionChart(gradeDistribution) {
                     position: 'bottom',
                     labels: { 
                         padding: 15, 
-                        usePointStyle: true 
+                        usePointStyle: true,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            return data.labels.map((label, index) => ({
+                                text: `${label}: ${data.datasets[0].data[index]} partners`,
+                                fillStyle: data.datasets[0].backgroundColor[index],
+                                strokeStyle: data.datasets[0].backgroundColor[index],
+                                pointStyle: 'circle'
+                            }));
+                        }
                     }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = Math.round((context.parsed / total) * 100);
-                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            return context.label + ': ' + context.parsed + ' partners (' + percentage + '%)';
                         }
                     }
                 }
-            }
+            },
+            cutout: '50%'
         }
     });
 }
 
-/**
- * Create performance trend chart
- */
 function createPerformanceTrendChart(trendData) {
     const ctx = document.getElementById('performanceTrendChart');
     if (!ctx) return;
@@ -1050,135 +402,33 @@ function createPerformanceTrendChart(trendData) {
     destroyChart('performanceTrend');
     
     const labels = trendData.map(item => item.month || item.period);
-    const data = trendData.map(item => parseFloat(item.avg_performance || item.performance || 0));
+    const performanceData = trendData.map(item => parseFloat(item.avg_performance || 0));
+    const partnerData = trendData.map(item => parseInt(item.active_partners || 0));
     
     analyticsCharts.performanceTrend = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Avg Performance (%)',
-                data: data,
-                borderColor: COLORS.success,
-                backgroundColor: createGradient(ctx, GRADIENTS.green),
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return 'Performance: ' + context.parsed.y + '%';
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-/**
- * Create inventory turnover chart
- */
-function createInventoryTurnoverChart(inventoryData) {
-    const ctx = document.getElementById('inventoryTurnoverChart');
-    if (!ctx) return;
-    
-    destroyChart('inventoryTurnover');
-    
-    const labels = inventoryData.slice(0, 8).map(item => item.nama_toko || 'Store');
-    const turnoverData = inventoryData.slice(0, 8).map(item => parseFloat(item.turnover_rate || 0));
-    
-    analyticsCharts.inventoryTurnover = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Turnover Rate',
-                data: turnoverData,
-                borderColor: COLORS.info,
-                backgroundColor: createGradient(ctx, GRADIENTS.blue),
-                fill: true,
-                tension: 0.4,
-                pointRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return 'Turnover Rate: ' + context.parsed.y + 'x';
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return value + 'x';
-                        }
-                    }
-                },
-                x: {
-                    ticks: { maxRotation: 45 }
-                }
-            }
-        }
-    });
-}
-
-/**
- * Create optimal vs actual quantities chart
- */
-function createOptimalVsActualChart(inventoryData) {
-    const ctx = document.getElementById('optimalVsActualChart');
-    if (!ctx) return;
-    
-    destroyChart('optimalVsActual');
-    
-    const labels = inventoryData.slice(0, 6).map(item => item.nama_barang || 'Product');
-    const actualData = inventoryData.slice(0, 6).map(item => parseFloat(item.current_stock || 0));
-    const optimalData = inventoryData.slice(0, 6).map(item => parseFloat(item.optimal_stock || 0));
-    
-    analyticsCharts.optimalVsActual = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
             datasets: [
                 {
-                    label: 'Actual Stock',
-                    data: actualData,
-                    backgroundColor: COLORS.warning,
-                    borderRadius: 4
+                    label: 'Avg Performance (%)',
+                    data: performanceData,
+                    borderColor: CHART_COLORS.success,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.success, 0.1),
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    yAxisID: 'y'
                 },
                 {
-                    label: 'Optimal Stock',
-                    data: optimalData,
-                    backgroundColor: COLORS.success,
-                    borderRadius: 4
+                    label: 'Active Partners',
+                    data: partnerData,
+                    borderColor: CHART_COLORS.info,
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    yAxisID: 'y1'
                 }
             ]
         },
@@ -1191,9 +441,174 @@ function createOptimalVsActualChart(inventoryData) {
                     align: 'end'
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y + ' units';
+                            if (context.datasetIndex === 0) {
+                                return 'Performance: ' + context.parsed.y + '%';
+                            } else {
+                                return 'Active Partners: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    max: 100,
+                    title: { display: true, text: 'Performance (%)' },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Partners' },
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * ===== ANALITIK 3: INVENTORY ANALYTICS CHARTS =====
+ */
+
+function createInventoryCharts(data) {
+    createInventoryTurnoverChart(data.inventory_data || []);
+    createOptimalVsActualChart(data.optimal_recommendations || []);
+    createInventoryEfficiencyChart(data.monthly_efficiency || []);
+}
+
+function createInventoryTurnoverChart(inventoryData) {
+    const ctx = document.getElementById('inventoryTurnoverChart');
+    if (!ctx) return;
+    
+    destroyChart('inventoryTurnover');
+    
+    const topItems = inventoryData.slice(0, 10);
+    const labels = topItems.map(item => `${item.nama_toko} - ${item.nama_barang}`);
+    const turnoverData = topItems.map(item => parseFloat(item.turnover_rate || 0));
+    const efficiencyData = topItems.map(item => parseFloat(item.efficiency || 0));
+    
+    analyticsCharts.inventoryTurnover = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Inventory Performance',
+                data: turnoverData.map((turnover, index) => ({
+                    x: turnover,
+                    y: efficiencyData[index],
+                    label: labels[index]
+                })),
+                backgroundColor: function(context) {
+                    const efficiency = context.parsed.y;
+                    if (efficiency >= 80) return CHART_COLORS.success;
+                    if (efficiency >= 60) return CHART_COLORS.warning;
+                    return CHART_COLORS.danger;
+                },
+                pointRadius: 8,
+                pointHoverRadius: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    callbacks: {
+                        title: function(context) {
+                            return context[0].raw.label;
+                        },
+                        label: function(context) {
+                            return [
+                                'Turnover Rate: ' + context.parsed.x + 'x/month',
+                                'Efficiency: ' + context.parsed.y + '%'
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Turnover Rate (x/month)' },
+                    beginAtZero: true
+                },
+                y: {
+                    title: { display: true, text: 'Efficiency (%)' },
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+}
+
+function createOptimalVsActualChart(recommendations) {
+    const ctx = document.getElementById('optimalVsActualChart');
+    if (!ctx) return;
+    
+    destroyChart('optimalVsActual');
+    
+    const topRecommendations = recommendations.slice(0, 8);
+    const labels = topRecommendations.map(item => item.nama_barang || 'Product');
+    const actualData = topRecommendations.map(item => parseFloat(item.current_avg_sent || 0));
+    const optimalData = topRecommendations.map(item => parseFloat(item.recommended_quantity || 0));
+    
+    analyticsCharts.optimalVsActual = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Current Average',
+                    data: actualData,
+                    backgroundColor: CHART_COLORS.warning,
+                    borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Recommended Optimal',
+                    data: optimalData,
+                    backgroundColor: CHART_COLORS.success,
+                    borderRadius: 4,
+                    borderSkipped: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end'
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    callbacks: {
+                        label: function(context) {
+                            const item = topRecommendations[context.dataIndex];
+                            if (context.datasetIndex === 0) {
+                                return 'Current: ' + context.parsed.y + ' units';
+                            } else {
+                                return [
+                                    'Optimal: ' + context.parsed.y + ' units',
+                                    'Savings: ' + formatCurrency(item.potential_monthly_savings || 0)
+                                ];
+                            }
                         }
                     }
                 }
@@ -1203,27 +618,25 @@ function createOptimalVsActualChart(inventoryData) {
                     ticks: { maxRotation: 45 }
                 },
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    title: { display: true, text: 'Quantity (units)' }
                 }
             }
         }
     });
 }
 
-/**
- * Create inventory efficiency trend chart
- */
-function createInventoryEfficiencyTrendChart(monthlyData) {
+function createInventoryEfficiencyChart(monthlyData) {
     const ctx = document.getElementById('inventoryEfficiencyTrendChart');
     if (!ctx) return;
     
-    destroyChart('inventoryEfficiencyTrend');
+    destroyChart('inventoryEfficiency');
     
     const labels = monthlyData.map(item => item.month || item.period);
     const efficiencyData = monthlyData.map(item => parseFloat(item.efficiency || 0));
     const rotationData = monthlyData.map(item => parseFloat(item.avg_rotation_days || 0));
     
-    analyticsCharts.inventoryEfficiencyTrend = new Chart(ctx, {
+    analyticsCharts.inventoryEfficiency = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -1231,18 +644,20 @@ function createInventoryEfficiencyTrendChart(monthlyData) {
                 {
                     label: 'Efficiency (%)',
                     data: efficiencyData,
-                    borderColor: COLORS.success,
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    yAxisID: 'y',
-                    tension: 0.4
+                    borderColor: CHART_COLORS.success,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.success, 0.1),
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y'
                 },
                 {
                     label: 'Avg Rotation (days)',
                     data: rotationData,
-                    borderColor: COLORS.danger,
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    yAxisID: 'y1',
-                    tension: 0.4
+                    borderColor: CHART_COLORS.danger,
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    tension: 0.4,
+                    yAxisID: 'y1'
                 }
             ]
         },
@@ -1278,18 +693,25 @@ function createInventoryEfficiencyTrendChart(monthlyData) {
 }
 
 /**
- * Create product velocity chart
+ * ===== ANALITIK 4: PRODUCT VELOCITY CHARTS =====
  */
+
+function createVelocityCharts(data) {
+    createProductVelocityChart(data.products || []);
+    createVelocityCategoryChart(data.category_stats || {});
+    createRegionalPreferenceChart(data.regional_preferences || []);
+}
+
 function createProductVelocityChart(products) {
     const ctx = document.getElementById('productVelocityChart');
     if (!ctx) return;
     
     destroyChart('productVelocity');
     
-    const topProducts = products.slice(0, 8);
+    const topProducts = products.slice(0, 10);
     const labels = topProducts.map(p => p.nama_barang || 'Product');
-    const data = topProducts.map(p => parseFloat(p.velocity_rate || 0));
-    const colors = topProducts.map(p => getVelocityColor(p.velocity_rate));
+    const velocityData = topProducts.map(p => parseFloat(p.velocity_rate || 0));
+    const colors = topProducts.map(p => VELOCITY_COLORS[p.category] || CHART_COLORS.secondary);
     
     analyticsCharts.productVelocity = new Chart(ctx, {
         type: 'bar',
@@ -1297,7 +719,7 @@ function createProductVelocityChart(products) {
             labels: labels,
             datasets: [{
                 label: 'Velocity Rate (%)',
-                data: data,
+                data: velocityData,
                 backgroundColor: colors,
                 borderRadius: 6,
                 borderSkipped: false
@@ -1309,13 +731,15 @@ function createProductVelocityChart(products) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const productIndex = context.dataIndex;
                             const product = topProducts[productIndex];
                             return [
                                 'Velocity: ' + context.parsed.y + '%',
-                                'Category: ' + (product.category || 'N/A')
+                                'Category: ' + (product.category || 'N/A'),
+                                'Revenue: ' + formatCurrency(product.total_revenue || 0)
                             ];
                         }
                     }
@@ -1325,6 +749,7 @@ function createProductVelocityChart(products) {
                 y: {
                     beginAtZero: true,
                     max: 100,
+                    title: { display: true, text: 'Velocity Rate (%)' },
                     ticks: {
                         callback: function(value) {
                             return value + '%';
@@ -1339,9 +764,6 @@ function createProductVelocityChart(products) {
     });
 }
 
-/**
- * Create velocity category distribution chart
- */
 function createVelocityCategoryChart(categoryStats) {
     const ctx = document.getElementById('velocityCategoryChart');
     if (!ctx) return;
@@ -1355,14 +777,23 @@ function createVelocityCategoryChart(categoryStats) {
         categoryStats.dead_stock || 0
     ];
     
+    const labels = ['Hot Sellers', 'Good Movers', 'Slow Movers', 'Dead Stock'];
+    const colors = [
+        VELOCITY_COLORS['Hot Seller'],
+        VELOCITY_COLORS['Good Mover'],
+        VELOCITY_COLORS['Slow Mover'],
+        VELOCITY_COLORS['Dead Stock']
+    ];
+    
     analyticsCharts.velocityCategory = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Hot Sellers', 'Good Movers', 'Slow Movers', 'Dead Stock'],
+            labels: labels,
             datasets: [{
                 data: data,
-                backgroundColor: [COLORS.success, COLORS.primary, COLORS.warning, COLORS.danger],
-                borderWidth: 0,
+                backgroundColor: colors,
+                borderWidth: 4,
+                borderColor: '#ffffff',
                 hoverOffset: 8
             }]
         },
@@ -1374,39 +805,50 @@ function createVelocityCategoryChart(categoryStats) {
                     position: 'bottom',
                     labels: { 
                         padding: 15, 
-                        usePointStyle: true 
+                        usePointStyle: true,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            return data.labels.map((label, index) => ({
+                                text: `${label}: ${data.datasets[0].data[index]}`,
+                                fillStyle: data.datasets[0].backgroundColor[index],
+                                strokeStyle: data.datasets[0].backgroundColor[index],
+                                pointStyle: 'circle'
+                            }));
+                        }
                     }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = total > 0 ? Math.round((context.parsed / total) * 100) : 0;
-                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            return context.label + ': ' + context.parsed + ' products (' + percentage + '%)';
                         }
                     }
                 }
-            }
+            },
+            cutout: '50%'
         }
     });
 }
 
-/**
- * Create regional preference radar chart
- */
 function createRegionalPreferenceChart(regionalData) {
     const ctx = document.getElementById('regionalPreferenceChart');
     if (!ctx) return;
     
     destroyChart('regionalPreference');
     
-    const labels = regionalData.length > 0 ? 
-        regionalData.map(region => region.region || region.wilayah || 'Region') :
-        ['Malang Kota', 'Malang Kabupaten', 'Kota Batu'];
+    if (!regionalData || regionalData.length === 0) {
+        regionalData = [
+            { region: 'Malang Kota', regional_avg_velocity: 85 },
+            { region: 'Malang Kabupaten', regional_avg_velocity: 72 },
+            { region: 'Kota Batu', regional_avg_velocity: 68 }
+        ];
+    }
     
-    const data = regionalData.length > 0 ? 
-        regionalData.map(region => parseFloat(region.avg_velocity || region.velocity || 0)) :
-        [85, 72, 68];
+    const labels = regionalData.map(region => region.region);
+    const data = regionalData.map(region => parseFloat(region.regional_avg_velocity || 0));
     
     analyticsCharts.regionalPreference = new Chart(ctx, {
         type: 'radar',
@@ -1415,13 +857,13 @@ function createRegionalPreferenceChart(regionalData) {
             datasets: [{
                 label: 'Average Velocity Rate',
                 data: data,
-                borderColor: COLORS.primary,
-                backgroundColor: 'rgba(0, 120, 212, 0.2)',
+                borderColor: CHART_COLORS.primary,
+                backgroundColor: createGradient(ctx, CHART_COLORS.primary, 0.2),
                 fill: true,
-                pointBackgroundColor: COLORS.primary,
+                pointBackgroundColor: CHART_COLORS.primary,
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                pointRadius: 5
+                pointRadius: 6
             }]
         },
         options: {
@@ -1430,6 +872,7 @@ function createRegionalPreferenceChart(regionalData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             return context.label + ': ' + context.parsed.r + '%';
@@ -1453,18 +896,30 @@ function createRegionalPreferenceChart(regionalData) {
 }
 
 /**
- * Create profitability ranking chart
+ * ===== ANALITIK 5: PROFITABILITY CHARTS =====
  */
+
+function createProfitabilityCharts(data) {
+    createProfitabilityRankingChart(data.profitability_data || []);
+    createCostBreakdownChart(data.cost_breakdown || {});
+    createProfitabilityTrendChart(data.monthly_trend || []);
+}
+
 function createProfitabilityRankingChart(profitabilityData) {
     const ctx = document.getElementById('profitabilityRankingChart');
     if (!ctx) return;
     
     destroyChart('profitabilityRanking');
     
-    const topPartners = profitabilityData.slice(0, 8);
+    const topPartners = profitabilityData.slice(0, 10);
     const labels = topPartners.map(item => item.nama_toko || 'Partner');
     const roiData = topPartners.map(item => parseFloat(item.roi || 0));
-    const colors = roiData.map(roi => getROIColor(roi));
+    const colors = roiData.map(roi => {
+        if (roi >= 30) return CHART_COLORS.success;
+        if (roi >= 20) return CHART_COLORS.primary;
+        if (roi >= 10) return CHART_COLORS.warning;
+        return CHART_COLORS.danger;
+    });
     
     analyticsCharts.profitabilityRanking = new Chart(ctx, {
         type: 'bar',
@@ -1481,41 +936,48 @@ function createProfitabilityRankingChart(profitabilityData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            indexAxis: 'y',
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const partnerIndex = context.dataIndex;
                             const partner = topPartners[partnerIndex];
                             return [
-                                'ROI: ' + context.parsed.y + '%',
-                                'Profit: ' + formatCurrency(partner.profit || 0)
+                                'ROI: ' + context.parsed.x + '%',
+                                'Net Profit: ' + formatCurrency(partner.net_profit || 0),
+                                'Grade: ' + (partner.profitability_grade || 'N/A')
                             ];
                         }
                     }
                 }
             },
             scales: {
-                y: {
+                x: {
                     beginAtZero: true,
+                    title: { display: true, text: 'ROI (%)' },
                     ticks: {
                         callback: function(value) {
                             return value + '%';
                         }
                     }
                 },
-                x: {
-                    ticks: { maxRotation: 45 }
+                y: {
+                    ticks: { 
+                        maxRotation: 0,
+                        callback: function(value, index) {
+                            const label = this.getLabelForValue(value);
+                            return label.length > 12 ? label.substring(0, 12) + '...' : label;
+                        }
+                    }
                 }
             }
         }
     });
 }
 
-/**
- * Create cost breakdown pie chart
- */
 function createCostBreakdownChart(costData) {
     const ctx = document.getElementById('costBreakdownChart');
     if (!ctx) return;
@@ -1531,6 +993,7 @@ function createCostBreakdownChart(costData) {
     ];
     
     const labels = ['COGS', 'Logistics', 'Opportunity Cost', 'Admin', 'Holding'];
+    const colors = [CHART_COLORS.primary, CHART_COLORS.warning, CHART_COLORS.danger, CHART_COLORS.info, CHART_COLORS.secondary];
     
     analyticsCharts.costBreakdown = new Chart(ctx, {
         type: 'pie',
@@ -1538,8 +1001,8 @@ function createCostBreakdownChart(costData) {
             labels: labels,
             datasets: [{
                 data: data,
-                backgroundColor: [COLORS.primary, COLORS.warning, COLORS.danger, COLORS.info, COLORS.secondary],
-                borderWidth: 2,
+                backgroundColor: colors,
+                borderWidth: 4,
                 borderColor: '#ffffff',
                 hoverOffset: 10
             }]
@@ -1556,6 +1019,7 @@ function createCostBreakdownChart(costData) {
                     }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -1569,9 +1033,6 @@ function createCostBreakdownChart(costData) {
     });
 }
 
-/**
- * Create profitability trend chart
- */
 function createProfitabilityTrendChart(monthlyTrend) {
     const ctx = document.getElementById('profitabilityTrendChart');
     if (!ctx) return;
@@ -1580,37 +1041,150 @@ function createProfitabilityTrendChart(monthlyTrend) {
     
     const labels = monthlyTrend.map(item => item.month || item.period);
     const profitData = monthlyTrend.map(item => parseFloat(item.profit_margin || 0));
+    const revenueData = monthlyTrend.map(item => parseFloat((item.revenue || 0) / 1000000)); // Convert to millions
     
     analyticsCharts.profitabilityTrend = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Profit Margin (%)',
-                data: profitData,
-                borderColor: COLORS.success,
-                backgroundColor: createGradient(ctx, GRADIENTS.green),
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4
-            }]
+            datasets: [
+                {
+                    label: 'Profit Margin (%)',
+                    data: profitData,
+                    borderColor: CHART_COLORS.success,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.success, 0.1),
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Revenue (Millions)',
+                    data: revenueData,
+                    borderColor: CHART_COLORS.primary,
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    yAxisID: 'y1'
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: {
+                    position: 'top',
+                    align: 'end'
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: 'Profit Margin (%)' },
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: 'Revenue (Millions)' },
+                    grid: { drawOnChartArea: false },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+/**
+ * ===== ANALITIK 6: CHANNEL COMPARISON CHARTS =====
+ */
+
+function createChannelCharts(data) {
+    createChannelComparisonChart(data.channel_metrics || {});
+    createChannelTrendChart(data.monthly_comparison || []);
+    createChannelMetricsChart(data.channel_metrics || {});
+}
+
+function createChannelComparisonChart(channelMetrics) {
+    const ctx = document.getElementById('channelComparisonChart');
+    if (!ctx) return;
+    
+    destroyChart('channelComparison');
+    
+    const b2b = channelMetrics.b2b || {};
+    const b2c = channelMetrics.b2c || {};
+    
+    const labels = ['Revenue Share', 'Margin %', 'Scalability', 'Cash Flow Speed'];
+    
+    analyticsCharts.channelComparison = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'B2B Konsinyasi',
+                    data: [
+                        b2b.revenue_percentage || 75,
+                        b2b.margin_percentage || 32,
+                        b2b.scalability_score || 85,
+                        b2b.cash_flow_score || 40
+                    ],
+                    borderColor: CHART_COLORS.primary,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.primary, 0.2),
+                    fill: true,
+                    pointBackgroundColor: CHART_COLORS.primary,
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                },
+                {
+                    label: 'B2C Direct Sales',
+                    data: [
+                        b2c.revenue_percentage || 25,
+                        b2c.margin_percentage || 58,
+                        b2c.scalability_score || 65,
+                        b2c.cash_flow_score || 95
+                    ],
+                    borderColor: CHART_COLORS.success,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.success, 0.2),
+                    fill: true,
+                    pointBackgroundColor: CHART_COLORS.success,
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
-                            return 'Profit Margin: ' + context.parsed.y + '%';
+                            return context.dataset.label + ': ' + context.parsed.r + '%';
                         }
                     }
                 }
             },
             scales: {
-                y: {
+                r: {
                     beginAtZero: true,
+                    max: 100,
                     ticks: {
                         callback: function(value) {
                             return value + '%';
@@ -1622,85 +1196,27 @@ function createProfitabilityTrendChart(monthlyTrend) {
     });
 }
 
-/**
- * Create channel comparison chart
- */
-function createChannelComparisonChart(channelMetrics) {
-    const ctx = document.getElementById('channelComparisonChart');
-    if (!ctx) return;
-    
-    destroyChart('channelComparison');
-    
-    const b2bRevenue = channelMetrics.b2b_revenue || 0;
-    const b2cRevenue = channelMetrics.b2c_revenue || 0;
-    const total = b2bRevenue + b2cRevenue;
-    
-    const b2bPercentage = total > 0 ? Math.round((b2bRevenue / total) * 100) : 75;
-    const b2cPercentage = total > 0 ? Math.round((b2cRevenue / total) * 100) : 25;
-    
-    const data = {
-        labels: ['Revenue Share', 'Volume Share', 'Profit Margin', 'Customer Count'],
-        datasets: [
-            {
-                label: 'B2B Konsinyasi',
-                data: [
-                    b2bPercentage,
-                    channelMetrics.b2b_volume_percentage || 80,
-                    channelMetrics.b2b_margin || 15,
-                    channelMetrics.b2b_customers || 100
-                ],
-                backgroundColor: 'rgba(0, 120, 212, 0.7)',
-                borderColor: COLORS.primary,
-                borderWidth: 2
-            },
-            {
-                label: 'B2C Direct Sales',
-                data: [
-                    b2cPercentage,
-                    channelMetrics.b2c_volume_percentage || 20,
-                    channelMetrics.b2c_margin || 25,
-                    channelMetrics.b2c_customers || 500
-                ],
-                backgroundColor: 'rgba(40, 167, 69, 0.7)',
-                borderColor: COLORS.success,
-                borderWidth: 2
-            }
-        ]
-    };
-    
-    analyticsCharts.channelComparison = new Chart(ctx, {
-        type: 'radar',
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-}
-
-/**
- * Create channel trend chart
- */
 function createChannelTrendChart(monthlyComparison) {
     const ctx = document.getElementById('channelTrendChart');
     if (!ctx) return;
     
     destroyChart('channelTrend');
     
-    const labels = monthlyComparison.map(item => item.month || item.period);
-    const b2bData = monthlyComparison.map(item => parseFloat(item.b2b_revenue || 0));
-    const b2cData = monthlyComparison.map(item => parseFloat(item.b2c_revenue || 0));
+    if (!monthlyComparison || monthlyComparison.length === 0) {
+        // Sample data
+        monthlyComparison = [
+            { month: 'Jan', b2b_revenue: 18500000, b2c_revenue: 6200000 },
+            { month: 'Feb', b2b_revenue: 22300000, b2c_revenue: 7400000 },
+            { month: 'Mar', b2b_revenue: 26100000, b2c_revenue: 8700000 },
+            { month: 'Apr', b2b_revenue: 19800000, b2c_revenue: 6600000 },
+            { month: 'May', b2b_revenue: 24500000, b2c_revenue: 8200000 },
+            { month: 'Jun', b2b_revenue: 28200000, b2c_revenue: 9400000 }
+        ];
+    }
+    
+    const labels = monthlyComparison.map(item => item.month);
+    const b2bData = monthlyComparison.map(item => parseFloat(item.b2b_revenue || 0) / 1000000);
+    const b2cData = monthlyComparison.map(item => parseFloat(item.b2c_revenue || 0) / 1000000);
     
     analyticsCharts.channelTrend = new Chart(ctx, {
         type: 'line',
@@ -1708,20 +1224,22 @@ function createChannelTrendChart(monthlyComparison) {
             labels: labels,
             datasets: [
                 {
-                    label: 'B2B Revenue',
+                    label: 'B2B Revenue (Millions)',
                     data: b2bData,
-                    borderColor: COLORS.primary,
-                    backgroundColor: 'rgba(0, 120, 212, 0.1)',
+                    borderColor: CHART_COLORS.primary,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.primary, 0.1),
                     fill: false,
-                    tension: 0.4
+                    tension: 0.4,
+                    pointRadius: 4
                 },
                 {
-                    label: 'B2C Revenue',
+                    label: 'B2C Revenue (Millions)',
                     data: b2cData,
-                    borderColor: COLORS.success,
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    borderColor: CHART_COLORS.success,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.success, 0.1),
                     fill: false,
-                    tension: 0.4
+                    tension: 0.4,
+                    pointRadius: 4
                 }
             ]
         },
@@ -1734,9 +1252,10 @@ function createChannelTrendChart(monthlyComparison) {
                     align: 'end'
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                            return context.dataset.label + ': ' + formatCurrency(context.parsed.y * 1000000);
                         }
                     }
                 }
@@ -1744,9 +1263,10 @@ function createChannelTrendChart(monthlyComparison) {
             scales: {
                 y: {
                     beginAtZero: true,
+                    title: { display: true, text: 'Revenue (Millions)' },
                     ticks: {
                         callback: function(value) {
-                            return formatCurrencyShort(value);
+                            return 'Rp ' + value + 'M';
                         }
                     }
                 }
@@ -1755,27 +1275,27 @@ function createChannelTrendChart(monthlyComparison) {
     });
 }
 
-/**
- * Create channel metrics detailed chart
- */
 function createChannelMetricsChart(channelMetrics) {
     const ctx = document.getElementById('channelMetricsChart');
     if (!ctx) return;
     
     destroyChart('channelMetrics');
     
-    const metrics = ['Partners/Customers', 'Avg Order Value', 'Frequency (monthly)', 'Satisfaction (%)'];
+    const b2b = channelMetrics.b2b || {};
+    const b2c = channelMetrics.b2c || {};
+    
+    const metrics = ['Partners/Customers', 'Avg Order (Millions)', 'Frequency/Month', 'Satisfaction %'];
     const b2bMetrics = [
-        channelMetrics.b2b_partners || 50,
-        channelMetrics.b2b_avg_order || 5000000,
-        channelMetrics.b2b_frequency || 8,
-        channelMetrics.b2b_satisfaction || 85
+        b2b.partners || 50,
+        (b2b.avg_order_value || 5000000) / 1000000,
+        b2b.frequency || 8,
+        b2b.satisfaction || 85
     ];
     const b2cMetrics = [
-        channelMetrics.b2c_customers || 200,
-        channelMetrics.b2c_avg_order || 500000,
-        channelMetrics.b2c_frequency || 3,
-        channelMetrics.b2c_satisfaction || 92
+        (b2c.customers || 200) / 4, // Scale down for comparison
+        (b2c.avg_order_value || 500000) / 1000000,
+        b2c.frequency || 3,
+        b2c.satisfaction || 92
     ];
     
     analyticsCharts.channelMetrics = new Chart(ctx, {
@@ -1786,14 +1306,16 @@ function createChannelMetricsChart(channelMetrics) {
                 {
                     label: 'B2B',
                     data: b2bMetrics,
-                    backgroundColor: COLORS.primary,
-                    borderRadius: 4
+                    backgroundColor: CHART_COLORS.primary,
+                    borderRadius: 4,
+                    borderSkipped: false
                 },
                 {
                     label: 'B2C',
                     data: b2cMetrics,
-                    backgroundColor: COLORS.success,
-                    borderRadius: 4
+                    backgroundColor: CHART_COLORS.success,
+                    borderRadius: 4,
+                    borderSkipped: false
                 }
             ]
         },
@@ -1806,15 +1328,18 @@ function createChannelMetricsChart(channelMetrics) {
                     align: 'end'
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const metricIndex = context.dataIndex;
                             let value = context.parsed.y;
                             
                             if (metricIndex === 1) { // Avg Order Value
-                                value = formatCurrency(value);
+                                value = formatCurrency(value * 1000000);
                             } else if (metricIndex === 3) { // Satisfaction
                                 value = value + '%';
+                            } else if (metricIndex === 0 && context.datasetIndex === 1) {
+                                value = value * 4; // Restore B2C customers scale
                             }
                             
                             return context.dataset.label + ': ' + value;
@@ -1824,7 +1349,11 @@ function createChannelMetricsChart(channelMetrics) {
             },
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    title: { display: true, text: 'Metric Value' }
+                },
+                x: {
+                    ticks: { maxRotation: 45 }
                 }
             }
         }
@@ -1832,15 +1361,33 @@ function createChannelMetricsChart(channelMetrics) {
 }
 
 /**
- * Create demand forecast chart
+ * ===== ANALITIK 7: PREDICTIVE ANALYTICS CHARTS =====
  */
+
+function createPredictiveCharts(data) {
+    createDemandForecastChart(data.demand_forecast || []);
+    createRiskAssessmentChart(data.risk_assessment || []);
+}
+
 function createDemandForecastChart(forecast) {
     const ctx = document.getElementById('demandForecastChart');
     if (!ctx) return;
     
     destroyChart('demandForecast');
     
-    const labels = forecast.map(item => item.month || item.period);
+    if (!forecast || forecast.length === 0) {
+        // Sample forecast data
+        forecast = [
+            { month: 'Jul 2024', predicted_demand: 4200, confidence: 85, upper_bound: 5040, lower_bound: 3360 },
+            { month: 'Aug 2024', predicted_demand: 4450, confidence: 82, upper_bound: 5340, lower_bound: 3560 },
+            { month: 'Sep 2024', predicted_demand: 4680, confidence: 79, upper_bound: 5616, lower_bound: 3744 },
+            { month: 'Oct 2024', predicted_demand: 4920, confidence: 76, upper_bound: 5904, lower_bound: 3936 },
+            { month: 'Nov 2024', predicted_demand: 5180, confidence: 73, upper_bound: 6216, lower_bound: 4144 },
+            { month: 'Dec 2024', predicted_demand: 5450, confidence: 70, upper_bound: 6540, lower_bound: 4360 }
+        ];
+    }
+    
+    const labels = forecast.map(item => item.month);
     const predictedData = forecast.map(item => parseFloat(item.predicted_demand || 0));
     const confidenceData = forecast.map(item => parseFloat(item.confidence || 0));
     const upperBound = forecast.map(item => parseFloat(item.upper_bound || 0));
@@ -1854,38 +1401,42 @@ function createDemandForecastChart(forecast) {
                 {
                     label: 'Predicted Demand',
                     data: predictedData,
-                    borderColor: COLORS.primary,
-                    backgroundColor: createGradient(ctx, GRADIENTS.blue),
+                    borderColor: CHART_COLORS.primary,
+                    backgroundColor: createGradient(ctx, CHART_COLORS.primary, 0.1),
                     fill: true,
                     tension: 0.4,
+                    pointRadius: 5,
                     yAxisID: 'y'
                 },
                 {
                     label: 'Upper Bound',
                     data: upperBound,
-                    borderColor: COLORS.warning,
+                    borderColor: CHART_COLORS.warning,
                     backgroundColor: 'transparent',
                     fill: false,
                     borderDash: [5, 5],
+                    pointRadius: 3,
                     yAxisID: 'y'
                 },
                 {
                     label: 'Lower Bound',
                     data: lowerBound,
-                    borderColor: COLORS.warning,
+                    borderColor: CHART_COLORS.warning,
                     backgroundColor: 'transparent',
                     fill: false,
                     borderDash: [5, 5],
+                    pointRadius: 3,
                     yAxisID: 'y'
                 },
                 {
                     label: 'Confidence (%)',
                     data: confidenceData,
-                    borderColor: COLORS.success,
+                    borderColor: CHART_COLORS.success,
                     backgroundColor: 'transparent',
                     fill: false,
                     tension: 0.2,
                     borderDash: [10, 5],
+                    pointRadius: 4,
                     yAxisID: 'y1'
                 }
             ]
@@ -1897,6 +1448,18 @@ function createDemandForecastChart(forecast) {
                 legend: {
                     position: 'top',
                     align: 'end'
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    callbacks: {
+                        label: function(context) {
+                            if (context.datasetIndex === 3) { // Confidence
+                                return 'Confidence: ' + context.parsed.y + '%';
+                            } else {
+                                return context.dataset.label + ': ' + context.parsed.y + ' units';
+                            }
+                        }
+                    }
                 }
             },
             scales: {
@@ -1921,19 +1484,33 @@ function createDemandForecastChart(forecast) {
     });
 }
 
-/**
- * Create risk assessment chart
- */
 function createRiskAssessmentChart(riskData) {
     const ctx = document.getElementById('riskAssessmentChart');
     if (!ctx) return;
     
     destroyChart('riskAssessment');
     
-    const partners = riskData.slice(0, 6);
+    if (!riskData || riskData.length === 0) {
+        // Sample risk data
+        riskData = [
+            { nama_toko: 'Toko ABC', risk_score: 85, risk_level: 'High' },
+            { nama_toko: 'Warung XYZ', risk_score: 72, risk_level: 'High' },
+            { nama_toko: 'Toko Sejahtera', risk_score: 45, risk_level: 'Medium' },
+            { nama_toko: 'Mini Market', risk_score: 38, risk_level: 'Medium' },
+            { nama_toko: 'Toko Maju', risk_score: 25, risk_level: 'Low' },
+            { nama_toko: 'Warung Berkah', risk_score: 15, risk_level: 'Low' }
+        ];
+    }
+    
+    const partners = riskData.slice(0, 8);
     const labels = partners.map(item => item.nama_toko || 'Partner');
     const riskScores = partners.map(item => parseFloat(item.risk_score || 0));
-    const colors = partners.map(item => getRiskColor(item.risk_level));
+    const colors = partners.map(item => {
+        const level = item.risk_level;
+        if (level === 'High') return CHART_COLORS.danger;
+        if (level === 'Medium') return CHART_COLORS.warning;
+        return CHART_COLORS.success;
+    });
     
     analyticsCharts.riskAssessment = new Chart(ctx, {
         type: 'bar',
@@ -1953,13 +1530,16 @@ function createRiskAssessmentChart(riskData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     callbacks: {
                         label: function(context) {
                             const partnerIndex = context.dataIndex;
                             const partner = partners[partnerIndex];
                             return [
                                 'Risk Score: ' + context.parsed.y,
-                                'Risk Level: ' + (partner.risk_level || 'Unknown')
+                                'Risk Level: ' + (partner.risk_level || 'Unknown'),
+                                'Status: ' + (partner.risk_level === 'High' ? 'Needs Attention' : 
+                                            partner.risk_level === 'Medium' ? 'Monitor' : 'Stable')
                             ];
                         }
                     }
@@ -1968,7 +1548,8 @@ function createRiskAssessmentChart(riskData) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 100
+                    max: 100,
+                    title: { display: true, text: 'Risk Score' }
                 },
                 x: {
                     ticks: { maxRotation: 45 }
@@ -1979,138 +1560,28 @@ function createRiskAssessmentChart(riskData) {
 }
 
 /**
- * Create AI recommendations display
+ * ===== UTILITY FUNCTIONS =====
  */
-function createAIRecommendations(recommendations) {
-    const container = document.getElementById('aiRecommendations');
-    if (!container) return;
-    
-    let html = '';
-    
-    // Use provided recommendations or generate defaults
-    if (!recommendations || recommendations.length === 0) {
-        recommendations = [
-            {
-                type: 'opportunity',
-                title: 'Optimize Inventory Allocation',
-                message: 'Increase shipment to top 3 performers by 20% based on trend analysis.',
-                estimated_impact: 'Rp 15-25 juta additional revenue'
-            },
-            {
-                type: 'risk',
-                title: 'Partner Risk Alert', 
-                message: '2 partners showing declining performance trends. Consider partnership review.',
-                estimated_impact: 'Prevent Rp 8-12 juta potential losses'
-            },
-            {
-                type: 'seasonal',
-                title: 'Peak Season Preparation',
-                message: 'High-demand season approaching. Prepare inventory increase by 25% for top-grade partners.',
-                estimated_impact: 'Rp 20-30 juta opportunity'
-            },
-            {
-                type: 'optimization',
-                title: 'Route Optimization',
-                message: 'Consolidate deliveries to reduce logistics costs by 15%.',
-                estimated_impact: 'Rp 5-8 juta monthly savings'
-            }
-        ];
-    }
-    
-    recommendations.forEach(function(rec) {
-        const typeClass = getRecommendationClass(rec.type);
-        const iconClass = getRecommendationIcon(rec.type);
-        const impact = rec.estimated_impact || rec.estimated_revenue || rec.estimated_savings || '';
-        
-        html += '<div class="recommendation-item ' + typeClass + '">' +
-                '<h4><i class="' + iconClass + '"></i> ' + rec.title + '</h4>' +
-                '<p>' + rec.message + '</p>' +
-                (impact ? '<p><strong>Impact: ' + impact + '</strong></p>' : '') +
-                '</div>';
-    });
-    
-    container.innerHTML = html;
-}
 
-// ===== UTILITY FUNCTIONS =====
-
-/**
- * Show loading overlay
- */
-function showLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.classList.add('show');
+function destroyChart(chartKey) {
+    if (analyticsCharts[chartKey] && typeof analyticsCharts[chartKey].destroy === 'function') {
+        analyticsCharts[chartKey].destroy();
+        delete analyticsCharts[chartKey];
     }
 }
 
-/**
- * Hide loading overlay
- */
-function hideLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.classList.remove('show');
-    }
+function createGradient(ctx, color, opacity = 0.2) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, color + Math.round(opacity * 255).toString(16).padStart(2, '0'));
+    gradient.addColorStop(1, color + '00');
+    return gradient;
 }
 
-/**
- * Show success message using SweetAlert2 or fallback to alert
- */
-function showSuccessMessage(message) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'success',
-            title: 'Success',
-            text: message,
-            timer: 3000,
-            showConfirmButton: false,
-            toast: true,
-            position: 'top-end'
-        });
-    } else {
-        alert(message);
-    }
-}
-
-/**
- * Show error message using SweetAlert2 or fallback to alert
- */
-function showErrorMessage(message) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message,
-            confirmButtonColor: '#dc3545'
-        });
-    } else {
-        alert('Error: ' + message);
-    }
-}
-
-/**
- * Update element text content safely
- */
-function updateElement(id, value) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.textContent = value;
-    }
-}
-
-/**
- * Format currency to Indonesian Rupiah
- */
 function formatCurrency(amount) {
     if (!amount || isNaN(amount)) return 'Rp 0';
-    
     return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount);
 }
 
-/**
- * Format currency with short notation (K, M, B)
- */
 function formatCurrencyShort(amount) {
     if (!amount || isNaN(amount)) return 'Rp 0';
     
@@ -2125,135 +1596,6 @@ function formatCurrencyShort(amount) {
     return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount);
 }
 
-/**
- * Safely destroy existing chart
- */
-function destroyChart(chartKey) {
-    if (analyticsCharts[chartKey] && typeof analyticsCharts[chartKey].destroy === 'function') {
-        analyticsCharts[chartKey].destroy();
-        delete analyticsCharts[chartKey];
-    }
-}
-
-/**
- * Create gradient for chart backgrounds
- */
-function createGradient(ctx, colors) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, colors[0] + '40'); // 40 = 25% opacity
-    gradient.addColorStop(1, colors[1] + '10'); // 10 = 6% opacity
-    return gradient;
-}
-
-/**
- * Generate array of colors for charts
- */
-function generateColors(count) {
-    const baseColors = [COLORS.primary, COLORS.success, COLORS.warning, COLORS.info, COLORS.danger, COLORS.secondary];
-    const colors = [];
-    
-    for (let i = 0; i < count; i++) {
-        colors.push(baseColors[i % baseColors.length]);
-    }
-    
-    return colors;
-}
-
-/**
- * Get color based on partner grade
- */
-function getGradeColor(grade) {
-    switch(grade) {
-        case 'A+': return COLORS.success;
-        case 'A': return COLORS.primary;
-        case 'B': return COLORS.warning;
-        case 'C': return COLORS.danger;
-        default: return COLORS.secondary;
-    }
-}
-
-/**
- * Get color based on velocity rate
- */
-function getVelocityColor(velocityRate) {
-    const rate = parseFloat(velocityRate) || 0;
-    if (rate >= 80) return COLORS.success; // Hot seller
-    if (rate >= 60) return COLORS.primary; // Good mover
-    if (rate >= 30) return COLORS.warning; // Slow mover
-    return COLORS.danger; // Dead stock
-}
-
-/**
- * Get color based on ROI value
- */
-function getROIColor(roi) {
-    const roiValue = parseFloat(roi) || 0;
-    if (roiValue >= 25) return COLORS.success;
-    if (roiValue >= 15) return COLORS.warning;
-    return COLORS.danger;
-}
-
-/**
- * Get color based on risk level
- */
-function getRiskColor(riskLevel) {
-    switch(riskLevel) {
-        case 'High': return COLORS.danger;
-        case 'Medium': return COLORS.warning;
-        case 'Low': return COLORS.success;
-        default: return COLORS.primary;
-    }
-}
-
-/**
- * Get CSS class for recommendation type
- */
-function getRecommendationClass(type) {
-    switch(type) {
-        case 'risk': return 'risk';
-        case 'opportunity': return 'opportunity';
-        case 'warning': 
-        case 'seasonal': return 'warning';
-        default: return '';
-    }
-}
-
-/**
- * Get icon class for recommendation type
- */
-function getRecommendationIcon(type) {
-    switch(type) {
-        case 'risk': return 'fas fa-exclamation-triangle';
-        case 'opportunity': return 'fas fa-lightbulb';
-        case 'seasonal': return 'fas fa-calendar-alt';
-        case 'optimization': return 'fas fa-cogs';
-        case 'product': return 'fas fa-box';
-        case 'inventory': return 'fas fa-warehouse';
-        case 'finance': return 'fas fa-chart-line';
-        default: return 'fas fa-info-circle';
-    }
-}
-
-/**
- * Format number with thousands separator
- */
-function formatNumber(num) {
-    if (!num || isNaN(num)) return '0';
-    return new Intl.NumberFormat('id-ID').format(num);
-}
-
-/**
- * Format percentage with specified decimal places
- */
-function formatPercentage(num, decimals) {
-    decimals = decimals || 1;
-    if (!num || isNaN(num)) return '0%';
-    return parseFloat(num).toFixed(decimals) + '%';
-}
-
-/**
- * Resize all charts to fit their containers
- */
 function resizeAllCharts() {
     Object.keys(analyticsCharts).forEach(function(chartKey) {
         if (analyticsCharts[chartKey] && typeof analyticsCharts[chartKey].resize === 'function') {
@@ -2266,408 +1608,18 @@ function resizeAllCharts() {
     });
 }
 
-/**
- * Resize charts in specific section with delay
- */
-function resizeChartsInSection(sectionName) {
-    setTimeout(function() {
-        resizeAllCharts();
-    }, 200);
-}
-
-/**
- * Debounce function to limit function calls
- */
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction() {
-        const context = this;
-        const args = arguments;
-        
-        const later = function() {
-            clearTimeout(timeout);
-            func.apply(context, args);
-        };
-        
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-/**
- * Get month name from date or number
- */
-function getMonthName(monthInput) {
-    const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    
-    if (typeof monthInput === 'number') {
-        return months[monthInput - 1] || 'Unknown';
-    }
-    
-    return monthInput || 'Unknown';
-}
-
-/**
- * Calculate growth rate between two values
- */
-function calculateGrowthRate(current, previous) {
-    if (!previous || previous === 0) return 0;
-    return ((current - previous) / previous * 100);
-}
-
-/**
- * Get trend indicator based on value
- */
-function getTrendIndicator(value) {
-    const numValue = parseFloat(value) || 0;
-    if (numValue > 5) return { class: 'positive', icon: 'fas fa-arrow-up', text: '+' };
-    if (numValue < -5) return { class: 'negative', icon: 'fas fa-arrow-down', text: '' };
-    return { class: 'neutral', icon: 'fas fa-minus', text: '' };
-}
-
-/**
- * Validate chart data before creating chart
- */
-function validateChartData(data, chartType) {
-    if (!data || (Array.isArray(data) && data.length === 0)) {
-        console.warn('No data provided for chart type:', chartType);
-        return false;
-    }
-    
-    if (Array.isArray(data)) {
-        const hasValidData = data.some(item => {
-            return item !== null && item !== undefined && !isNaN(parseFloat(item));
-        });
-        
-        if (!hasValidData) {
-            console.warn('No valid numeric data found for chart type:', chartType);
-            return false;
-        }
-    }
-    
-    return true;
-}
-
-/**
- * Handle chart creation errors
- */
-function handleChartError(error, chartName) {
-    console.error('Error creating chart:', chartName, error);
-    
-    // Show placeholder or error message in chart container
-    const chartContainer = document.getElementById(chartName + 'Chart');
-    if (chartContainer) {
-        chartContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #6c757d;">' +
-            '<div style="text-align: center;">' +
-            '<i class="fas fa-chart-bar" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>' +
-            '<p>Chart data unavailable</p>' +
-            '</div></div>';
-    }
-}
-
-// ===== PRINT FUNCTIONALITY =====
-
-/**
- * Handle before print event - prepare layout for printing
- */
-function handleBeforePrint() {
-    console.log('Preparing for print...');
-    
-    // Show all sections for comprehensive print
-    document.querySelectorAll('.analytics-section').forEach(function(section) {
-        section.classList.add('active');
-    });
-    
-    // Wait for layout changes and resize charts
-    setTimeout(function() {
-        resizeAllCharts();
-    }, 100);
-}
-
-/**
- * Handle after print event - restore normal layout
- */
-function handleAfterPrint() {
-    console.log('Restoring layout after print...');
-    
-    // Hide all sections first
-    document.querySelectorAll('.analytics-section').forEach(function(section) {
-        section.classList.remove('active');
-    });
-    
-    // Show only the currently active section
-    const activeNavBtn = document.querySelector('.nav-btn.active');
-    if (activeNavBtn) {
-        const activeSection = activeNavBtn.getAttribute('data-section');
-        const sectionElement = document.getElementById(activeSection + '-section');
-        if (sectionElement) {
-            sectionElement.classList.add('active');
-        }
-    }
-    
-    // Resize charts back to normal
-    setTimeout(function() {
-        resizeAllCharts();
-    }, 100);
-}
-
-/**
- * Export chart as image
- */
-function exportChartAsImage(chartKey, filename) {
-    if (analyticsCharts[chartKey]) {
-        try {
-            const canvas = analyticsCharts[chartKey].canvas;
-            const url = canvas.toDataURL('image/png');
-            
-            const link = document.createElement('a');
-            link.download = filename || (chartKey + '_chart.png');
-            link.href = url;
-            link.click();
-        } catch (error) {
-            console.error('Error exporting chart:', error);
-            showErrorMessage('Failed to export chart image');
-        }
-    }
-}
-
-/**
- * Export all analytics data as JSON
- */
-function exportAnalyticsData() {
-    const exportData = {
-        timestamp: new Date().toISOString(),
-        filters: currentFilters,
-        charts: {}
-    };
-    
-    // Collect data from all charts
-    Object.keys(analyticsCharts).forEach(function(chartKey) {
-        if (analyticsCharts[chartKey] && analyticsCharts[chartKey].data) {
-            exportData.charts[chartKey] = analyticsCharts[chartKey].data;
-        }
-    });
-    
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = 'analytics_data_' + new Date().toISOString().split('T')[0] + '.json';
-    link.click();
-}
-
-// ===== ERROR HANDLING & RETRY LOGIC =====
-
-/**
- * Retry failed requests with exponential backoff
- */
-function retryRequest(requestFunction, maxRetries, delay) {
-    maxRetries = maxRetries || 3;
-    delay = delay || 1000;
-    
-    return new Promise(function(resolve, reject) {
-        let retryCount = 0;
-        
-        function attemptRequest() {
-            requestFunction()
-                .then(resolve)
-                .catch(function(error) {
-                    retryCount++;
-                    
-                    if (retryCount < maxRetries) {
-                        console.warn('Request failed, retrying in ' + delay + 'ms... (attempt ' + retryCount + '/' + maxRetries + ')');
-                        setTimeout(attemptRequest, delay);
-                        delay *= 2; // Exponential backoff
-                    } else {
-                        console.error('Request failed after ' + maxRetries + ' attempts:', error);
-                        reject(error);
-                    }
-                });
-        }
-        
-        attemptRequest();
-    });
-}
-
-/**
- * Check if element is in viewport for lazy loading
- */
-function isInViewport(element) {
-    if (!element) return false;
-    
-    const rect = element.getBoundingClientRect();
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-}
-
-/**
- * Smooth scroll to element
- */
-function smoothScrollTo(elementId) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
-    }
-}
-
-/**
- * Local storage helpers for caching
- */
-const CacheHelper = {
-    set: function(key, data, expireMinutes) {
-        expireMinutes = expireMinutes || 30;
-        const expireTime = new Date().getTime() + (expireMinutes * 60 * 1000);
-        
-        const cacheData = {
-            data: data,
-            expireTime: expireTime
-        };
-        
-        try {
-            localStorage.setItem('analytics_' + key, JSON.stringify(cacheData));
-        } catch (error) {
-            console.warn('Failed to cache data:', error);
-        }
-    },
-    
-    get: function(key) {
-        try {
-            const cacheData = localStorage.getItem('analytics_' + key);
-            if (!cacheData) return null;
-            
-            const parsed = JSON.parse(cacheData);
-            
-            if (new Date().getTime() > parsed.expireTime) {
-                localStorage.removeItem('analytics_' + key);
-                return null;
-            }
-            
-            return parsed.data;
-        } catch (error) {
-            console.warn('Failed to retrieve cached data:', error);
-            return null;
-        }
-    },
-    
-    clear: function() {
-        try {
-            const keys = Object.keys(localStorage);
-            keys.forEach(function(key) {
-                if (key.startsWith('analytics_')) {
-                    localStorage.removeItem(key);
-                }
-            });
-        } catch (error) {
-            console.warn('Failed to clear cache:', error);
-        }
-    }
+// Export functions for use in main analytics.js
+window.AnalyticsCharts = {
+    createOverviewCharts,
+    createPartnerCharts,
+    createInventoryCharts,
+    createVelocityCharts,
+    createProfitabilityCharts,
+    createChannelCharts,
+    createPredictiveCharts,
+    destroyChart,
+    resizeAllCharts,
+    analyticsCharts
 };
 
-// ===== GLOBAL EXPORTS & INITIALIZATION =====
-
-/**
- * Export main functions for global access
- */
-window.analyticsApp = {
-    // Main functions
-    refreshAllAnalytics: refreshAllAnalytics,
-    switchToSection: switchToSection,
-    showSection: showSection,
-    
-    // Utility functions
-    formatCurrency: formatCurrency,
-    formatCurrencyShort: formatCurrencyShort,
-    formatNumber: formatNumber,
-    formatPercentage: formatPercentage,
-    
-    // UI functions
-    showSuccessMessage: showSuccessMessage,
-    showErrorMessage: showErrorMessage,
-    showLoading: showLoading,
-    hideLoading: hideLoading,
-    
-    // Chart functions
-    resizeAllCharts: resizeAllCharts,
-    exportChartAsImage: exportChartAsImage,
-    exportAnalyticsData: exportAnalyticsData,
-    
-    // Data management
-    updateFilters: updateFilters,
-    getCurrentFilters: function() { return currentFilters; },
-    
-    // Cache management
-    clearCache: CacheHelper.clear,
-    
-    // Chart instances (for debugging)
-    getCharts: function() { return analyticsCharts; }
-};
-
-// ===== PERFORMANCE MONITORING =====
-
-/**
- * Monitor performance and log metrics
- */
-function logPerformanceMetrics() {
-    if (window.performance && window.performance.timing) {
-        const timing = window.performance.timing;
-        const loadTime = timing.loadEventEnd - timing.navigationStart;
-        
-        console.log('Analytics Dashboard Performance Metrics:');
-        console.log('- Page Load Time:', loadTime + 'ms');
-        console.log('- DOM Ready Time:', (timing.domContentLoadedEventEnd - timing.navigationStart) + 'ms');
-        console.log('- Charts Loaded:', Object.keys(analyticsCharts).length);
-    }
-}
-
-// Log performance metrics after page load
-window.addEventListener('load', function() {
-    setTimeout(logPerformanceMetrics, 1000);
-});
-
-// ===== ERROR TRACKING =====
-
-/**
- * Global error handler for uncaught errors
- */
-window.addEventListener('error', function(event) {
-    console.error('Analytics Dashboard Error:', {
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        error: event.error
-    });
-    
-    // Optionally send error to logging service
-    // sendErrorToLoggingService(event);
-});
-
-/**
- * Handle unhandled promise rejections
- */
-window.addEventListener('unhandledrejection', function(event) {
-    console.error('Analytics Dashboard Unhandled Promise Rejection:', event.reason);
-    
-    // Prevent default browser behavior
-    event.preventDefault();
-});
-
-// ===== INITIALIZATION COMPLETE =====
-
-console.log('Analytics Dashboard JavaScript loaded successfully');
-console.log('Available functions:', Object.keys(window.analyticsApp));
-console.log('Chart color scheme:', COLORS);
-
-// Auto-refresh data every 5 minutes (optional)
-// setInterval(refreshAllAnalytics, 5 * 60 * 1000);
+console.log('Analytics Charts module loaded successfully');

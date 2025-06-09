@@ -53,21 +53,92 @@ Route::prefix('dashboard/api')->group(function() {
     Route::get('/transaksi-terbaru', [DashboardController::class, 'getTransaksiTerbaru']);
     Route::get('/toko-retur-terbanyak', [DashboardController::class, 'getTokoReturTerbanyak']);
 });
-    // Route Analytics
-    Route::group(['prefix' => 'analytics'], function() {
-        Route::get('/', [AnalyticsController::class, 'index'])->name('analytics.index');
-        Route::get('/overview', [AnalyticsController::class, 'getOverviewData'])->name('analytics.overview');
-        Route::get('/partner-performance', [AnalyticsController::class, 'getPartnerPerformance'])->name('analytics.partner-performance');
-        Route::get('/inventory-analytics', [AnalyticsController::class, 'getInventoryAnalytics'])->name('analytics.inventory-analytics');
-        Route::get('/product-velocity', [AnalyticsController::class, 'getProductVelocity'])->name('analytics.product-velocity');
-        Route::get('/profitability-analysis', [AnalyticsController::class, 'getProfitabilityAnalysis'])->name('analytics.profitability-analysis');
-        Route::get('/channel-comparison', [AnalyticsController::class, 'getChannelComparison'])->name('analytics.channel-comparison');
-        Route::get('/predictive-analytics', [AnalyticsController::class, 'getPredictiveAnalytics'])->name('analytics.predictive-analytics');
+Route::group(['prefix' => 'analytics', 'middleware' => 'auth'], function () {
+    // Main Analytics Dashboard
+    Route::get('/', [App\Http\Controllers\AnalyticsController::class, 'index'])
+        ->name('analytics.index');
+    
+    // Analytics 1: Partner Performance Analytics
+    Route::get('/partner-performance', [App\Http\Controllers\AnalyticsController::class, 'partnerPerformance'])
+        ->name('analytics.partner-performance');
+    
+    // Analytics 2: Inventory Optimization
+    Route::get('/inventory-optimization', [App\Http\Controllers\AnalyticsController::class, 'inventoryOptimization'])
+        ->name('analytics.inventory-optimization');
+    
+    // Analytics 3: Product Velocity
+    Route::get('/product-velocity', [App\Http\Controllers\AnalyticsController::class, 'productVelocity'])
+        ->name('analytics.product-velocity');
+    
+    // Analytics 4: Profitability Analysis
+    Route::get('/profitability-analysis', [App\Http\Controllers\AnalyticsController::class, 'profitabilityAnalysis'])
+        ->name('analytics.profitability-analysis');
+    
+    // Analytics 5: Channel Comparison
+    Route::get('/channel-comparison', [App\Http\Controllers\AnalyticsController::class, 'channelComparison'])
+        ->name('analytics.channel-comparison');
+    
+    // Analytics 6: Predictive Analytics
+    Route::get('/predictive-analytics', [App\Http\Controllers\AnalyticsController::class, 'predictiveAnalytics'])
+        ->name('analytics.predictive-analytics');
+    
+    // API Endpoints for AJAX calls
+    Route::group(['prefix' => 'api'], function () {
+        // Partner Performance APIs
+        Route::get('/partner/{id}/detail', [App\Http\Controllers\AnalyticsController::class, 'getPartnerDetail'])
+            ->name('analytics.api.partner-detail');
+        Route::get('/partner/{id}/history', [App\Http\Controllers\AnalyticsController::class, 'getPartnerHistory'])
+            ->name('analytics.api.partner-history');
+        Route::post('/partner/{id}/alert', [App\Http\Controllers\AnalyticsController::class, 'sendPartnerAlert'])
+            ->name('analytics.api.send-alert');
         
-        // Debug routes
-        Route::get('/test', [AnalyticsController::class, 'testAnalytics'])->name('analytics.test');
-        Route::get('/debug-info', [AnalyticsController::class, 'debugInfo'])->name('analytics.debug-info');
+        // Export APIs
+        Route::get('/export/partner-performance', [App\Http\Controllers\AnalyticsController::class, 'exportPartnerPerformance'])
+            ->name('analytics.api.export-partner-performance');
+        Route::get('/export/inventory-recommendations', [App\Http\Controllers\AnalyticsController::class, 'exportInventoryRecommendations'])
+            ->name('analytics.api.export-inventory');
+        Route::get('/export/product-velocity', [App\Http\Controllers\AnalyticsController::class, 'exportProductVelocity'])
+            ->name('analytics.api.export-velocity');
+        Route::get('/export/profitability', [App\Http\Controllers\AnalyticsController::class, 'exportProfitability'])
+            ->name('analytics.api.export-profitability');
+        
+        // Real-time data APIs
+        Route::get('/charts/performance-trend', [App\Http\Controllers\AnalyticsController::class, 'getPerformanceTrendData'])
+            ->name('analytics.api.performance-trend');
+        Route::get('/charts/grade-distribution', [App\Http\Controllers\AnalyticsController::class, 'getGradeDistributionData'])
+            ->name('analytics.api.grade-distribution');
+        Route::get('/charts/velocity-heatmap', [App\Http\Controllers\AnalyticsController::class, 'getVelocityHeatmapData'])
+            ->name('analytics.api.velocity-heatmap');
+        Route::get('/charts/profitability-comparison', [App\Http\Controllers\AnalyticsController::class, 'getProfitabilityComparisonData'])
+            ->name('analytics.api.profitability-comparison');
+        
+        // Prediction APIs
+        Route::get('/predictions/demand/{toko_id}/{barang_id}', [App\Http\Controllers\AnalyticsController::class, 'getDemandPrediction'])
+            ->name('analytics.api.demand-prediction');
+        Route::get('/predictions/risk-scores', [App\Http\Controllers\AnalyticsController::class, 'getRiskScores'])
+            ->name('analytics.api.risk-scores');
+        Route::get('/predictions/seasonal-forecast', [App\Http\Controllers\AnalyticsController::class, 'getSeasonalForecast'])
+            ->name('analytics.api.seasonal-forecast');
+        
+        // Optimization APIs
+        Route::post('/optimize/inventory-allocation', [App\Http\Controllers\AnalyticsController::class, 'optimizeInventoryAllocation'])
+            ->name('analytics.api.optimize-inventory');
+        Route::post('/recommendations/generate', [App\Http\Controllers\AnalyticsController::class, 'generateRecommendations'])
+            ->name('analytics.api.generate-recommendations');
+        
+        // Bulk Operations APIs
+        Route::post('/bulk/send-alerts', [App\Http\Controllers\AnalyticsController::class, 'bulkSendAlerts'])
+            ->name('analytics.api.bulk-alerts');
+        Route::post('/bulk/update-grades', [App\Http\Controllers\AnalyticsController::class, 'bulkUpdateGrades'])
+            ->name('analytics.api.bulk-update-grades');
+        
+        // Settings APIs
+        Route::get('/settings/thresholds', [App\Http\Controllers\AnalyticsController::class, 'getAnalyticsThresholds'])
+            ->name('analytics.api.get-thresholds');
+        Route::post('/settings/thresholds', [App\Http\Controllers\AnalyticsController::class, 'updateAnalyticsThresholds'])
+            ->name('analytics.api.update-thresholds');
     });
+});
 
 
     // Route profil
