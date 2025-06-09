@@ -82,7 +82,7 @@
             </li>
 
             <!-- Analytics - NEW ADVANCED SECTION -->
-            <li class="nav-item {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis', 'analytics.channel-comparison', 'analytics.predictive-analytics']))? 'menu-open' : '' }}">
+            <li class="nav-item">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis', 'analytics.channel-comparison', 'analytics.predictive-analytics']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-brain"></i>
                     <p>
@@ -93,49 +93,44 @@
                 <ul class="nav nav-treeview">
                     <li class="nav-item">
                         <a href="{{ route('analytics.index') }}" class="nav-link {{ ($activemenu == 'analytics')? 'active' : '' }}">
-                            <i class="fas fa-chart-line nav-icon"></i>
+                            <i class="far fa-circle nav-icon"></i>
                             <p>Analytics Dashboard</p>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('analytics.partner-performance') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
-                            <i class="fas fa-trophy nav-icon"></i>
+                            <i class="far fa-circle nav-icon"></i>
                             <p>Partner Performance</p>
-                            <span class="badge badge-success right">A+</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('analytics.inventory-optimization') }}" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')? 'active' : '' }}">
-                            <i class="fas fa-boxes nav-icon"></i>
+                            <i class="far fa-circle nav-icon"></i>
                             <p>Inventory Optimization</p>
-                            <span class="badge badge-info right">AI</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('analytics.product-velocity') }}" class="nav-link {{ ($activemenu == 'analytics.product-velocity')? 'active' : '' }}">
-                            <i class="fas fa-tachometer-alt nav-icon"></i>
+                            <i class="far fa-circle nav-icon"></i>
                             <p>Product Velocity</p>
-                            <span class="badge badge-warning right">🔥</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('analytics.profitability-analysis') }}" class="nav-link {{ ($activemenu == 'analytics.profitability-analysis')? 'active' : '' }}">
-                            <i class="fas fa-calculator nav-icon"></i>
+                            <i class="far fa-circle nav-icon"></i>
                             <p>True Profitability</p>
-                            <span class="badge badge-success right">₹</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('analytics.channel-comparison') }}" class="nav-link {{ ($activemenu == 'analytics.channel-comparison')? 'active' : '' }}">
-                            <i class="fas fa-balance-scale nav-icon"></i>
+                            <i class="far fa-circle nav-icon"></i>
                             <p>Channel Comparison</p>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('analytics.predictive-analytics') }}" class="nav-link {{ ($activemenu == 'analytics.predictive-analytics')? 'active' : '' }}">
-                            <i class="fas fa-crystal-ball nav-icon"></i>
+                            <i class="far fa-circle nav-icon"></i>
                             <p>Predictive Analytics</p>
-                            <span class="badge badge-primary right">AI</span>
                         </a>
                     </li>
                 </ul>
