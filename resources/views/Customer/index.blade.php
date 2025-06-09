@@ -6,7 +6,9 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Data Customer</h3>
+                    <h3 class="card-title">
+                        <i class="fa fa-fw fa-users"></i> Data Customer
+                    </h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-primary btn-sm" id="btnTambah">
                             <i class="fas fa-plus"></i> Tambah Data

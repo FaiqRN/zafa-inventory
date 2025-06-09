@@ -4,7 +4,9 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Data Barang</h3>
+            <h3 class="card-title">
+                <i class="fa fa-fw fa-cubes"></i> Data Barang
+            </h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-primary" id="btnTambah">
                     <i class="fas fa-plus"></i> Tambah Barang

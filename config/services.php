@@ -53,6 +53,11 @@ return [
     'mapbox' => [
         'key' => env('MAPBOX_API_KEY'),
     ],
+
+    'googlemap' => [
+        'key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Texas Wablas WhatsApp API Configuration (ENHANCED)
