@@ -170,10 +170,6 @@
                                         </select>
                                         <input type="hidden" id="wilayah_kelurahan" name="wilayah_kelurahan">
                                         <div class="invalid-feedback" id="error-wilayah_kelurahan"></div>
-                                        <small class="form-text text-success">
-                                            <i class="fas fa-search-location"></i> 
-                                            <strong>Auto-Zoom:</strong> Peta akan zoom otomatis ke kelurahan yang dipilih
-                                        </small>
                                     </div>
                                 </div>
                             </div>

@@ -242,9 +242,9 @@ $(document).ready(function() {
             // Untuk 6 bulan, hanya tampilkan bulan akhir semester
             bulanSelect.prop('disabled', false);
             bulanSelect.empty();
-            bulanSelect.append('<option value="6">Juni (Semester 1)</option>');
-            bulanSelect.append('<option value="12">Desember (Semester 2)</option>');
-            
+            bulanSelect.append('<option value="6">Januari-Juni (Semester 1)</option>');
+            bulanSelect.append('<option value="12">Juli-Desember (Semester 2)</option>');
+
             // Set default ke semester saat ini
             let currentMonth = new Date().getMonth() + 1;
             if (currentMonth <= 6) {

@@ -223,12 +223,6 @@
 
       <button class="btn-login" type="submit">Login</button>
 
-      <div class="social-login">
-        <p>Or login with</p>
-        <i class='bx bxl-google'></i>
-        <i class='bx bxl-facebook-circle'></i>
-        <i class='bx bxl-github'></i>
-      </div>
     </form>
   </div>
 </div>
