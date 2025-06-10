@@ -52,6 +52,7 @@ Route::prefix('dashboard/api')->group(function() {
     Route::get('/barang-analysis', [DashboardController::class, 'getBarangLakuTidakLaku'])->name('dashboard.api.barang-analysis');
     Route::get('/transaksi-terbaru', [DashboardController::class, 'getTransaksiTerbaru']);
     Route::get('/toko-retur-terbanyak', [DashboardController::class, 'getTokoReturTerbanyak']);
+    Route::get('/debug', [DashboardController::class, 'debug'])->name('dashboard.api.debug');
 });
 Route::group(['prefix' => 'analytics', 'middleware' => 'auth'], function () {
     // Main Analytics Dashboard

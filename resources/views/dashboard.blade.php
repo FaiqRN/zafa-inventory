@@ -49,7 +49,7 @@
     padding: 15px;
 }
 .table-hover tbody tr:hover {
-    background-color: rgba(0,0,0,0.03);
+    background-color: rgba(0,123,255,0.1);
     transform: scale(1.01);
     transition: all 0.2s ease;
 }
@@ -78,11 +78,56 @@
 }
 .animate-number {
     transition: all 0.5s ease;
+    font-weight: bold;
 }
 .badge-enhanced {
     padding: 8px 12px;
     border-radius: 15px;
     font-weight: 500;
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.stats-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.stats-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.fade-in {
+    animation: fadeInUp 0.5s ease-out;
+}
+.card-header .btn-group {
+    margin-left: auto;
+}
+/* Fix untuk dropdown filter */
+.dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: none;
+}
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+.dropdown-toggle::after {
+    margin-left: 0.5em;
 }
 </style>
 @endpush
@@ -102,21 +147,59 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="alert alert-info dashboard-card" style="background: linear-gradient(135deg, #eb7d07, #f14c05); border: none; color: white;">
-                <h4><i class="fas fa-tachometer-alt mr-2"></i>Dashboard</h4>
-                <p class="mb-0">Monitor penjualan dan pengiriman</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4><i class="fas fa-tachometer-alt mr-2"></i>Dashboard CRM</h4>
+                        <p class="mb-0">Monitor penjualan dan pengiriman secara real-time</p>
+                    </div>
+                    <div class="text-right">
+                        <small>Update terakhir: <span id="last-update">-</span></small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Statistics Cards Row -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-6">
+            <div class="stats-card">
+                <div class="stats-number animate-number" id="total-barang">0</div>
+                <div class="stats-label">Total Barang</div>
+                <i class="fas fa-boxes" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="stats-number animate-number" id="total-toko">0</div>
+                <div class="stats-label">Total Toko Partner</div>
+                <i class="fas fa-store" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="stats-number animate-number" id="pengiriman-bulan">0</div>
+                <div class="stats-label">Pengiriman Bulan Ini</div>
+                <i class="fas fa-truck" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stats-number animate-number" id="retur-bulan">0</div>
+                <div class="stats-label">Retur Bulan Ini</div>
+                <i class="fas fa-undo-alt" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
     
     <!-- Main row -->
     <div class="row">
         <!-- Left col -->
         <div class="col-md-8">
             <!-- Grafik Pengiriman Chart - Enhanced -->
-            <div class="card dashboard-card">
-                <div class="card-header bg-primary">
-                    <h3 class="card-title">
+            <div class="card dashboard-card fade-in">
+                <div class="card-header bg-primary d-flex justify-content-between align-items-center">
+                    <h3 class="card-title text-white">
                         <i class="fas fa-chart-line mr-2"></i>
                         Grafik Pengiriman Barang
                     </h3>
@@ -137,8 +220,8 @@
             <!-- /.card -->
 
             <!-- Pengiriman Terbaru - Enhanced -->
-            <div class="card dashboard-card">
-                <div class="card-header border-transparent bg-info">
+            <div class="card dashboard-card fade-in">
+                <div class="card-header border-transparent bg-info d-flex justify-content-between align-items-center">
                     <h3 class="card-title text-white">
                         <i class="fas fa-history mr-2"></i>Transaksi Pengiriman Terbaru
                     </h3>
@@ -151,16 +234,15 @@
                 <div class="card-body p-0">
                     <div class="table-responsive" style="max-height: 400px;">
                         <table class="table table-hover m-0">
-                        <thead class="bg-light sticky-top">
-                            <tr>
-                            <th>No. Transaksi</th>
-                            <th>Customer</th>
-                            <th>Barang</th>
-                            <th>Tanggal</th>
-                            <th class="text-center">Qty & Harga</th>
-                            <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th>No. Transaksi</th>
+                                    <th>Customer/Toko</th>
+                                    <th>Barang</th>
+                                    <th class="text-center">Qty & Harga</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
                             <tbody id="table-transaksi">
                                 <!-- Data akan dimuat via AJAX -->
                             </tbody>
@@ -183,22 +265,22 @@
         
         <div class="col-md-4">
             <!-- Analisis Barang - Enhanced (Bar Chart) -->
-            <div class="card dashboard-card">
-                <div class="card-header bg-success">
+            <div class="card dashboard-card fade-in">
+                <div class="card-header bg-success d-flex justify-content-between align-items-center">
                     <h3 class="card-title text-white">
                         <i class="fas fa-chart-bar mr-2"></i>Analisis Barang
                     </h3>
                     <div class="card-tools">
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-light dropdown-toggle" data-toggle="dropdown" id="filter-barang-text">
-                                Barang Laku
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="filter-barang-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span id="filter-barang-text">Barang Laku</span>
                             </button>
-                            <div class="dropdown-menu">
+                            <div class="dropdown-menu" aria-labelledby="filter-barang-dropdown">
                                 <a class="dropdown-item filter-barang" href="#" data-filter="laku">
-                                    <i class="fas fa-thumbs-up text-success mr-1"></i>Barang Laku
+                                    <i class="fas fa-thumbs-up text-success mr-2"></i>Barang Laku
                                 </a>
                                 <a class="dropdown-item filter-barang" href="#" data-filter="tidak_laku">
-                                    <i class="fas fa-thumbs-down text-danger mr-1"></i>Barang Tidak Laku
+                                    <i class="fas fa-thumbs-down text-danger mr-2"></i>Barang Kurang Laku
                                 </a>
                             </div>
                         </div>
@@ -217,11 +299,12 @@
             <!-- /.card -->
 
             <!-- Toko Retur Terbanyak - Enhanced -->
-            <div class="card dashboard-card">
-                <div class="card-header bg-warning">
+            <div class="card dashboard-card fade-in">
+                <div class="card-header bg-warning d-flex justify-content-between align-items-center">
                     <h3 class="card-title">
                         <i class="fas fa-exclamation-triangle mr-2"></i>Toko Retur Terbanyak
                     </h3>
+                    <small class="text-muted">12 bulan terakhir</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive" style="max-height: 300px;">
@@ -255,15 +338,15 @@
             <!-- Info Cards Harian -->
             <div class="row">
                 <div class="col-12">
-                    <div class="info-box bg-gradient-info dashboard-card">
+                    <div class="info-box bg-gradient-info dashboard-card fade-in">
                         <span class="info-box-icon">
                             <i class="fas fa-calendar-day"></i>
                         </span>
                         <div class="info-box-content">
-                            <span class="info-box-text">Hari Ini</span>
+                            <span class="info-box-text">Aktivitas Hari Ini</span>
                             <span class="info-box-number">
-                                Pengiriman: <span id="pengiriman-hari">0</span> | 
-                                Pemesanan: <span id="pemesanan-hari">0</span>
+                                Pengiriman: <span id="pengiriman-hari" class="animate-number">0</span> | 
+                                Pemesanan: <span id="pemesanan-hari" class="animate-number">0</span>
                             </span>
                             <div class="progress">
                                 <div class="progress-bar bg-white" style="width: 70%; opacity: 0.4;"></div>

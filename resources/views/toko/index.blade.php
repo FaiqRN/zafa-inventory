@@ -15,9 +15,6 @@
                 <button type="button" class="btn btn-primary" id="btnTambah">
                     <i class="fas fa-plus"></i> Tambah Toko
                 </button>
-                <button type="button" class="btn btn-info" id="btnBatchGeocode" title="Batch Geocoding untuk semua toko">
-                    <i class="fas fa-map-marker-alt"></i> Batch Geocoding
-                </button>
             </div>
         </div>
         

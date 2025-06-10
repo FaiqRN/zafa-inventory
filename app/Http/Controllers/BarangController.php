@@ -34,8 +34,8 @@ class BarangController extends Controller
      */
     public function getData(Request $request)
     {
-        // Ambil HANYA data yang tidak terhapus (is_deleted = 0)
-        $data = Barang::where('is_deleted', 0)->get();
+        // Ambil HANYA data yang tidak terhapus (is_deleted = 0) dan urutkan berdasarkan kode barang
+        $data = Barang::where('is_deleted', 0)->orderBy('barang_kode', 'asc')->get();
         
         $response = DataTables::of($data)
             ->addIndexColumn()
@@ -235,8 +235,8 @@ class BarangController extends Controller
 
     public function getList(Request $request)
     {
-        // Ambil HANYA data yang tidak terhapus (is_deleted = 0)
-        $data = Barang::where('is_deleted', 0)->get();
+        // Ambil HANYA data yang tidak terhapus (is_deleted = 0) dan urutkan berdasarkan kode barang
+        $data = Barang::where('is_deleted', 0)->orderBy('barang_kode', 'asc')->get();
         
         return response()->json([
             'status' => 'success',

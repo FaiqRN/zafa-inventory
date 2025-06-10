@@ -1,8 +1,8 @@
 $(document).ready(function() {
-    // Inisialisasi variabel sorting
+    // Inisialisasi variabel sorting - pastikan default adalah data terbaru
     var currentSort = {
         column: 'tanggal_pengiriman',
-        direction: 'desc'
+        direction: 'desc' // Default ke desc untuk menampilkan data terbaru terlebih dahulu
     };
 
     // Initialize Select2
@@ -25,8 +25,11 @@ $(document).ready(function() {
     const today = new Date().toISOString().split('T')[0];
     $('#tanggal_pengiriman').val(today);
 
-    // Load initial data
+    // Load initial data - pastikan sorting indicator ditampilkan
     loadPengirimanData();
+    
+    // Set initial sorting indicator
+    $('.sortable[data-column="tanggal_pengiriman"]').addClass('sorting-desc');
     
     // Handler klik untuk header tabel yang dapat diurutkan
     $(document).on('click', '.sortable', function() {
@@ -69,109 +72,120 @@ $(document).ready(function() {
         $('#filter_start_date').val('');
         $('#filter_end_date').val('');
         $('#current_page').val(1); // Reset page ke 1
+        
+        // Reset sorting ke default (tanggal terbaru)
+        currentSort = {
+            column: 'tanggal_pengiriman',
+            direction: 'desc'
+        };
+        
+        // Update UI sorting indicator
+        $('.sortable').removeClass('sorting-asc sorting-desc');
+        $('.sortable[data-column="tanggal_pengiriman"]').addClass('sorting-desc');
+        
         loadPengirimanData();
     });
 
     // Export data button
-// Export Excel button
-$('#export-excel').click(function() {
-    console.log('Export Excel button clicked');
-    doExport('xlsx');
-});
-
-// Export CSV button
-$('#export-csv').click(function() {
-    console.log('Export CSV button clicked');
-    doExport('csv');
-});
-
-// Fungsi untuk melakukan export
-function doExport(format) {
-    // Buat URL dasar
-    var url = '/pengiriman/export';
-    
-    // Buat form sementara
-    var $form = $('<form>', {
-        'method': 'GET',
-        'action': url
+    // Export Excel button
+    $('#export-excel').click(function() {
+        console.log('Export Excel button clicked');
+        doExport('xlsx');
     });
-    
-    // Tambahkan parameter format
-    $form.append($('<input>', {
-        'type': 'hidden',
-        'name': 'format',
-        'value': format
-    }));
-    
-    // Tambahkan filter jika ada
-    if ($('#filter_toko_id').val()) {
-        $form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'toko_id',
-            'value': $('#filter_toko_id').val()
-        }));
-    }
-    
-    if ($('#filter_status').val()) {
-        $form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'status',
-            'value': $('#filter_status').val()
-        }));
-    }
-    
-    if ($('#filter_start_date').val()) {
-        $form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'start_date',
-            'value': $('#filter_start_date').val()
-        }));
-    }
-    
-    if ($('#filter_end_date').val()) {
-        $form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'end_date',
-            'value': $('#filter_end_date').val()
-        }));
-    }
-    
-    // Tambahkan parameter sorting
-    $form.append($('<input>', {
-        'type': 'hidden',
-        'name': 'sort_column',
-        'value': currentSort.column
-    }));
-    
-    $form.append($('<input>', {
-        'type': 'hidden',
-        'name': 'sort_direction',
-        'value': currentSort.direction
-    }));
-    
-    // Tambahkan CSRF token untuk keamanan
-    $form.append($('<input>', {
-        'type': 'hidden',
-        'name': '_token',
-        'value': $('meta[name="csrf-token"]').attr('content')
-    }));
-    
-    // Log untuk debugging
-    console.log('Exporting with parameters:', {
-        format: format,
-        toko_id: $('#filter_toko_id').val(),
-        status: $('#filter_status').val(),
-        start_date: $('#filter_start_date').val(),
-        end_date: $('#filter_end_date').val(),
-        sort_column: currentSort.column,
-        sort_direction: currentSort.direction
+
+    // Export CSV button
+    $('#export-csv').click(function() {
+        console.log('Export CSV button clicked');
+        doExport('csv');
     });
-    
-    // Tambahkan form ke body, submit, dan hapus
-    $('body').append($form);
-    $form.submit();
-    $form.remove();
-}
+
+    // Fungsi untuk melakukan export
+    function doExport(format) {
+        // Buat URL dasar
+        var url = '/pengiriman/export';
+        
+        // Buat form sementara
+        var $form = $('<form>', {
+            'method': 'GET',
+            'action': url
+        });
+        
+        // Tambahkan parameter format
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'format',
+            'value': format
+        }));
+        
+        // Tambahkan filter jika ada
+        if ($('#filter_toko_id').val()) {
+            $form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'toko_id',
+                'value': $('#filter_toko_id').val()
+            }));
+        }
+        
+        if ($('#filter_status').val()) {
+            $form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'status',
+                'value': $('#filter_status').val()
+            }));
+        }
+        
+        if ($('#filter_start_date').val()) {
+            $form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'start_date',
+                'value': $('#filter_start_date').val()
+            }));
+        }
+        
+        if ($('#filter_end_date').val()) {
+            $form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'end_date',
+                'value': $('#filter_end_date').val()
+            }));
+        }
+        
+        // Tambahkan parameter sorting
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'sort_column',
+            'value': currentSort.column
+        }));
+        
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': 'sort_direction',
+            'value': currentSort.direction
+        }));
+        
+        // Tambahkan CSRF token untuk keamanan
+        $form.append($('<input>', {
+            'type': 'hidden',
+            'name': '_token',
+            'value': $('meta[name="csrf-token"]').attr('content')
+        }));
+        
+        // Log untuk debugging
+        console.log('Exporting with parameters:', {
+            format: format,
+            toko_id: $('#filter_toko_id').val(),
+            status: $('#filter_status').val(),
+            start_date: $('#filter_start_date').val(),
+            end_date: $('#filter_end_date').val(),
+            sort_column: currentSort.column,
+            sort_direction: currentSort.direction
+        });
+        
+        // Tambahkan form ke body, submit, dan hapus
+        $('body').append($form);
+        $form.submit();
+        $form.remove();
+    }
 
     // Generate nomor pengiriman when opening the add modal
     $('#btnTambahPengiriman').click(function() {
@@ -493,11 +507,20 @@ function doExport(format) {
                 if (response.data.length === 0) {
                     // Handle empty data
                     $('#table-pengiriman tbody').html('<tr><td colspan="8" class="text-center">Tidak ada data</td></tr>');
+                    $('#pagination-container').empty();
                     return;
                 }
                 
+                // Calculate correct numbering for pagination
+                var currentPage = response.current_page;
+                var perPage = response.per_page;
+                var startNumber = (currentPage - 1) * perPage;
+                
                 // Loop through the data and append rows to the table
                 $.each(response.data, function(index, item) {
+                    // Calculate correct row number
+                    var rowNumber = startNumber + index + 1;
+                    
                     // Create formatted date
                     var tanggal = new Date(item.tanggal_pengiriman);
                     var formattedTanggal = tanggal.getDate() + '/' + (tanggal.getMonth() + 1) + '/' + tanggal.getFullYear();
@@ -530,7 +553,7 @@ function doExport(format) {
                     // Create row
                     var row = `
                         <tr>
-                            <td>${index + 1}</td>
+                            <td>${rowNumber}</td>
                             <td>${item.nomer_pengiriman}</td>
                             <td>${formattedTanggal}</td>
                             <td>${item.toko ? item.toko.nama_toko : ''}</td>

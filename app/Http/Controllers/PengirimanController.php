@@ -516,70 +516,78 @@ public function export(Request $request)
     }
 }
 
-    /**
-     * Get list of pengiriman with pagination.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function getList(Request $request)
-    {
-        $query = Pengiriman::with(['toko', 'barang']);
-        
-        // Filter by toko_id if provided
-        if ($request->has('toko_id') && !empty($request->toko_id)) {
-            $query->where('toko_id', $request->toko_id);
-        }
+/**
+ * Get list of pengiriman with pagination.
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function getList(Request $request)
+{
+    $query = Pengiriman::with(['toko', 'barang']);
     
-        // Filter by status if provided
-        if ($request->has('status') && !empty($request->status)) {
-            $query->where('status', $request->status);
-        }
-    
-        // Filter by date range if provided
-        if ($request->has('start_date') && !empty($request->start_date)) {
-            $query->whereDate('tanggal_pengiriman', '>=', $request->start_date);
-        }
-        
-        if ($request->has('end_date') && !empty($request->end_date)) {
-            $query->whereDate('tanggal_pengiriman', '<=', $request->end_date);
-        }
-        
-        // Sorting
-        $sortColumn = $request->input('sort_column', 'tanggal_pengiriman');
-        $sortDirection = $request->input('sort_direction', 'desc');
-        
-        // Validasi kolom yang diizinkan untuk sorting untuk mencegah SQL injection
-        $allowedColumns = [
-            'nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 
-            'barang_id', 'jumlah_kirim', 'status'
-        ];
-        
-        if (!in_array($sortColumn, $allowedColumns)) {
-            $sortColumn = 'tanggal_pengiriman';
-        }
-        
-        // Apply sorting
-        $query->orderBy($sortColumn, $sortDirection);
-        
-        // Pagination
-        $perPage = 10;
-        $page = $request->input('page', 1);
-        $total = $query->count();
-        $result = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
-        
-        // Prepare response
-        $response = [
-            'data' => $result,
-            'total' => $total,
-            'per_page' => $perPage,
-            'current_page' => (int)$page,
-            'last_page' => ceil($total / $perPage)
-        ];
-        
-        return response()->json($response)
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+    // Filter by toko_id if provided
+    if ($request->has('toko_id') && !empty($request->toko_id)) {
+        $query->where('toko_id', $request->toko_id);
     }
+
+    // Filter by status if provided
+    if ($request->has('status') && !empty($request->status)) {
+        $query->where('status', $request->status);
+    }
+
+    // Filter by date range if provided
+    if ($request->has('start_date') && !empty($request->start_date)) {
+        $query->whereDate('tanggal_pengiriman', '>=', $request->start_date);
+    }
+    
+    if ($request->has('end_date') && !empty($request->end_date)) {
+        $query->whereDate('tanggal_pengiriman', '<=', $request->end_date);
+    }
+    
+    // Sorting - pastikan default adalah tanggal terbaru ke terlama
+    $sortColumn = $request->input('sort_column', 'tanggal_pengiriman');
+    $sortDirection = $request->input('sort_direction', 'desc'); // Default desc untuk data terbaru
+    
+    // Validasi kolom yang diizinkan untuk sorting untuk mencegah SQL injection
+    $allowedColumns = [
+        'nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 
+        'barang_id', 'jumlah_kirim', 'status'
+    ];
+    
+    if (!in_array($sortColumn, $allowedColumns)) {
+        $sortColumn = 'tanggal_pengiriman';
+        $sortDirection = 'desc'; // Reset ke default jika kolom tidak valid
+    }
+    
+    // Apply sorting - untuk konsistensi, tambah secondary sort berdasarkan ID
+    $query->orderBy($sortColumn, $sortDirection);
+    
+    // Tambahkan secondary sorting berdasarkan pengiriman_id untuk konsistensi
+    if ($sortColumn !== 'pengiriman_id') {
+        $query->orderBy('pengiriman_id', 'desc');
+    }
+    
+    // Pagination
+    $perPage = 10;
+    $page = $request->input('page', 1);
+    $total = $query->count();
+    
+    // Get paginated results
+    $result = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
+    
+    // Prepare response
+    $response = [
+        'data' => $result,
+        'total' => $total,
+        'per_page' => $perPage,
+        'current_page' => (int)$page,
+        'last_page' => ceil($total / $perPage)
+    ];
+    
+    return response()->json($response)
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
+}
 }
