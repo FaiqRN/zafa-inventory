@@ -386,11 +386,6 @@ Tips: Gunakan emoji untuk membuat pesan lebih menarik 😊"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-                <button type="button" class="btn btn-success" id="sendIndividualBtn">
-                    <i class="fab fa-whatsapp mr-1"></i>
-                    Kirim WhatsApp Individual
-                </button>
             </div>
         </div>
     </div>
