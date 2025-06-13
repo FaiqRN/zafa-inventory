@@ -1,6 +1,6 @@
 @extends('layouts.template')
 
-@section('page_title', 'CRM Market Intelligence')
+@section('page_title', 'CRM Market Intelligence - Ekspansi Toko')
 
 @section('breadcrumb')
 <li class="breadcrumb-item"><a href="{{ url('/') }}">Home</a></li>
@@ -29,14 +29,14 @@
             <div class="small-box bg-info hover-lift">
                 <div class="inner">
                     <h3 id="total-partners" class="animate-counter">-</h3>
-                    <p>Total Partners</p>
+                    <p>Total Toko</p>
                 </div>
                 <div class="icon">
-                    <i class="fas fa-handshake"></i>
+                    <i class="fas fa-store"></i>
                 </div>
                 <div class="small-box-footer">
                     <span class="text-white">
-                        <i class="fas fa-arrow-up"></i> +5.2% from last month
+                        <i class="fas fa-chart-line"></i> Geographic Distribution
                     </span>
                 </div>
             </div>
@@ -45,15 +45,15 @@
         <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
             <div class="small-box bg-success hover-lift">
                 <div class="inner">
-                    <h3 id="active-partners" class="animate-counter">-</h3>
-                    <p>Active Partners</p>
+                    <h3 id="geo-clusters" class="animate-counter">-</h3>
+                    <p>Geo Cluster</p>
                 </div>
                 <div class="icon">
-                    <i class="fas fa-chart-line"></i>
+                    <i class="fas fa-map-marked-alt"></i>
                 </div>
                 <div class="small-box-footer">
                     <span class="text-white">
-                        <i class="fas fa-arrow-up"></i> +3.1% from last month
+                        <i class="fas fa-bullseye"></i> 1.5km Radius
                     </span>
                 </div>
             </div>
@@ -62,15 +62,15 @@
         <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
             <div class="small-box bg-warning hover-lift">
                 <div class="inner">
-                    <h3 id="high-performers" class="animate-counter">-</h3>
-                    <p>High Performers</p>
+                    <h3><span id="avg-margin" class="animate-counter">-</span>%</h3>
+                    <p>Avg Margin</p>
                 </div>
                 <div class="icon">
-                    <i class="fas fa-star"></i>
+                    <i class="fas fa-percentage"></i>
                 </div>
                 <div class="small-box-footer">
                     <span class="text-white">
-                        <i class="fas fa-arrow-up"></i> +8.4% from last month
+                        <i class="fas fa-arrow-up"></i> Profit Analysis
                     </span>
                 </div>
             </div>
@@ -79,470 +79,228 @@
         <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
             <div class="small-box bg-danger hover-lift">
                 <div class="inner">
-                    <h3><span id="coverage-percentage" class="animate-counter">-</span>%</h3>
-                    <p>GPS Coverage</p>
+                    <h3>Rp <span id="total-revenue" class="animate-counter">-</span></h3>
+                    <p>Total Revenue</p>
                 </div>
                 <div class="icon">
-                    <i class="fas fa-map-marked-alt"></i>
+                    <i class="fas fa-money-bill-wave"></i>
                 </div>
                 <div class="small-box-footer">
                     <span class="text-white">
-                        <i class="fas fa-arrow-up"></i> +2.7% from last month
+                        <i class="fas fa-coins"></i> Monthly Projection
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- CRM Controls Panel -->
-    <div class="card card-outline card-primary shadow-lg-custom">
+    <!-- Tab Navigation System -->
+    <div class="card shadow-lg-custom">
         <div class="card-header bg-gradient-primary">
             <h3 class="card-title text-white">
-                <i class="fas fa-sliders-h mr-2"></i>
-                CRM Intelligence Controls
+                <i class="fas fa-chart-area mr-2"></i>
+                CRM Ekspansi Toko - Market Intelligence
             </h3>
-            <div class="card-tools">
-                <div class="btn-group">
-                    <button class="btn btn-light btn-sm" id="btn-refresh-map" title="Refresh Data">
-                        <i class="fas fa-sync-alt mr-1"></i>Refresh
-                    </button>
-                    <button class="btn btn-light btn-sm" id="btn-clear-cache" title="Clear Cache">
-                        <i class="fas fa-trash mr-1"></i>Clear Cache
-                    </button>
-                </div>
-            </div>
         </div>
-        <div class="card-body">
-            <!-- Filters Row -->
-            <div class="row mb-3">
-                <div class="col-lg-3 col-md-6 mb-2">
-                    <div class="form-group">
-                        <label class="form-label text-sm font-weight-bold text-uppercase">
-                            <i class="fas fa-map mr-1"></i>Territory Filter
-                        </label>
-                        <select class="form-control form-control-sm" id="filter-wilayah">
-                            <option value="all">All Territories</option>
-                            <option value="Kota Malang">Kota Malang</option>
-                            <option value="Kabupaten Malang">Kabupaten Malang</option>
-                            <option value="Kota Batu">Kota Batu</option>
-                        </select>
-                    </div>
-                </div>
+        <div class="card-body p-0">
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs nav-justified" id="crmTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active font-weight-bold" id="overview-tab" data-toggle="tab" href="#overview" role="tab">
+                        <i class="fas fa-chart-pie mr-2"></i>📈 Overview
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link font-weight-bold" id="analysis-tab" data-toggle="tab" href="#analysis" role="tab">
+                        <i class="fas fa-search mr-2"></i>🔍 Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link font-weight-bold" id="expansion-tab" data-toggle="tab" href="#expansion" role="tab">
+                        <i class="fas fa-rocket mr-2"></i>🚀 Ekspansi
+                    </a>
+                </li>
+            </ul>
 
-                <div class="col-lg-3 col-md-6 mb-2">
-                    <div class="form-group">
-                        <label class="form-label text-sm font-weight-bold text-uppercase">
-                            <i class="fas fa-users mr-1"></i>Partner Segment
-                        </label>
-                        <select class="form-control form-control-sm" id="filter-segment">
-                            <option value="all">All Segments</option>
-                            <option value="Premium Partner">Premium Partners</option>
-                            <option value="Growth Partner">Growth Partners</option>
-                            <option value="Standard Partner">Standard Partners</option>
-                            <option value="New Partner">New Partners</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 mb-2">
-                    <div class="form-group">
-                        <label class="form-label text-sm font-weight-bold text-uppercase">
-                            <i class="fas fa-chart-bar mr-1"></i>Performance Level
-                        </label>
-                        <select class="form-control form-control-sm" id="filter-performance">
-                            <option value="all">All Performance</option>
-                            <option value="high">High (80-100)</option>
-                            <option value="medium">Medium (60-79)</option>
-                            <option value="low">Low (40-59)</option>
-                            <option value="very-low">Very Low (0-39)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-md-6 mb-2">
-                    <div class="form-group">
-                        <label class="form-label text-sm font-weight-bold text-uppercase">
-                            <i class="fas fa-calendar mr-1"></i>Date Range
-                        </label>
-                        <select class="form-control form-control-sm" id="filter-date">
-                            <option value="all">All Time</option>
-                            <option value="7d">Last 7 Days</option>
-                            <option value="30d">Last 30 Days</option>
-                            <option value="90d">Last 90 Days</option>
-                            <option value="1y">Last Year</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Toggle Controls -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <div class="d-flex flex-wrap justify-content-center gap-3">
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="toggle-cluster" checked>
-                            <label class="custom-control-label" for="toggle-cluster">
-                                <i class="fas fa-layer-group mr-1"></i>Partner Clustering
-                            </label>
-                        </div>
-
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="toggle-heatmap">
-                            <label class="custom-control-label" for="toggle-heatmap">
-                                <i class="fas fa-fire mr-1"></i>Performance Heatmap
-                            </label>
-                        </div>
-
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="toggle-grid-heatmap" checked>
-                            <label class="custom-control-label" for="toggle-grid-heatmap">
-                                <i class="fas fa-th mr-1"></i>Territory Grid
-                            </label>
-                        </div>
-
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="toggle-performance">
-                            <label class="custom-control-label" for="toggle-performance">
-                                <i class="fas fa-percentage mr-1"></i>Performance Scores
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="btn-group btn-group-sm d-flex flex-wrap justify-content-center" role="group">
-                        <button type="button" class="btn btn-primary btn-crm" id="btn-price-recommendations">
-                            <i class="fas fa-dollar-sign mr-1"></i>Price Intelligence
-                        </button>
-                        <button type="button" class="btn btn-success btn-crm" id="btn-partner-analysis">
-                            <i class="fas fa-chart-bar mr-1"></i>Partner Analysis
-                        </button>
-                        <button type="button" class="btn btn-warning btn-crm" id="btn-market-opportunities">
-                            <i class="fas fa-bullseye mr-1"></i>Market Opportunities
-                        </button>
-                        <button type="button" class="btn btn-info btn-crm" id="btn-export-insights">
-                            <i class="fas fa-download mr-1"></i>Export Insights
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-crm" id="btn-system-health">
-                            <i class="fas fa-heartbeat mr-1"></i>System Health
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content Row -->
-    <div class="row">
-        <!-- Map Column -->
-        <div class="col-lg-8 mb-4">
-            <div class="card card-primary card-outline shadow-md-custom">
-                <div class="card-header bg-gradient-primary">
-                    <h3 class="card-title text-white">
-                        <i class="fas fa-map mr-2"></i>
-                        Geographic CRM Intelligence
-                    </h3>
-                    <div class="card-tools">
-                        <span class="badge badge-light" id="visible-partners-badge">
-                            <i class="fas fa-eye mr-1"></i>
-                            <span id="visible-partners-count">0</span> visible
-                        </span>
-                        <button type="button" class="btn btn-tool text-white" data-card-widget="maximize" title="Maximize">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                        <button type="button" class="btn btn-tool text-white" data-card-widget="collapse" title="Collapse">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="market-map-container">
-                        <div id="market-map" style="height: 600px; width: 100%;"></div>
-                        <div class="map-loading-overlay" id="map-loading" style="display: none;">
-                            <div class="d-flex flex-column align-items-center justify-content-center h-100">
-                                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
-                                    <span class="sr-only">Loading...</span>
-                                </div>
-                                <h5 class="text-muted">Loading CRM Map Data...</h5>
-                                <p class="text-muted">Please wait while we load partner information</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Map Error State -->
-                        <div class="map-error-overlay" id="map-error" style="display: none;">
-                            <div class="d-flex flex-column align-items-center justify-content-center h-100">
-                                <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 3rem;"></i>
-                                <h5 class="text-danger">Map Loading Error</h5>
-                                <p class="text-muted text-center">Unable to load map data.<br>Please check your connection and try again.</p>
-                                <button class="btn btn-primary" onclick="location.reload()">
-                                    <i class="fas fa-sync-alt mr-1"></i>Retry
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Tab Content -->
+            <div class="tab-content p-3" id="crmTabContent">
                 
-                <!-- Map Footer with Quick Stats -->
-                <div class="card-footer bg-light">
-                    <div class="row text-center">
-                        <div class="col-3">
-                            <div class="description-block">
-                                <span class="description-percentage text-success">
-                                    <i class="fas fa-caret-up"></i> 3.2%
-                                </span>
-                                <h5 class="description-header" id="footer-total-partners">0</h5>
-                                <span class="description-text">TOTAL PARTNERS</span>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="description-block">
-                                <span class="description-percentage text-warning">
-                                    <i class="fas fa-caret-left"></i> 0.1%
-                                </span>
-                                <h5 class="description-header" id="footer-premium-partners">0</h5>
-                                <span class="description-text">PREMIUM</span>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="description-block">
-                                <span class="description-percentage text-success">
-                                    <i class="fas fa-caret-up"></i> 2.1%
-                                </span>
-                                <h5 class="description-header" id="footer-active-partners">0</h5>
-                                <span class="description-text">ACTIVE</span>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="description-block">
-                                <span class="description-percentage text-info">
-                                    <i class="fas fa-caret-up"></i> 1.5%
-                                </span>
-                                <h5 class="description-header" id="footer-coverage">0%</h5>
-                                <span class="description-text">COVERAGE</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CRM Insights Sidebar -->
-        <div class="col-lg-4">
-            <!-- AI Insights Card -->
-            <div class="card card-success card-outline shadow-md-custom mb-4">
-                <div class="card-header bg-gradient-success">
-                    <h3 class="card-title text-white">
-                        <i class="fas fa-lightbulb mr-2"></i>
-                        AI Insights
-                    </h3>
-                    <div class="card-tools">
-                        <span class="badge badge-light animate-pulse">Live</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="crm-insights-content">
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-brain fa-spin mb-2 fa-2x text-success"></i>
-                            <p class="mb-0">Analyzing partner data...</p>
-                            <small>Generating AI-powered insights</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Market Opportunities Card -->
-            <div class="card card-warning card-outline shadow-md-custom mb-4">
-                <div class="card-header bg-gradient-warning">
-                    <h3 class="card-title">
-                        <i class="fas fa-bullseye mr-2"></i>
-                        Market Opportunities
-                    </h3>
-                    <div class="card-tools">
-                        <span class="badge badge-light">High Priority</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="market-opportunities-content">
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-search fa-spin mb-2 fa-2x text-warning"></i>
-                            <p class="mb-0">Identifying opportunities...</p>
-                            <small>Scanning market gaps</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button class="btn btn-warning btn-sm btn-block btn-crm" id="btn-view-all-opportunities">
-                        <i class="fas fa-eye mr-1"></i>View All Opportunities
-                    </button>
-                </div>
-            </div>
-
-            <!-- Price Intelligence Card -->
-            <div class="card card-info card-outline shadow-md-custom mb-4">
-                <div class="card-header bg-gradient-info">
-                    <h3 class="card-title text-white">
-                        <i class="fas fa-dollar-sign mr-2"></i>
-                        Price Intelligence
-                    </h3>
-                    <div class="card-tools">
-                        <span class="badge badge-light">Updated</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="price-intelligence-content">
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-chart-line fa-spin mb-2 fa-2x text-info"></i>
-                            <p class="mb-0">Processing price data...</p>
-                            <small>Analyzing market pricing</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button class="btn btn-info btn-sm btn-block btn-crm" id="load-price-intel">
-                        <i class="fas fa-search mr-1"></i>Advanced Analysis
-                    </button>
-                </div>
-            </div>
-
-            <!-- Partner Performance Card -->
-            <div class="card card-primary card-outline shadow-md-custom mb-4">
-                <div class="card-header bg-gradient-primary">
-                    <h3 class="card-title text-white">
-                        <i class="fas fa-chart-bar mr-2"></i>
-                        Partner Performance
-                    </h3>
-                    <div class="card-tools">
-                        <span class="badge badge-light">Real-time</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="partner-performance-content">
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-users fa-spin mb-2 fa-2x text-primary"></i>
-                            <p class="mb-0">Calculating performance...</p>
-                            <small>Analyzing partner metrics</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button class="btn btn-primary btn-sm btn-block btn-crm" id="btn-performance-report">
-                        <i class="fas fa-file-alt mr-1"></i>Generate Report
-                    </button>
-                </div>
-            </div>
-
-            <!-- System Status Card -->
-            <div class="card card-secondary card-outline shadow-md-custom">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-server mr-2"></i>
-                        System Status
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="info-box mb-2">
-                        <span class="info-box-icon bg-success"><i class="fas fa-database"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Database</span>
-                            <span class="info-box-number">Online</span>
-                        </div>
-                    </div>
-                    <div class="info-box mb-2">
-                        <span class="info-box-icon bg-info"><i class="fas fa-memory"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Cache Status</span>
-                            <span class="info-box-number">Active</span>
-                        </div>
-                    </div>
-                    <div class="info-box">
-                        <span class="info-box-icon bg-warning"><i class="fas fa-clock"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Last Update</span>
-                            <span class="info-box-number" id="last-update-time">-</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Price Intelligence Modal -->
-<div class="modal fade" id="price-intelligence-modal" tabindex="-1" role="dialog" aria-labelledby="priceIntelligenceModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h4 class="modal-title text-white" id="priceIntelligenceModalLabel">
-                    <i class="fas fa-brain mr-2"></i>
-                    Advanced Price Intelligence
-                </h4>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- Price Analysis Filters -->
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label font-weight-bold">Territory Filter</label>
-                            <select class="form-control" id="price-territory-filter">
-                                <option value="">All Territories</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label font-weight-bold">Product Filter</label>
-                            <select class="form-control" id="price-product-filter">
-                                <option value="">All Products</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label font-weight-bold">&nbsp;</label>
-                            <button class="btn btn-primary btn-block btn-crm" id="analyze-pricing">
-                                <i class="fas fa-search mr-1"></i>Analyze Pricing
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Price Analysis Results -->
-                <div id="price-analysis-results">
-                    <div class="text-center text-muted py-5">
-                        <i class="fas fa-chart-line fa-3x mb-3 text-primary"></i>
-                        <h5>Price Intelligence Analysis</h5>
-                        <p>Select filters and click "Analyze Pricing" to view comprehensive insights</p>
-                        <div class="row mt-4">
-                            <div class="col-md-4">
-                                <div class="info-box">
-                                    <span class="info-box-icon bg-primary"><i class="fas fa-tags"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Price Points</span>
-                                        <span class="info-box-number">Analysis Ready</span>
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                    <div class="row">
+                        <!-- Map Column -->
+                        <div class="col-lg-8 mb-4">
+                            <div class="card card-primary card-outline">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-map mr-2"></i>Geographic Market Analysis
+                                    </h3>
+                                    <div class="card-tools">
+                                        <span class="badge badge-light" id="visible-partners-badge">
+                                            <i class="fas fa-eye mr-1"></i>
+                                            <span id="visible-partners-count">0</span> visible
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="market-map-container">
+                                        <div id="market-map" style="height: 500px; width: 100%;"></div>
+                                        <div class="map-loading-overlay" id="map-loading" style="display: none;">
+                                            <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                                                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                                    <span class="sr-only">Loading...</span>
+                                                </div>
+                                                <h5 class="text-muted">Loading Market Map...</h5>
+                                                <p class="text-muted">Calculating profit and clustering data</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="info-box">
-                                    <span class="info-box-icon bg-success"><i class="fas fa-percentage"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Margin Analysis</span>
-                                        <span class="info-box-number">Available</span>
+                        </div>
+
+                        <!-- Control Panel -->
+                        <div class="col-lg-4">
+                            <!-- Legend Cluster -->
+                            <div class="card card-info mb-3">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-palette mr-2"></i>Legend Cluster
+                                    </h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="legend-items">
+                                        <div class="legend-item mb-2">
+                                            <span class="legend-color bg-success"></span>
+                                            <span>🟢 Hijau (Margin >20%): Excellent Performance</span>
+                                        </div>
+                                        <div class="legend-item mb-2">
+                                            <span class="legend-color bg-warning"></span>
+                                            <span>🟡 Kuning (Margin 10-20%): Good Performance</span>
+                                        </div>
+                                        <div class="legend-item mb-2">
+                                            <span class="legend-color bg-danger"></span>
+                                            <span>🔴 Merah (Margin <10%): Poor Performance</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-color" style="background-color: #8b5cf6;"></span>
+                                            <span>🟣 Ungu: Cluster Boundary (1.5km)</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="info-box">
-                                    <span class="info-box-icon bg-warning"><i class="fas fa-chart-bar"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Market Trends</span>
-                                        <span class="info-box-number">Ready</span>
+
+                            <!-- Action Buttons -->
+                            <div class="card card-success">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-cogs mr-2"></i>Action Controls
+                                    </h3>
+                                </div>
+                                <div class="card-body">
+                                    <button type="button" class="btn btn-warning btn-block btn-lg mb-3" id="btn-calculate-profit">
+                                        <i class="fas fa-calculator mr-2"></i>
+                                        💰 Hitung Profit Semua Toko
+                                    </button>
+                                    <button type="button" class="btn btn-info btn-block btn-lg mb-3" id="btn-create-clustering">
+                                        <i class="fas fa-project-diagram mr-2"></i>
+                                        🗺️ Buat Geographic Clustering
+                                    </button>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <button type="button" class="btn btn-primary btn-sm btn-block" id="btn-refresh-data">
+                                                <i class="fas fa-sync-alt mr-1"></i>Refresh
+                                            </button>
+                                        </div>
+                                        <div class="col-6">
+                                            <button type="button" class="btn btn-secondary btn-sm btn-block" id="btn-clear-cache">
+                                                <i class="fas fa-trash mr-1"></i>Clear Cache
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Tab -->
+                <div class="tab-pane fade" id="analysis" role="tabpanel">
+                    <div class="row">
+                        <!-- Profit Analysis Panel -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card card-warning">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-chart-bar mr-2"></i>📈 Profit Analysis
+                                    </h3>
+                                </div>
+                                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                                    <div id="profit-analysis-content">
+                                        <div class="text-center text-muted py-5">
+                                            <i class="fas fa-calculator fa-3x mb-3 text-warning"></i>
+                                            <h5>Profit Analysis</h5>
+                                            <p>Klik "Hitung Profit Semua Toko" pada tab Overview untuk memulai analisis</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Geographic Clusters Panel -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-map-marked-alt mr-2"></i>🎯 Geographic Clusters
+                                    </h3>
+                                </div>
+                                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                                    <div id="clustering-analysis-content">
+                                        <div class="text-center text-muted py-5">
+                                            <i class="fas fa-project-diagram fa-3x mb-3 text-info"></i>
+                                            <h5>Geographic Clustering</h5>
+                                            <p>Klik "Buat Geographic Clustering" pada tab Overview untuk memulai pengelompokan</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expansion Tab -->
+                <div class="tab-pane fade" id="expansion" role="tabpanel">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-success">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-rocket mr-2"></i>🚀 Expansion Planning & Recommendations
+                                    </h3>
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-success btn-sm" id="btn-generate-expansion">
+                                            <i class="fas fa-magic mr-1"></i>Generate Expansion Plan
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div id="expansion-recommendations-content">
+                                        <div class="text-center text-muted py-5">
+                                            <i class="fas fa-rocket fa-3x mb-3 text-success"></i>
+                                            <h5>Expansion Recommendations</h5>
+                                            <p>Silakan jalankan Profit Analysis dan Geographic Clustering terlebih dahulu, kemudian klik "Generate Expansion Plan"</p>
+                                            <div class="mt-4">
+                                                <div class="alert alert-info">
+                                                    <h6><i class="fas fa-info-circle mr-2"></i>Requirements:</h6>
+                                                    <ul class="list-unstyled mb-0">
+                                                        <li>✅ Data profit analysis harus sudah dijalankan</li>
+                                                        <li>✅ Geographic clustering harus sudah dibuat</li>
+                                                        <li>✅ Minimum margin threshold: 10%</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -550,137 +308,48 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times mr-1"></i>Close
-                </button>
-                <button type="button" class="btn btn-primary btn-crm" id="export-price-analysis">
-                    <i class="fas fa-download mr-1"></i>Export Analysis
-                </button>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- Partner Analysis Modal -->
-<div class="modal fade" id="partner-analysis-modal" tabindex="-1" role="dialog" aria-labelledby="partnerAnalysisModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-success">
-                <h4 class="modal-title text-white" id="partnerAnalysisModalLabel">
-                    <i class="fas fa-chart-bar mr-2"></i>
-                    Partner Performance Analysis
-                </h4>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="partner-analysis-content">
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-spinner fa-spin fa-2x mb-3 text-success"></i>
-                        <h5>Loading Partner Analysis...</h5>
-                        <p>Calculating performance metrics and generating insights</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times mr-1"></i>Close
-                </button>
-                <button type="button" class="btn btn-success btn-crm" id="export-partner-analysis">
-                    <i class="fas fa-download mr-1"></i>Export Report
-                </button>
-                <button type="button" class="btn btn-info btn-crm" id="btn-detailed-analysis">
-                    <i class="fas fa-search-plus mr-1"></i>Detailed Analysis
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Market Opportunities Modal -->
-<div class="modal fade" id="market-opportunities-modal" tabindex="-1" role="dialog" aria-labelledby="marketOpportunitiesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h4 class="modal-title" id="marketOpportunitiesModalLabel">
-                    <i class="fas fa-bullseye mr-2"></i>
-                    Market Expansion Opportunities
-                </h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="market-opportunities-analysis">
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i>
-                        <h5>Analyzing Market Opportunities...</h5>
-                        <p>Identifying high-potential territories and expansion strategies</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times mr-1"></i>Close
-                </button>
-                <button type="button" class="btn btn-warning btn-crm" id="export-opportunities">
-                    <i class="fas fa-download mr-1"></i>Export Opportunities
-                </button>
-                <button type="button" class="btn btn-primary btn-crm" id="btn-territory-details">
-                    <i class="fas fa-map mr-1"></i>Territory Details
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- System Health Modal -->
-<div class="modal fade" id="system-health-modal" tabindex="-1" role="dialog" aria-labelledby="systemHealthModalLabel" aria-hidden="true">
+<!-- Store Detail Modal -->
+<div class="modal fade" id="store-detail-modal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-info">
-                <h4 class="modal-title text-white" id="systemHealthModalLabel">
-                    <i class="fas fa-heartbeat mr-2"></i>
-                    System Health & Performance
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title text-white">
+                    <i class="fas fa-store mr-2"></i>Store Details
                 </h4>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <div id="system-health-content">
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-spinner fa-spin fa-2x mb-3 text-info"></i>
-                        <h5>Checking System Health...</h5>
-                        <p>Analyzing system performance and status</p>
-                    </div>
+                <div id="store-detail-content">
+                    <!-- Content will be populated by JavaScript -->
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times mr-1"></i>Close
-                </button>
-                <button type="button" class="btn btn-info btn-crm" id="btn-refresh-health">
-                    <i class="fas fa-sync-alt mr-1"></i>Refresh Status
-                </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Partner Side Panel (Hidden by default) -->
-<div id="partner-side-panel" class="partner-side-panel" style="display: none;">
-    <div class="side-panel-content">
-        <div class="side-panel-header">
-            <h6>Partner Quick View</h6>
-            <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('partner-side-panel').style.display='none'">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="side-panel-body">
-            <!-- Content will be populated by JavaScript -->
+<!-- Cluster Detail Modal -->
+<div class="modal fade" id="cluster-detail-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h4 class="modal-title text-white">
+                    <i class="fas fa-project-diagram mr-2"></i>Cluster Analysis
+                </h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="cluster-detail-content">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -689,11 +358,11 @@
 
 @push('css')
 <style>
-/* Enhanced Market Map Styles untuk Production */
+/* Enhanced CRM Ekspansi Toko Styles */
 .market-map-container {
     position: relative;
     width: 100%;
-    height: 600px;
+    height: 500px;
     border-radius: 12px;
     overflow: hidden;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -706,8 +375,7 @@
     border-radius: 12px;
 }
 
-.map-loading-overlay,
-.map-error-overlay {
+.map-loading-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -722,52 +390,58 @@
     backdrop-filter: blur(8px);
 }
 
-/* Animation Classes */
-.animate-fade-in {
-    animation: fadeIn 0.5s ease-in;
-}
-
-.animate-counter {
-    transition: all 0.3s ease;
-}
-
-.animate-pulse {
-    animation: pulse 2s infinite;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-/* Enhanced Small Box Hover Effects */
-.hover-lift {
-    transition: all 0.3s ease;
-}
-
-.hover-lift:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
-/* Custom Button Styling */
-.btn-crm {
-    border-radius: 8px;
+/* Tab Styling */
+.nav-tabs .nav-link {
+    color: #495057;
     font-weight: 600;
-    padding: 8px 16px;
+    border: none;
+    padding: 15px 20px;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link.active {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border-radius: 8px 8px 0 0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+}
+
+/* Legend Styling */
+.legend-items .legend-item {
+    display: flex;
+    align-items: center;
     font-size: 13px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 10px;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+}
+
+/* Enhanced Button Styling */
+.btn-lg {
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 10px;
     transition: all 0.3s ease;
     border: none;
     position: relative;
     overflow: hidden;
 }
 
-.btn-crm::before {
+.btn-lg::before {
     content: '';
     position: absolute;
     top: 0;
@@ -778,177 +452,210 @@
     transition: left 0.5s ease;
 }
 
-.btn-crm:hover::before {
+.btn-lg:hover::before {
     left: 100%;
 }
 
-.btn-primary.btn-crm {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.btn-primary.btn-crm:hover {
+.btn-lg:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
-/* Custom Shadows */
-.shadow-sm-custom {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.shadow-md-custom {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.shadow-lg-custom {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
-}
-
-/* Gradient Backgrounds */
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #007bff, #0056b3) !important;
-}
-
-.bg-gradient-success {
-    background: linear-gradient(135deg, #28a745, #20c997) !important;
-}
-
-.bg-gradient-warning {
-    background: linear-gradient(135deg, #ffc107, #fd7e14) !important;
-}
-
-.bg-gradient-info {
-    background: linear-gradient(135deg, #17a2b8, #138496) !important;
-}
-
-/* Enhanced Form Controls */
-.form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-/* Custom Switch Styling */
-.custom-control-input:checked ~ .custom-control-label::before {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-
-/* Partner Side Panel */
-.partner-side-panel {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 300px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    z-index: 1050;
-    animation: slideInRight 0.3s ease;
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-}
-
-.side-panel-header {
-    padding: 15px;
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    justify-content: between;
-    align-items: center;
-}
-
-.side-panel-body {
-    padding: 15px;
-}
-
-/* Chart Container Styling */
-.chart-container {
-    position: relative;
-    height: 250px;
-    background: white;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    margin-bottom: 15px;
-}
-
-/* Info Box Enhancements */
-.info-box {
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-}
-
-.info-box:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-/* Description Block Styling */
-.description-block {
-    padding: 10px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-}
-
-.description-block:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.02);
-}
-
-/* Modal Enhancements */
-.modal-content {
-    border-radius: 12px;
+/* Card Enhancements */
+.card {
     border: none;
-    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
 }
 
-.modal-header {
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
     border-radius: 12px 12px 0 0;
     border-bottom: none;
-    padding: 20px 24px;
+    padding: 15px 20px;
 }
 
-.modal-body {
-    padding: 24px;
+/* Animation Classes */
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-in;
 }
 
-.modal-footer {
-    border-radius: 0 0 12px 12px;
-    border-top: 1px solid #dee2e6;
-    padding: 20px 24px;
+.animate-counter {
+    transition: all 0.3s ease;
+}
+
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Analysis Content Styling */
+.profit-item, .cluster-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid #007bff;
+    transition: all 0.3s ease;
+}
+
+.profit-item:hover, .cluster-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.profit-item h6, .cluster-item h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.profit-metrics, .cluster-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.metric-item {
+    text-align: center;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.metric-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #007bff;
+}
+
+.metric-label {
+    font-size: 11px;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+/* Expansion Recommendations Styling */
+.recommendation-item {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.recommendation-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--priority-color, #007bff);
+}
+
+.recommendation-item.priority-tinggi {
+    --priority-color: #28a745;
+    border-color: #28a745;
+}
+
+.recommendation-item.priority-sedang {
+    --priority-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.recommendation-item.priority-rendah {
+    --priority-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.recommendation-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border-color: var(--priority-color);
+}
+
+.priority-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.priority-tinggi .priority-badge {
+    background: #28a745;
+    color: white;
+}
+
+.priority-sedang .priority-badge {
+    background: #ffc107;
+    color: #212529;
+}
+
+.priority-rendah .priority-badge {
+    background: #6c757d;
+    color: white;
+}
+
+.score-bar {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffc107, #28a745);
+    border-radius: 4px;
+    transition: width 0.8s ease;
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
-    .market-map-container {
-        height: 500px;
-    }
-}
-
 @media (max-width: 768px) {
     .market-map-container {
         height: 400px;
-        border-radius: 8px;
     }
     
-    .btn-group .btn-crm {
-        margin: 2px 0;
-        width: 100%;
+    .nav-tabs .nav-link {
+        padding: 10px 15px;
+        font-size: 14px;
     }
     
-    .custom-control {
-        margin-bottom: 10px;
+    .btn-lg {
+        padding: 10px 16px;
+        font-size: 14px;
     }
     
-    .partner-side-panel {
-        width: 280px;
-        top: 10px;
-        right: 10px;
+    .profit-metrics, .cluster-metrics {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -957,556 +664,906 @@
         height: 350px;
     }
     
-    .small-box .inner h3 {
-        font-size: 1.5rem;
+    .profit-metrics, .cluster-metrics {
+        grid-template-columns: 1fr;
     }
     
-    .btn-group {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .partner-side-panel {
-        width: calc(100% - 20px);
-        left: 10px;
-        right: 10px;
+    .recommendation-item {
+        padding: 15px;
     }
 }
 
-/* Print Styles */
-@media print {
-    .btn, .modal, .custom-control, .alert, .card-tools {
-        display: none !important;
-    }
-    
-    .market-map-container {
-        height: 400px !important;
-        break-inside: avoid;
-    }
-    
-    .card {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
+/* Loading States */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .card, .btn, .form-control {
-        border: 2px solid !important;
-    }
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-    
-    .animate-pulse, .animate-fade-in {
-        animation: none !important;
-    }
+/* Success States */
+.success-indicator {
+    color: #28a745;
+    animation: pulse 2s infinite;
 }
 
-/* Dark mode considerations */
-@media (prefers-color-scheme: dark) {
-    .chart-container, .info-box, .description-block {
-        background: #2c3e50 !important;
-        color: #ecf0f1 !important;
-    }
-    
-    .modal-content {
-        background: #2c3e50 !important;
-        color: #ecf0f1 !important;
-    }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 </style>
 @endpush
 
 @push('js')
-<!-- Enhanced Market Map CRM JavaScript -->
-<script src="{{ asset('js/enhanced-market-map.js') }}"></script>
+<!-- Chart.js for visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// Page-specific JavaScript untuk integrasi dengan AdminLTE
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 CRM Market Intelligence page loading...');
-    
-    // Initialize tooltips AdminLTE style
-    if (typeof $ !== 'undefined' && $.fn.tooltip) {
-        $('[data-toggle="tooltip"]').tooltip();
-    }
-    
-    // Setup additional event handlers
-    setupAdditionalEventHandlers();
-    
-    // Setup AdminLTE card widgets
-    setupCardWidgets();
-    
-    // Setup counter animations
-    setupCounterAnimations();
-    
-    console.log('✅ CRM Market Intelligence page loaded successfully');
-});
-
-/**
- * Setup additional event handlers
- */
-function setupAdditionalEventHandlers() {
-    try {
-        // Clear cache button
-        const clearCacheBtn = document.getElementById('btn-clear-cache');
-        if (clearCacheBtn) {
-            clearCacheBtn.addEventListener('click', handleClearCache);
-        }
+// CRM Ekspansi Toko - Main Application
+class CRMExpansionApp {
+    constructor() {
+        this.map = null;
+        this.storeData = [];
+        this.clusters = [];
+        this.profitCalculated = false;
+        this.clusteringDone = false;
         
-        // System health button
-        const systemHealthBtn = document.getElementById('btn-system-health');
-        if (systemHealthBtn) {
-            systemHealthBtn.addEventListener('click', showSystemHealth);
-        }
-        
-        // Performance report button
-        const perfReportBtn = document.getElementById('btn-performance-report');
-        if (perfReportBtn) {
-            perfReportBtn.addEventListener('click', generatePerformanceReport);
-        }
-        
-        // View all opportunities button
-        const viewOppsBtn = document.getElementById('btn-view-all-opportunities');
-        if (viewOppsBtn) {
-            viewOppsBtn.addEventListener('click', () => {
-                if (window.enhancedMarketMapCRMInstance) {
-                    window.enhancedMarketMapCRMInstance.loadMarketOpportunitiesModal();
-                }
-            });
-        }
-        
-        console.log('✅ Additional event handlers setup complete');
-        
-    } catch (error) {
-        console.error('❌ Error setting up additional event handlers:', error);
-    }
-}
-
-/**
- * Setup AdminLTE card widgets
- */
-function setupCardWidgets() {
-    try {
-        // Handle card maximize/minimize
-        $('[data-card-widget="maximize"]').on('click', function() {
-            const mapContainer = document.getElementById('market-map');
-            if (mapContainer) {
-                // Trigger map resize after maximize/minimize
-                setTimeout(() => {
-                    if (window.enhancedMarketMapCRMInstance && window.enhancedMarketMapCRMInstance.map) {
-                        window.enhancedMarketMapCRMInstance.map.invalidateSize();
-                    }
-                }, 300);
-            }
-        });
-        
-        // Handle card collapse
-        $('[data-card-widget="collapse"]').on('click', function() {
-            setTimeout(() => {
-                if (window.enhancedMarketMapCRMInstance && window.enhancedMarketMapCRMInstance.map) {
-                    window.enhancedMarketMapCRMInstance.map.invalidateSize();
-                }
-            }, 300);
-        });
-        
-        // Handle sidebar toggle
-        $('[data-widget="pushmenu"]').on('click', function() {
-            setTimeout(() => {
-                if (window.enhancedMarketMapCRMInstance && window.enhancedMarketMapCRMInstance.map) {
-                    window.enhancedMarketMapCRMInstance.map.invalidateSize();
-                }
-            }, 300);
-        });
-        
-    } catch (error) {
-        console.warn('⚠️ AdminLTE widgets not available:', error);
-    }
-}
-
-/**
- * Setup counter animations
- */
-function setupCounterAnimations() {
-    try {
-        const counterElements = document.querySelectorAll('.animate-counter');
-        
-        const animateCounter = (element, target) => {
-            const duration = 1500;
-            const start = 0;
-            const increment = target / (duration / 16);
-            let current = start;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    current = target;
-                    clearInterval(timer);
-                }
-                element.textContent = Math.floor(current).toLocaleString();
-            }, 16);
+        // Configuration
+        this.config = {
+            CLUSTER_RADIUS: 1.5, // km
+            MAX_STORES_PER_CLUSTER: 5,
+            MIN_PROFIT_MARGIN: 10, // percentage
+            DEFAULT_HARGA_AWAL: 12000, // Rp
+            MALANG_CENTER: [-7.9666, 112.6326]
         };
         
-        // Observe when counters come into view
-        if ('IntersectionObserver' in window) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
-                        const target = parseInt(entry.target.textContent.replace(/[^0-9]/g, '')) || 0;
-                        if (target > 0) {
-                            animateCounter(entry.target, target);
-                            entry.target.classList.add('animated');
-                        }
-                    }
-                });
-            });
-            
-            counterElements.forEach(el => observer.observe(el));
-        }
-        
-    } catch (error) {
-        console.warn('⚠️ Counter animations not available:', error);
+        this.init();
     }
-}
+    
+    async init() {
+        try {
+            console.log('🚀 Initializing CRM Expansion App...');
+            
+            // Initialize map
+            await this.initMap();
+            
+            // Setup event listeners
+            this.setupEventListeners();
+            
+            // Load initial data
+            await this.loadStoreData();
+            
+            console.log('✅ CRM Expansion App initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing app:', error);
+            this.showError('Failed to initialize application: ' + error.message);
+        }
+    }
+    
+    async initMap() {
+        try {
+            // Initialize Leaflet map
+            this.map = L.map('market-map', {
+                center: this.config.MALANG_CENTER,
+                zoom: 13,
+                zoomControl: true,
+                attributionControl: true
+            });
 
-/**
- * Handle clear cache
- */
-async function handleClearCache() {
-    try {
-        if (typeof Swal !== 'undefined') {
-            const result = await Swal.fire({
-                title: 'Clear Cache?',
-                text: 'This will clear all cached data and reload fresh information.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#007bff',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, clear cache',
-                cancelButtonText: 'Cancel'
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors | CRM Expansion System',
+                maxZoom: 18
+            }).addTo(this.map);
+            
+            console.log('✅ Map initialized successfully');
+        } catch (error) {
+            throw new Error('Map initialization failed: ' + error.message);
+        }
+    }
+    
+    setupEventListeners() {
+        // Action buttons
+        document.getElementById('btn-calculate-profit')?.addEventListener('click', () => {
+            this.calculateProfitAllStores();
+        });
+        
+        document.getElementById('btn-create-clustering')?.addEventListener('click', () => {
+            this.createGeographicClustering();
+        });
+        
+        document.getElementById('btn-generate-expansion')?.addEventListener('click', () => {
+            this.generateExpansionPlan();
+        });
+        
+        document.getElementById('btn-refresh-data')?.addEventListener('click', () => {
+            this.refreshData();
+        });
+        
+        document.getElementById('btn-clear-cache')?.addEventListener('click', () => {
+            this.clearCache();
+        });
+        
+        // Tab switching
+        document.querySelectorAll('[data-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', (e) => {
+                this.handleTabChange(e.target.getAttribute('href'));
+            });
+        });
+    }
+    
+    async loadStoreData() {
+        try {
+            this.showLoading('Loading store data...');
+            
+            const response = await fetch('/market-map/toko-data', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
             });
             
-            if (result.isConfirmed) {
-                // Clear cache via API
-                const response = await fetch('/market-map/clear-cache', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Content-Type': 'application/json'
-                    }
-                });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.storeData = data.data;
+                this.updateStatistics(data.summary);
+                this.renderStoresOnMap();
                 
-                if (response.ok) {
-                    // Clear local cache
-                    if (window.enhancedMarketMapCRMInstance) {
-                        window.enhancedMarketMapCRMInstance.clearAllCache();
-                        window.enhancedMarketMapCRMInstance.refreshAllData();
-                    }
-                    
-                    Swal.fire({
-                        title: 'Cache Cleared!',
-                        text: 'All cached data has been cleared and fresh data is being loaded.',
-                        icon: 'success',
-                        timer: 2000
-                    });
-                } else {
-                    throw new Error('Failed to clear cache');
+                console.log(`✅ Loaded ${this.storeData.length} stores`);
+            } else {
+                throw new Error(data.message || 'Failed to load store data');
+            }
+        } catch (error) {
+            console.error('❌ Error loading store data:', error);
+            this.showError('Failed to load store data: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    renderStoresOnMap() {
+        try {
+            // Clear existing markers
+            this.map.eachLayer((layer) => {
+                if (layer instanceof L.Marker) {
+                    this.map.removeLayer(layer);
                 }
-            }
-        }
-    } catch (error) {
-        console.error('❌ Error clearing cache:', error);
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: 'Error',
-                text: 'Failed to clear cache: ' + error.message,
-                icon: 'error'
             });
-        }
-    }
-}
-
-/**
- * Show system health modal
- */
-async function showSystemHealth() {
-    try {
-        $('#system-health-modal').modal('show');
-        
-        const content = document.getElementById('system-health-content');
-        
-        // Show loading
-        content.innerHTML = `
-            <div class="text-center text-muted py-4">
-                <i class="fas fa-spinner fa-spin fa-2x mb-3 text-info"></i>
-                <h5>Checking System Health...</h5>
-                <p>Analyzing system performance and status</p>
-            </div>
-        `;
-        
-        // Fetch system health data
-        const response = await fetch('/market-map/system-health', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            renderSystemHealth(data.health);
-        } else {
-            throw new Error(data.message || 'Failed to get system health');
-        }
-        
-    } catch (error) {
-        console.error('❌ Error showing system health:', error);
-        
-        const content = document.getElementById('system-health-content');
-        content.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                Failed to load system health: ${error.message}
-            </div>
-        `;
-    }
-}
-
-/**
- * Render system health data
- */
-function renderSystemHealth(health) {
-    const content = document.getElementById('system-health-content');
-    
-    let html = `
-        <div class="system-health-container">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="info-box">
-                        <span class="info-box-icon ${health.database_connection === 'OK' ? 'bg-success' : 'bg-danger'}">
-                            <i class="fas fa-database"></i>
-                        </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Database Connection</span>
-                            <span class="info-box-number">${health.database_connection}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="info-box">
-                        <span class="info-box-icon ${health.cache_status === 'OK' ? 'bg-success' : 'bg-warning'}">
-                            <i class="fas fa-memory"></i>
-                        </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Cache Status</span>
-                            <span class="info-box-number">${health.cache_status}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
             
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h6><i class="fas fa-chart-bar mr-2"></i>Data Quality Metrics</h6>
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="description-block">
-                                <h5 class="description-header text-primary">${health.data_quality.total_partners}</h5>
-                                <span class="description-text">Total Partners</span>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="description-block">
-                                <h5 class="description-header text-success">${health.data_quality.geocoded_partners}</h5>
-                                <span class="description-text">Geocoded Partners</span>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="description-block">
-                                <h5 class="description-header text-info">${health.data_quality.geocoding_percentage}%</h5>
-                                <span class="description-text">Geocoding Coverage</span>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="description-block">
-                                <h5 class="description-header text-warning">${health.data_quality.active_partners}</h5>
-                                <span class="description-text">Active Partners</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            // Add store markers
+            this.storeData.forEach(store => {
+                if (store.has_coordinates) {
+                    const marker = this.createStoreMarker(store);
+                    marker.addTo(this.map);
+                }
+            });
             
-            <div class="row">
-                <div class="col-12">
-                    <h6><i class="fas fa-tachometer-alt mr-2"></i>Performance Metrics</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <tbody>
-                                <tr>
-                                    <td><strong>Cache Hit Rate</strong></td>
-                                    <td>${health.performance_metrics.cache_hit_rate}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Average Response Time</strong></td>
-                                    <td>${health.performance_metrics.avg_response_time}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Last Data Update</strong></td>
-                                    <td>${health.performance_metrics.last_data_update ? new Date(health.performance_metrics.last_data_update).toLocaleString() : 'Never'}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    content.innerHTML = html;
-}
-
-/**
- * Generate performance report
- */
-function generatePerformanceReport() {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: 'Generating Report',
-            html: `
-                <div class="report-progress">
-                    <p>Generating comprehensive performance report...</p>
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 100%"></div>
-                    </div>
-                    <small class="text-muted">This report will include partner performance metrics, market analysis, and actionable insights.</small>
-                </div>
-            `,
-            icon: 'info',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#007bff',
-            timer: 4000,
-            timerProgressBar: true
-        });
-    }
-}
-
-/**
- * Update footer statistics
- */
-function updateFooterStats(data) {
-    try {
-        const elements = {
-            'footer-total-partners': data.total_partners || 0,
-            'footer-premium-partners': data.premium_partners || 0,
-            'footer-active-partners': data.active_partners || 0,
-            'footer-coverage': data.coverage_percentage || 0
-        };
-        
-        Object.entries(elements).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = typeof value === 'number' ? value.toLocaleString() : value;
-            }
-        });
-        
-    } catch (error) {
-        console.warn('⚠️ Error updating footer stats:', error);
-    }
-}
-
-/**
- * Update last update time
- */
-function updateLastUpdateTime() {
-    try {
-        const element = document.getElementById('last-update-time');
-        if (element) {
-            element.textContent = new Date().toLocaleTimeString();
+            // Update visible count
+            const visibleCount = this.storeData.filter(s => s.has_coordinates).length;
+            document.getElementById('visible-partners-count').textContent = visibleCount;
+            
+        } catch (error) {
+            console.error('❌ Error rendering stores:', error);
         }
-    } catch (error) {
-        console.warn('⚠️ Error updating last update time:', error);
     }
-}
-
-// Error handling for missing dependencies
-window.addEventListener('error', function(e) {
-    if (e.message.includes('Leaflet') || e.message.includes('L is not defined')) {
-        console.error('❌ Leaflet library failed to load');
+    
+    createStoreMarker(store) {
+        // Determine marker color based on profit margin (if calculated)
+        let color = '#6c757d'; // Default gray
+        if (this.profitCalculated && store.margin_percent !== undefined) {
+            if (store.margin_percent >= 20) {
+                color = '#28a745'; // Green - Excellent
+            } else if (store.margin_percent >= 10) {
+                color = '#ffc107'; // Yellow - Good
+            } else {
+                color = '#dc3545'; // Red - Poor
+            }
+        }
         
-        const mapContainer = document.getElementById('market-map');
-        if (mapContainer) {
-            mapContainer.innerHTML = `
-                <div class="error-state text-center p-5">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h5 class="text-danger">Map Library Error</h5>
-                    <p class="text-muted">Unable to load map components. Please check your internet connection.</p>
-                    <button class="btn btn-primary btn-crm" onclick="location.reload()">
-                        <i class="fas fa-sync-alt mr-1"></i>Retry Loading
-                    </button>
+        const marker = L.circleMarker([store.latitude, store.longitude], {
+            radius: 8,
+            fillColor: color,
+            color: '#ffffff',
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.6
+        });
+        
+        // Create popup content
+        const popupContent = this.createStorePopup(store);
+        marker.bindPopup(popupContent);
+        
+        // Click handler
+        marker.on('click', () => {
+            this.showStoreDetail(store);
+        });
+        
+        return marker;
+    }
+    
+    createStorePopup(store) {
+        let profitInfo = '';
+        if (this.profitCalculated && store.margin_percent !== undefined) {
+            profitInfo = `
+                <div class="mt-2">
+                    <strong>Profit Analysis:</strong><br>
+                    <small>
+                        Margin: ${store.margin_percent}% | 
+                        Profit/Unit: Rp ${store.profit_per_unit?.toLocaleString()} |
+                        Total Profit: Rp ${store.total_profit?.toLocaleString()}
+                    </small>
                 </div>
             `;
         }
-    }
-});
-
-// Performance monitoring
-if ('performance' in window) {
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-            console.log(`📊 CRM page loaded in ${loadTime}ms`);
-            
-            if (loadTime > 5000) {
-                console.warn('⚠️ Page load time is slower than expected');
-                
-                // Show performance warning
-                if (typeof $ !== 'undefined' && $(document).Toasts) {
-                    $(document).Toasts('create', {
-                        class: 'bg-warning',
-                        title: 'Performance Notice',
-                        subtitle: 'Loading Time',
-                        body: 'Page loading took longer than expected. Consider optimizing your connection.',
-                        autohide: true,
-                        delay: 5000
-                    });
-                }
-            }
-            
-            // Update last update time
-            updateLastUpdateTime();
-            
-        }, 0);
-    });
-}
-
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Escape key to close modals
-    if (e.key === 'Escape') {
-        $('.modal').modal('hide');
+        
+        return `
+            <div class="store-popup">
+                <h6 class="mb-2">${store.nama_toko}</h6>
+                <small>
+                    <strong>Pemilik:</strong> ${store.pemilik}<br>
+                    <strong>Lokasi:</strong> ${store.kecamatan}, ${store.kota_kabupaten}<br>
+                    <strong>Status:</strong> ${store.status_aktif}<br>
+                    <strong>Products:</strong> ${store.jumlah_barang} | 
+                    <strong>Orders:</strong> ${store.total_pengiriman}
+                </small>
+                ${profitInfo}
+            </div>
+        `;
     }
     
-    // F5 for refresh (prevent default and use our refresh)
-    if (e.key === 'F5') {
-        e.preventDefault();
-        if (window.enhancedMarketMapCRMInstance) {
-            window.enhancedMarketMapCRMInstance.forceRefreshData();
+    async calculateProfitAllStores() {
+        try {
+            console.log('💰 Calculating profit for all stores...');
+            this.showLoading('Calculating profit for all stores...');
+            
+            // Simulate profit calculation (in real app, this would call an API)
+            await this.simulateDelay(2000);
+            
+            // Calculate profit for each store
+            this.storeData.forEach(store => {
+                const hargaAwal = store.harga_awal || this.config.DEFAULT_HARGA_AWAL;
+                const hargaJual = store.harga_jual || (hargaAwal * 1.2); // Default 20% markup
+                const totalTerjual = store.total_terjual || Math.floor(Math.random() * 100) + 10;
+                
+                store.profit_per_unit = hargaJual - hargaAwal;
+                store.margin_percent = ((store.profit_per_unit / hargaJual) * 100);
+                store.total_profit = store.profit_per_unit * totalTerjual;
+                store.roi = ((store.total_profit / (hargaAwal * totalTerjual)) * 100);
+            });
+            
+            this.profitCalculated = true;
+            
+            // Update map markers with new colors
+            this.renderStoresOnMap();
+            
+            // Update analysis tab
+            this.renderProfitAnalysis();
+            
+            // Show success message
+            this.showSuccess('Profit calculation completed!', 'All stores have been analyzed for profitability.');
+            
+            console.log('✅ Profit calculation completed');
+            
+        } catch (error) {
+            console.error('❌ Error calculating profit:', error);
+            this.showError('Failed to calculate profit: ' + error.message);
+        } finally {
+            this.hideLoading();
         }
     }
+    
+    renderProfitAnalysis() {
+        const container = document.getElementById('profit-analysis-content');
+        if (!container) return;
+        
+        // Sort stores by margin percentage (descending)
+        const sortedStores = [...this.storeData]
+            .filter(store => store.margin_percent !== undefined)
+            .sort((a, b) => b.margin_percent - a.margin_percent);
+        
+        let html = '<div class="profit-analysis-results">';
+        
+        sortedStores.forEach(store => {
+            const marginColor = store.margin_percent >= 20 ? 'success' : 
+                              store.margin_percent >= 10 ? 'warning' : 'danger';
+            
+            // Calculate expansion projection
+            const expansionInvestment = this.config.DEFAULT_HARGA_AWAL * 100; // 100 units
+            const breakEvenUnits = Math.ceil(expansionInvestment / store.profit_per_unit);
+            const projectedMonthlyProfit = store.profit_per_unit * 50; // Assume 50 units/month
+            
+            html += `
+                <div class="profit-item border-${marginColor}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6>${store.nama_toko}</h6>
+                        <span class="badge badge-${marginColor}">${store.margin_percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="profit-metrics">
+                        <div class="metric-item">
+                            <div class="metric-value">Rp ${store.profit_per_unit.toLocaleString()}</div>
+                            <div class="metric-label">Profit/Unit</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">${store.total_terjual || 0}</div>
+                            <div class="metric-label">Units Sold</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">Rp ${store.total_profit.toLocaleString()}</div>
+                            <div class="metric-label">Total Profit</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">${store.roi.toFixed(1)}%</div>
+                            <div class="metric-label">ROI</div>
+                        </div>
+                    </div>
+                    <div class="expansion-projection mt-3 p-2 bg-light rounded">
+                        <small>
+                            <strong>Proyeksi Ekspansi:</strong><br>
+                            Investasi: Rp ${expansionInvestment.toLocaleString()} | 
+                            Break-even: ${breakEvenUnits} units | 
+                            Profit/bulan: Rp ${projectedMonthlyProfit.toLocaleString()}
+                        </small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    async createGeographicClustering() {
+        try {
+            if (!this.profitCalculated) {
+                this.showWarning('Please calculate profit first', 'Run profit analysis before creating clusters.');
+                return;
+            }
+            
+            console.log('🗺️ Creating geographic clustering...');
+            this.showLoading('Creating geographic clusters...');
+            
+            await this.simulateDelay(2000);
+            
+            // Perform clustering
+            this.clusters = this.performClustering();
+            this.clusteringDone = true;
+            
+            // Render cluster boundaries on map
+            this.renderClustersOnMap();
+            
+            // Update analysis tab
+            this.renderClusteringAnalysis();
+            
+            this.showSuccess('Geographic clustering completed!', `Created ${this.clusters.length} clusters.`);
+            
+            console.log(`✅ Created ${this.clusters.length} clusters`);
+            
+        } catch (error) {
+            console.error('❌ Error creating clusters:', error);
+            this.showError('Failed to create clusters: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    performClustering() {
+        const clusters = [];
+        const processed = new Set();
+        let clusterId = 1;
+        
+        this.storeData.forEach(store => {
+            if (processed.has(store.toko_id) || !store.has_coordinates) {
+                return;
+            }
+            
+            const clusterStores = [store];
+            processed.add(store.toko_id);
+            
+            // Find nearby stores
+            this.storeData.forEach(otherStore => {
+                if (processed.has(otherStore.toko_id) || !otherStore.has_coordinates) {
+                    return;
+                }
+                
+                const distance = this.calculateDistance(
+                    store.latitude, store.longitude,
+                    otherStore.latitude, otherStore.longitude
+                );
+                
+                if (distance <= this.config.CLUSTER_RADIUS) {
+                    clusterStores.push(otherStore);
+                    processed.add(otherStore.toko_id);
+                }
+            });
+            
+            // Calculate cluster metrics
+            const metrics = this.calculateClusterMetrics(clusterStores);
+            
+            clusters.push({
+                cluster_id: 'CLUSTER_' + String.fromCharCode(64 + clusterId),
+                store_count: clusterStores.length,
+                stores: clusterStores,
+                center: this.calculateClusterCenter(clusterStores),
+                metrics: metrics,
+                expansion_potential: Math.max(0, this.config.MAX_STORES_PER_CLUSTER - clusterStores.length)
+            });
+            
+            clusterId++;
+        });
+        
+        return clusters;
+    }
+    
+    calculateDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371; // Earth radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+    
+    calculateClusterCenter(stores) {
+        const validStores = stores.filter(s => s.has_coordinates);
+        if (validStores.length === 0) return this.config.MALANG_CENTER;
+        
+        const totalLat = validStores.reduce((sum, s) => sum + s.latitude, 0);
+        const totalLng = validStores.reduce((sum, s) => sum + s.longitude, 0);
+        
+        return [totalLat / validStores.length, totalLng / validStores.length];
+    }
+    
+    calculateClusterMetrics(stores) {
+        const totalRevenue = stores.reduce((sum, s) => sum + (s.revenue || 0), 0);
+        const totalProfit = stores.reduce((sum, s) => sum + (s.total_profit || 0), 0);
+        const avgMargin = stores.length > 0 ? 
+            stores.reduce((sum, s) => sum + (s.margin_percent || 0), 0) / stores.length : 0;
+        
+        const areas = [...new Set(stores.map(s => s.kecamatan))];
+        
+        return {
+            total_revenue: totalRevenue,
+            total_profit: totalProfit,
+            avg_margin: avgMargin,
+            area_coverage: areas.join(', ')
+        };
+    }
+    
+    renderClustersOnMap() {
+        // Remove existing cluster boundaries
+        this.map.eachLayer((layer) => {
+            if (layer instanceof L.Circle && layer.options.className === 'cluster-boundary') {
+                this.map.removeLayer(layer);
+            }
+        });
+        
+        // Add cluster boundaries
+        this.clusters.forEach(cluster => {
+            const circle = L.circle(cluster.center, {
+                radius: this.config.CLUSTER_RADIUS * 1000, // Convert to meters
+                color: '#8b5cf6',
+                weight: 2,
+                opacity: 0.6,
+                fillColor: '#8b5cf6',
+                fillOpacity: 0.1,
+                className: 'cluster-boundary'
+            });
+            
+            circle.bindPopup(this.createClusterPopup(cluster));
+            circle.addTo(this.map);
+        });
+    }
+    
+    createClusterPopup(cluster) {
+        return `
+            <div class="cluster-popup">
+                <h6 class="mb-2">${cluster.cluster_id}</h6>
+                <small>
+                    <strong>Stores:</strong> ${cluster.store_count}<br>
+                    <strong>Avg Margin:</strong> ${cluster.metrics.avg_margin.toFixed(1)}%<br>
+                    <strong>Total Revenue:</strong> Rp ${cluster.metrics.total_revenue.toLocaleString()}<br>
+                    <strong>Area:</strong> ${cluster.metrics.area_coverage}<br>
+                    <strong>Expansion Potential:</strong> ${cluster.expansion_potential} stores
+                </small>
+            </div>
+        `;
+    }
+    
+    renderClusteringAnalysis() {
+        const container = document.getElementById('clustering-analysis-content');
+        if (!container) return;
+        
+        let html = '<div class="clustering-analysis-results">';
+        
+        this.clusters.forEach(cluster => {
+            const marginColor = cluster.metrics.avg_margin >= 20 ? 'success' : 
+                              cluster.metrics.avg_margin >= 15 ? 'warning' : 'danger';
+            
+            html += `
+                <div class="cluster-item border-${marginColor}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6>${cluster.cluster_id}</h6>
+                        <span class="badge badge-${marginColor}">${cluster.metrics.avg_margin.toFixed(1)}%</span>
+                    </div>
+                    <div class="cluster-info">
+                        <p class="mb-2"><strong>Total Stores:</strong> ${cluster.store_count} | 
+                        <strong>Area:</strong> ${cluster.metrics.area_coverage}</p>
+                        <p class="mb-2"><strong>Revenue:</strong> Rp ${cluster.metrics.total_revenue.toLocaleString()}</p>
+                        <p class="mb-2"><strong>Potensi Ekspansi:</strong> ${cluster.expansion_potential} toko lagi</p>
+                    </div>
+                    <div class="store-list mt-2">
+                        <small><strong>Stores in cluster:</strong></small>
+                        <ul class="list-unstyled mb-0">
+                            ${cluster.stores.slice(0, 3).map(store => 
+                                `<li><small>• ${store.nama_toko} (${store.kecamatan})</small></li>`
+                            ).join('')}
+                            ${cluster.stores.length > 3 ? `<li><small>• and ${cluster.stores.length - 3} more...</small></li>` : ''}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+    
+    async generateExpansionPlan() {
+        try {
+            if (!this.profitCalculated || !this.clusteringDone) {
+                this.showWarning('Prerequisites not met', 'Please complete profit analysis and geographic clustering first.');
+                return;
+            }
+            
+            console.log('🚀 Generating expansion plan...');
+            this.showLoading('Generating expansion recommendations...');
+            
+            await this.simulateDelay(2000);
+            
+            // Generate recommendations
+            const recommendations = this.createExpansionRecommendations();
+            
+            // Render recommendations
+            this.renderExpansionRecommendations(recommendations);
+            
+            this.showSuccess('Expansion plan generated!', `Found ${recommendations.length} expansion opportunities.`);
+            
+            console.log(`✅ Generated ${recommendations.length} recommendations`);
+            
+        } catch (error) {
+            console.error('❌ Error generating expansion plan:', error);
+            this.showError('Failed to generate expansion plan: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    createExpansionRecommendations() {
+        const recommendations = [];
+        
+        this.clusters.forEach(cluster => {
+            if (cluster.metrics.avg_margin >= this.config.MIN_PROFIT_MARGIN && 
+                cluster.expansion_potential > 0) {
+                
+                const score = this.calculateExpansionScore(cluster);
+                const priority = this.determinePriority(cluster.metrics.avg_margin);
+                const financialProjection = this.calculateFinancialProjection(cluster);
+                
+                recommendations.push({
+                    cluster_id: cluster.cluster_id,
+                    priority: priority,
+                    score: score,
+                    target_expansion: Math.min(cluster.expansion_potential, 3),
+                    current_stores: cluster.store_count,
+                    avg_margin: cluster.metrics.avg_margin,
+                    area_coverage: cluster.metrics.area_coverage,
+                    pricing_strategy: this.determinePricingStrategy(cluster.metrics.avg_margin),
+                    ...financialProjection
+                });
+            }
+        });
+        
+        // Sort by priority and score
+        return recommendations.sort((a, b) => {
+            const priorityOrder = { 'TINGGI': 3, 'SEDANG': 2, 'RENDAH': 1 };
+            const aPriority = priorityOrder[a.priority] || 0;
+            const bPriority = priorityOrder[b.priority] || 0;
+            
+            if (aPriority === bPriority) {
+                return b.score - a.score;
+            }
+            return bPriority - aPriority;
+        });
+    }
+    
+    calculateExpansionScore(cluster) {
+        let score = 0;
+        
+        // Margin weight (60%)
+        score += (cluster.metrics.avg_margin / 30) * 60;
+        
+        // Expansion potential weight (30%)
+        score += (cluster.expansion_potential / this.config.MAX_STORES_PER_CLUSTER) * 30;
+        
+        // Store count factor (10%)
+        score += (cluster.store_count / this.config.MAX_STORES_PER_CLUSTER) * 10;
+        
+        return Math.min(100, Math.round(score));
+    }
+    
+    determinePriority(avgMargin) {
+        if (avgMargin >= 20) return 'TINGGI';
+        if (avgMargin >= 15) return 'SEDANG';
+        return 'RENDAH';
+    }
+    
+    determinePricingStrategy(avgMargin) {
+        if (avgMargin >= 25) return 'Premium Pricing';
+        if (avgMargin <= 12) return 'Competitive Pricing';
+        return 'Market Average';
+    }
+    
+    calculateFinancialProjection(cluster) {
+        const avgStoreRevenue = cluster.metrics.total_revenue / cluster.store_count;
+        const avgStoreProfit = cluster.metrics.total_profit / cluster.store_count;
+        const expansionCount = Math.min(cluster.expansion_potential, 3);
+        
+        const totalInvestment = expansionCount * this.config.DEFAULT_HARGA_AWAL * 100; // 100 units per store
+        const projectedMonthlyProfit = expansionCount * (avgStoreProfit / 12);
+        const paybackPeriod = projectedMonthlyProfit > 0 ? 
+            Math.ceil(totalInvestment / projectedMonthlyProfit) : 99;
+        
+        return {
+            total_investment: totalInvestment,
+            projected_monthly_profit: Math.round(projectedMonthlyProfit),
+            payback_period: paybackPeriod,
+            recommended_price: Math.round(this.config.DEFAULT_HARGA_AWAL * (1 + cluster.metrics.avg_margin / 100))
+        };
+    }
+    
+    renderExpansionRecommendations(recommendations) {
+        const container = document.getElementById('expansion-recommendations-content');
+        if (!container) return;
+        
+        if (recommendations.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h5>No Expansion Opportunities Found</h5>
+                    <p>No clusters meet the minimum criteria for expansion (10% margin).</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="expansion-recommendations-list">';
+        
+        recommendations.forEach(rec => {
+            html += `
+                <div class="recommendation-item priority-${rec.priority.toLowerCase()}">
+                    <div class="priority-badge">${rec.priority}</div>
+                    
+                    <div class="recommendation-header mb-3">
+                        <h5>${rec.cluster_id}</h5>
+                        <p class="text-muted mb-1">Area: ${rec.area_coverage}</p>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: ${rec.score}%"></div>
+                        </div>
+                        <small class="text-muted">Expansion Score: ${rec.score}/100</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="recommendation-details">
+                                <p><strong>Target Ekspansi:</strong> ${rec.target_expansion} toko baru</p>
+                                <p><strong>Current Stores:</strong> ${rec.current_stores}</p>
+                                <p><strong>Pricing Strategy:</strong> ${rec.pricing_strategy}</p>
+                                <p><strong>Recommended Price:</strong> Rp ${rec.recommended_price.toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="financial-projection">
+                                <p><strong>Proyeksi Profit Bulanan:</strong> <span class="text-success">Rp ${rec.projected_monthly_profit.toLocaleString()}</span></p>
+                                <p><strong>Total Investasi:</strong> <span class="text-primary">Rp ${rec.total_investment.toLocaleString()}</span></p>
+                                <p><strong>Payback Period:</strong> <span class="text-info">${rec.payback_period} bulan</span></p>
+                                <p><strong>Score Keseluruhan:</strong> <span class="text-warning">${rec.score}/100</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        // Add summary
+        const totalInvestment = recommendations.reduce((sum, rec) => sum + rec.total_investment, 0);
+        const totalProjectedProfit = recommendations.reduce((sum, rec) => sum + rec.projected_monthly_profit, 0);
+        
+        html += `
+            <div class="expansion-summary mt-4 p-3 bg-light rounded">
+                <h6><i class="fas fa-calculator mr-2"></i>Investment Summary</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Total Recommendations:</strong> ${recommendations.length}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Total Investment:</strong> Rp ${totalInvestment.toLocaleString()}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1"><strong>Monthly Profit Projection:</strong> Rp ${totalProjectedProfit.toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+        // Animate score bars
+        setTimeout(() => {
+            document.querySelectorAll('.score-fill').forEach(bar => {
+                bar.style.transition = 'width 0.8s ease';
+            });
+        }, 100);
+    }
+    
+    // Utility methods
+    handleTabChange(tabId) {
+        if (tabId === '#analysis' && !this.profitCalculated && !this.clusteringDone) {
+            // Show helper message
+        } else if (tabId === '#expansion' && (!this.profitCalculated || !this.clusteringDone)) {
+            // Show prerequisites message
+        }
+    }
+    
+    updateStatistics(summary) {
+        try {
+            document.getElementById('total-partners').textContent = summary.total_toko || 0;
+            document.getElementById('geo-clusters').textContent = this.clusters.length || 0;
+            document.getElementById('avg-margin').textContent = summary.avg_margin || 0;
+            document.getElementById('total-revenue').textContent = 
+                summary.total_revenue ? (summary.total_revenue / 1000000).toFixed(1) + 'M' : '0';
+        } catch (error) {
+            console.warn('⚠️ Error updating statistics:', error);
+        }
+    }
+    
+    async refreshData() {
+        try {
+            this.showLoading('Refreshing data...');
+            await this.loadStoreData();
+            this.showSuccess('Data refreshed successfully!');
+        } catch (error) {
+            this.showError('Failed to refresh data: ' + error.message);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    async clearCache() {
+        try {
+            const response = await fetch('/market-map/clear-cache', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                this.showSuccess('Cache cleared successfully!');
+                this.refreshData();
+            } else {
+                throw new Error('Failed to clear cache');
+            }
+        } catch (error) {
+            this.showError('Failed to clear cache: ' + error.message);
+        }
+    }
+    
+    showLoading(message = 'Loading...') {
+        const indicator = document.getElementById('loading-indicator');
+        if (indicator) {
+            indicator.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm mr-2" role="status"></div>
+                    <span>${message}</span>
+                </div>
+            `;
+            indicator.style.display = 'block';
+        }
+        
+        const mapLoading = document.getElementById('map-loading');
+        if (mapLoading) {
+            mapLoading.style.display = 'flex';
+        }
+    }
+    
+    hideLoading() {
+        const indicator = document.getElementById('loading-indicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+        
+        const mapLoading = document.getElementById('map-loading');
+        if (mapLoading) {
+            mapLoading.style.display = 'none';
+        }
+    }
+    
+    showSuccess(title, message = '') {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: title,
+                text: message,
+                icon: 'success',
+                timer: 3000,
+                timerProgressBar: true
+            });
+        } else {
+            alert(title + (message ? '\n' + message : ''));
+        }
+    }
+    
+    showError(message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Error',
+                text: message,
+                icon: 'error'
+            });
+        } else {
+            alert('Error: ' + message);
+        }
+    }
+    
+    showWarning(title, message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: title,
+                text: message,
+                icon: 'warning'
+            });
+        } else {
+            alert(title + '\n' + message);
+        }
+    }
+    
+    simulateDelay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+}
+
+// Initialize the application when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Starting CRM Expansion Application...');
+    
+    // Check for required dependencies
+    if (typeof L === 'undefined') {
+        console.error('❌ Leaflet library not loaded');
+        return;
+    }
+    
+    // Initialize the app
+    window.crmApp = new CRMExpansionApp();
 });
 
-// Auto-update last update time every minute
-setInterval(updateLastUpdateTime, 60000);
+// Handle page unload
+window.addEventListener('beforeunload', function() {
+    if (window.crmApp) {
+        // Cleanup if needed
+        console.log('🧹 Cleaning up CRM application...');
+    }
+});
 </script>
 @endpush
