@@ -54,7 +54,7 @@ class BarangToko extends Model
      */
     public function barang()
     {
-        return $this->belongsTo(Barang::class, 'barang_id', 'barang_id');
+        return $this->hasMany(Barang::class, 'barang_id', 'barang_id');
     }
 
     /**

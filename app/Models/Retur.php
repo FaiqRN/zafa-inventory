@@ -78,7 +78,7 @@ class Retur extends Model
      */
     public function pengiriman()
     {
-        return $this->belongsTo(Pengiriman::class, 'pengiriman_id', 'pengiriman_id');
+        return $this->hasMany(Pengiriman::class, 'pengiriman_id', 'pengiriman_id');
     }
 
     /**
@@ -86,7 +86,7 @@ class Retur extends Model
      */
     public function barang()
     {
-        return $this->belongsTo(Barang::class, 'barang_id', 'barang_id');
+        return $this->hasMany(Barang::class, 'barang_id', 'barang_id');
     }
 
     /**
