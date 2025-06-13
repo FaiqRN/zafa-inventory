@@ -782,12 +782,6 @@ class CRMExpansionSystem {
                             </div>
                             <div class="col-md-3">
                                 <div class="metric-item">
-                                    <div class="metric-value text-info">${store.total_terjual}</div>
-                                    <div class="metric-label">Units Sold</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="metric-item">
                                     <div class="metric-value text-success">Rp ${store.total_profit.toLocaleString()}</div>
                                     <div class="metric-label">Total Profit</div>
                                 </div>

@@ -23,76 +23,7 @@
     <!-- Error Alert Container -->
     <div id="error-container"></div>
 
-    <!-- CRM Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-info hover-lift">
-                <div class="inner">
-                    <h3 id="total-partners" class="animate-counter">-</h3>
-                    <p>Total Toko</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-store"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-chart-line"></i> Geographic Distribution
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-success hover-lift">
-                <div class="inner">
-                    <h3 id="geo-clusters" class="animate-counter">-</h3>
-                    <p>Geo Cluster</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-map-marked-alt"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-bullseye"></i> 1.5km Radius
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-warning hover-lift">
-                <div class="inner">
-                    <h3><span id="avg-margin" class="animate-counter">-</span>%</h3>
-                    <p>Avg Margin</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-percentage"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-arrow-up"></i> Profit Analysis
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-danger hover-lift">
-                <div class="inner">
-                    <h3>Rp <span id="total-revenue" class="animate-counter">-</span></h3>
-                    <p>Total Revenue</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-coins"></i> Monthly Projection
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
+  
 
     <!-- Tab Navigation System -->
     <div class="card shadow-lg-custom">
@@ -113,11 +44,6 @@
                 <li class="nav-item">
                     <a class="nav-link font-weight-bold" id="analysis-tab" data-toggle="tab" href="#analysis" role="tab">
                         <i class="fas fa-search mr-2"></i>🔍 Analysis
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link font-weight-bold" id="expansion-tab" data-toggle="tab" href="#expansion" role="tab">
-                        <i class="fas fa-rocket mr-2"></i>🚀 Ekspansi
                     </a>
                 </li>
             </ul>
@@ -992,10 +918,6 @@ class CRMExpansionApp {
                             <div class="metric-label">Profit/Unit</div>
                         </div>
                         <div class="metric-item">
-                            <div class="metric-value">${store.total_terjual || 0}</div>
-                            <div class="metric-label">Units Sold</div>
-                        </div>
-                        <div class="metric-item">
                             <div class="metric-value">Rp ${store.total_profit.toLocaleString()}</div>
                             <div class="metric-label">Total Profit</div>
                         </div>
@@ -1198,7 +1120,7 @@ class CRMExpansionApp {
                     <div class="cluster-info">
                         <p class="mb-2"><strong>Total Stores:</strong> ${cluster.store_count} | 
                         <strong>Area:</strong> ${cluster.metrics.area_coverage}</p>
-                        <p class="mb-2"><strong>Revenue:</strong> Rp ${cluster.metrics.total_revenue.toLocaleString()}</p>
+                        
                         <p class="mb-2"><strong>Potensi Ekspansi:</strong> ${cluster.expansion_potential} toko lagi</p>
                     </div>
                     <div class="store-list mt-2">
