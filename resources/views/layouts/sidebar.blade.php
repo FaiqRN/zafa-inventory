@@ -83,10 +83,10 @@
 
             <!-- Analytics - NEW ADVANCED SECTION -->
             <li class="nav-item">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis', 'analytics.channel-comparison', 'analytics.predictive-analytics']))? 'active' : '' }}">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-brain"></i>
                     <p>
-                        Smart Analytics
+                        Analytics
                         <i class="right fas fa-angle-left"></i>
                     </p>
                 </a>
@@ -98,39 +98,27 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('analytics.partner-performance') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
+                        <a href="{{ route('analytics.partner-performance.index') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Partner Performance</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('analytics.inventory-optimization') }}" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')? 'active' : '' }}">
+                        <a href="{{ route('analytics.inventory-optimization.index') }}" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Inventory Optimization</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('analytics.product-velocity') }}" class="nav-link {{ ($activemenu == 'analytics.product-velocity')? 'active' : '' }}">
+                        <a href="{{ route('analytics.product-velocity.index') }}" class="nav-link {{ ($activemenu == 'analytics.product-velocity')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Product Velocity</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('analytics.profitability-analysis') }}" class="nav-link {{ ($activemenu == 'analytics.profitability-analysis')? 'active' : '' }}">
+                        <a href="{{ route('analytics.profitability-analysis.index') }}" class="nav-link {{ ($activemenu == 'analytics.profitability-analysis')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>True Profitability</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('analytics.channel-comparison') }}" class="nav-link {{ ($activemenu == 'analytics.channel-comparison')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Channel Comparison</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('analytics.predictive-analytics') }}" class="nav-link {{ ($activemenu == 'analytics.predictive-analytics')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Predictive Analytics</p>
                         </a>
                     </li>
                 </ul>

@@ -17,6 +17,12 @@ use App\Http\Controllers\LaporanTokoController;
 use App\Http\Controllers\LaporanPemesananController;
 use App\Http\Controllers\FollowUpPelangganController;
 
+// Analytics Controllers - FIXED NAMESPACE (Tanpa Analytics\)
+use App\Http\Controllers\PartnerPerformanceController;
+use App\Http\Controllers\InventoryOptimizationController;
+use App\Http\Controllers\ProductVelocityController;
+use App\Http\Controllers\ProfitabilityController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -46,111 +52,94 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     // Dashboard API Routes untuk View Data
-Route::prefix('dashboard/api')->group(function() {
-    Route::get('/statistik', [DashboardController::class, 'getStatistikRingkasan']);
-    Route::get('/grafik-pengiriman', [DashboardController::class, 'getGrafikPengiriman']);
-    Route::get('/barang-analysis', [DashboardController::class, 'getBarangLakuTidakLaku'])->name('dashboard.api.barang-analysis');
-    Route::get('/transaksi-terbaru', [DashboardController::class, 'getTransaksiTerbaru']);
-    Route::get('/toko-retur-terbanyak', [DashboardController::class, 'getTokoReturTerbanyak']);
-    Route::get('/debug', [DashboardController::class, 'debug'])->name('dashboard.api.debug');
-});
-Route::group(['prefix' => 'analytics', 'middleware' => 'auth'], function () {
-    // Main Analytics Dashboard
-    Route::get('/', [App\Http\Controllers\AnalyticsController::class, 'index'])
-        ->name('analytics.index');
-    
-    // Analytics 1: Partner Performance Analytics
-    Route::get('/partner-performance', [App\Http\Controllers\AnalyticsController::class, 'partnerPerformance'])
-        ->name('analytics.partner-performance');
-    
-    // Analytics 2: Inventory Optimization
-    Route::get('/inventory-optimization', [App\Http\Controllers\AnalyticsController::class, 'inventoryOptimization'])
-        ->name('analytics.inventory-optimization');
-    
-    // Analytics 3: Product Velocity
-    Route::get('/product-velocity', [App\Http\Controllers\AnalyticsController::class, 'productVelocity'])
-        ->name('analytics.product-velocity');
-    
-    // Analytics 4: Profitability Analysis
-    Route::get('/profitability-analysis', [App\Http\Controllers\AnalyticsController::class, 'profitabilityAnalysis'])
-        ->name('analytics.profitability-analysis');
-    
-    // Analytics 5: Channel Comparison
-    Route::get('/channel-comparison', [App\Http\Controllers\AnalyticsController::class, 'channelComparison'])
-        ->name('analytics.channel-comparison');
-    
-    // Analytics 6: Predictive Analytics
-    Route::get('/predictive-analytics', [App\Http\Controllers\AnalyticsController::class, 'predictiveAnalytics'])
-        ->name('analytics.predictive-analytics');
-    
-    // API Endpoints for AJAX calls
-    Route::group(['prefix' => 'api'], function () {
-        // Partner Performance APIs
-        Route::get('/partner/{id}/detail', [App\Http\Controllers\AnalyticsController::class, 'getPartnerDetail'])
-            ->name('analytics.api.partner-detail');
-        Route::get('/partner/{id}/history', [App\Http\Controllers\AnalyticsController::class, 'getPartnerHistory'])
-            ->name('analytics.api.partner-history');
-        Route::post('/partner/{id}/alert', [App\Http\Controllers\AnalyticsController::class, 'sendPartnerAlert'])
-            ->name('analytics.api.send-alert');
-        
-        // Export APIs
-        Route::get('/export/partner-performance', [App\Http\Controllers\AnalyticsController::class, 'exportPartnerPerformance'])
-            ->name('analytics.api.export-partner-performance');
-        Route::get('/export/inventory-recommendations', [App\Http\Controllers\AnalyticsController::class, 'exportInventoryRecommendations'])
-            ->name('analytics.api.export-inventory');
-        Route::get('/export/product-velocity', [App\Http\Controllers\AnalyticsController::class, 'exportProductVelocity'])
-            ->name('analytics.api.export-velocity');
-        Route::get('/export/profitability', [App\Http\Controllers\AnalyticsController::class, 'exportProfitability'])
-            ->name('analytics.api.export-profitability');
-        
-        // Real-time data APIs
-        Route::get('/charts/performance-trend', [App\Http\Controllers\AnalyticsController::class, 'getPerformanceTrendData'])
-            ->name('analytics.api.performance-trend');
-        Route::get('/charts/grade-distribution', [App\Http\Controllers\AnalyticsController::class, 'getGradeDistributionData'])
-            ->name('analytics.api.grade-distribution');
-        Route::get('/charts/velocity-heatmap', [App\Http\Controllers\AnalyticsController::class, 'getVelocityHeatmapData'])
-            ->name('analytics.api.velocity-heatmap');
-        Route::get('/charts/profitability-comparison', [App\Http\Controllers\AnalyticsController::class, 'getProfitabilityComparisonData'])
-            ->name('analytics.api.profitability-comparison');
-        
-        // Prediction APIs
-        Route::get('/predictions/demand/{toko_id}/{barang_id}', [App\Http\Controllers\AnalyticsController::class, 'getDemandPrediction'])
-            ->name('analytics.api.demand-prediction');
-        Route::get('/predictions/risk-scores', [App\Http\Controllers\AnalyticsController::class, 'getRiskScores'])
-            ->name('analytics.api.risk-scores');
-        Route::get('/predictions/seasonal-forecast', [App\Http\Controllers\AnalyticsController::class, 'getSeasonalForecast'])
-            ->name('analytics.api.seasonal-forecast');
-        
-        // Optimization APIs
-        Route::post('/optimize/inventory-allocation', [App\Http\Controllers\AnalyticsController::class, 'optimizeInventoryAllocation'])
-            ->name('analytics.api.optimize-inventory');
-        Route::post('/recommendations/generate', [App\Http\Controllers\AnalyticsController::class, 'generateRecommendations'])
-            ->name('analytics.api.generate-recommendations');
-        
-        // Bulk Operations APIs
-        Route::post('/bulk/send-alerts', [App\Http\Controllers\AnalyticsController::class, 'bulkSendAlerts'])
-            ->name('analytics.api.bulk-alerts');
-        Route::post('/bulk/update-grades', [App\Http\Controllers\AnalyticsController::class, 'bulkUpdateGrades'])
-            ->name('analytics.api.bulk-update-grades');
-        
-        // Settings APIs
-        Route::get('/settings/thresholds', [App\Http\Controllers\AnalyticsController::class, 'getAnalyticsThresholds'])
-            ->name('analytics.api.get-thresholds');
-        Route::post('/settings/thresholds', [App\Http\Controllers\AnalyticsController::class, 'updateAnalyticsThresholds'])
-            ->name('analytics.api.update-thresholds');
+    Route::prefix('dashboard/api')->group(function() {
+        Route::get('/statistik', [DashboardController::class, 'getStatistikRingkasan']);
+        Route::get('/grafik-pengiriman', [DashboardController::class, 'getGrafikPengiriman']);
+        Route::get('/barang-analysis', [DashboardController::class, 'getBarangLakuTidakLaku'])->name('dashboard.api.barang-analysis');
+        Route::get('/transaksi-terbaru', [DashboardController::class, 'getTransaksiTerbaru']);
+        Route::get('/toko-retur-terbanyak', [DashboardController::class, 'getTokoReturTerbanyak']);
+        Route::get('/debug', [DashboardController::class, 'debug'])->name('dashboard.api.debug');
     });
-});
 
+    // ===============================
+    // ANALYTICS ROUTES - CORE 4 MODULES ONLY
+    // ===============================
+    Route::prefix('analytics')->name('analytics.')->group(function () {
+        // Main Analytics Dashboard - Overview Only
+        Route::get('/', [AnalyticsController::class, 'index'])->name('index');
+        Route::get('/api/overview', [AnalyticsController::class, 'getOverviewData'])->name('api.overview');
+
+        // ===== ANALYTICS 1: PARTNER PERFORMANCE =====
+        Route::prefix('partner-performance')->name('partner-performance.')->group(function () {
+            Route::get('/', [PartnerPerformanceController::class, 'index'])->name('index');
+            
+            // API Routes
+            Route::get('/api/data', [PartnerPerformanceController::class, 'getData'])->name('api.data');
+            Route::get('/api/trends', [PartnerPerformanceController::class, 'getTrends'])->name('api.trends');
+            Route::get('/api/statistics', [PartnerPerformanceController::class, 'getStatistics'])->name('api.statistics');
+            Route::get('/api/search', [PartnerPerformanceController::class, 'searchPartners'])->name('api.search');
+            
+            // Partner Actions
+            Route::get('/history/{partnerId}', [PartnerPerformanceController::class, 'getPartnerHistory'])->name('history');
+            Route::post('/alert/{partnerId}', [PartnerPerformanceController::class, 'sendPartnerAlert'])->name('alert');
+            Route::post('/bulk-alerts', [PartnerPerformanceController::class, 'sendBulkAlerts'])->name('bulk-alerts');
+            
+            // Export & Reports
+            Route::get('/export', [PartnerPerformanceController::class, 'export'])->name('export');
+            Route::post('/generate-report', [PartnerPerformanceController::class, 'generateReport'])->name('generate-report');
+        });
+        
+        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION =====
+        Route::prefix('inventory-optimization')->name('inventory-optimization.')->group(function () {
+            Route::get('/', [InventoryOptimizationController::class, 'index'])->name('index');
+            
+            // Recommendation Actions
+            Route::post('/apply', [InventoryOptimizationController::class, 'applyRecommendation'])->name('apply');
+            Route::post('/apply-all', [InventoryOptimizationController::class, 'applyAllRecommendations'])->name('apply-all');
+            Route::post('/customize', [InventoryOptimizationController::class, 'customizeRecommendation'])->name('customize');
+            Route::post('/generate', [InventoryOptimizationController::class, 'refreshRecommendations'])->name('generate');
+            
+            // Seasonal Configuration
+            Route::get('/seasonal-config', [InventoryOptimizationController::class, 'getSeasonalAdjustments'])->name('seasonal-config');
+            Route::post('/update-seasonal', [InventoryOptimizationController::class, 'updateSeasonalConfiguration'])->name('update-seasonal');
+            
+            // API Routes
+            Route::get('/api/data', [InventoryOptimizationController::class, 'getOptimizationData'])->name('api.data');
+            Route::get('/details/{recommendationId}', [InventoryOptimizationController::class, 'getRecommendationDetails'])->name('details');
+            
+            // Export
+            Route::get('/export', [InventoryOptimizationController::class, 'export'])->name('export');
+        });
+        
+        // ===== ANALYTICS 3: PRODUCT VELOCITY =====
+        Route::prefix('product-velocity')->name('product-velocity.')->group(function () {
+            Route::get('/', [ProductVelocityController::class, 'index'])->name('index');
+            Route::get('/export', [ProductVelocityController::class, 'export'])->name('export');
+            Route::post('/optimize-portfolio', [ProductVelocityController::class, 'optimizePortfolio'])->name('optimize-portfolio');
+            Route::post('/recommend-increase/{barangId}', [ProductVelocityController::class, 'recommendIncrease'])->name('recommend-increase');
+            Route::post('/recommend-discontinue/{barangId}', [ProductVelocityController::class, 'recommendDiscontinue'])->name('recommend-discontinue');
+        });
+        
+        // ===== ANALYTICS 4: PROFITABILITY ANALYSIS =====
+        Route::prefix('profitability-analysis')->name('profitability-analysis.')->group(function () {
+            Route::get('/', [ProfitabilityController::class, 'index'])->name('index');
+            Route::get('/export', [ProfitabilityController::class, 'export'])->name('export');
+            Route::get('/identify-loss-makers', [ProfitabilityController::class, 'identifyLossMakers'])->name('identify-loss-makers');
+            Route::post('/flag-partner/{partnerId}', [ProfitabilityController::class, 'flagPartner'])->name('flag-partner');
+            Route::post('/optimize-partner/{partnerId}', [ProfitabilityController::class, 'optimizePartner'])->name('optimize-partner');
+            Route::get('/roi-distribution', [ProfitabilityController::class, 'getRoiDistribution'])->name('roi-distribution');
+        });
+    });
 
     // Route profil
     Route::middleware(['auth'])->group(function () {
-        Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'index'])->name('profile');
+        Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
         
         Route::prefix('pengaturan')->group(function () {
-            Route::get('/edit-profile', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
-            Route::post('/update-profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
-            Route::get('/ubah-password', [App\Http\Controllers\ProfileController::class, 'changePassword'])->name('profile.change-password');
-            Route::post('/update-password', [App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.update-password');
+            Route::get('/edit-profile', [ProfileController::class, 'edit'])->name('profile.edit');
+            Route::post('/update-profile', [ProfileController::class, 'update'])->name('profile.update');
+            Route::get('/ubah-password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
+            Route::post('/update-password', [ProfileController::class, 'updatePassword'])->name('profile.update-password');
         });
     });
     
@@ -166,30 +155,29 @@ Route::group(['prefix' => 'analytics', 'middleware' => 'auth'], function () {
         Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
     });
     
-Route::prefix('toko')->group(function() {
-    // Basic CRUD routes
-    Route::get('/', [TokoController::class, 'index'])->name('toko.index');
-    Route::get('/list', [TokoController::class, 'getList'])->name('toko.list'); // ← Route yang hilang
-    Route::get('/data', [TokoController::class, 'getData'])->name('toko.data');
-    Route::get('/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
-    Route::post('/', [TokoController::class, 'store'])->name('toko.store');
-    Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
-    Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
-    Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
-    Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
-    
-    // Wilayah routes
-    Route::get('/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
-    Route::get('/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
-    Route::get('/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
-    
-    // Enhanced geocoding routes
-    Route::post('/preview-geocode', [TokoController::class, 'previewGeocode'])->name('toko.previewGeocode');
-    Route::post('/geocode', [TokoController::class, 'geocodeToko'])->name('toko.geocodeToko');
-    Route::post('/batch-geocode', [TokoController::class, 'batchGeocodeToko'])->name('toko.batchGeocodeToko');
-
-    Route::post('/validate-coordinates', [TokoController::class, 'validateMapCoordinates'])->name('toko.validateCoordinates');
-});
+    Route::prefix('toko')->group(function() {
+        // Basic CRUD routes
+        Route::get('/', [TokoController::class, 'index'])->name('toko.index');
+        Route::get('/list', [TokoController::class, 'getList'])->name('toko.list');
+        Route::get('/data', [TokoController::class, 'getData'])->name('toko.data');
+        Route::get('/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
+        Route::post('/', [TokoController::class, 'store'])->name('toko.store');
+        Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
+        Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
+        Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
+        Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
+        
+        // Wilayah routes
+        Route::get('/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
+        Route::get('/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
+        Route::get('/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
+        
+        // Enhanced geocoding routes
+        Route::post('/preview-geocode', [TokoController::class, 'previewGeocode'])->name('toko.previewGeocode');
+        Route::post('/geocode', [TokoController::class, 'geocodeToko'])->name('toko.geocodeToko');
+        Route::post('/batch-geocode', [TokoController::class, 'batchGeocodeToko'])->name('toko.batchGeocodeToko');
+        Route::post('/validate-coordinates', [TokoController::class, 'validateMapCoordinates'])->name('toko.validateCoordinates');
+    });
     
     Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');
     Route::get('/barang-toko/getAvailableBarang', [BarangTokoController::class, 'getAvailableBarang'])->name('barang-toko.getAvailableBarang');
@@ -228,7 +216,7 @@ Route::prefix('toko')->group(function() {
         Route::get('/data', [ReturController::class, 'getData'])->name('retur.data');
         Route::get('/get-pengiriman', [ReturController::class, 'getPengiriman'])->name('retur.getPengiriman');
         Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
-        Route::get('/export', [ReturController::class, 'export'])->name('retur.export'); // Pastikan ini di atas {id}
+        Route::get('/export', [ReturController::class, 'export'])->name('retur.export');
         Route::get('/{id}', [ReturController::class, 'show'])->name('retur.show');
         Route::delete('/{id}', [ReturController::class, 'destroy'])->name('retur.destroy');
     });
@@ -244,7 +232,6 @@ Route::prefix('toko')->group(function() {
     });
     
     // Route Laporan
-    // Laporan Pemesanan Routes
     Route::get('/laporan-pemesanan', [LaporanPemesananController::class, 'index'])->name('laporan.pemesanan');
     Route::get('/laporan-pemesanan/data', [LaporanPemesananController::class, 'getData'])->name('laporan.pemesanan.data');
     Route::post('/laporan-pemesanan/update-catatan', [LaporanPemesananController::class, 'updateCatatan'])->name('laporan.pemesanan.updateCatatan');
@@ -258,10 +245,10 @@ Route::prefix('toko')->group(function() {
     Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
     Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
     
-// Route Follow Up Pelanggan (Complete with WhatsApp Integration)
+    // Route Follow Up Pelanggan (Complete with WhatsApp Integration)
     Route::group(['prefix' => 'follow-up-pelanggan'], function() {
         Route::get('/', [FollowUpPelangganController::class, 'index'])->name('follow-up-pelanggan.index');
-        
+        Route::get('/test-image-sending', [FollowUpPelangganController::class, 'testImageSending']);
         // Customer data endpoints
         Route::get('/filtered-customers', [FollowUpPelangganController::class, 'getFilteredCustomers'])->name('follow-up-pelanggan.filtered-customers');
         
@@ -281,10 +268,8 @@ Route::prefix('toko')->group(function() {
         // Debug route (temporary - remove in production)
         Route::get('/debug', [FollowUpPelangganController::class, 'debugDatabase'])->name('follow-up-pelanggan.debug');
         Route::get('/debug-wablas', [FollowUpPelangganController::class, 'debugWablas'])->name('follow-up-pelanggan.debug-wablas');
-        Route::get('/debug', [FollowUpPelangganController::class, 'debugDatabase'])->name('follow-up-pelanggan.debug');
-    
+        
     });
-
 
     // ===============================
     // MARKET MAP CRM ROUTES 
@@ -323,19 +308,16 @@ Route::prefix('toko')->group(function() {
         Route::get('/export-price-intelligence', [MarketMapController::class, 'exportPriceIntelligence'])->name('market-map.export-price-intelligence');
         Route::get('/export-partner-performance', [MarketMapController::class, 'exportPartnerPerformance'])->name('market-map.export-partner-performance');
         
-        // Geocoding & Data Quality (kept for maintaining coordinate accuracy)
+        // Geocoding & Data Quality
         Route::post('/bulk-geocode', [MarketMapController::class, 'bulkGeocodeTokos'])->name('market-map.bulk-geocode');
         Route::get('/geocode-status', [MarketMapController::class, 'getGeocodeStatus'])->name('market-map.geocode-status');
         Route::post('/enhanced-bulk-geocode', [MarketMapController::class, 'enhancedBulkGeocodeTokos'])->name('market-map.enhanced-bulk-geocode');
         Route::post('/fix-coordinates/{tokoId}', [MarketMapController::class, 'fixTokoCoordinates'])->name('market-map.fix-coordinates');
         
-        // *** REMOVED: Toko creation routes (no longer needed for CRM focus) ***
-        Route::get('/market-map/system-health', [MarketMapController::class, 'getSystemHealth'])->name('market-map.system-health');
-Route::get('/market-map/territory-analysis', [MarketMapController::class, 'getTerritoryAnalysis'])->name('market-map.territory-analysis');
-Route::get('/market-map/detailed-partner-analysis', [MarketMapController::class, 'getDetailedPartnerAnalysis'])->name('market-map.detailed-partner-analysis');
-Route::post('/market-map/clear-cache', [MarketMapController::class, 'clearSystemCache'])->name('market-map.clear-cache');
-        
-        // Route::post('/store-toko', [MarketMapController::class, 'storeToko'])->name('market-map.store-toko');
+        // System Health & Performance
+        Route::get('/system-health', [MarketMapController::class, 'getSystemHealth'])->name('market-map.system-health');
+        Route::get('/detailed-partner-analysis', [MarketMapController::class, 'getDetailedPartnerAnalysis'])->name('market-map.detailed-partner-analysis');
+        Route::post('/clear-cache', [MarketMapController::class, 'clearSystemCache'])->name('market-map.clear-cache');
     });
 
     // Route untuk debugging (hanya di development)

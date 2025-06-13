@@ -114,7 +114,7 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * Send follow up message with FIXED WhatsApp broadcast
+     * Send follow up message with FIXED WhatsApp broadcast including images
      */
     public function sendFollowUp(Request $request)
     {
@@ -122,7 +122,7 @@ class FollowUpPelangganController extends Controller
             'customers' => 'required|string',
             'message' => 'nullable|string|max:1000',
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
             'target_type' => 'required|in:pelangganLama,pelangganBaru,pelangganTidakKembali,keseluruhan'
         ]);
 
@@ -149,48 +149,84 @@ class FollowUpPelangganController extends Controller
             $imagePaths = [];
             $imageUrls = [];
 
-            // Handle image uploads
+            // FIXED: Handle image uploads with proper storage and URL generation
             if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $image) {
-                    $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                    $imagePath = $image->storeAs('follow-up-images', $imageName, 'public');
-                    $imagePaths[] = $imagePath;
-                    $imageUrls[] = asset('storage/' . $imagePath);
+                Log::info('Processing ' . count($request->file('images')) . ' uploaded images');
+                
+                foreach ($request->file('images') as $index => $image) {
+                    try {
+                        // Validate image
+                        if (!$image->isValid()) {
+                            Log::error("Invalid image at index {$index}");
+                            continue;
+                        }
+
+                        // Generate unique filename
+                        $imageName = time() . '_' . uniqid() . '_' . $index . '.' . $image->getClientOriginalExtension();
+                        
+                        // Store in public disk
+                        $imagePath = $image->storeAs('follow-up-images', $imageName, 'public');
+                        
+                        if (!$imagePath) {
+                            Log::error("Failed to store image {$imageName}");
+                            continue;
+                        }
+
+                        $imagePaths[] = $imagePath;
+                        
+                        // CRITICAL FIX: Generate full accessible URL for WhatsApp API
+                        $fullImageUrl = url('storage/' . $imagePath);
+                        $imageUrls[] = $fullImageUrl;
+                        
+                        Log::info("Image uploaded successfully: {$imagePath}, URL: {$fullImageUrl}");
+                        
+                        // Verify the image is accessible
+                        if (!$this->verifyImageUrl($fullImageUrl)) {
+                            Log::warning("Image URL not accessible: {$fullImageUrl}");
+                        }
+                        
+                    } catch (\Exception $e) {
+                        Log::error("Failed to upload image at index {$index}: " . $e->getMessage());
+                        continue;
+                    }
                 }
+                
+                Log::info("Total images processed: " . count($imageUrls) . " out of " . count($request->file('images')));
             }
 
             // Check if we have something to send
-            if (empty($message) && empty($imagePaths)) {
+            if (empty($message) && empty($imageUrls)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Pesan atau gambar harus diisi minimal salah satu'
                 ], 422);
             }
 
-            // Check WhatsApp device status first (CRITICAL)
+            // Check WhatsApp device status first
             $deviceStatus = $this->checkWablasDeviceStatus();
             if (!$deviceStatus['isConnected']) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'WhatsApp device tidak terhubung. Status: ' . $deviceStatus['message'] . '. Silakan scan QR code di device settings.'
+                    'message' => 'WhatsApp device tidak terhubung. Status: ' . $deviceStatus['message']
                 ], 500);
             }
 
-            Log::info("Starting WhatsApp broadcast to " . count($customers) . " customers");
+            Log::info("Starting WhatsApp broadcast to " . count($customers) . " customers with " . count($imageUrls) . " images");
 
             $successCount = 0;
             $failedCount = 0;
             $results = [];
 
-            // FIXED: Use batch processing for better performance
-            $customerBatches = array_chunk($customers, 5); // Process 5 customers at a time
+            // Process customers in smaller batches for image sending
+            $batchSize = count($imageUrls) > 0 ? 2 : 5; // Smaller batches when sending images
+            $customerBatches = array_chunk($customers, $batchSize);
             
             foreach ($customerBatches as $batchIndex => $batch) {
                 Log::info("Processing batch " . ($batchIndex + 1) . " of " . count($customerBatches));
                 
                 foreach ($batch as $customer) {
                     try {
-                        // Validate required customer data
+                        // Validate customer data
                         if (empty($customer['phone']) || empty($customer['name'])) {
                             $results[] = [
                                 'customer' => $customer['name'] ?? 'Unknown',
@@ -202,7 +238,7 @@ class FollowUpPelangganController extends Controller
                             continue;
                         }
 
-                        // Format and validate phone number (CRITICAL FIX)
+                        // Format phone number
                         $phone = $this->formatPhoneNumber($customer['phone']);
                         if (!$this->validatePhoneNumber($phone)) {
                             $results[] = [
@@ -215,7 +251,7 @@ class FollowUpPelangganController extends Controller
                             continue;
                         }
 
-                        // Create follow up record in database first
+                        // Create follow up record in database
                         $followUpData = [
                             'customer_name' => $customer['name'],
                             'phone_number' => $phone,
@@ -230,9 +266,10 @@ class FollowUpPelangganController extends Controller
                         ];
 
                         $followUpId = DB::table('follow_up')->insertGetId($followUpData);
+                        Log::info("Created follow_up record {$followUpId} for {$customer['name']}");
 
-                        // FIXED: Send via WhatsApp API with proper error handling
-                        $whatsappResult = $this->sendWhatsAppMessageFixed($phone, $message, $imageUrls, $customer['name']);
+                        // FIXED: Send via WhatsApp with proper image handling
+                        $whatsappResult = $this->sendWhatsAppWithImages($phone, $message, $imageUrls, $customer['name']);
                         
                         if ($whatsappResult['success']) {
                             // Update status to sent
@@ -255,7 +292,7 @@ class FollowUpPelangganController extends Controller
                             ];
                             $successCount++;
                             
-                            Log::info("Successfully sent WhatsApp to {$customer['name']} ({$phone})");
+                            Log::info("Successfully sent WhatsApp with images to {$customer['name']} ({$phone})");
                         } else {
                             // Update status to failed
                             DB::table('follow_up')
@@ -278,13 +315,13 @@ class FollowUpPelangganController extends Controller
                             Log::error("Failed to send WhatsApp to {$customer['name']} ({$phone}): " . $whatsappResult['error']);
                         }
 
-                        // FIXED: Add proper delay between messages (CRITICAL for rate limiting)
-                        sleep(3); // 3 second delay between each message
+                        // CRITICAL: Longer delay when sending images
+                        $delay = count($imageUrls) > 0 ? 6 : 3; // 6 seconds for images, 3 for text only
+                        sleep($delay);
 
                     } catch (\Exception $e) {
                         Log::error('Follow up send error for customer ' . ($customer['name'] ?? 'unknown') . ': ' . $e->getMessage());
                         
-                        // Update database if record was created
                         if (isset($followUpId)) {
                             DB::table('follow_up')
                                 ->where('follow_up_id', $followUpId)
@@ -305,10 +342,11 @@ class FollowUpPelangganController extends Controller
                     }
                 }
                 
-                // Add delay between batches
+                // Longer delay between batches when sending images
                 if ($batchIndex < count($customerBatches) - 1) {
-                    Log::info("Waiting 5 seconds before next batch...");
-                    sleep(5); // 5 second delay between batches
+                    $batchDelay = count($imageUrls) > 0 ? 10 : 5;
+                    Log::info("Waiting {$batchDelay} seconds before next batch...");
+                    sleep($batchDelay);
                 }
             }
 
@@ -320,13 +358,15 @@ class FollowUpPelangganController extends Controller
                 'summary' => [
                     'total' => count($customers),
                     'success' => $successCount,
-                    'failed' => $failedCount
+                    'failed' => $failedCount,
+                    'images_sent' => count($imageUrls)
                 ],
                 'results' => $results
             ]);
 
         } catch (\Exception $e) {
             Log::error('Send follow up error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'status' => 'error',
@@ -335,10 +375,10 @@ class FollowUpPelangganController extends Controller
         }
     }
 
-/**
-     * FINAL FIX: Send WhatsApp message menggunakan method yang sudah terbukti berhasil
+    /**
+     * FIXED: Send WhatsApp message with images support
      */
-    private function sendWhatsAppMessageFixed($phone, $message, $imageUrls = [], $customerName = 'Customer')
+    private function sendWhatsAppWithImages($phone, $message, $imageUrls = [], $customerName = 'Customer')
     {
         try {
             $wablasToken = env('WABLAS_TOKEN');
@@ -356,39 +396,38 @@ class FollowUpPelangganController extends Controller
             $hasError = false;
             $lastMessageId = null;
 
-            // FINAL FIX: Headers yang sudah terbukti berhasil
+            // Headers for API calls
             $headers = [
                 'Authorization' => $wablasToken,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
             ];
 
-            Log::info("Sending WhatsApp to {$phone} using FINAL FIX method");
+            Log::info("Sending WhatsApp to {$phone} with " . count($imageUrls) . " images and message: " . ($message ? 'yes' : 'no'));
 
-            // Send text message if provided
-            if (!empty($message)) {
-                $textResult = $this->sendWablasTextMessageFinalFix($wablasUrl, $headers, $phone, $message);
-                $results[] = $textResult;
-                
-                if (!$textResult['success']) {
-                    $hasError = true;
-                    Log::error("Failed to send text message to {$phone}: " . $textResult['error']);
-                } else {
-                    $lastMessageId = $textResult['message_id'];
-                    Log::info("Successfully sent text message to {$phone}, message_id: {$lastMessageId}");
-                }
-
-                // Add delay between text and images
-                if (!empty($imageUrls)) {
-                    sleep(2);
-                }
-            }
-
-            // Send images if provided
+            // STRATEGY: Send images first with captions, then text message if needed
             if (!empty($imageUrls)) {
                 foreach ($imageUrls as $index => $imageUrl) {
-                    $caption = ($index === 0) ? "Gambar untuk {$customerName}" : '';
-                    $imageResult = $this->sendWablasImageMessageFinalFix($wablasUrl, $headers, $phone, $imageUrl, $caption);
+                    // Verify image URL is accessible before sending
+                    if (!$this->verifyImageUrl($imageUrl)) {
+                        Log::error("Image URL not accessible: {$imageUrl}");
+                        $hasError = true;
+                        $results[] = [
+                            'success' => false,
+                            'error' => 'Image URL tidak dapat diakses: ' . $imageUrl
+                        ];
+                        continue;
+                    }
+
+                    // Use message as caption for the first image only
+                    $caption = '';
+                    if ($index === 0 && !empty($message)) {
+                        $caption = $message;
+                    } elseif ($index === 0 && empty($message)) {
+                        $caption = "Gambar untuk {$customerName}";
+                    }
+                    
+                    $imageResult = $this->sendWablasImageMessage($wablasUrl, $headers, $phone, $imageUrl, $caption);
                     $results[] = $imageResult;
                     
                     if (!$imageResult['success']) {
@@ -401,20 +440,38 @@ class FollowUpPelangganController extends Controller
                     
                     // Delay between images
                     if ($index < count($imageUrls) - 1) {
-                        sleep(2);
+                        sleep(3); // 3 seconds between images
                     }
+                }
+            }
+
+            // Send separate text message only if no images were sent OR if message wasn't used as caption
+            if (!empty($message) && (empty($imageUrls) || $hasError)) {
+                if (!empty($imageUrls)) {
+                    sleep(2); // Small delay after images
+                }
+                
+                $textResult = $this->sendWablasTextMessage($wablasUrl, $headers, $phone, $message);
+                $results[] = $textResult;
+                
+                if (!$textResult['success']) {
+                    $hasError = true;
+                    Log::error("Failed to send text message to {$phone}: " . $textResult['error']);
+                } else {
+                    $lastMessageId = $textResult['message_id'];
+                    Log::info("Successfully sent text message to {$phone}, message_id: {$lastMessageId}");
                 }
             }
 
             return [
                 'success' => !$hasError,
                 'message_id' => $lastMessageId,
-                'error' => $hasError ? 'Beberapa pesan gagal dikirim' : null,
+                'error' => $hasError ? 'Beberapa pesan/gambar gagal dikirim' : null,
                 'response' => $results
             ];
 
         } catch (\Exception $e) {
-            Log::error('sendWhatsAppMessageFixed error: ' . $e->getMessage());
+            Log::error('sendWhatsAppWithImages error: ' . $e->getMessage());
             
             return [
                 'success' => false,
@@ -425,27 +482,27 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * FINAL FIX: Send text message dengan format yang sudah terbukti berhasil
+     * FIXED: Send image message via Wablas API
      */
-    private function sendWablasTextMessageFinalFix($apiUrl, $headers, $phone, $message)
+    private function sendWablasImageMessage($apiUrl, $headers, $phone, $imageUrl, $caption = '')
     {
         try {
-            // FINAL FIX: Format payload yang sudah terbukti berhasil dari test
             $payload = [
                 'phone' => $phone,
-                'message' => $message
+                'image' => $imageUrl,
+                'caption' => $caption
             ];
             
-            Log::info("Sending text message to {$phone} via FINAL FIX method", [
-                'url' => $apiUrl . '/send-message',
+            Log::info("Sending image to {$phone}", [
+                'url' => $apiUrl . '/send-image',
                 'payload' => $payload
             ]);
             
-            $response = Http::timeout(60)
+            $response = Http::timeout(90) // Increased timeout for images
                 ->withHeaders($headers)
-                ->post($apiUrl . '/send-message', $payload);
+                ->post($apiUrl . '/send-image', $payload);
 
-            Log::info("Wablas response for {$phone} (FINAL FIX)", [
+            Log::info("Wablas image response for {$phone}", [
                 'status_code' => $response->status(),
                 'response_body' => $response->body(),
                 'successful' => $response->successful()
@@ -454,23 +511,8 @@ class FollowUpPelangganController extends Controller
             if ($response->successful()) {
                 $responseData = $response->json();
                 
-                // FINAL FIX: Handle response format berdasarkan test yang berhasil
                 if (isset($responseData['status']) && $responseData['status'] === true) {
-                    $messageId = null;
-                    
-                    // Extract message ID dari format response yang berhasil
-                    if (isset($responseData['data']['messages'][0]['id'])) {
-                        $messageId = $responseData['data']['messages'][0]['id'];
-                    } elseif (isset($responseData['data']['id'])) {
-                        $messageId = $responseData['data']['id'];
-                    } elseif (isset($responseData['id'])) {
-                        $messageId = $responseData['id'];
-                    } elseif (isset($responseData['message_id'])) {
-                        $messageId = $responseData['message_id'];
-                    } else {
-                        // Fallback jika tidak ada ID yang jelas
-                        $messageId = 'sent_' . time() . '_' . substr(md5($phone), 0, 8);
-                    }
+                    $messageId = $this->extractMessageId($responseData);
                     
                     return [
                         'success' => true,
@@ -486,12 +528,6 @@ class FollowUpPelangganController extends Controller
                 }
             } else {
                 $errorBody = $response->body();
-                Log::error('Wablas send message failed (FINAL FIX)', [
-                    'status' => $response->status(),
-                    'response' => $errorBody,
-                    'payload' => $payload
-                ]);
-                
                 return [
                     'success' => false,
                     'error' => 'HTTP Error: ' . $response->status() . ' - ' . $errorBody,
@@ -500,8 +536,7 @@ class FollowUpPelangganController extends Controller
             }
             
         } catch (\Exception $e) {
-            Log::error('sendWablasTextMessageFinalFix error: ' . $e->getMessage());
-            
+            Log::error('sendWablasImageMessage error: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -511,50 +546,36 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * FINAL FIX: Send image message dengan format yang konsisten
+     * FIXED: Send text message via Wablas API
      */
-    private function sendWablasImageMessageFinalFix($apiUrl, $headers, $phone, $imageUrl, $caption = '')
+    private function sendWablasTextMessage($apiUrl, $headers, $phone, $message)
     {
         try {
-            // FINAL FIX: Format payload yang konsisten dengan send message
             $payload = [
                 'phone' => $phone,
-                'image' => $imageUrl,
-                'caption' => $caption
+                'message' => $message
             ];
             
-            Log::info("Sending image to {$phone} via FINAL FIX method", [
-                'url' => $apiUrl . '/send-image',
+            Log::info("Sending text message to {$phone}", [
+                'url' => $apiUrl . '/send-message',
                 'payload' => $payload
             ]);
             
             $response = Http::timeout(60)
                 ->withHeaders($headers)
-                ->post($apiUrl . '/send-image', $payload);
+                ->post($apiUrl . '/send-message', $payload);
 
-            Log::info("Wablas image response for {$phone} (FINAL FIX)", [
+            Log::info("Wablas text response for {$phone}", [
                 'status_code' => $response->status(),
-                'response_body' => $response->body()
+                'response_body' => $response->body(),
+                'successful' => $response->successful()
             ]);
 
             if ($response->successful()) {
                 $responseData = $response->json();
                 
                 if (isset($responseData['status']) && $responseData['status'] === true) {
-                    $messageId = null;
-                    
-                    // Extract message ID dari response
-                    if (isset($responseData['data']['messages'][0]['id'])) {
-                        $messageId = $responseData['data']['messages'][0]['id'];
-                    } elseif (isset($responseData['data']['id'])) {
-                        $messageId = $responseData['data']['id'];
-                    } elseif (isset($responseData['id'])) {
-                        $messageId = $responseData['id'];
-                    } elseif (isset($responseData['message_id'])) {
-                        $messageId = $responseData['message_id'];
-                    } else {
-                        $messageId = 'image_' . time() . '_' . substr(md5($phone), 0, 8);
-                    }
+                    $messageId = $this->extractMessageId($responseData);
                     
                     return [
                         'success' => true,
@@ -569,14 +590,16 @@ class FollowUpPelangganController extends Controller
                     ];
                 }
             } else {
+                $errorBody = $response->body();
                 return [
                     'success' => false,
-                    'error' => 'HTTP Error: ' . $response->status() . ' - ' . $response->body(),
+                    'error' => 'HTTP Error: ' . $response->status() . ' - ' . $errorBody,
                     'response' => $response->json()
                 ];
             }
             
         } catch (\Exception $e) {
+            Log::error('sendWablasTextMessage error: ' . $e->getMessage());
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -586,7 +609,53 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * FINAL FIX: Check device status menggunakan test message method
+     * FIXED: Extract message ID from various response formats
+     */
+    private function extractMessageId($responseData)
+    {
+        // Try different possible locations for message ID
+        if (isset($responseData['data']['messages'][0]['id'])) {
+            return $responseData['data']['messages'][0]['id'];
+        } elseif (isset($responseData['data']['id'])) {
+            return $responseData['data']['id'];
+        } elseif (isset($responseData['id'])) {
+            return $responseData['id'];
+        } elseif (isset($responseData['message_id'])) {
+            return $responseData['message_id'];
+        } else {
+            // Generate fallback ID
+            return 'msg_' . time() . '_' . substr(md5(json_encode($responseData)), 0, 8);
+        }
+    }
+
+    /**
+     * NEW: Verify if image URL is accessible
+     */
+    private function verifyImageUrl($imageUrl)
+    {
+        try {
+            $response = Http::timeout(15)->head($imageUrl);
+            
+            if (!$response->successful()) {
+                Log::error("Image URL HTTP error: " . $response->status() . " for URL: " . $imageUrl);
+                return false;
+            }
+            
+            $contentType = $response->header('Content-Type');
+            if (!$contentType || strpos($contentType, 'image/') !== 0) {
+                Log::error("Invalid content type: " . $contentType . " for URL: " . $imageUrl);
+                return false;
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to verify image URL {$imageUrl}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * FIXED: Check device status
      */
     private function checkWablasDeviceStatus()
     {
@@ -601,34 +670,27 @@ class FollowUpPelangganController extends Controller
                 ];
             }
 
-            // FINAL FIX: Karena endpoint status tidak bekerja, gunakan test message untuk validasi
             $headers = [
                 'Authorization' => $wablasToken,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
             ];
 
-            // Test dengan payload minimal untuk validasi device
+            // Test with a simple message to admin
             $testPayload = [
-                'phone' => '6282245454528', // Admin phone
+                'phone' => env('APP_ADMIN_PHONE', '6282245454528'),
                 'message' => 'Device check - ' . date('H:i:s')
             ];
             
-            Log::info("Checking device status via test message (FINAL FIX)");
+            Log::info("Checking device status via test message");
 
             $response = Http::timeout(30)
                 ->withHeaders($headers)
                 ->post($wablasUrl . '/send-message', $testPayload);
 
-            Log::info("Device validation response (FINAL FIX)", [
-                'status_code' => $response->status(),
-                'response_body' => $response->body()
-            ]);
-
             if ($response->successful()) {
                 $responseData = $response->json();
                 
-                // FINAL FIX: Jika bisa send message, berarti device connected
                 if (isset($responseData['status']) && $responseData['status'] === true) {
                     return [
                         'isConnected' => true,
@@ -643,11 +705,6 @@ class FollowUpPelangganController extends Controller
                     ];
                 }
             } else {
-                Log::error('Device validation failed (FINAL FIX)', [
-                    'status' => $response->status(),
-                    'response' => $response->body()
-                ]);
-                
                 return [
                     'isConnected' => false,
                     'message' => 'HTTP Error: ' . $response->status()
@@ -655,7 +712,7 @@ class FollowUpPelangganController extends Controller
             }
             
         } catch (\Exception $e) {
-            Log::error('checkWablasDeviceStatus error (FINAL FIX): ' . $e->getMessage());
+            Log::error('checkWablasDeviceStatus error: ' . $e->getMessage());
             
             return [
                 'isConnected' => false,
@@ -665,20 +722,20 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * FINAL FIX: Test WhatsApp connection menggunakan method yang sudah terbukti berhasil
+     * FIXED: Test WhatsApp connection with image support
      */
     public function testWhatsAppConnection()
     {
         try {
             $testPhone = env('APP_ADMIN_PHONE', '6282245454528');
-            $testMessage = 'Test koneksi Wablas FINAL FIX - ' . now()->format('Y-m-d H:i:s');
+            $testMessage = 'Test koneksi Wablas dengan gambar - ' . now()->format('Y-m-d H:i:s');
             
-            Log::info("Testing Wablas FINAL FIX connection to: " . $testPhone);
+            Log::info("Testing Wablas connection to: " . $testPhone);
             
-            // FINAL FIX: Langsung test send message (sudah terbukti berhasil)
-            $result = $this->sendWhatsAppMessageFixed($testPhone, $testMessage);
+            // Test with message only first
+            $result = $this->sendWhatsAppWithImages($testPhone, $testMessage, []);
             
-            Log::info("Wablas FINAL FIX test result: " . json_encode($result));
+            Log::info("Wablas test result: " . json_encode($result));
             
             return response()->json([
                 'status' => $result['success'] ? 'success' : 'error',
@@ -689,7 +746,7 @@ class FollowUpPelangganController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Test Wablas connection error (FINAL FIX): " . $e->getMessage());
+            Log::error("Test Wablas connection error: " . $e->getMessage());
             
             return response()->json([
                 'status' => 'error',
@@ -699,13 +756,11 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * FINAL FIX: Get device status for frontend (selalu return connected karena sudah terbukti berhasil)
+     * Get device status for frontend
      */
     public function getDeviceStatus()
     {
         try {
-            // FINAL FIX: Karena send message sudah berhasil, device pasti connected
-            // Tapi tetap cek dengan test message untuk validasi real-time
             $deviceStatus = $this->checkWablasDeviceStatus();
             
             return response()->json([
@@ -714,20 +769,20 @@ class FollowUpPelangganController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            // FINAL FIX: Jika ada error, assume connected karena send message berhasil
+            Log::error('getDeviceStatus error: ' . $e->getMessage());
+            
             return response()->json([
                 'status' => 'success',
                 'data' => [
-                    'isConnected' => true,
-                    'message' => 'connected (validated by successful send)',
-                    'note' => 'Device status validated by successful message sending'
+                    'isConnected' => false,
+                    'message' => 'Error checking status: ' . $e->getMessage()
                 ]
             ]);
         }
     }
 
     /**
-     * FIXED: Format phone number to proper Indonesian format
+     * Format phone number to proper Indonesian format
      */
     private function formatPhoneNumber($phone)
     {
@@ -753,7 +808,7 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * FIXED: Validate phone number format
+     * Validate phone number format
      */
     private function validatePhoneNumber($phone)
     {
@@ -761,9 +816,6 @@ class FollowUpPelangganController extends Controller
         $phoneLength = strlen($phone);
         return $phoneLength >= 12 && $phoneLength <= 15 && substr($phone, 0, 2) === '62' && is_numeric($phone);
     }
-
-    // ... (rest of the methods remain the same: getHistory, uploadImage, getPelangganLama, etc.)
-    // I'll continue with the existing methods from your original code...
 
     /**
      * Get follow up history
@@ -857,7 +909,7 @@ class FollowUpPelangganController extends Controller
     public function uploadImage(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120' // 5MB
         ]);
 
         if ($validator->fails()) {
@@ -896,7 +948,7 @@ class FollowUpPelangganController extends Controller
     private function getPelangganLama()
     {
         try {
-            if (!DB::table('pemesanan')->exists()) {
+            if (!Schema::hasTable('pemesanan') || !DB::table('pemesanan')->exists()) {
                 return collect([]);
             }
 
@@ -921,14 +973,16 @@ class FollowUpPelangganController extends Controller
             return $pelangganLama->map(function ($customer) {
                 $lastProduct = 'Unknown Product';
                 try {
-                    $lastOrder = DB::table('pemesanan')
-                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
-                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
-                        ->select('barang.nama_barang')
-                        ->first();
-                    
-                    if ($lastOrder && $lastOrder->nama_barang) {
-                        $lastProduct = $lastOrder->nama_barang;
+                    if ($customer->lastOrderId && Schema::hasTable('barang')) {
+                        $lastOrder = DB::table('pemesanan')
+                            ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                            ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                            ->select('barang.nama_barang')
+                            ->first();
+                        
+                        if ($lastOrder && $lastOrder->nama_barang) {
+                            $lastProduct = $lastOrder->nama_barang;
+                        }
                     }
                 } catch (\Exception $e) {
                     Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
@@ -963,7 +1017,7 @@ class FollowUpPelangganController extends Controller
     private function getPelangganBaru()
     {
         try {
-            if (!DB::table('pemesanan')->exists()) {
+            if (!Schema::hasTable('pemesanan') || !DB::table('pemesanan')->exists()) {
                 return collect([]);
             }
 
@@ -990,14 +1044,16 @@ class FollowUpPelangganController extends Controller
             return $pelangganBaru->map(function ($customer) {
                 $lastProduct = 'Unknown Product';
                 try {
-                    $lastOrder = DB::table('pemesanan')
-                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
-                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
-                        ->select('barang.nama_barang')
-                        ->first();
-                    
-                    if ($lastOrder && $lastOrder->nama_barang) {
-                        $lastProduct = $lastOrder->nama_barang;
+                    if ($customer->lastOrderId && Schema::hasTable('barang')) {
+                        $lastOrder = DB::table('pemesanan')
+                            ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                            ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                            ->select('barang.nama_barang')
+                            ->first();
+                        
+                        if ($lastOrder && $lastOrder->nama_barang) {
+                            $lastProduct = $lastOrder->nama_barang;
+                        }
                     }
                 } catch (\Exception $e) {
                     Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
@@ -1032,7 +1088,7 @@ class FollowUpPelangganController extends Controller
     private function getPelangganTidakKembali()
     {
         try {
-            if (!DB::table('pemesanan')->exists()) {
+            if (!Schema::hasTable('pemesanan') || !DB::table('pemesanan')->exists()) {
                 return collect([]);
             }
 
@@ -1059,14 +1115,16 @@ class FollowUpPelangganController extends Controller
             return $pelangganTidakKembali->map(function ($customer) {
                 $lastProduct = 'Unknown Product';
                 try {
-                    $lastOrder = DB::table('pemesanan')
-                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
-                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
-                        ->select('barang.nama_barang')
-                        ->first();
-                    
-                    if ($lastOrder && $lastOrder->nama_barang) {
-                        $lastProduct = $lastOrder->nama_barang;
+                    if ($customer->lastOrderId && Schema::hasTable('barang')) {
+                        $lastOrder = DB::table('pemesanan')
+                            ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                            ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                            ->select('barang.nama_barang')
+                            ->first();
+                        
+                        if ($lastOrder && $lastOrder->nama_barang) {
+                            $lastProduct = $lastOrder->nama_barang;
+                        }
                     }
                 } catch (\Exception $e) {
                     Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
@@ -1096,14 +1154,15 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * Get Keseluruhan Pelanggan (dari pemesanan dan data_customer)
+     * Get Keseluruhan Pelanggan
      */
     private function getKeseluruhanPelanggan()
     {
         try {
             $allCustomers = collect();
 
-            if (DB::table('pemesanan')->exists()) {
+            // From pemesanan table
+            if (Schema::hasTable('pemesanan') && DB::table('pemesanan')->exists()) {
                 $fromPemesanan = DB::table('pemesanan')
                     ->select([
                         'nama_pemesan as name',
@@ -1125,6 +1184,7 @@ class FollowUpPelangganController extends Controller
                 $allCustomers = $allCustomers->merge($fromPemesanan);
             }
 
+            // From data_customer table if exists
             if (Schema::hasTable('data_customer') && DB::table('data_customer')->exists()) {
                 $fromCustomer = DB::table('data_customer')
                     ->leftJoin('pemesanan', 'data_customer.pemesanan_id', '=', 'pemesanan.pemesanan_id')
@@ -1148,7 +1208,7 @@ class FollowUpPelangganController extends Controller
 
             return $allCustomers->map(function ($customer) {
                 $lastProduct = 'No Purchase';
-                if ($customer->lastOrderId) {
+                if ($customer->lastOrderId && Schema::hasTable('barang')) {
                     try {
                         $lastOrder = DB::table('pemesanan')
                             ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
@@ -1193,7 +1253,7 @@ class FollowUpPelangganController extends Controller
     private function getPelangganBySource($source)
     {
         try {
-            if (!DB::table('pemesanan')->exists()) {
+            if (!Schema::hasTable('pemesanan') || !DB::table('pemesanan')->exists()) {
                 return collect([]);
             }
 
@@ -1218,14 +1278,16 @@ class FollowUpPelangganController extends Controller
             return $customers->map(function ($customer) use ($source) {
                 $lastProduct = 'Unknown Product';
                 try {
-                    $lastOrder = DB::table('pemesanan')
-                        ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
-                        ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
-                        ->select('barang.nama_barang')
-                        ->first();
-                    
-                    if ($lastOrder && $lastOrder->nama_barang) {
-                        $lastProduct = $lastOrder->nama_barang;
+                    if ($customer->lastOrderId && Schema::hasTable('barang')) {
+                        $lastOrder = DB::table('pemesanan')
+                            ->leftJoin('barang', 'pemesanan.barang_id', '=', 'barang.barang_id')
+                            ->where('pemesanan.pemesanan_id', $customer->lastOrderId)
+                            ->select('barang.nama_barang')
+                            ->first();
+                        
+                        if ($lastOrder && $lastOrder->nama_barang) {
+                            $lastProduct = $lastOrder->nama_barang;
+                        }
                     }
                 } catch (\Exception $e) {
                     Log::warning("Error getting last product for order {$customer->lastOrderId}: " . $e->getMessage());
@@ -1335,13 +1397,14 @@ class FollowUpPelangganController extends Controller
             // Test Wablas configuration
             $debug['wablas_config'] = [
                 'token_exists' => !empty(env('WABLAS_TOKEN')),
-                'secret_key_exists' => !empty(env('WABLAS_SECRET_KEY')),
-                'api_url' => env('WABLAS_API_URL', 'https://texas.wablas.com/api')
+                'api_url' => env('WABLAS_API_URL', 'https://texas.wablas.com/api'),
+                'admin_phone' => env('APP_ADMIN_PHONE', 'not_set')
             ];
             
             // Test device status
             $debug['device_status'] = $this->checkWablasDeviceStatus();
             
+            // Test customer queries
             try {
                 $debug['pelangganLama_count'] = $this->getPelangganLama()->count();
             } catch (\Exception $e) {
@@ -1365,111 +1428,19 @@ class FollowUpPelangganController extends Controller
             } catch (\Exception $e) {
                 $debug['keseluruhan_error'] = $e->getMessage();
             }
+
+            // Test storage
+            $debug['storage_info'] = [
+                'public_path_exists' => file_exists(public_path('storage')),
+                'storage_app_public_exists' => file_exists(storage_path('app/public')),
+                'follow_up_images_dir_exists' => file_exists(storage_path('app/public/follow-up-images')),
+                'storage_writable' => is_writable(storage_path('app/public'))
+            ];
             
             return response()->json([
                 'status' => 'success',
                 'debug' => $debug
             ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500);
-        }
-    }
-
-    /**
-     * Debug Wablas Connection - Tambahkan method ini ke FollowUpPelangganController
-     */
-    public function debugWablas()
-    {
-        try {
-            $debug = [];
-            
-            // 1. Check environment variables
-            $debug['env_config'] = [
-                'WABLAS_API_URL' => env('WABLAS_API_URL'),
-                'WABLAS_TOKEN_EXISTS' => !empty(env('WABLAS_TOKEN')),
-                'WABLAS_TOKEN_PREVIEW' => env('WABLAS_TOKEN') ? substr(env('WABLAS_TOKEN'), 0, 20) . '...' : 'NOT SET',
-                'WABLAS_SECRET_KEY_EXISTS' => !empty(env('WABLAS_SECRET_KEY')),
-                'WABLAS_SECRET_KEY_PREVIEW' => env('WABLAS_SECRET_KEY') ? substr(env('WABLAS_SECRET_KEY'), 0, 10) . '...' : 'NOT SET',
-                'WABLAS_DEVICE_ID' => env('WABLAS_DEVICE_ID'),
-                'APP_ADMIN_PHONE' => env('APP_ADMIN_PHONE'),
-            ];
-            
-            $wablasToken = env('WABLAS_TOKEN');
-            $wablasSecretKey = env('WABLAS_SECRET_KEY', '');
-            $wablasUrl = env('WABLAS_API_URL', 'https://texas.wablas.com/api');
-            
-            if (!empty($wablasToken)) {
-                $authToken = $wablasToken . '.' . $wablasSecretKey;
-                
-                // 2. Test device info endpoint
-                try {
-                    $response = Http::timeout(15)
-                        ->withHeaders([
-                            'Authorization' => $authToken,
-                        ])
-                        ->get($wablasUrl . '/device/info');
-                    
-                    $debug['device_info_test'] = [
-                        'url' => $wablasUrl . '/device/info',
-                        'auth_token_preview' => substr($authToken, 0, 30) . '...',
-                        'status_code' => $response->status(),
-                        'success' => $response->successful(),
-                        'response_body' => $response->json(),
-                        'raw_response' => $response->body()
-                    ];
-                } catch (\Exception $e) {
-                    $debug['device_info_test'] = [
-                        'error' => $e->getMessage(),
-                        'success' => false
-                    ];
-                }
-                
-                // 3. Test v2 API send message FIXED
-                try {
-                    $payload = [
-                        "data" => [
-                            [
-                                'phone' => '6282245454528',
-                                'message' => 'Test API v2 FIXED - ' . now()->format('H:i:s')
-                            ]
-                        ]
-                    ];
-                    
-                    $testResponse = Http::timeout(15)
-                        ->withHeaders([
-                            'Authorization' => $authToken,
-                            'Content-Type' => 'application/json'
-                        ])
-                        ->post($wablasUrl . '/v2/send-message', $payload);
-                    
-                    $debug['send_message_v2_fixed_test'] = [
-                        'url' => $wablasUrl . '/v2/send-message',
-                        'payload' => $payload,
-                        'status_code' => $testResponse->status(),
-                        'success' => $testResponse->successful(),
-                        'response_body' => $testResponse->json(),
-                        'raw_response' => $testResponse->body()
-                    ];
-                } catch (\Exception $e) {
-                    $debug['send_message_v2_fixed_test'] = [
-                        'error' => $e->getMessage(),
-                        'success' => false
-                    ];
-                }
-                
-            } else {
-                $debug['error'] = 'WABLAS_TOKEN not configured';
-            }
-            
-            return response()->json([
-                'status' => 'success',
-                'debug' => $debug
-            ], 200, [], JSON_PRETTY_PRINT);
             
         } catch (\Exception $e) {
             return response()->json([

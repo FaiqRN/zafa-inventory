@@ -109,7 +109,7 @@
                         </div>
                     </div>
                     <div class="d-grid">
-                        <a href="{{ route('analytics.partner-performance') }}" class="btn btn-primary">
+                        <a href="{{ route('analytics.partner-performance.index') }}" class="btn btn-primary">
                             <i class="fas fa-chart-line mr-1"></i> Lihat Partner Performance
                         </a>
                     </div>
@@ -145,7 +145,7 @@
                         </div>
                     </div>
                     <div class="d-grid">
-                        <a href="{{ route('analytics.inventory-optimization') }}" class="btn btn-success">
+                        <a href="{{ route('analytics.inventory-optimization.index') }}" class="btn btn-success">
                             <i class="fas fa-calculator mr-1"></i> Lihat Rekomendasi Optimal
                         </a>
                     </div>
@@ -193,7 +193,7 @@
                         </div>
                     </div>
                     <div class="d-grid">
-                        <a href="{{ route('analytics.product-velocity') }}" class="btn btn-warning">
+                        <a href="{{ route('analytics.product-velocity.index') }}" class="btn btn-warning">
                             <i class="fas fa-search mr-1"></i> Analisis Kecepatan Produk
                         </a>
                     </div>
@@ -235,88 +235,8 @@
                         </div>
                     </div>
                     <div class="d-grid">
-                        <a href="{{ route('analytics.profitability-analysis') }}" class="btn btn-info">
+                        <a href="{{ route('analytics.profitability-analysis.index') }}" class="btn btn-info">
                             <i class="fas fa-money-bill-wave mr-1"></i> Analisis True Profit
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics 5: Channel Comparison -->
-        <div class="col-lg-6 col-md-12 mb-4">
-            <div class="card h-100 shadow-lg border-0">
-                <div class="card-header bg-gradient-secondary text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-balance-scale mr-2"></i>
-                        Channel Comparison
-                    </h5>
-                    <small class="opacity-75">Pertarungan Channel - Konsinyasi vs Jualan Langsung</small>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">
-                        Sistem perbandingan seperti "ring tinju" antara 2 cara jualan Anda: konsinyasi ke toko VS jualan langsung. 
-                        Sistem ini menimbang mana yang lebih menguntungkan dari berbagai aspek.
-                    </p>
-                    <div class="row text-center mb-3">
-                        <div class="col-6">
-                            <div class="border-right">
-                                <strong class="text-primary">B2B</strong>
-                                <div class="text-muted small">High Volume</div>
-                                <div class="text-muted small">Lower Margin</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <strong class="text-success">B2C</strong>
-                            <div class="text-muted small">Lower Volume</div>
-                            <div class="text-muted small">Higher Margin</div>
-                        </div>
-                    </div>
-                    <div class="d-grid">
-                        <a href="{{ route('analytics.channel-comparison') }}" class="btn btn-secondary">
-                            <i class="fas fa-chart-bar mr-1"></i> Bandingkan Channel
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics 6: Predictive Analytics -->
-        <div class="col-lg-6 col-md-12 mb-4">
-            <div class="card h-100 shadow-lg border-0">
-                <div class="card-header bg-gradient-dark text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-crystal-ball mr-2"></i>
-                        Predictive Analytics
-                    </h5>
-                    <small class="opacity-75">Mesin Prediksi Masa Depan - AI Sederhana untuk Bisnis Cerdas</small>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">
-                        Seperti punya "dukun sakti" untuk bisnis, tapi pakai data! Sistem ini menggunakan kecerdasan buatan sederhana 
-                        untuk memprediksi apa yang akan terjadi di masa depan berdasarkan pola-pola dari data historis.
-                    </p>
-                    <div class="row text-center mb-3">
-                        <div class="col-4">
-                            <div class="border-right">
-                                <strong class="text-info">75%</strong>
-                                <div class="text-muted small">Prediction Accuracy</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="border-right">
-                                <strong class="text-success">-45%</strong>
-                                <div class="text-muted small">Over-stock</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <strong class="text-warning">+25%</strong>
-                            <div class="text-muted small">Cash Flow</div>
-                        </div>
-                    </div>
-                    <div class="d-grid">
-                        <a href="{{ route('analytics.predictive-analytics') }}" class="btn btn-dark">
-                            <i class="fas fa-brain mr-1"></i> Prediksi Masa Depan
                         </a>
                     </div>
                 </div>
@@ -356,7 +276,6 @@
                             </h6>
                             <ul class="list-unstyled text-muted">
                                 <li><i class="fas fa-circle fa-xs mr-2"></i>Dashboard real-time otomatis</li>
-                                <li><i class="fas fa-circle fa-xs mr-2"></i>AI prediksi jumlah optimal</li>
                                 <li><i class="fas fa-circle fa-xs mr-2"></i>Ranking partner berdasarkan ROI</li>
                                 <li><i class="fas fa-circle fa-xs mr-2"></i>Antisipasi masalah sebelum terjadi</li>
                                 <li><i class="fas fa-circle fa-xs mr-2"></i>Keputusan berdasarkan data akurat</li>
