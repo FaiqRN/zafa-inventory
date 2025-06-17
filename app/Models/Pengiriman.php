@@ -67,7 +67,7 @@ class Pengiriman extends Model
      */
     public function barang()
     {
-        return $this->hasMany(Barang::class, 'barang_id', 'barang_id');
+        return $this->belongsTo(Barang::class, 'barang_id', 'barang_id');
     }
 
     /**
@@ -75,7 +75,7 @@ class Pengiriman extends Model
      */
     public function toko()
     {
-        return $this->hasMany(Toko::class, 'toko_id', 'toko_id');
+        return $this->belongsTo(Toko::class, 'toko_id', 'toko_id');
     }
 
     /**
