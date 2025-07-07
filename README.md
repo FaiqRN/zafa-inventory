@@ -134,16 +134,7 @@ php artisan serve
 
 Akses aplikasi di `http://localhost:8000`
 
-## 📱 Demo & Screenshots
-
-### Dashboard Analytics
-![Dashboard](https://github.com/FaiqRN/zafa-inventory/blob/main/public/asset/analytics/dashboard.png)
-
-### POS System
-![POS](https://github.com/FaiqRN/zafa-inventory/blob/main/public/asset/master%20data/barang.png)
-
-### Market Map
-![Market Map](https://github.com/FaiqRN/zafa-inventory/blob/main/public/asset/market%20map/market%20map.png)
+## 📱 Video Demo
 
 ### Video Demo
 [![Demo ZafaSys](https://img.youtube.com/vi/DqcifhglA-s/0.jpg)](https://www.youtube.com/watch?v=DqcifhglA-s)
@@ -154,9 +145,9 @@ Akses aplikasi di `http://localhost:8000`
 
 Sistem akan memiliki user default setelah seeding:
 
-- **Admin**: 
-  - Email: `admin@zafasys.com`
-  - Password: `password`
+- **Admin/User**: 
+  - Email: `User1`
+  - Password: `User123`
 
 ### Menu Utama
 
@@ -257,20 +248,11 @@ Kami menyambut kontribusi untuk pengembangan ZafaSys:
 - Pastikan semua tests passing
 - Update CHANGELOG.md
 
-## 📄 Lisensi
-
-Proyek ini dilisensikan under [MIT License](LICENSE).
-
 ## 👥 Tim Pengembang
 
-- **Faiq RN** - *Lead Developer* - [@FaiqRN](https://github.com/FaiqRN)
-
-## 🔗 Links Penting
-
-- 🌐 **Demo Online**: [ZafaSys Landing Page](https://zafasys.com)
-- 📱 **Shopee Store**: [Zafa Potato](https://shopee.co.id/tirtomulyo_coffee)
-- 💬 **WhatsApp Business**: [Contact](https://api.whatsapp.com/send/?phone=6282121441930)
-- 🎥 **Video Demo**: [YouTube](https://www.youtube.com/watch?v=DqcifhglA-s)
+- **Faiq Ramzy Nabighah** - *Lead Developer* - [@FaiqRN](https://github.com/FaiqRN)
+- **Annisa Prissilya** - *Programmer* - [@AnnisaPrisil](https://github.com/AnnisaPrisil)
+- **Khoirul Hidayah** - *Programmer* - [@KhoirulHidayah](https://github.com/KhoirulHidayah)
 
 ## 🙏 Acknowledgments
 
@@ -284,7 +266,7 @@ Proyek ini dilisensikan under [MIT License](LICENSE).
 
 Butuh bantuan atau ingin bergabung sebagai mitra bisnis?
 
-- 📧 **Email**: support@zafasys.com
+- 📧 **Email**: zafapotatokitchen@gmail.com
 - 💬 **WhatsApp**: [+62 821-2144-1930](https://api.whatsapp.com/send/?phone=6282121441930)
 - 🛒 **Beli Produk**: [Shopee](https://shopee.co.id/tirtomulyo_coffee)
 - 📱 **Follow Instagram**: [@zafaapotato_](https://www.instagram.com/zafaapotato_/)
