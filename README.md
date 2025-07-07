@@ -1,66 +1,296 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ZafaSys - Inventory Management Made Easy
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 
-## About Laravel
+> **Solusi All-in-One untuk pengelolaan bisnis yang lebih cerdas**
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+ZafaSys adalah sistem manajemen inventory dan CRM terintegrasi yang dirancang khusus untuk bisnis Zafa Potato. Kelola pelanggan, pemesanan, dan stok dengan analitik pintar dalam satu platform untuk pengambilan keputusan yang lebih tepat berbasis data.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🎯 Tentang Proyek
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+ZafaSys dikembangkan untuk membantu bisnis Zafa Kering Kentang dalam mengelola operasional bisnis secara efisien, mulai dari manajemen inventory, analisis performa penjualan, hingga optimalisasi strategi bisnis melalui data-driven insights.
 
-## Learning Laravel
+## ✨ Fitur Utama
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 🏪 POS (Point of Sale)
+Sistem pencatatan transaksi penjualan real-time dengan fitur:
+- **Master Data**: Kelola data barang, toko, dan customer
+- **Manajemen Stok**: Atur ketersediaan barang per toko dan harga
+- **Transaksi**: Pemesanan, pengiriman, dan retur barang
+- **Data Customer**: Sistem CRM terintegrasi
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 📊 Sales Report
+Laporan penjualan komprehensif dengan visualisasi data:
+- **Laporan Pemesanan**: Analisis transaksi berdasarkan rentang waktu
+- **Laporan Per Toko**: Perbandingan performa antar cabang
+- **Export Data**: Unduh laporan dalam format PDF/Excel
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🔍 CRM Analytics
+Dashboard analitik canggih untuk business intelligence:
+- **Analytics Dashboard**: Metrik kinerja bisnis real-time
+- **Partner Performance**: Analisis performa mitra berdasarkan grade
+- **Inventory Optimization**: Rekomendasi pengelolaan stok optimal dengan algoritma cerdas
+- **Product Velocity**: Analisis kecepatan perputaran produk (slow mover hingga hot sellers)
+- **True Profitability**: Kalkulasi profit bersih dengan COGS, logistics, dan opportunity cost
 
-## Laravel Sponsors
+### 🗺️ Market Map
+Visualisasi distribusi toko berbasis geografis:
+- **Peta Interaktif**: Lokasi dan performa toko pada peta
+- **Analisis Ekspansi**: Data-driven planning untuk cabang baru
+- **Performance Mapping**: Visualisasi performa per lokasi
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 👥 Follow Up
+Sistem manajemen komunikasi pelanggan:
+- **Scheduled Follow-up**: Jadwal komunikasi tindak lanjut
+- **Customer Engagement**: Maintenance loyalitas pelanggan
+- **Sales Pipeline**: Tracking prospek dan konversi
 
-### Premium Partners
+## 🛠 Teknologi
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+- **Backend**: Laravel 10.x
+- **Frontend**: Blade Templates + Custom JavaScript
+- **Styling**: Custom CSS dengan animasi interaktif
+- **Database**: MySQL
+- **Maps**: Leaflet.js / Google Maps API
+- **Charts**: Chart.js untuk visualisasi data
+- **Authentication**: Laravel Auth
 
-## Contributing
+## 📋 Persyaratan Sistem
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- PHP >= 8.1
+- Composer
+- Node.js >= 16.x
+- MySQL >= 8.0
+- Git
 
-## Code of Conduct
+## 🚀 Instalasi
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 1. Clone Repository
 
-## Security Vulnerabilities
+```bash
+git clone https://github.com/FaiqRN/zafa-inventory.git
+cd zafa-inventory
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 2. Install Dependencies
 
-## License
+```bash
+# Install PHP dependencies
+composer install
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# Install Node.js dependencies (jika ada)
+npm install
+```
+
+### 3. Environment Setup
+
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Generate application key
+php artisan key:generate
+```
+
+### 4. Database Configuration
+
+Edit file `.env`:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=zafasys_inventory
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+### 5. Database Migration
+
+```bash
+# Run migrations
+php artisan migrate
+
+# Seed database dengan data sample
+php artisan db:seed
+```
+
+### 6. Storage Link
+
+```bash
+# Create symbolic link untuk storage
+php artisan storage:link
+```
+
+### 7. Run Application
+
+```bash
+# Start development server
+php artisan serve
+```
+
+Akses aplikasi di `http://localhost:8000`
+
+## 📱 Demo & Screenshots
+
+### Dashboard Analytics
+![Dashboard](https://github.com/FaiqRN/zafa-inventory/blob/main/public/asset/analytics/dashboard.png)
+
+### POS System
+![POS](https://github.com/FaiqRN/zafa-inventory/blob/main/public/asset/master%20data/barang.png)
+
+### Market Map
+![Market Map](https://github.com/FaiqRN/zafa-inventory/blob/main/public/asset/market%20map/market%20map.png)
+
+### Video Demo
+[![Demo ZafaSys](https://img.youtube.com/vi/DqcifhglA-s/0.jpg)](https://www.youtube.com/watch?v=DqcifhglA-s)
+
+## 🎮 Penggunaan
+
+### Login Default
+
+Sistem akan memiliki user default setelah seeding:
+
+- **Admin**: 
+  - Email: `admin@zafasys.com`
+  - Password: `password`
+
+### Menu Utama
+
+1. **Master Data**
+   - Data Barang
+   - Data Toko  
+   - Barang Per Toko
+   - Data Customer
+
+2. **Transaksi**
+   - Pemesanan
+   - Pengiriman Barang
+   - Retur Barang
+
+3. **Laporan**
+   - Laporan Pemesanan
+   - Laporan Per Toko
+
+4. **Smart Analytics**
+   - Analytics Dashboard
+   - Partner Performance
+   - Inventory Optimization
+   - Product Velocity
+   - True Profitability
+
+5. **Market Map**
+   - Visualisasi geografis toko
+
+6. **Follow Up**
+   - Manajemen komunikasi pelanggan
+
+## 🔧 Konfigurasi
+
+### Maps API
+
+Untuk fitur Market Map, tambahkan API key pada `.env`:
+
+```env
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+```
+
+### Email Configuration
+
+Untuk notifikasi email:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@zafasys.com
+MAIL_FROM_NAME="ZafaSys"
+```
+
+## 📊 Business Context
+
+### Zafa Potato Business
+ZafaSys dikembangkan untuk mendukung bisnis **Zafa Kering Kentang**:
+- 🛒 **Beli Produk**: [Shopee Zafa Potato](https://shopee.co.id/tirtomulyo_coffee)
+- 🤝 **Jadi Mitra**: [WhatsApp](https://api.whatsapp.com/send/?phone=6282121441930)
+- 📱 **Instagram**: [@zafaapotato_](https://www.instagram.com/zafaapotato_/)
+
+### Target Users
+- Pemilik bisnis retail/distributor
+- Manager toko dan cabang
+- Tim sales dan marketing
+- Operator gudang dan inventory
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+php artisan test
+
+# Run specific test
+php artisan test tests/Feature/InventoryTest.php
+
+# Generate test coverage
+php artisan test --coverage
+```
+
+## 🤝 Kontribusi
+
+Kami menyambut kontribusi untuk pengembangan ZafaSys:
+
+1. Fork repository
+2. Buat feature branch (`git checkout -b feature/NewFeature`)
+3. Commit changes (`git commit -m 'Add NewFeature'`)
+4. Push branch (`git push origin feature/NewFeature`)
+5. Create Pull Request
+
+### Development Guidelines
+
+- Ikuti PSR-12 coding standards
+- Tulis dokumentasi untuk fitur baru
+- Pastikan semua tests passing
+- Update CHANGELOG.md
+
+## 📄 Lisensi
+
+Proyek ini dilisensikan under [MIT License](LICENSE).
+
+## 👥 Tim Pengembang
+
+- **Faiq RN** - *Lead Developer* - [@FaiqRN](https://github.com/FaiqRN)
+
+## 🔗 Links Penting
+
+- 🌐 **Demo Online**: [ZafaSys Landing Page](https://zafasys.com)
+- 📱 **Shopee Store**: [Zafa Potato](https://shopee.co.id/tirtomulyo_coffee)
+- 💬 **WhatsApp Business**: [Contact](https://api.whatsapp.com/send/?phone=6282121441930)
+- 🎥 **Video Demo**: [YouTube](https://www.youtube.com/watch?v=DqcifhglA-s)
+
+## 🙏 Acknowledgments
+
+- Laravel Framework
+- Chart.js untuk visualisasi data
+- Leaflet.js untuk mapping
+- Bootstrap untuk UI components
+- Komunitas open source
+
+## 📞 Support
+
+Butuh bantuan atau ingin bergabung sebagai mitra bisnis?
+
+- 📧 **Email**: support@zafasys.com
+- 💬 **WhatsApp**: [+62 821-2144-1930](https://api.whatsapp.com/send/?phone=6282121441930)
+- 🛒 **Beli Produk**: [Shopee](https://shopee.co.id/tirtomulyo_coffee)
+- 📱 **Follow Instagram**: [@zafaapotato_](https://www.instagram.com/zafaapotato_/)
+
+---
+
+⭐ **Suka ngemil? Beli produknya, suka jualan? Gabung jadi reseller dan nikmati untungnya!**
+
+💡 *ZafaSys - Inventory Management Made Easy*
