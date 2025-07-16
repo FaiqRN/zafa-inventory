@@ -272,29 +272,27 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     });
 
     // ===============================
-    // MARKET MAP CRM ROUTES - ENHANCED FOR EKSPANSI TOKO
+    // MARKET MAP CRM ROUTES - ENHANCED FOR EKSPANSI TOKO - FIXED VERSION
     // ===============================
     Route::group(['prefix' => 'market-map'], function() {
         // Main CRM Market Map
         Route::get('/', [MarketMapController::class, 'index'])->name('market-map.index');
         
-        // ===== CORE DATA APIs =====
+        // ===== CORE DATA APIs - FIXED =====
         Route::get('/toko-data', [MarketMapController::class, 'getTokoData'])->name('market-map.toko-data');
+        
+        // ===== MAIN BUSINESS LOGIC APIS - FIXED =====
+        Route::post('/calculate-profit', [MarketMapController::class, 'calculateProfitAllStores'])->name('market-map.calculate-profit');
+        Route::post('/create-clusters', [MarketMapController::class, 'createClusters'])->name('market-map.create-clusters');
+        Route::post('/generate-expansion-plan', [MarketMapController::class, 'generateExpansionRecommendations'])->name('market-map.generate-expansion-plan');
+        
+        // ===== ADDITIONAL DATA ENDPOINTS =====
         Route::get('/wilayah-statistics', [MarketMapController::class, 'getWilayahStatistics'])->name('market-map.wilayah-statistics');
         Route::get('/partner-details/{tokoId}', [MarketMapController::class, 'getTokoBarang'])->name('market-map.partner-details');
-        
-        // ===== PROFIT ANALYSIS APIs =====
-        Route::post('/calculate-profit', [MarketMapController::class, 'calculateProfitAllStores'])->name('market-map.calculate-profit');
         Route::get('/profit-analysis', [MarketMapController::class, 'getProfitAnalysis'])->name('market-map.profit-analysis');
         Route::get('/profit-data/{tokoId}', [MarketMapController::class, 'getTokoProfit'])->name('market-map.profit-data');
-        
-        // ===== CLUSTERING APIs =====
-        Route::post('/create-clusters', [MarketMapController::class, 'createClusters'])->name('market-map.create-clusters');
         Route::get('/clusters-data', [MarketMapController::class, 'getClustersData'])->name('market-map.clusters-data');
         Route::get('/cluster-details/{clusterId}', [MarketMapController::class, 'getClusterDetails'])->name('market-map.cluster-details');
-        
-        // ===== EXPANSION PLANNING APIs =====
-        Route::post('/generate-expansion-plan', [MarketMapController::class, 'generateExpansionRecommendations'])->name('market-map.generate-expansion-plan');
         Route::get('/expansion-recommendations', [MarketMapController::class, 'getExpansionRecommendations'])->name('market-map.expansion-recommendations');
         Route::post('/validate-expansion', [MarketMapController::class, 'validateExpansionPlan'])->name('market-map.validate-expansion');
         
@@ -342,7 +340,7 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
         Route::post('/fix-coordinates/{tokoId}', [MarketMapController::class, 'fixTokoCoordinates'])->name('market-map.fix-coordinates');
         Route::post('/validate-coordinates', [MarketMapController::class, 'validateCoordinates'])->name('market-map.validate-coordinates');
         
-        // ===== SYSTEM MANAGEMENT =====
+        // ===== SYSTEM MANAGEMENT - FIXED =====
         Route::get('/system-health', [MarketMapController::class, 'getSystemHealth'])->name('market-map.system-health');
         Route::get('/detailed-partner-analysis', [MarketMapController::class, 'getDetailedPartnerAnalysis'])->name('market-map.detailed-partner-analysis');
         Route::post('/clear-cache', [MarketMapController::class, 'clearSystemCache'])->name('market-map.clear-cache');

@@ -1,7 +1,7 @@
 /**
- * CRM Ekspansi Toko - Complete JavaScript Implementation
+ * CRM Ekspansi Toko - Complete JavaScript Implementation - FIXED VERSION
  * Geographic CRM analytics dengan profit intelligence dan expansion planning
- * Version: 2.0 - Production Ready with Full Business Logic
+ * Version: 2.2 - Production Ready with Enhanced Error Handling
  */
 
 class CRMExpansionSystem {
@@ -10,9 +10,15 @@ class CRMExpansionSystem {
         this.map = null;
         this.storeData = [];
         this.clusters = [];
+        this.expansionPlan = [];
+        this.markers = []; // Track markers for cleanup
+        this.clusterLayers = []; // Track cluster layers
+        
+        // System state - FIXED STATE MANAGEMENT
         this.profitCalculated = false;
         this.clusteringDone = false;
-        this.expansionPlan = [];
+        this.expansionGenerated = false;
+        this.systemReady = false;
         
         // System configuration sesuai dokumentasi
         this.config = {
@@ -49,11 +55,25 @@ class CRMExpansionSystem {
             totalClusters: 0
         };
         
+        // API endpoints
+        this.apiEndpoints = {
+            getTokoData: '/market-map/toko-data',
+            calculateProfit: '/market-map/calculate-profit',
+            createClusters: '/market-map/create-clusters',
+            generateExpansion: '/market-map/generate-expansion-plan',
+            clearCache: '/market-map/clear-cache',
+            systemHealth: '/market-map/system-health'
+        };
+        
+        // Error handling and retry logic
+        this.maxRetries = 3;
+        this.retryDelay = 1000;
+        
         this.init();
     }
     
     /**
-     * Initialize the complete CRM system
+     * Initialize the complete CRM system - FIXED
      */
     async init() {
         try {
@@ -74,6 +94,9 @@ class CRMExpansionSystem {
             // Load initial data
             await this.loadInitialData();
             
+            // Mark system as ready
+            this.systemReady = true;
+            
             // Performance tracking
             this.performanceMetrics.loadTime = performance.now() - startTime;
             
@@ -92,7 +115,6 @@ class CRMExpansionSystem {
         const required = {
             'Leaflet': typeof L !== 'undefined',
             'SweetAlert': typeof Swal !== 'undefined',
-            'Chart.js': typeof Chart !== 'undefined',
             'jQuery': typeof $ !== 'undefined'
         };
         
@@ -212,18 +234,15 @@ class CRMExpansionSystem {
         // Setup tab functionality
         this.setupTabSystem();
         
-        // Initialize charts containers
-        this.initializeChartContainers();
-        
         // Setup responsive behavior
         this.setupResponsiveBehavior();
     }
     
     /**
-     * Setup comprehensive event handlers
+     * Setup comprehensive event handlers - FIXED
      */
     setupEventHandlers() {
-        // Main action buttons
+        // Main action buttons - FIXED WITH PROPER API INTEGRATION
         document.getElementById('btn-calculate-profit')?.addEventListener('click', () => {
             this.calculateProfitAllStores();
         });
@@ -292,16 +311,16 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Load initial store data
+     * Load initial store data - FIXED WITH PROPER API INTEGRATION
      */
     async loadInitialData() {
         try {
             this.showLoading('Loading store data...');
             
-            const response = await this.fetchWithRetry('/market-map/toko-data');
+            const response = await this.fetchWithRetry(this.apiEndpoints.getTokoData);
             
             if (response.success) {
-                this.storeData = response.data;
+                this.storeData = response.data || [];
                 this.performanceMetrics.totalStores = this.storeData.length;
                 
                 // Update statistics
@@ -311,6 +330,10 @@ class CRMExpansionSystem {
                 this.renderStoresOnMap();
                 
                 console.log(`✅ Loaded ${this.storeData.length} stores`);
+                
+                if (this.storeData.length === 0) {
+                    this.showWarning('No Data', 'No store data found. Please check if there are active stores in the system.');
+                }
             } else {
                 throw new Error(response.message || 'Failed to load store data');
             }
@@ -323,9 +346,9 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Enhanced fetch with retry mechanism
+     * Enhanced fetch with retry mechanism - IMPROVED ERROR HANDLING
      */
-    async fetchWithRetry(url, options = {}, retries = 3) {
+    async fetchWithRetry(url, options = {}, retries = this.maxRetries) {
         for (let i = 0; i < retries; i++) {
             try {
                 const response = await fetch(url, {
@@ -334,25 +357,40 @@ class CRMExpansionSystem {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         ...options.headers
                     }
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
                 }
                 
-                return await response.json();
+                const data = await response.json();
+                
+                // Check if response indicates an error
+                if (data.success === false) {
+                    throw new Error(data.message || 'API returned error status');
+                }
+                
+                return data;
                 
             } catch (error) {
-                if (i === retries - 1) throw error;
-                await this.sleep(1000 * Math.pow(2, i)); // Exponential backoff
+                console.warn(`Attempt ${i + 1}/${retries} failed:`, error.message);
+                
+                if (i === retries - 1) {
+                    throw error;
+                }
+                
+                // Exponential backoff
+                await this.sleep(this.retryDelay * Math.pow(2, i));
             }
         }
     }
     
     /**
-     * Render stores on map with performance markers
+     * Render stores on map with performance markers - FIXED
      */
     renderStoresOnMap() {
         try {
@@ -361,23 +399,36 @@ class CRMExpansionSystem {
             // Clear existing markers
             this.clearMapMarkers();
             
+            if (!this.storeData || this.storeData.length === 0) {
+                console.warn('⚠️ No store data to render');
+                this.updateVisibleCount(0);
+                return;
+            }
+            
             // Create markers for stores with coordinates
-            const validStores = this.storeData.filter(store => store.has_coordinates);
+            const validStores = this.storeData.filter(store => 
+                store.has_coordinates && 
+                store.latitude && 
+                store.longitude &&
+                !isNaN(parseFloat(store.latitude)) &&
+                !isNaN(parseFloat(store.longitude))
+            );
             
             validStores.forEach(store => {
                 const marker = this.createStoreMarker(store);
                 if (marker) {
                     marker.addTo(this.map);
+                    this.markers.push(marker); // Track for cleanup
                 }
             });
             
             // Update visible count
-            document.getElementById('visible-partners-count').textContent = validStores.length;
+            this.updateVisibleCount(validStores.length);
             
             // Performance tracking
             this.performanceMetrics.renderTime = performance.now() - startTime;
             
-            console.log(`✅ Rendered ${validStores.length} stores in ${this.performanceMetrics.renderTime.toFixed(2)}ms`);
+            console.log(`✅ Rendered ${validStores.length}/${this.storeData.length} stores in ${this.performanceMetrics.renderTime.toFixed(2)}ms`);
             
         } catch (error) {
             console.error('❌ Error rendering stores:', error);
@@ -385,7 +436,17 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create store marker with profit-based styling
+     * Update visible partners count
+     */
+    updateVisibleCount(count) {
+        const visibleElement = document.getElementById('visible-partners-count');
+        if (visibleElement) {
+            visibleElement.textContent = count;
+        }
+    }
+    
+    /**
+     * Create store marker with profit-based styling - FIXED
      */
     createStoreMarker(store) {
         try {
@@ -393,7 +454,7 @@ class CRMExpansionSystem {
             let color = this.colors.default;
             let title = store.nama_toko;
             
-            if (this.profitCalculated && store.margin_percent !== undefined) {
+            if (this.profitCalculated && store.profit_calculated && store.margin_percent !== undefined) {
                 if (store.margin_percent >= this.config.GOOD_PROFIT_MARGIN) {
                     color = this.colors.excellent;
                     title += ` (${store.margin_percent.toFixed(1)}% - Excellent)`;
@@ -406,7 +467,7 @@ class CRMExpansionSystem {
                 }
             }
             
-            const marker = L.circleMarker([store.latitude, store.longitude], {
+            const marker = L.circleMarker([parseFloat(store.latitude), parseFloat(store.longitude)], {
                 radius: 8,
                 fillColor: color,
                 color: '#ffffff',
@@ -437,12 +498,12 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create enhanced store popup content
+     * Create enhanced store popup content - FIXED
      */
     createStorePopup(store) {
         let profitSection = '';
         
-        if (this.profitCalculated && store.margin_percent !== undefined) {
+        if (this.profitCalculated && store.profit_calculated && store.margin_percent !== undefined) {
             const marginClass = store.margin_percent >= 20 ? 'success' : 
                               store.margin_percent >= 10 ? 'warning' : 'danger';
             
@@ -477,7 +538,7 @@ class CRMExpansionSystem {
             <div class="store-popup-content">
                 <div class="popup-header mb-2">
                     <h6 class="mb-1 text-primary">${store.nama_toko}</h6>
-                    <small class="text-muted">${store.pemilik}</small>
+                    <small class="text-muted">${store.pemilik || 'Unknown Owner'}</small>
                 </div>
                 
                 <div class="popup-body">
@@ -486,7 +547,7 @@ class CRMExpansionSystem {
                             <div class="col-12">
                                 <small>
                                     <i class="fas fa-map-marker-alt mr-1 text-danger"></i>
-                                    ${store.kecamatan}, ${store.kota_kabupaten}
+                                    ${store.kecamatan || 'Unknown'}, ${store.kota_kabupaten || 'Unknown'}
                                 </small>
                             </div>
                         </div>
@@ -494,13 +555,13 @@ class CRMExpansionSystem {
                             <div class="col-6">
                                 <small>
                                     <i class="fas fa-box mr-1 text-info"></i>
-                                    ${store.jumlah_barang} Products
+                                    ${store.jumlah_barang || 0} Products
                                 </small>
                             </div>
                             <div class="col-6">
                                 <small>
                                     <i class="fas fa-truck mr-1 text-success"></i>
-                                    ${store.total_pengiriman} Orders
+                                    ${store.total_pengiriman || 0} Orders
                                 </small>
                             </div>
                         </div>
@@ -508,13 +569,13 @@ class CRMExpansionSystem {
                             <div class="col-6">
                                 <small>
                                     <i class="fas fa-undo mr-1 text-warning"></i>
-                                    ${store.total_retur} Returns
+                                    ${store.total_retur || 0} Returns
                                 </small>
                             </div>
                             <div class="col-6">
                                 <small>
                                     <i class="fas fa-signal mr-1"></i>
-                                    ${store.status_aktif}
+                                    ${store.status_aktif || 'Unknown'}
                                 </small>
                             </div>
                         </div>
@@ -532,13 +593,17 @@ class CRMExpansionSystem {
     }
     
     /**
-     * MAIN FUNCTION: Calculate profit for all stores
-     * Implements the complete profit calculation algorithm from documentation
+     * MAIN FUNCTION: Calculate profit for all stores - FIXED WITH ENHANCED ERROR HANDLING
      */
     async calculateProfitAllStores() {
         try {
+            if (!this.systemReady) {
+                this.showWarning('System Not Ready', 'Please wait for system initialization to complete.');
+                return;
+            }
+            
             if (this.storeData.length === 0) {
-                this.showWarning('No Data', 'No store data available for profit calculation.');
+                this.showWarning('No Data', 'No store data available for profit calculation. Please refresh the page or check your data.');
                 return;
             }
             
@@ -547,120 +612,96 @@ class CRMExpansionSystem {
             
             this.showLoading('Calculating profit for all stores...');
             
-            // Simulate API delay for realistic UX
-            await this.sleep(1500);
-            
-            // Perform profit calculations for each store
-            this.storeData.forEach(store => {
-                this.calculateStoreProfit(store);
+            // Call backend API for profit calculation
+            const response = await this.fetchWithRetry(this.apiEndpoints.calculateProfit, {
+                method: 'POST'
             });
             
-            this.profitCalculated = true;
-            
-            // Update map with new profit colors
-            this.renderStoresOnMap();
-            
-            // Render profit analysis in Analysis tab
-            this.renderProfitAnalysis();
-            
-            // Update statistics
-            this.updateProfitStatistics();
-            
-            // Performance tracking
-            const calculationTime = performance.now() - startTime;
-            this.performanceMetrics.calculationTime = calculationTime;
-            
-            // Show success notification
-            this.showSuccess(
-                'Profit Calculation Completed!', 
-                `Analyzed ${this.storeData.length} stores in ${calculationTime.toFixed(0)}ms. View results in Analysis tab.`
-            );
-            
-            console.log(`✅ Profit calculation completed in ${calculationTime.toFixed(2)}ms`);
+            if (response.success && response.data && response.data.length > 0) {
+                // Update store data with calculated profit
+                this.storeData = response.data;
+                this.profitCalculated = true;
+                
+                // Update map with new profit colors
+                this.renderStoresOnMap();
+                
+                // Update statistics with new profit data
+                this.updateStatistics(response.summary);
+                this.updateProfitStatistics(response.statistics);
+                
+                // Render profit analysis in Analysis tab
+                this.renderProfitAnalysis();
+                
+                // Performance tracking
+                const calculationTime = performance.now() - startTime;
+                this.performanceMetrics.calculationTime = calculationTime;
+                
+                // Show success notification
+                this.showSuccess(
+                    'Profit Calculation Completed!', 
+                    `Analyzed ${response.statistics.processed_stores} stores. Avg margin: ${response.statistics.avg_margin}%`
+                );
+                
+                console.log(`✅ Profit calculation completed in ${calculationTime.toFixed(2)}ms`);
+                
+            } else {
+                throw new Error(response.message || 'Failed to calculate profit - no data returned');
+            }
             
         } catch (error) {
             console.error('❌ Error calculating profit:', error);
-            this.showError('Failed to calculate profit: ' + error.message);
+            this.handleCalculationError('profit calculation', error);
         } finally {
             this.hideLoading();
         }
     }
     
     /**
-     * Calculate profit metrics for individual store
-     * Implements the exact formula from documentation
+     * Handle calculation errors with detailed messaging
      */
-    calculateStoreProfit(store) {
-        try {
-            // Base prices (as per documentation)
-            const hargaAwal = store.harga_awal || this.config.DEFAULT_HARGA_AWAL; // Rp 12,000
-            const hargaJual = store.harga_jual || this.estimateSellingPrice(hargaAwal, store);
-            const totalTerjual = store.total_terjual || this.estimateSoldUnits(store);
-            
-            // Core profit calculations
-            store.profit_per_unit = hargaJual - hargaAwal;
-            store.margin_percent = ((store.profit_per_unit / hargaJual) * 100);
-            store.total_profit = store.profit_per_unit * totalTerjual;
-            store.roi = ((store.total_profit / (hargaAwal * totalTerjual)) * 100);
-            
-            // Additional metrics
-            store.break_even_units = Math.ceil(this.config.DEFAULT_HARGA_AWAL * this.config.DEFAULT_INITIAL_STOCK / store.profit_per_unit);
-            store.projected_monthly_profit = store.profit_per_unit * Math.floor(totalTerjual / 12);
-            
-            // Store the calculated data
-            store.harga_awal = hargaAwal;
-            store.harga_jual = hargaJual;
-            store.total_terjual = totalTerjual;
-            
-        } catch (error) {
-            console.warn('⚠️ Error calculating profit for store:', store.toko_id, error);
-            // Set default values
-            store.margin_percent = 0;
-            store.profit_per_unit = 0;
-            store.total_profit = 0;
-            store.roi = 0;
+    handleCalculationError(operation, error) {
+        let message = error.message || 'Unknown error occurred';
+        let suggestions = [];
+        
+        if (message.includes('No active stores found')) {
+            suggestions.push('• Check if there are active stores in the database');
+            suggestions.push('• Verify store data has been properly imported');
+        } else if (message.includes('No stores with profit data')) {
+            suggestions.push('• Run profit calculation first');
+            suggestions.push('• Ensure stores have valid coordinates');
+        } else if (message.includes('No clusters available')) {
+            suggestions.push('• Complete profit analysis first');
+            suggestions.push('• Create geographic clustering before generating expansion plans');
         }
+        
+        const suggestionText = suggestions.length > 0 ? 
+            '\n\nSuggestions:\n' + suggestions.join('\n') : '';
+        
+        this.showError(`Failed to perform ${operation}: ${message}${suggestionText}`);
     }
     
     /**
-     * Estimate selling price based on store performance
-     */
-    estimateSellingPrice(hargaAwal, store) {
-        let multiplier = 1.2; // Default 20% markup
-        
-        // Adjust based on store performance indicators
-        if (store.total_pengiriman > 50) multiplier = 1.25; // High volume stores
-        if (store.status_aktif === 'Sangat Aktif') multiplier = 1.3;
-        if (store.total_retur > store.total_pengiriman * 0.1) multiplier = 1.15; // High return rate
-        
-        return Math.round(hargaAwal * multiplier);
-    }
-    
-    /**
-     * Estimate sold units based on store data
-     */
-    estimateSoldUnits(store) {
-        // Base estimation on orders and activity
-        let baseUnits = store.total_pengiriman * 5; // Average 5 units per order
-        
-        // Add randomization for realism
-        const variation = 0.3; // 30% variation
-        const randomFactor = 1 + (Math.random() - 0.5) * variation;
-        
-        return Math.max(1, Math.floor(baseUnits * randomFactor));
-    }
-    
-    /**
-     * Render profit analysis results in Analysis tab
+     * Render profit analysis results in Analysis tab - FIXED
      */
     renderProfitAnalysis() {
         const container = document.getElementById('profit-analysis-content');
         if (!container) return;
         
-        // Sort stores by margin percentage (descending)
-        const sortedStores = [...this.storeData]
-            .filter(store => store.margin_percent !== undefined)
+        // Filter and sort stores by margin percentage (descending)
+        const sortedStores = this.storeData
+            .filter(store => store.profit_calculated && store.margin_percent !== undefined)
             .sort((a, b) => b.margin_percent - a.margin_percent);
+        
+        if (sortedStores.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3 text-warning"></i>
+                    <h5>No Profit Data Available</h5>
+                    <p>Please run profit calculation first</p>
+                </div>
+            `;
+            return;
+        }
         
         let html = '<div class="profit-analysis-results">';
         
@@ -682,7 +723,7 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create profit summary header
+     * Create profit summary header - FIXED
      */
     createProfitSummaryHeader(stores) {
         const totalStores = stores.length;
@@ -740,7 +781,7 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create individual profit store card
+     * Create individual profit store card - FIXED
      */
     createProfitStoreCard(store, rank) {
         const marginClass = store.margin_percent >= 20 ? 'success' : 
@@ -751,8 +792,10 @@ class CRMExpansionSystem {
         
         // Calculate expansion projection
         const expansionInvestment = this.config.DEFAULT_HARGA_AWAL * this.config.DEFAULT_INITIAL_STOCK;
-        const projectedROI = ((store.profit_per_unit * this.config.DEFAULT_INITIAL_STOCK) / expansionInvestment) * 100;
-        const paybackMonths = Math.ceil(expansionInvestment / (store.profit_per_unit * 50)); // Assume 50 units/month
+        const projectedROI = store.profit_per_unit > 0 ? 
+            ((store.profit_per_unit * this.config.DEFAULT_INITIAL_STOCK) / expansionInvestment) * 100 : 0;
+        const paybackMonths = store.projected_monthly_profit > 0 ? 
+            Math.ceil(expansionInvestment / store.projected_monthly_profit) : 99;
         
         return `
             <div class="profit-item border-left-${marginClass} mb-3" data-rank="${rank}">
@@ -762,7 +805,7 @@ class CRMExpansionSystem {
                             <span class="rank-badge badge badge-secondary mr-2">#${rank}</span>
                             ${store.nama_toko}
                         </h6>
-                        <small class="text-muted">${store.kecamatan}, ${store.kota_kabupaten}</small>
+                        <small class="text-muted">${store.kecamatan || 'Unknown'}, ${store.kota_kabupaten || 'Unknown'}</small>
                     </div>
                     <div class="text-right">
                         <span class="badge badge-${marginClass} badge-lg">
@@ -778,6 +821,12 @@ class CRMExpansionSystem {
                                 <div class="metric-item">
                                     <div class="metric-value text-primary">Rp ${store.profit_per_unit.toLocaleString()}</div>
                                     <div class="metric-label">Profit per Unit</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-item">
+                                    <div class="metric-value text-info">${store.total_terjual}</div>
+                                    <div class="metric-label">Units Sold</div>
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -828,11 +877,15 @@ class CRMExpansionSystem {
     }
     
     /**
-     * MAIN FUNCTION: Create geographic clustering
-     * Implements the clustering algorithm from documentation
+     * MAIN FUNCTION: Create geographic clustering - FIXED WITH ENHANCED ERROR HANDLING
      */
     async createGeographicClustering() {
         try {
+            if (!this.systemReady) {
+                this.showWarning('System Not Ready', 'Please wait for system initialization to complete.');
+                return;
+            }
+            
             if (!this.profitCalculated) {
                 this.showWarning('Prerequisites Not Met', 'Please calculate profit analysis first before creating clusters.');
                 return;
@@ -848,230 +901,66 @@ class CRMExpansionSystem {
             
             this.showLoading('Creating geographic clusters with 1.5km radius...');
             
-            // Simulate processing time
-            await this.sleep(2000);
+            // Call backend API for clustering
+            const response = await this.fetchWithRetry(this.apiEndpoints.createClusters, {
+                method: 'POST',
+                body: JSON.stringify({
+                    radius: this.config.CLUSTER_RADIUS
+                })
+            });
             
-            // Perform clustering algorithm
-            this.clusters = this.performClusteringAlgorithm();
-            this.clusteringDone = true;
-            this.performanceMetrics.totalClusters = this.clusters.length;
-            
-            // Render cluster boundaries on map
-            this.renderClustersOnMap();
-            
-            // Update Analysis tab with cluster results
-            this.renderClusteringAnalysis();
-            
-            // Update statistics
-            this.updateClusteringStatistics();
-            
-            const processingTime = performance.now() - startTime;
-            
-            this.showSuccess(
-                'Geographic Clustering Completed!',
-                `Created ${this.clusters.length} clusters in ${processingTime.toFixed(0)}ms. View results in Analysis tab.`
-            );
-            
-            console.log(`✅ Clustering completed: ${this.clusters.length} clusters in ${processingTime.toFixed(2)}ms`);
+            if (response.success && response.clusters && response.clusters.length > 0) {
+                this.clusters = response.clusters;
+                this.clusteringDone = true;
+                this.performanceMetrics.totalClusters = this.clusters.length;
+                
+                // Render cluster boundaries on map
+                this.renderClustersOnMap();
+                
+                // Update Analysis tab with cluster results
+                this.renderClusteringAnalysis();
+                
+                // Update statistics
+                this.updateClusteringStatistics();
+                
+                const processingTime = performance.now() - startTime;
+                
+                this.showSuccess(
+                    'Geographic Clustering Completed!',
+                    `Created ${this.clusters.length} clusters from ${response.total_stores} stores`
+                );
+                
+                console.log(`✅ Clustering completed: ${this.clusters.length} clusters in ${processingTime.toFixed(2)}ms`);
+                
+            } else if (response.success && response.clusters && response.clusters.length === 0) {
+                this.showWarning(
+                    'No Clusters Created',
+                    'No clusters were created. This might be because stores are too far apart or don\'t meet clustering criteria.'
+                );
+            } else {
+                throw new Error(response.message || 'Failed to create clusters');
+            }
             
         } catch (error) {
             console.error('❌ Error creating clusters:', error);
-            this.showError('Failed to create clusters: ' + error.message);
+            this.handleCalculationError('geographic clustering', error);
         } finally {
             this.hideLoading();
         }
     }
     
     /**
-     * Perform clustering algorithm implementation
-     * Exact algorithm from documentation
-     */
-    performClusteringAlgorithm() {
-        const clusters = [];
-        const processed = new Set();
-        let clusterId = 1;
-        
-        // Filter stores with valid coordinates and profit data
-        const validStores = this.storeData.filter(store => 
-            store.has_coordinates && store.margin_percent !== undefined
-        );
-        
-        console.log(`🔍 Processing ${validStores.length} valid stores for clustering...`);
-        
-        // Main clustering loop
-        validStores.forEach(store => {
-            if (processed.has(store.toko_id)) {
-                return;
-            }
-            
-            // Start new cluster with current store
-            const clusterStores = [store];
-            processed.add(store.toko_id);
-            
-            // Find nearby stores within radius
-            validStores.forEach(otherStore => {
-                if (processed.has(otherStore.toko_id)) {
-                    return;
-                }
-                
-                const distance = this.calculateHaversineDistance(
-                    store.latitude, store.longitude,
-                    otherStore.latitude, otherStore.longitude
-                );
-                
-                // Add to cluster if within radius
-                if (distance <= this.config.CLUSTER_RADIUS) {
-                    clusterStores.push(otherStore);
-                    processed.add(otherStore.toko_id);
-                }
-            });
-            
-            // Calculate cluster metrics
-            const clusterMetrics = this.calculateClusterMetrics(clusterStores);
-            const clusterCenter = this.calculateClusterCenter(clusterStores);
-            const expansionPotential = Math.max(0, this.config.MAX_STORES_PER_CLUSTER - clusterStores.length);
-            
-            // Create cluster object
-            const cluster = {
-                cluster_id: 'CLUSTER_' + String.fromCharCode(64 + clusterId), // A, B, C, etc.
-                store_count: clusterStores.length,
-                stores: clusterStores,
-                center: clusterCenter,
-                metrics: clusterMetrics,
-                expansion_potential: expansionPotential,
-                expansion_score: this.calculateExpansionScore(clusterMetrics, clusterStores.length),
-                profitability_level: this.determineProfitabilityLevel(clusterMetrics.avg_margin)
-            };
-            
-            clusters.push(cluster);
-            clusterId++;
-        });
-        
-        // Sort clusters by expansion score (descending)
-        clusters.sort((a, b) => b.expansion_score - a.expansion_score);
-        
-        console.log(`✅ Created ${clusters.length} clusters with expansion analysis`);
-        
-        return clusters;
-    }
-    
-    /**
-     * Calculate distance using Haversine formula
-     * Exact implementation from documentation
-     */
-    calculateHaversineDistance(lat1, lng1, lat2, lng2) {
-        const R = 6371; // Earth radius in km
-        const dLat = this.toRadians(lat2 - lat1);
-        const dLng = this.toRadians(lng2 - lng1);
-        
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
-                  Math.sin(dLng/2) * Math.sin(dLng/2);
-                  
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        
-        return R * c; // Distance in km
-    }
-    
-    /**
-     * Convert degrees to radians
-     */
-    toRadians(degrees) {
-        return degrees * (Math.PI / 180);
-    }
-    
-    /**
-     * Calculate cluster center point
-     */
-    calculateClusterCenter(stores) {
-        const validStores = stores.filter(s => s.has_coordinates);
-        if (validStores.length === 0) return this.config.MALANG_CENTER;
-        
-        const totalLat = validStores.reduce((sum, s) => sum + s.latitude, 0);
-        const totalLng = validStores.reduce((sum, s) => sum + s.longitude, 0);
-        
-        return [totalLat / validStores.length, totalLng / validStores.length];
-    }
-    
-    /**
-     * Calculate comprehensive cluster metrics
-     */
-    calculateClusterMetrics(stores) {
-        const totalRevenue = stores.reduce((sum, s) => sum + (s.revenue || 0), 0);
-        const totalProfit = stores.reduce((sum, s) => sum + (s.total_profit || 0), 0);
-        const avgMargin = stores.length > 0 ? 
-            stores.reduce((sum, s) => sum + (s.margin_percent || 0), 0) / stores.length : 0;
-        const avgPerformance = stores.length > 0 ?
-            stores.reduce((sum, s) => sum + (s.performance_score || 50), 0) / stores.length : 50;
-        
-        // Get unique administrative areas
-        const kecamatanList = [...new Set(stores.map(s => s.kecamatan).filter(Boolean))];
-        const kelurahanList = [...new Set(stores.map(s => s.kelurahan).filter(Boolean))];
-        
-        return {
-            total_revenue: totalRevenue,
-            total_profit: totalProfit,
-            avg_margin: avgMargin,
-            avg_performance: avgPerformance,
-            area_coverage: kecamatanList.join(', '),
-            kecamatan_count: kecamatanList.length,
-            kelurahan_count: kelurahanList.length,
-            density_score: this.calculateDensityScore(stores.length)
-        };
-    }
-    
-    /**
-     * Calculate expansion score for cluster
-     * Implementation from documentation
-     */
-    calculateExpansionScore(metrics, storeCount) {
-        let score = 0;
-        
-        // Margin weight (60%) - as per documentation
-        const marginScore = Math.min((metrics.avg_margin / 30) * 60, 60);
-        score += marginScore;
-        
-        // Expansion potential weight (30%)
-        const expansionPotential = Math.max(0, this.config.MAX_STORES_PER_CLUSTER - storeCount);
-        const expansionScore = (expansionPotential / this.config.MAX_STORES_PER_CLUSTER) * 30;
-        score += expansionScore;
-        
-        // Location/density weight (10%)
-        const locationScore = (metrics.density_score / 100) * 10;
-        score += locationScore;
-        
-        return Math.min(100, Math.round(score));
-    }
-    
-    /**
-     * Calculate density score
-     */
-    calculateDensityScore(storeCount) {
-        // Score based on store density in cluster
-        if (storeCount >= 4) return 90;
-        if (storeCount >= 3) return 70;
-        if (storeCount >= 2) return 50;
-        return 30;
-    }
-    
-    /**
-     * Determine profitability level
-     */
-    determineProfitabilityLevel(avgMargin) {
-        if (avgMargin >= 25) return 'Excellent';
-        if (avgMargin >= 20) return 'Very Good';
-        if (avgMargin >= 15) return 'Good';
-        if (avgMargin >= 10) return 'Fair';
-        return 'Poor';
-    }
-    
-    /**
-     * Render cluster boundaries on map
+     * Render cluster boundaries on map - FIXED
      */
     renderClustersOnMap() {
         try {
             // Remove existing cluster boundaries
             this.clearClusterBoundaries();
+            
+            if (!this.clusters || this.clusters.length === 0) {
+                console.warn('⚠️ No clusters to render');
+                return;
+            }
             
             // Add cluster boundaries with enhanced styling
             this.clusters.forEach(cluster => {
@@ -1093,6 +982,7 @@ class CRMExpansionSystem {
                 });
                 
                 circle.addTo(this.map);
+                this.clusterLayers.push(circle); // Track for cleanup
                 
                 // Add cluster label
                 const label = L.marker(cluster.center, {
@@ -1104,6 +994,7 @@ class CRMExpansionSystem {
                 });
                 
                 label.addTo(this.map);
+                this.clusterLayers.push(label); // Track for cleanup
             });
             
             console.log(`✅ Rendered ${this.clusters.length} cluster boundaries`);
@@ -1114,7 +1005,7 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create enhanced cluster popup content
+     * Create enhanced cluster popup content - FIXED
      */
     createClusterPopup(cluster) {
         const marginClass = cluster.metrics.avg_margin >= 20 ? 'success' : 
@@ -1200,11 +1091,185 @@ class CRMExpansionSystem {
     }
     
     /**
-     * MAIN FUNCTION: Generate expansion plan
-     * Implements the expansion recommendation algorithm from documentation
+     * Render clustering analysis results - FIXED
+     */
+    renderClusteringAnalysis() {
+        const container = document.getElementById('clustering-analysis-content');
+        if (!container) return;
+        
+        if (this.clusters.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-project-diagram fa-3x mb-3 text-info"></i>
+                    <h5>No Clusters Available</h5>
+                    <p>Please create geographic clustering first</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="clustering-analysis-results">';
+        
+        // Add clustering summary
+        html += this.createClusteringSummaryHeader();
+        
+        // Add individual cluster analysis
+        this.clusters.forEach((cluster, index) => {
+            html += this.createClusterAnalysisCard(cluster, index + 1);
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+        // Animate the cards
+        setTimeout(() => {
+            this.animateClusterCards();
+        }, 100);
+    }
+    
+    /**
+     * Create clustering summary header
+     */
+    createClusteringSummaryHeader() {
+        const totalClusters = this.clusters.length;
+        const avgMargin = this.clusters.reduce((sum, c) => sum + c.metrics.avg_margin, 0) / totalClusters;
+        const totalRevenue = this.clusters.reduce((sum, c) => sum + c.metrics.total_revenue, 0);
+        const expansionOpportunities = this.clusters.reduce((sum, c) => sum + c.expansion_potential, 0);
+        
+        return `
+            <div class="clustering-summary-header mb-4 p-3 bg-info text-white rounded">
+                <h5 class="mb-3"><i class="fas fa-project-diagram mr-2"></i>Geographic Clustering Summary</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4>${totalClusters}</h4>
+                            <small>Total Clusters</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4>${avgMargin.toFixed(1)}%</h4>
+                            <small>Avg Margin</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4>Rp ${(totalRevenue / 1000000).toFixed(1)}M</h4>
+                            <small>Total Revenue</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4>${expansionOpportunities}</h4>
+                            <small>Expansion Slots</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Create cluster analysis card
+     */
+    createClusterAnalysisCard(cluster, rank) {
+        const marginClass = cluster.metrics.avg_margin >= 20 ? 'success' : 
+                          cluster.metrics.avg_margin >= 15 ? 'warning' : 'danger';
+        
+        return `
+            <div class="cluster-item border-left-${marginClass} mb-3" data-rank="${rank}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">
+                            <span class="rank-badge badge badge-secondary mr-2">#${rank}</span>
+                            ${cluster.cluster_id}
+                        </h6>
+                        <small class="text-muted">${cluster.metrics.area_coverage}</small>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-${marginClass} badge-lg">
+                            ${cluster.metrics.avg_margin.toFixed(1)}%
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="cluster-metrics">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="metric-item">
+                                    <div class="metric-value text-primary">${cluster.store_count}</div>
+                                    <div class="metric-label">Stores</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-item">
+                                    <div class="metric-value text-info">Rp ${cluster.metrics.total_revenue.toLocaleString()}</div>
+                                    <div class="metric-label">Revenue</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-item">
+                                    <div class="metric-value text-success">Rp ${cluster.metrics.total_profit.toLocaleString()}</div>
+                                    <div class="metric-label">Profit</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-item">
+                                    <div class="metric-value text-warning">${cluster.expansion_potential}</div>
+                                    <div class="metric-label">Expansion Slots</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="expansion-score mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><strong>Expansion Score:</strong></span>
+                            <span class="badge badge-info">${cluster.expansion_score}/100</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-gradient-success" 
+                                 style="width: ${cluster.expansion_score}%">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="store-list mt-3">
+                        <h6><i class="fas fa-store mr-1"></i>Stores in Cluster</h6>
+                        <div class="store-items">
+                            ${cluster.stores.slice(0, 2).map(store => `
+                                <div class="store-item">
+                                    <small>
+                                        <strong>${store.nama_toko}</strong> - 
+                                        ${store.margin_percent.toFixed(1)}% margin
+                                    </small>
+                                </div>
+                            `).join('')}
+                            ${cluster.stores.length > 2 ? `
+                                <div class="store-item">
+                                    <small class="text-muted">
+                                        ... and ${cluster.stores.length - 2} more stores
+                                    </small>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * MAIN FUNCTION: Generate expansion plan - FIXED WITH ENHANCED ERROR HANDLING
      */
     async generateExpansionPlan() {
         try {
+            if (!this.systemReady) {
+                this.showWarning('System Not Ready', 'Please wait for system initialization to complete.');
+                return;
+            }
+            
             if (!this.profitCalculated || !this.clusteringDone) {
                 this.showWarning(
                     'Prerequisites Not Met', 
@@ -1223,172 +1288,51 @@ class CRMExpansionSystem {
             
             this.showLoading('Analyzing expansion opportunities and generating recommendations...');
             
-            // Simulate analysis time
-            await this.sleep(2500);
+            // Call backend API for expansion plan generation
+            const response = await this.fetchWithRetry(this.apiEndpoints.generateExpansion, {
+                method: 'POST'
+            });
             
-            // Generate expansion recommendations
-            this.expansionPlan = this.createExpansionRecommendations();
-            
-            // Render expansion plan in Expansion tab
-            this.renderExpansionPlan();
-            
-            // Update statistics
-            this.updateExpansionStatistics();
-            
-            const processingTime = performance.now() - startTime;
-            
-            this.showSuccess(
-                'Expansion Plan Generated!',
-                `Created ${this.expansionPlan.length} recommendations in ${processingTime.toFixed(0)}ms. View plan in Expansion tab.`
-            );
-            
-            console.log(`✅ Expansion plan generated: ${this.expansionPlan.length} recommendations in ${processingTime.toFixed(2)}ms`);
+            if (response.success && response.recommendations) {
+                this.expansionPlan = response.recommendations;
+                this.expansionGenerated = true;
+                
+                // Render expansion plan in Expansion tab
+                this.renderExpansionPlan();
+                
+                // Update statistics
+                this.updateExpansionStatistics();
+                
+                const processingTime = performance.now() - startTime;
+                
+                if (this.expansionPlan.length > 0) {
+                    this.showSuccess(
+                        'Expansion Plan Generated!',
+                        `Created ${this.expansionPlan.length} recommendations. Total investment: Rp ${(response.total_investment / 1000000).toFixed(1)}M`
+                    );
+                } else {
+                    this.showWarning(
+                        'No Recommendations Generated',
+                        'No expansion opportunities were identified that meet the minimum criteria.'
+                    );
+                }
+                
+                console.log(`✅ Expansion plan generated: ${this.expansionPlan.length} recommendations in ${processingTime.toFixed(2)}ms`);
+                
+            } else {
+                throw new Error(response.message || 'Failed to generate expansion plan');
+            }
             
         } catch (error) {
             console.error('❌ Error generating expansion plan:', error);
-            this.showError('Failed to generate expansion plan: ' + error.message);
+            this.handleCalculationError('expansion plan generation', error);
         } finally {
             this.hideLoading();
         }
     }
     
     /**
-     * Create expansion recommendations
-     * Implementation from documentation algorithm
-     */
-    createExpansionRecommendations() {
-        const recommendations = [];
-        
-        // Filter clusters that meet expansion criteria
-        const eligibleClusters = this.clusters.filter(cluster => 
-            cluster.metrics.avg_margin >= this.config.MIN_PROFIT_MARGIN && 
-            cluster.expansion_potential > 0
-        );
-        
-        console.log(`🎯 Analyzing ${eligibleClusters.length} eligible clusters for expansion...`);
-        
-        eligibleClusters.forEach(cluster => {
-            const recommendation = this.createClusterRecommendation(cluster);
-            recommendations.push(recommendation);
-        });
-        
-        // Sort by priority and score
-        recommendations.sort((a, b) => {
-            const priorityOrder = { 'TINGGI': 3, 'SEDANG': 2, 'RENDAH': 1 };
-            const aPriority = priorityOrder[a.priority] || 0;
-            const bPriority = priorityOrder[b.priority] || 0;
-            
-            if (aPriority === bPriority) {
-                return b.score - a.score;
-            }
-            return bPriority - aPriority;
-        });
-        
-        console.log(`✅ Generated ${recommendations.length} expansion recommendations`);
-        
-        return recommendations;
-    }
-    
-    /**
-     * Create individual cluster recommendation
-     */
-    createClusterRecommendation(cluster) {
-        const avgMargin = cluster.metrics.avg_margin;
-        const targetExpansion = Math.min(cluster.expansion_potential, 3); // Max 3 new stores per recommendation
-        
-        // Determine priority based on margin (as per documentation)
-        const priority = this.determinePriority(avgMargin);
-        
-        // Calculate financial projections
-        const financialProjection = this.calculateFinancialProjection(cluster, targetExpansion);
-        
-        // Determine pricing strategy
-        const pricingStrategy = this.determinePricingStrategy(avgMargin);
-        
-        // Calculate recommended price
-        const recommendedPrice = Math.round(
-            this.config.DEFAULT_HARGA_AWAL * (1 + avgMargin / 100)
-        );
-        
-        return {
-            cluster_id: cluster.cluster_id,
-            priority: priority,
-            score: cluster.expansion_score,
-            target_expansion: targetExpansion,
-            current_stores: cluster.store_count,
-            area_coverage: cluster.metrics.area_coverage,
-            avg_margin: avgMargin,
-            pricing_strategy: pricingStrategy,
-            recommended_price: recommendedPrice,
-            profitability_level: cluster.profitability_level,
-            center_coordinates: cluster.center,
-            ...financialProjection
-        };
-    }
-    
-    /**
-     * Determine priority level based on margin
-     */
-    determinePriority(avgMargin) {
-        if (avgMargin >= 20) return 'TINGGI';
-        if (avgMargin >= 15) return 'SEDANG';
-        return 'RENDAH';
-    }
-    
-    /**
-     * Determine pricing strategy
-     */
-    determinePricingStrategy(avgMargin) {
-        if (avgMargin >= 25) return 'Premium Pricing';
-        if (avgMargin <= 12) return 'Competitive Pricing';
-        return 'Market Average';
-    }
-    
-    /**
-     * Calculate financial projection for expansion
-     */
-    calculateFinancialProjection(cluster, expansionCount) {
-        // Average store metrics from cluster
-        const avgStoreRevenue = cluster.metrics.total_revenue / cluster.store_count;
-        const avgStoreProfit = cluster.metrics.total_profit / cluster.store_count;
-        
-        // Investment calculation
-        const totalInvestment = expansionCount * this.config.DEFAULT_HARGA_AWAL * this.config.DEFAULT_INITIAL_STOCK;
-        
-        // Profit projection (monthly)
-        const projectedMonthlyProfit = expansionCount * (avgStoreProfit / 12);
-        
-        // Payback period calculation
-        const paybackPeriod = projectedMonthlyProfit > 0 ? 
-            Math.ceil(totalInvestment / projectedMonthlyProfit) : 99;
-        
-        // ROI calculation
-        const annualProfit = projectedMonthlyProfit * 12;
-        const expectedROI = totalInvestment > 0 ? 
-            (annualProfit / totalInvestment) * 100 : 0;
-        
-        return {
-            total_investment: totalInvestment,
-            projected_monthly_profit: Math.round(projectedMonthlyProfit),
-            projected_annual_profit: Math.round(annualProfit),
-            payback_period: paybackPeriod,
-            expected_roi: Math.round(expectedROI * 10) / 10,
-            break_even_units: Math.ceil(totalInvestment / (avgStoreProfit / cluster.store_count)),
-            risk_level: this.calculateRiskLevel(cluster, paybackPeriod)
-        };
-    }
-    
-    /**
-     * Calculate risk level for investment
-     */
-    calculateRiskLevel(cluster, paybackPeriod) {
-        if (paybackPeriod <= 12 && cluster.metrics.avg_margin >= 20) return 'Low';
-        if (paybackPeriod <= 18 && cluster.metrics.avg_margin >= 15) return 'Medium';
-        return 'High';
-    }
-    
-    /**
-     * Render expansion plan in Expansion tab
+     * Render expansion plan in Expansion tab - FIXED
      */
     renderExpansionPlan() {
         const container = document.getElementById('expansion-recommendations-content');
@@ -1422,14 +1366,15 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create expansion summary header
+     * Create expansion summary header - FIXED
      */
     createExpansionSummaryHeader() {
         const totalRecommendations = this.expansionPlan.length;
         const highPriority = this.expansionPlan.filter(r => r.priority === 'TINGGI').length;
         const totalInvestment = this.expansionPlan.reduce((sum, r) => sum + r.total_investment, 0);
         const totalProjectedProfit = this.expansionPlan.reduce((sum, r) => sum + r.projected_monthly_profit, 0);
-        const avgPayback = this.expansionPlan.reduce((sum, r) => sum + r.payback_period, 0) / totalRecommendations;
+        const avgPayback = totalRecommendations > 0 ? 
+            this.expansionPlan.reduce((sum, r) => sum + r.payback_period, 0) / totalRecommendations : 0;
         
         return `
             <div class="expansion-summary-header mb-4 p-4 bg-gradient-success text-white rounded">
@@ -1481,7 +1426,7 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create individual recommendation card
+     * Create individual recommendation card - FIXED
      */
     createRecommendationCard(recommendation, rank) {
         const priorityClass = recommendation.priority.toLowerCase();
@@ -1638,7 +1583,7 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Create investment summary
+     * Create investment summary - FIXED
      */
     createInvestmentSummary() {
         const totalInvestment = this.expansionPlan.reduce((sum, r) => sum + r.total_investment, 0);
@@ -1781,6 +1726,24 @@ class CRMExpansionSystem {
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
+                    card.classList.add('animated');
+                }, 50);
+            }, index * 100);
+        });
+    }
+    
+    animateClusterCards() {
+        const cards = document.querySelectorAll('.cluster-item');
+        cards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.3s ease';
+                
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                    card.classList.add('animated');
                 }, 50);
             }, index * 100);
         });
@@ -1797,6 +1760,7 @@ class CRMExpansionSystem {
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateX(0)';
+                    card.classList.add('animated');
                 }, 50);
             }, index * 150);
         });
@@ -1817,7 +1781,7 @@ class CRMExpansionSystem {
     }
     
     /**
-     * Utility and helper methods
+     * Utility and helper methods - FIXED
      */
     updateStatistics(summary) {
         try {
@@ -1825,7 +1789,7 @@ class CRMExpansionSystem {
                 'total-partners': summary.total_toko || 0,
                 'geo-clusters': this.clusters.length || 0,
                 'avg-margin': this.profitCalculated ? 
-                    (this.storeData.reduce((sum, s) => sum + (s.margin_percent || 0), 0) / this.storeData.length).toFixed(1) : 0,
+                    summary.avg_margin || 0 : 0,
                 'total-revenue': summary.total_revenue ? 
                     (summary.total_revenue / 1000000).toFixed(1) + 'M' : '0'
             };
@@ -1834,6 +1798,8 @@ class CRMExpansionSystem {
                 const element = document.getElementById(id);
                 if (element) {
                     element.textContent = value;
+                    // Add animation effect
+                    element.classList.add('animate-counter');
                 }
             });
         } catch (error) {
@@ -1841,23 +1807,51 @@ class CRMExpansionSystem {
         }
     }
     
+    updateProfitStatistics(statistics) {
+        try {
+            if (statistics) {
+                const avgMarginElement = document.getElementById('avg-margin');
+                if (avgMarginElement) {
+                    avgMarginElement.textContent = statistics.avg_margin || 0;
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Error updating profit statistics:', error);
+        }
+    }
+    
+    updateClusteringStatistics() {
+        try {
+            const geoClustersElement = document.getElementById('geo-clusters');
+            if (geoClustersElement) {
+                geoClustersElement.textContent = this.clusters.length;
+            }
+        } catch (error) {
+            console.warn('⚠️ Error updating clustering statistics:', error);
+        }
+    }
+    
+    updateExpansionStatistics() {
+        // Additional statistics updates for expansion tab if needed
+        console.log('✅ Expansion statistics updated');
+    }
+    
     clearMapMarkers() {
-        this.map.eachLayer((layer) => {
-            if (layer instanceof L.CircleMarker) {
-                this.map.removeLayer(layer);
+        this.markers.forEach(marker => {
+            if (this.map.hasLayer(marker)) {
+                this.map.removeLayer(marker);
             }
         });
+        this.markers = [];
     }
     
     clearClusterBoundaries() {
-        this.map.eachLayer((layer) => {
-            if (layer instanceof L.Circle || (layer.options && layer.options.className === 'cluster-boundary')) {
-                this.map.removeLayer(layer);
-            }
-            if (layer.options && layer.options.icon && layer.options.icon.options.className === 'cluster-label-marker') {
+        this.clusterLayers.forEach(layer => {
+            if (this.map.hasLayer(layer)) {
                 this.map.removeLayer(layer);
             }
         });
+        this.clusterLayers = [];
     }
     
     handleTabChange(tabId) {
@@ -1882,11 +1876,19 @@ class CRMExpansionSystem {
             // Reset states
             this.profitCalculated = false;
             this.clusteringDone = false;
+            this.expansionGenerated = false;
             this.clusters = [];
             this.expansionPlan = [];
             
+            // Clear map elements
+            this.clearMapMarkers();
+            this.clearClusterBoundaries();
+            
             // Reload data
             await this.loadInitialData();
+            
+            // Clear analysis tabs
+            this.clearAnalysisTabs();
             
             this.showSuccess('Data refreshed successfully!');
         } catch (error) {
@@ -1896,9 +1898,45 @@ class CRMExpansionSystem {
         }
     }
     
+    clearAnalysisTabs() {
+        const profitContainer = document.getElementById('profit-analysis-content');
+        const clusterContainer = document.getElementById('clustering-analysis-content');
+        const expansionContainer = document.getElementById('expansion-recommendations-content');
+        
+        if (profitContainer) {
+            profitContainer.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-calculator fa-3x mb-3 text-warning"></i>
+                    <h5>Profit Analysis</h5>
+                    <p>Klik "Hitung Profit Semua Toko" pada tab Overview untuk memulai analisis</p>
+                </div>
+            `;
+        }
+        
+        if (clusterContainer) {
+            clusterContainer.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-project-diagram fa-3x mb-3 text-info"></i>
+                    <h5>Geographic Clustering</h5>
+                    <p>Klik "Buat Geographic Clustering" pada tab Overview untuk memulai pengelompokan</p>
+                </div>
+            `;
+        }
+        
+        if (expansionContainer) {
+            expansionContainer.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-rocket fa-3x mb-3 text-success"></i>
+                    <h5>Expansion Recommendations</h5>
+                    <p>Silakan jalankan Profit Analysis dan Geographic Clustering terlebih dahulu, kemudian klik "Generate Expansion Plan"</p>
+                </div>
+            `;
+        }
+    }
+    
     async clearSystemCache() {
         try {
-            const response = await this.fetchWithRetry('/market-map/clear-cache', {
+            const response = await this.fetchWithRetry(this.apiEndpoints.clearCache, {
                 method: 'POST'
             });
             
@@ -2041,20 +2079,49 @@ class CRMExpansionSystem {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     
+    setupTabSystem() {
+        // Enhanced tab functionality if needed
+    }
+    
+    setupResponsiveBehavior() {
+        // Enhanced responsive behavior if needed
+    }
+    
+    handleStoreClick(store) {
+        console.log('📊 Store clicked:', store.toko_id);
+        // Additional store click handling
+    }
+    
     // Placeholder methods for detail views
     showStoreDetail(storeId) {
         console.log('📊 Show store detail for:', storeId);
         // Implementation for store detail modal
+        this.showInfo('Store Detail', `Showing details for store: ${storeId}`);
     }
     
     showClusterDetail(clusterId) {
         console.log('🎯 Show cluster detail for:', clusterId);
         // Implementation for cluster detail modal
+        this.showInfo('Cluster Detail', `Showing details for cluster: ${clusterId}`);
     }
     
     showRecommendationDetail(clusterId) {
         console.log('🚀 Show recommendation detail for:', clusterId);
         // Implementation for recommendation detail modal
+        this.showInfo('Recommendation Detail', `Showing recommendation details for cluster: ${clusterId}`);
+    }
+    
+    showInfo(title, message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: title,
+                text: message,
+                icon: 'info',
+                confirmButtonColor: '#007bff'
+            });
+        } else {
+            alert(title + '\n' + message);
+        }
     }
 }
 
