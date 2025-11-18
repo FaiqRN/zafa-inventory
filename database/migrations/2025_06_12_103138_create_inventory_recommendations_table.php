@@ -28,7 +28,11 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('applied_by')->nullable();
             $table->timestamp('applied_at')->nullable();
-            $table->timestamps();
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
             
             $table->index(['toko_id', 'barang_id']);
             $table->index(['confidence_level', 'status']);

@@ -425,9 +425,9 @@ class InventoryOptimizationController extends Controller
             $adjustmentsData = $request->adjustments;
             $updatedBy = auth()->user()->name ?? 'System';
 
-            // Create seasonal_adjustments table if not exists
-            if (!Schema::hasTable('seasonal_adjustments')) {
-                Schema::create('seasonal_adjustments', function (Blueprint $table) {
+            // Create penyesuaian_musiman table if not exists
+            if (!Schema::hasTable('penyesuaian_musiman')) {
+                Schema::create('penyesuaian_musiman', function (Blueprint $table) {
                     $table->id();
                     $table->integer('month')->unique();
                     $table->decimal('multiplier', 8, 2)->default(1.00);

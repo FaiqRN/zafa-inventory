@@ -18,8 +18,16 @@ class CreateBarangTable extends Migration
             $table->string('barang_kode', 20);
             $table->string('nama_barang', 100);
             $table->decimal('harga_awal_barang', 10, 2);
+            $table->integer('stok')->default(0)->comment('Stok barang');
             $table->string('satuan', 20);
             $table->string('keterangan', 255)->nullable();
+            $table->boolean('is_deleted')->default(0);
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
+            
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_general_ci';
         });

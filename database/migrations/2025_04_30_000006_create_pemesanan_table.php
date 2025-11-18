@@ -18,6 +18,9 @@ class CreatePemesananTable extends Migration
             $table->string('barang_id', 10);
             $table->string('nama_pemesan', 100);
             $table->date('tanggal_pemesanan');
+            $table->date('tanggal_diproses')->nullable();
+            $table->date('tanggal_dikirim')->nullable();
+            $table->date('tanggal_selesai')->nullable();
             $table->text('alamat_pemesan');
             $table->integer('jumlah_pesanan');
             $table->decimal('total', 12, 2);
@@ -27,7 +30,11 @@ class CreatePemesananTable extends Migration
             $table->string('no_telp_pemesan', 20);
             $table->string('email_pemesan', 100);
             $table->text('catatan_pemesanan')->nullable();
-            $table->timestamps(); // created_at dan updated_at
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
             
             $table->foreign('barang_id')
                   ->references('barang_id')

@@ -23,7 +23,11 @@ return new class extends Migration
             $table->decimal('efficiency_percentage', 8, 2)->default(0);
             $table->integer('avg_days_to_sell')->default(0);
             $table->decimal('cash_cycle_days', 8, 2)->default(0);
-            $table->timestamps();
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
             
             $table->index(['period_date', 'toko_id', 'barang_id']);
             $table->index('period_date');

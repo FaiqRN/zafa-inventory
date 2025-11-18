@@ -28,7 +28,11 @@ return new class extends Migration
             $table->json('metadata')->nullable()->comment('Additional data in JSON format');
             $table->string('performed_by');
             $table->timestamp('performed_at');
-            $table->timestamps();
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
             
             $table->index(['toko_id', 'barang_id']);
             $table->index(['action_type', 'performed_at']);

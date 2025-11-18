@@ -12,10 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('user', function (Blueprint $table) {
-            $table->id('user_id');            
-            $table->string('username', 20)->unique();
+            $table->id('user_id');
+            $table->foreignId('role_id')->constrained('role', 'role_id')->onDelete('cascade');
             $table->string('password')->unique();
-            $table->string('nama_lengkap');
+            $table->string('firstname', 100);
+            $table->string('lastname', 100);
             $table->text('foto')->nullable();
             $table->enum('jenis_kelamin', ['L', 'P'])->nullable();
             $table->string('tempat_lahir', 100)->nullable();
@@ -25,11 +26,15 @@ return new class extends Migration
             $table->string('telp', 50);
             $table->string('created_by', 50)->nullable();
             $table->string('updated_by', 50)->nullable();
-            $table->timestamps();
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
             $table->softDeletes();
         
                   
-            $table->index(['nama_lengkap','username']);
+            $table->index(['firstname', 'lastname']);
         });
     }
 

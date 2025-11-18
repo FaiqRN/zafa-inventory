@@ -123,32 +123,7 @@
                     </li>
                 </ul>
             </li>
-
-            <!-- Laporan -->
-            <li class="nav-item">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['laporan-pemesanan', 'laporan-toko']))? 'active' : '' }}">
-                    <i class="nav-icon fas fa-file-alt"></i>
-                    <p>
-                        Laporan 
-                        <i class="right fas fa-angle-left"></i>
-                    </p>
-                </a>
-                <ul class="nav nav-treeview">
-                    <li class="nav-item">
-                        <a href="{{ url('/laporan-pemesanan') }}" class="nav-link {{ ($activemenu == 'laporan-pemesanan')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Laporan Pemesanan</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url('/laporan-toko') }}" class="nav-link {{ ($activemenu == 'laporan-toko')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Laporan Per Toko</p>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-
+            
             <!-- Market Map -->
             <li class="nav-item">
                 <a href="{{ url('/market-map') }}" class="nav-link {{ ($activemenu == 'market-map')? 'active' : '' }}">

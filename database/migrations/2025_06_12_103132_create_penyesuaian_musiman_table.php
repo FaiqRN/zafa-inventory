@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('seasonal_adjustments', function (Blueprint $table) {
+        Schema::create('penyesuaian_musiman', function (Blueprint $table) {
             $table->id();
             $table->integer('month')->unique()->comment('1-12 untuk Januari-Desember');
             $table->decimal('multiplier', 8, 2)->default(1.00)->comment('Seasonal multiplier');
@@ -20,13 +20,17 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
-            $table->timestamps();
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
             
             $table->index(['month', 'is_active']);
         });
 
         // Insert default seasonal adjustments
-        DB::table('seasonal_adjustments')->insert([
+        DB::table('penyesuaian_musiman')->insert([
             [
                 'month' => 1, 
                 'multiplier' => 1.10, 
@@ -131,6 +135,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('seasonal_adjustments');
+        Schema::dropIfExists('penyesuaian_musiman');
     }
 };
