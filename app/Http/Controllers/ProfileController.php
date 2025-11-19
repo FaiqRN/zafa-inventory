@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use App\Rules\StrongPassword;
 use stdClass;
 
 class ProfileController extends Controller
@@ -162,10 +163,10 @@ class ProfileController extends Controller
      */
     public function updatePassword(Request $request)
     {
-        // Validasi input
+        // Validasi input dengan strong password requirement
         $validator = Validator::make($request->all(), [
             'current_password' => 'required',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'string', 'min:8', 'confirmed', new StrongPassword()],
         ], [
             'current_password.required' => 'Password saat ini wajib diisi',
             'password.required' => 'Password baru wajib diisi',

@@ -46,8 +46,6 @@ class LogoutController extends Controller
 
         // Redirect to login with cache control headers and flash message
         return redirect()->route('login')
-            ->with('message', 'Anda telah berhasil logout.')
-            ->with('class', 'info')
             ->withHeaders([
                 'Cache-Control' => 'no-cache, no-store, max-age=0, must-revalidate',
                 'Pragma' => 'no-cache',

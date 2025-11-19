@@ -6,6 +6,7 @@ use App\Helpers\LoginHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Models\User;
+use App\Models\LoginAttempt;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,26 +39,39 @@ class LoginController extends Controller
     }
 
     /**
-     * Handle login request with rate limiting
+     * Handle login request with rate limiting and account lockout
      *
      * @param LoginRequest $request
      * @return RedirectResponse
      */
     public function login(LoginRequest $request): RedirectResponse
     {
-        // Extract remember value
+        $username = $request->input('username');
+        $password = $request->input('password');
         $remember = $request->boolean('remember');
+
+        // Check if account is locked
+        if (LoginAttempt::isLocked($username)) {
+            $remainingSeconds = LoginAttempt::getLockTimeRemaining($username);
+            $remainingMinutes = ceil($remainingSeconds / 60);
+            
+            return back()
+                ->withErrors([
+                    'username' => "Akun Anda terkunci karena terlalu banyak percobaan login yang gagal. Silakan coba lagi dalam {$remainingMinutes} menit."
+                ])
+                ->onlyInput('username');
+        }
 
         // Prepare credentials array
         $credentials = [
-            'username' => $request->input('username'),
-            'password' => $request->input('password'),
+            'username' => $username,
+            'password' => $password,
         ];
 
-        // Implement rate limiting
-        $rateLimitKey = 'login.' . $request->ip() . '.' . $request->input('username');
+        // Implement rate limiting (per IP + username)
+        $rateLimitKey = 'login.' . $request->ip() . '.' . $username;
 
-        // Check if rate limit exceeded
+        // Check if rate limit exceeded (5 attempts per minute)
         if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
             $seconds = RateLimiter::availableIn($rateLimitKey);
             return back()
@@ -72,6 +86,17 @@ class LoginController extends Controller
 
             // Clear rate limiter on success
             RateLimiter::clear($rateLimitKey);
+
+            // Record successful login attempt
+            LoginAttempt::recordAttempt(
+                $username,
+                $request->ip(),
+                $request->userAgent(),
+                true
+            );
+
+            // Clear any previous failed attempts
+            LoginAttempt::clearAttempts($username);
 
             // Regenerate session
             $request->session()->regenerate();
@@ -104,11 +129,52 @@ class LoginController extends Controller
                 ]);
         }
 
-        // Failed authentication - hit rate limiter
+        // Failed authentication
         RateLimiter::hit($rateLimitKey, 60);
 
+        // Record failed login attempt
+        LoginAttempt::recordAttempt(
+            $username,
+            $request->ip(),
+            $request->userAgent(),
+            false
+        );
+
+        // Check if we should lock the account (5 failed attempts in 15 minutes)
+        $failedAttempts = LoginAttempt::countRecentFailedAttempts($username, 15);
+        
+        if ($failedAttempts >= 5) {
+            // Lock account for 30 minutes
+            LoginAttempt::lockAccount($username, 30);
+            
+            // Log the lockout
+            LoginHelper::logLogin(
+                0,
+                "Account locked due to too many failed login attempts: {$username}",
+                [
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'failed_attempts' => $failedAttempts,
+                ]
+            );
+            
+            return back()
+                ->withErrors([
+                    'username' => 'Akun Anda telah dikunci karena terlalu banyak percobaan login yang gagal. Silakan coba lagi dalam 30 menit.'
+                ])
+                ->onlyInput('username');
+        }
+
+        // Show remaining attempts
+        $remainingAttempts = 5 - $failedAttempts;
+        $errorMessage = "Username atau password tidak valid.";
+        
+        if ($remainingAttempts <= 3) {
+            $errorMessage .= " Anda memiliki {$remainingAttempts} percobaan lagi sebelum akun dikunci.";
+        }
+
         return back()
-            ->withErrors(['username' => 'Username atau password tidak valid.'])
+            ->withErrors(['username' => $errorMessage])
             ->onlyInput('username');
     }
 

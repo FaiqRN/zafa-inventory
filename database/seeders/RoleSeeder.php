@@ -18,5 +18,6 @@ class RoleSeeder extends Seeder
             ['nama_role' => 'ketua', 'deskripsi' => 'Ketua dengan akses manajemen', 'created_at' => now(), 'updated_at' => now()],
             ['nama_role' => 'karyawan', 'deskripsi' => 'Karyawan dengan akses terbatas', 'created_at' => now(), 'updated_at' => now()],
         ]);
+        echo "\nRoles seeded successfully!\n";
     }
 }

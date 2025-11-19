@@ -17,13 +17,14 @@ class UserSeeder extends Seeder
 
         // Seed users
         // IMPORTANT: Gunakan Hash::make() karena DB::table() bypass model events
+        // Password requirements: min 8 chars, uppercase, lowercase, numbers
         DB::table('user')->insert([
             [
                 'role_id' => 1, // admin
                 'username' => 'admin',
                 'firstname' => 'Admin',
                 'lastname' => 'System',
-                'password' => Hash::make('admin123'), // Di-hash sekali saja
+                'password' => Hash::make('Admin123'), // Strong password
                 'foto' => null,
                 'jenis_kelamin' => 'L',
                 'tempat_lahir' => 'Jakarta',
@@ -39,7 +40,7 @@ class UserSeeder extends Seeder
                 'username' => 'ketua',
                 'firstname' => 'Budi',
                 'lastname' => 'Santoso',
-                'password' => Hash::make('ketua123'),
+                'password' => Hash::make('Ketua123'), // Strong password
                 'foto' => null,
                 'jenis_kelamin' => 'L',
                 'tempat_lahir' => 'Bandung',
@@ -55,7 +56,7 @@ class UserSeeder extends Seeder
                 'username' => 'karyawan',
                 'firstname' => 'Siti',
                 'lastname' => 'Nurhaliza',
-                'password' => Hash::make('karyawan123'),
+                'password' => Hash::make('Karyawan123'), // Strong password
                 'foto' => null,
                 'jenis_kelamin' => 'P',
                 'tempat_lahir' => 'Surabaya',
@@ -69,9 +70,9 @@ class UserSeeder extends Seeder
         ]);
 
         echo "\nRoles and Users seeded successfully!\n";
-        echo "\nLogin credentials:\n";
-        echo "1. Admin    - username: admin     password: admin123\n";
-        echo "2. Ketua    - username: ketua     password: ketua123\n";
-        echo "3. Karyawan - username: karyawan  password: karyawan123\n\n";
+        echo "\nLogin credentials (Strong passwords - min 8 chars, uppercase, lowercase, numbers):\n";
+        echo "1. Admin    - username: admin     password: Admin123\n";
+        echo "2. Ketua    - username: ketua     password: Ketua123\n";
+        echo "3. Karyawan - username: karyawan  password: Karyawan123\n\n";
     }
 }
