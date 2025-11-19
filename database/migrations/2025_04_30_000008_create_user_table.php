@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('user', function (Blueprint $table) {
             $table->id('user_id');
             $table->foreignId('role_id')->constrained('role', 'role_id')->onDelete('cascade');
-            $table->string('password')->unique();
+            $table->string('username', 50)->unique();
+            $table->string('password');
             $table->string('firstname', 100);
             $table->string('lastname', 100);
             $table->text('foto')->nullable();
@@ -23,7 +24,9 @@ return new class extends Migration
             $table->date('tanggal_lahir')->nullable();
             $table->text('alamat');
             $table->string('email', 100)->unique();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('telp', 50);
+            $table->rememberToken();
             $table->string('created_by', 50)->nullable();
             $table->string('updated_by', 50)->nullable();
             

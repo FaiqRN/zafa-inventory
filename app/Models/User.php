@@ -17,6 +17,7 @@ class User extends Authenticatable
     public const TABLE = 'user';
     public const FIELD_USER_ID = 'user_id';
     public const FIELD_ROLE_ID = 'role_id';
+    public const FIELD_USERNAME = 'username';
     public const FIELD_PASSWORD = 'password';
     public const FIELD_FIRSTNAME = 'firstname';
     public const FIELD_LASTNAME = 'lastname';
@@ -42,6 +43,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         self::FIELD_ROLE_ID,
+        self::FIELD_USERNAME,
         self::FIELD_PASSWORD,
         self::FIELD_FIRSTNAME,
         self::FIELD_LASTNAME,
@@ -66,7 +68,6 @@ class User extends Authenticatable
     protected $casts = [
         self::FIELD_TANGGAL_LAHIR => 'date',
         self::FIELD_EMAIL_VERIFIED_AT => 'datetime',
-        self::FIELD_PASSWORD => 'hashed',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
         self::FIELD_DELETED_AT => 'datetime',
@@ -166,5 +167,25 @@ class User extends Authenticatable
         }
         
         return null;
+    }
+
+    /**
+     * Get the name of the unique identifier for the user.
+     *
+     * @return string
+     */
+    public function getAuthIdentifierName(): string
+    {
+        return self::FIELD_USERNAME;
+    }
+
+    /**
+     * Get the password for the user.
+     *
+     * @return string
+     */
+    public function getAuthPassword(): string
+    {
+        return $this->{self::FIELD_PASSWORD};
     }
 }

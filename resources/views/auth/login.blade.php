@@ -123,6 +123,58 @@
       text-decoration: none;
     }
 
+    .error-message {
+      color: #e74c3c;
+      font-size: 13px;
+      margin-top: 5px;
+      display: block;
+    }
+
+    .flash-message {
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .flash-message.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .flash-message.info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .flash-message.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .remember-me input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .remember-me label {
+      margin: 0;
+      cursor: pointer;
+      font-weight: 400;
+      font-size: 14px;
+    }
+
     .btn-login {
       width: 100%;
       padding: 12px;
@@ -202,6 +254,14 @@
   </div>
   <div class="right">
     <h2>Login</h2>
+
+    <!-- Flash Messages -->
+    @if(session('message'))
+      <div class="flash-message {{ session('class', 'info') }}">
+        {{ session('message') }}
+      </div>
+    @endif
+
     <form method="POST" action="{{ route('login') }}">
       @csrf
 
@@ -209,16 +269,28 @@
       <div class="form-group">
         <label for="username">Username</label>
         <i class='bx bx-user input-icon-left'></i>
-        <input type="text" name="username" id="username" placeholder="Enter your username" required>
+        <input type="text" name="username" id="username" placeholder="Enter your username" value="{{ old('username') }}">
+        @error('username')
+          <span class="error-message">{{ $message }}</span>
+        @enderror
       </div>
 
       <!-- Password -->
       <div class="form-group">
         <label for="password">Password</label>
         <i class='bx bx-lock input-icon-left'></i>
-        <input type="password" name="password" id="password" placeholder="Enter your password" required>
+        <input type="password" name="password" id="password" placeholder="Enter your password">
         <i class='bx bx-show toggle-password' id="togglePassword"></i>
+        @error('password')
+          <span class="error-message">{{ $message }}</span>
+        @enderror
         <a href="#">Forgot Password?</a>
+      </div>
+
+      <!-- Remember Me -->
+      <div class="remember-me">
+        <input type="checkbox" name="remember" id="remember" value="1">
+        <label for="remember">Remember Me</label>
       </div>
 
       <button class="btn-login" type="submit">Login</button>

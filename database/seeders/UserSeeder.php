@@ -17,6 +17,7 @@ class UserSeeder extends Seeder
         DB::table('user')->insert([
             [
                 'role_id' => 1, // admin
+                'username' => 'admin',
                 'firstname' => 'Admin',
                 'lastname' => 'System',
                 'password' => Hash::make('admin123'),
@@ -32,6 +33,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'role_id' => 2, // ketua
+                'username' => 'ketua',
                 'firstname' => 'Budi',
                 'lastname' => 'Santoso',
                 'password' => Hash::make('ketua123'),
@@ -47,6 +49,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'role_id' => 3, // karyawan
+                'username' => 'karyawan',
                 'firstname' => 'Siti',
                 'lastname' => 'Nurhaliza',
                 'password' => Hash::make('karyawan123'),

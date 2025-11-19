@@ -1,7 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
@@ -34,16 +35,21 @@ use App\Http\Controllers\ProfitabilityController;
 |
 */
 
-// Route tamu/belum login
-Route::middleware(['guest', 'nocache'])->group(function () {
-    Route::get('/', [AuthController::class, 'showLoginForm']);
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+// Route tamu/belum login dengan rate limiting
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+    Route::get('/', [LoginController::class, 'showLoginForm']);
+    Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [LoginController::class, 'login'])->name('login.process');
 });
 
-// Route yang memerlukan autentikasi
-Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Token authentication route dengan rate limiting
+Route::middleware(['throttle:10,1'])->group(function () {
+    Route::get('/auth/{token}', [LoginController::class, 'loginViaToken'])->name('auth.token');
+});
+
+// Route yang memerlukan autentikasi dengan prevent.back middleware
+Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])->group(function () {
+    Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
     
     // ===============================
     // DASHBOARD ROUTES 
