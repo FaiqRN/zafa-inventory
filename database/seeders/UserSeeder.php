@@ -14,13 +14,16 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+
+        // Seed users
+        // IMPORTANT: Gunakan Hash::make() karena DB::table() bypass model events
         DB::table('user')->insert([
             [
                 'role_id' => 1, // admin
                 'username' => 'admin',
                 'firstname' => 'Admin',
                 'lastname' => 'System',
-                'password' => Hash::make('admin123'),
+                'password' => Hash::make('admin123'), // Di-hash sekali saja
                 'foto' => null,
                 'jenis_kelamin' => 'L',
                 'tempat_lahir' => 'Jakarta',
@@ -64,5 +67,11 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
         ]);
+
+        echo "\nRoles and Users seeded successfully!\n";
+        echo "\nLogin credentials:\n";
+        echo "1. Admin    - username: admin     password: admin123\n";
+        echo "2. Ketua    - username: ketua     password: ketua123\n";
+        echo "3. Karyawan - username: karyawan  password: karyawan123\n\n";
     }
 }
