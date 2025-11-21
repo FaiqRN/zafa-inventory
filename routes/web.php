@@ -160,6 +160,12 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         Route::delete('/destroy/{id}', [BarangController::class, 'destroy'])->name('barang.destroy');
         Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
         
+        // Stok Barang endpoints
+        Route::get('/{id}/stok', [BarangController::class, 'getStokBarang'])->name('barang.stok');
+        Route::post('/stok/store', [BarangController::class, 'storeStok'])->name('barang.stok.store');
+        Route::get('/stok/{id}/edit', [BarangController::class, 'editStok'])->name('barang.stok.edit');
+        Route::post('/stok/update/{id}', [BarangController::class, 'updateStok'])->name('barang.stok.update');
+        
         // Stock management endpoints
         Route::get('/{id}/stock-info', [BarangController::class, 'getStockInfo'])->name('barang.stockInfo');
         Route::post('/validate-stock', [BarangController::class, 'validateStock'])->name('barang.validateStock');

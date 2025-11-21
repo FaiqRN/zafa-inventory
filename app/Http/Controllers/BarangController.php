@@ -6,6 +6,7 @@ use App\Models\Barang;
 use App\Helpers\MasterData\barang\BarangHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 
 class BarangController extends Controller
@@ -65,7 +66,7 @@ class BarangController extends Controller
         $kode = Barang::generateBarangKode();
         
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'kode' => $kode
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
@@ -89,7 +90,7 @@ class BarangController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
@@ -98,12 +99,13 @@ class BarangController extends Controller
         // Generate unique barang_id using helper
         $barangId = BarangHelper::generateUniqueBarangId();
 
-        // Create new barang
+        // Create new barang with explicit values
         $barang = new Barang();
         $barang->barang_id = $barangId;
         $barang->barang_kode = $request->barang_kode;
         $barang->nama_barang = $request->nama_barang;
         $barang->harga_awal_barang = $request->harga_awal_barang;
+        $barang->stok = 0;  // Default stok 0
         $barang->satuan = $request->satuan;
         $barang->keterangan = $request->keterangan;
         $barang->is_deleted = 0;
@@ -113,7 +115,7 @@ class BarangController extends Controller
         $barangWithStock = BarangHelper::getBarangById($barangId);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Data barang berhasil ditambahkan',
             'data' => $barangWithStock
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
@@ -131,13 +133,13 @@ class BarangController extends Controller
         
         if (!$barang) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Data barang tidak ditemukan'
             ], 404);
         }
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'data' => $barang
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
@@ -155,7 +157,7 @@ class BarangController extends Controller
         
         if (!$barang) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Data barang tidak ditemukan'
             ], 404);
         }
@@ -171,7 +173,7 @@ class BarangController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
@@ -189,7 +191,7 @@ class BarangController extends Controller
         $barangWithStock = BarangHelper::getBarangById($id);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Data barang berhasil diperbarui',
             'data' => $barangWithStock
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
@@ -207,7 +209,7 @@ class BarangController extends Controller
         
         if (!$barang) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Data barang tidak ditemukan'
             ], 404);
         }
@@ -217,7 +219,7 @@ class BarangController extends Controller
         $barang->save();
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Data barang berhasil dihapus'
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
@@ -230,12 +232,14 @@ class BarangController extends Controller
      */
     public function getList(Request $request)
     {
-        // Get active barang with stock information
-        $data = BarangHelper::getActiveBarang();
+        // Get active barang
+        $barangList = Barang::where('is_deleted', 0)
+            ->orderBy('barang_kode', 'asc')
+            ->get(['barang_id', 'barang_kode', 'nama_barang', 'harga_awal_barang', 'satuan', 'keterangan', 'stok']);
         
         return response()->json([
             'status' => 'success',
-            'data' => $data
+            'data' => $barangList
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
@@ -297,6 +301,184 @@ class BarangController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => $validation
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Get stock history for a specific barang
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStokBarang($id)
+    {
+        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        
+        if (!$barang) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data barang tidak ditemukan'
+            ], 404);
+        }
+
+        // Get stok records for this barang (assuming we'll create a barang_stok table)
+        // For now, return sample data structure
+        $stokData = DB::table('barang_stok')
+            ->where('barang_id', $id)
+            ->where('is_deleted', 0)
+            ->orderBy('tanggal_stock_barang', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $stokData
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Store new stock entry for barang
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeStok(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'barang_id' => 'required|string|exists:barang,barang_id',
+            'tanggal_stock_barang' => 'required|date',
+            'stok' => 'required|integer|min:1',
+            'catatan' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Insert stok data
+        $stokId = DB::table('barang_stok')->insertGetId([
+            'barang_id' => $request->barang_id,
+            'tanggal_stock_barang' => $request->tanggal_stock_barang,
+            'stok' => $request->stok,
+            'catatan' => $request->catatan,
+            'is_deleted' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Update total stok di tabel barang
+        $totalStok = DB::table('barang_stok')
+            ->where('barang_id', $request->barang_id)
+            ->where('is_deleted', 0)
+            ->sum('stok');
+
+        Barang::where('barang_id', $request->barang_id)->update([
+            'stok' => $totalStok,
+            'tanggal_stock_barang' => $request->tanggal_stock_barang,
+        ]);
+
+        // Get updated stok data
+        $stokData = DB::table('barang_stok')
+            ->where('barang_id', $request->barang_id)
+            ->where('is_deleted', 0)
+            ->orderBy('tanggal_stock_barang', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Stok barang berhasil ditambahkan',
+            'data' => $stokData
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Get specific stock entry for editing
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function editStok($id)
+    {
+        $stok = DB::table('barang_stok')
+            ->where('id', $id)
+            ->where('is_deleted', 0)
+            ->first();
+        
+        if (!$stok) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data stok tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $stok
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Update stock entry
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateStok(Request $request, $id)
+    {
+        $stok = DB::table('barang_stok')
+            ->where('id', $id)
+            ->where('is_deleted', 0)
+            ->first();
+        
+        if (!$stok) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data stok tidak ditemukan'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'barang_id' => 'required|string|exists:barang,barang_id',
+            'tanggal_stock_barang' => 'required|date',
+            'stok' => 'required|integer|min:1',
+            'catatan' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Update stok data
+        DB::table('barang_stok')
+            ->where('id', $id)
+            ->update([
+                'tanggal_stock_barang' => $request->tanggal_stock_barang,
+                'stok' => $request->stok,
+                'catatan' => $request->catatan,
+                'updated_at' => now(),
+            ]);
+
+        // Recalculate total stok
+        $totalStok = DB::table('barang_stok')
+            ->where('barang_id', $request->barang_id)
+            ->where('is_deleted', 0)
+            ->sum('stok');
+
+        Barang::where('barang_id', $request->barang_id)->update([
+            'stok' => $totalStok,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Stok barang berhasil diperbarui'
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 }
