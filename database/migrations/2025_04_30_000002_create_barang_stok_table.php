@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateBarangTable extends Migration
+class CreateBarangStokTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,21 +13,24 @@ class CreateBarangTable extends Migration
      */
     public function up()
     {
-        Schema::create('barang', function (Blueprint $table) {
-            $table->string('barang_id', 10)->primary();
-            $table->string('barang_kode', 20);
-            $table->string('nama_barang', 100);
-            $table->decimal('harga_awal_barang', 10, 2);
-            $table->integer('stok')->default(0)->comment('Stok barang');
-            $table->date('tanggal_stock_barang')->nullable();
-            $table->string('satuan', 20);
-            $table->string('keterangan', 255)->nullable();
+        Schema::create('barang_stok', function (Blueprint $table) {
+            $table->id();
+            $table->string('barang_id', 10);
+            $table->date('tanggal_stock_barang');
+            $table->integer('stok')->default(0)->comment('Jumlah stok yang ditambahkan');
+            $table->text('catatan')->nullable()->comment('Catatan untuk stok ini');
             $table->boolean('is_deleted')->default(0);
             
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->string('user_create')->nullable();
             $table->string('user_update')->nullable();
+            
+            // Foreign key constraint
+            $table->foreign('barang_id')
+                  ->references('barang_id')
+                  ->on('barang')
+                  ->onDelete('cascade');
             
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_general_ci';
@@ -41,6 +44,6 @@ class CreateBarangTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('barang');
+        Schema::dropIfExists('barang_stok');
     }
 }

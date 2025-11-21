@@ -34,6 +34,7 @@ class Barang extends Model
         self::FIELD_BARANG_KODE,
         self::FIELD_NAMA_BARANG,
         self::FIELD_HARGA_AWAL_BARANG,
+        self::FIELD_TANGGAL_STOCK_BARANG,
         self::FIELD_STOK,
         self::FIELD_SATUAN,
         self::FIELD_KETERANGAN,
@@ -45,6 +46,7 @@ class Barang extends Model
     protected $casts = [
         self::FIELD_STOK => 'integer',
         self::FIELD_HARGA_AWAL_BARANG => 'decimal:2',
+        self::FIELD_TANGGAL_STOCK_BARANG => 'date',
         self::FIELD_IS_DELETED => 'boolean',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
@@ -83,23 +85,26 @@ class Barang extends Model
     
     public static function generateBarangKode()
     {
-        $lastBarang = self::orderBy(self::FIELD_BARANG_KODE, 'desc')->first();
+        // Get last barang that is not deleted, ordered by kode
+        $lastBarang = self::where(self::FIELD_IS_DELETED, 0)
+                          ->orderBy(self::FIELD_BARANG_KODE, 'desc')
+                          ->first();
         
         if (!$lastBarang) {
-            return 'BRG001';
+            return 'BRG1';
         }
         
         $lastKode = $lastBarang->{self::FIELD_BARANG_KODE};
         $prefix = 'BRG';
         
         if (!preg_match('/^BRG\d+$/', $lastKode)) {
-            return 'BRG001';
+            return 'BRG1';
         }
         
         $numPart = substr($lastKode, strlen($prefix));
         $nextNum = intval($numPart) + 1;
         
-        return $prefix . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+        return $prefix . $nextNum;
     }
 
     /**
