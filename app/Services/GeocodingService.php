@@ -122,17 +122,22 @@ class GeocodingService
             if ($kelurahan) {
                 Log::info('Internal Database: Found kelurahan - ' . $kelurahan->nama);
                 
+                $isGenerated = ($kelurahan->source ?? 'generated') === 'generated';
+                $accuracy = $kelurahan->accuracy ?? ($isGenerated ? 'low' : 'high');
+                $confidence = $isGenerated ? 0.3 : 0.85;
+                
                 return [
                     'latitude' => (float) $kelurahan->latitude,
                     'longitude' => (float) $kelurahan->longitude,
                     'formatted_address' => $kelurahan->full_location,
-                    'accuracy' => 'high',
+                    'accuracy' => $accuracy,
                     'provider' => 'internal_database',
-                    'confidence' => 0.75,
+                    'confidence' => $confidence,
                     'kelurahan_name' => $kelurahan->nama,
                     'kecamatan' => $kelurahan->kecamatan,
                     'kota' => $kelurahan->kota,
-                    'validation_passed' => true
+                    'validation_passed' => !$isGenerated, // Only pass validation if not generated
+                    'is_generated' => $isGenerated
                 ];
             }
             
@@ -1092,7 +1097,9 @@ class GeocodingService
             'in_malang_region' => self::isInMalangRegion($result['latitude'], $result['longitude']),
             'provider' => $result['provider'] ?? 'unknown',
             'accuracy' => $result['accuracy'] ?? $result['location_type'] ?? 'unknown',
-            'confidence' => $result['confidence'] ?? null
+            'confidence' => $result['confidence'] ?? null,
+            'quality' => $level, // Backward compatibility
+            'recommendations' => [] // Default empty recommendations
         ];
     }
 

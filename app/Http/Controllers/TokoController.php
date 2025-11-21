@@ -42,8 +42,21 @@ class TokoController extends Controller
 
         $response = DataTables::of($data)
             ->addIndexColumn()
+            ->addColumn('quality_badge', function($row) {
+                $status = $row->geocoding_status;
+                $score = $row->{Toko::FIELD_GEOCODING_SCORE};
+                
+                $badgeHtml = '<span class="badge badge-' . $status['badge_class'] . '" 
+                    data-toggle="tooltip" 
+                    data-placement="top" 
+                    title="Quality Score: ' . ($score ?? 'N/A') . '">' . 
+                    $status['message'] . 
+                '</span>';
+                
+                return $badgeHtml;
+            })
             ->addColumn('action', fn($row) => '')
-            ->rawColumns(['action'])
+            ->rawColumns(['quality_badge', 'action'])
             ->make(true);
 
         return $this->withNoCacheHeaders($response);
@@ -477,7 +490,7 @@ class TokoController extends Controller
             return $this->jsonErrorWithNoCache($result['message'], $result['status_code']);
         }
 
-        return response()->json([
+        return $this->jsonSuccessWithNoCache([
             'status' => 'success',
             'data' => $result['data']
         ]);

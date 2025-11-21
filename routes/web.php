@@ -199,6 +199,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         // Parameterized routes (MUST be last to avoid catching specific routes)
         Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
         Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
+        Route::get('/{id}/coordinate-details', [TokoController::class, 'getCoordinateDetails'])->name('toko.coordinateDetails');
         Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
         Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
     });

@@ -19,6 +19,8 @@ class KelurahanCoordinate extends Model
         'latitude',
         'longitude',
         'is_active',
+        'source',
+        'accuracy',
     ];
 
     protected $casts = [

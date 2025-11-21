@@ -33,7 +33,7 @@
                             <th width="12%">Wilayah</th>
                             <th width="10%">No. Telepon</th>
                             <th width="12%">Koordinat GPS</th>
-                            <th width="10%">Status</th>
+                            <th width="10%">Kualitas GPS</th>
                             <th width="9%" class="text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -76,6 +76,7 @@
                     <!-- Hidden fields for coordinates -->
                     <input type="hidden" id="latitude" name="latitude">
                     <input type="hidden" id="longitude" name="longitude">
+
                     
                     <div class="row">
                         <!-- Form Fields Column -->
@@ -117,9 +118,10 @@
                             <div class="form-group">
                                 <label for="alamat">
                                     <i class="fas fa-map-marker-alt"></i> Alamat Detail *
+                                    <small class="text-muted">(Gunakan format standar Indonesia untuk deteksi otomatis)</small>
                                 </label>
                                 <textarea class="form-control" id="alamat" name="alamat" rows="3" required 
-                                          placeholder="Contoh: Jl. Ahmad Yani Utara No. 200, Polowijen, Kec. Blimbing, Kota Malang, Jawa Timur 65126"></textarea>
+                                          placeholder="Contoh: Jl. Ahmad Yani No. 20, Polowijen, Kec. Blimbing, Kota Malang"></textarea>
                                 <small class="form-text text-muted">
                                     <i class="fas fa-magic text-primary"></i> 
                                     <strong>Format Indonesia:</strong> Jl. [nama jalan] No. [nomor], [Kelurahan], Kec. [Kecamatan], Kota [Kota]
@@ -130,12 +132,18 @@
                                 <div id="addressSearchStatus" class="mt-2" style="display: none;">
                                     <!-- Dynamic search status will be shown here -->
                                 </div>
+                                
+                                <!-- Detected Kelurahan Info Display -->
+                                <div id="detectedKelurahanInfo" class="mt-2" style="display: none;">
+                                    <!-- Dynamic kelurahan detection info will be shown here -->
+                                </div>
                             </div>
                             
                             <!-- Wilayah dengan Kelurahan Auto-Zoom Feature -->
                             <div class="form-group">
                                 <label for="wilayah_kota_id">
                                     <i class="fas fa-city"></i> Kota/Kabupaten *
+                                    <small class="text-muted">(Akan terisi otomatis dari alamat)</small>
                                 </label>
                                 <select class="form-control" id="wilayah_kota_id" required>
                                     <option value="">-- Pilih Kota/Kabupaten --</option>
@@ -149,6 +157,7 @@
                                     <div class="form-group">
                                         <label for="wilayah_kecamatan_id">
                                             <i class="fas fa-building"></i> Kecamatan *
+                                            <small class="text-muted">(Auto-fill)</small>
                                         </label>
                                         <select class="form-control" id="wilayah_kecamatan_id" required disabled>
                                             <option value="">-- Pilih Kecamatan --</option>
@@ -161,6 +170,7 @@
                                     <div class="form-group">
                                         <label for="wilayah_kelurahan_id">
                                             <i class="fas fa-home"></i> Kelurahan *
+                                            <small class="text-muted">(Auto-fill)</small>
                                         </label>
                                         <select class="form-control" id="wilayah_kelurahan_id" required disabled>
                                             <option value="">-- Pilih Kelurahan --</option>
@@ -185,6 +195,7 @@
                             <div class="form-group">
                                 <label>
                                     <i class="fas fa-crosshairs"></i> Koordinat GPS *
+                                    <small class="text-muted">(Pilih lokasi di peta untuk presisi tinggi)</small>
                                 </label>
                                 <div class="input-group">
                                     <div class="input-group-prepend">
@@ -204,9 +215,9 @@
                                 <small class="form-text">
                                     <i class="fas fa-route text-info"></i> 
                                     <strong>Cara Mudah:</strong> 
-                                    <span class="badge badge-light">1. Format Indonesia</span> → 
+                                    <span class="badge badge-light">1. Ketik Alamat Format Indonesia</span> → 
                                     <span class="badge badge-light">2. Auto-Detect Kelurahan</span> → 
-                                    <span class="badge badge-light">3. Klik Lokasi Presisi</span>
+                                    <span class="badge badge-light">3. Klik Lokasi Presisi di Peta</span>
                                 </small>
                                 <div class="invalid-feedback" id="error-latitude"></div>
                                 <div class="invalid-feedback" id="error-longitude"></div>
@@ -240,39 +251,59 @@
                                             </h6>
                                             <div class="row text-sm">
                                                 <div class="col-12">
-                                                    <div class="d-flex align-items-center mb-1">
+                                                    <div class="d-flex align-items-start mb-1">
                                                         <span class="badge badge-primary mr-2">1</span>
-                                                        <small><strong>Ketik format:</strong> Jl. [nama], [Kelurahan], Kec. [Kecamatan], Kota [Kota]</small>
+                                                        <small><strong>Ketik alamat:</strong> Gunakan format Jl. [nama] No. [nomor], [Kelurahan], Kec. [Kecamatan], Kota [Kota]</small>
                                                     </div>
-                                                    <div class="d-flex align-items-center mb-1">
+                                                    <div class="d-flex align-items-start mb-1">
                                                         <span class="badge badge-warning mr-2">2</span>
-                                                        <small><strong>Auto-deteksi:</strong> Sistem deteksi kelurahan → zoom otomatis</small>
+                                                        <small><strong>Auto-deteksi:</strong> Sistem akan mendeteksi kelurahan dan zoom peta ke area tersebut secara otomatis</small>
                                                     </div>
-                                                    <div class="d-flex align-items-center">
+                                                    <div class="d-flex align-items-start">
                                                         <span class="badge badge-success mr-2">3</span>
-                                                        <small><strong>Klik presisi:</strong> Pilih lokasi exact di peta → koordinat tersimpan</small>
+                                                        <small><strong>Klik presisi:</strong> Klik pada lokasi exact di peta untuk menentukan koordinat final (marker merah)</small>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="mt-2 p-2 bg-light rounded">
                                                 <small class="text-muted">
-                                                    <strong>Contoh:</strong> "Jl. Ahmad Yani No. 200, Polowijen, Kec. Blimbing, Kota Malang"
+                                                    <i class="fas fa-check-circle text-success"></i> 
+                                                    <strong>Contoh Format:</strong> "Jl. Ahmad Yani No. 20, Polowijen, Kec. Blimbing, Kota Malang"
                                                 </small>
                                             </div>
                                         </div>
                                     </div>
                                     
-                                    <div class="d-flex justify-content-between align-items-center mt-2">
-                                        <div>
-                                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnCenterMalang">
-                                                <i class="fas fa-bullseye"></i> Pusat Malang
-                                            </button>
+                                    <!-- Map Controls and Legend -->
+                                    <div class="mt-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnCenterMalang">
+                                                    <i class="fas fa-bullseye"></i> Pusat Malang
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <small class="text-muted">
-                                                <i class="fas fa-eye text-warning"></i> Marker kuning = preview | 
-                                                <i class="fas fa-map-pin text-danger"></i> Marker merah = final
-                                            </small>
+                                        
+                                        <!-- Marker Legend -->
+                                        <div class="card border-secondary mt-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex justify-content-around text-center">
+                                                    <div class="flex-fill">
+                                                        <i class="fas fa-map-marker-alt fa-2x text-warning"></i>
+                                                        <div class="small mt-1">
+                                                            <strong>Marker Kuning</strong><br>
+                                                            <span class="text-muted">Preview (Auto)</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-fill border-left">
+                                                        <i class="fas fa-map-marker-alt fa-2x text-danger"></i>
+                                                        <div class="small mt-1">
+                                                            <strong>Marker Merah</strong><br>
+                                                            <span class="text-muted">Final (Dipilih)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     
@@ -337,6 +368,190 @@
                 </button>
                 <button type="button" class="btn btn-danger" id="btnDelete">
                     <i class="fas fa-trash"></i> Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detail Koordinat -->
+<div class="modal fade" id="coordinateDetailsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-map-marked-alt"></i> Detail Koordinat GPS
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading State -->
+                <div id="coordinateDetailsLoading" class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <p class="text-muted">Memuat detail koordinat...</p>
+                </div>
+
+                <!-- Content State -->
+                <div id="coordinateDetailsContent" style="display: none;">
+                    <!-- Toko Info -->
+                    <div class="card border-primary mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-store"></i> Informasi Toko
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Nama Toko:</strong><br>
+                                        <span id="detail-nama-toko" class="text-muted"></span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Pemilik:</strong><br>
+                                        <span id="detail-pemilik" class="text-muted"></span>
+                                    </p>
+                                </div>
+                            </div>
+                            <p class="mb-0">
+                                <strong>Alamat:</strong><br>
+                                <span id="detail-alamat" class="text-muted"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Coordinate Info -->
+                    <div class="card border-success mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-crosshairs"></i> Koordinat GPS
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Latitude:</strong><br>
+                                        <code id="detail-latitude" class="text-success"></code>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Longitude:</strong><br>
+                                        <code id="detail-longitude" class="text-success"></code>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <p class="mb-0">
+                                        <strong>Link Google Maps:</strong><br>
+                                        <a id="detail-google-maps-link" href="#" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                            <i class="fas fa-external-link-alt"></i> Buka di Google Maps
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Geocoding Quality Info -->
+                    <div class="card border-warning mb-3">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-line"></i> Kualitas Geocoding
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Provider:</strong><br>
+                                        <span id="detail-provider" class="badge badge-info"></span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Accuracy:</strong><br>
+                                        <span id="detail-accuracy" class="badge badge-secondary"></span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Quality Score:</strong><br>
+                                        <span id="detail-quality-score" class="badge badge-lg"></span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Confidence:</strong><br>
+                                        <span id="detail-confidence" class="badge badge-secondary"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Validation -->
+                    <div class="card border-info mb-3">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-map-marker-alt"></i> Validasi Lokasi
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Status Wilayah:</strong><br>
+                                        <span id="detail-region-status"></span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Jarak dari Pusat Malang:</strong><br>
+                                        <span id="detail-distance" class="text-muted"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warning for Low Quality -->
+                    <div id="detail-low-quality-warning" class="alert alert-warning" style="display: none;">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle"></i> Koordinat Perlu Diperbaiki
+                        </h6>
+                        <p class="mb-0">
+                            Koordinat ini memiliki kualitas rendah. Disarankan untuk melakukan geocoding ulang atau memilih lokasi secara manual di peta.
+                        </p>
+                    </div>
+
+                    <!-- Warning for Out of Region -->
+                    <div id="detail-out-of-region-warning" class="alert alert-danger" style="display: none;">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-exclamation-circle"></i> Koordinat Di Luar Wilayah Malang
+                        </h6>
+                        <p class="mb-0">
+                            Koordinat ini berada di luar wilayah Malang Raya. Pastikan alamat dan koordinat sudah benar.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div id="coordinateDetailsError" class="alert alert-danger" style="display: none;">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-circle"></i> Gagal Memuat Data
+                    </h6>
+                    <p id="coordinateDetailsErrorMessage" class="mb-0"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Tutup
+                </button>
+                <button type="button" class="btn btn-warning" id="btnFixCoordinates" style="display: none;">
+                    <i class="fas fa-wrench"></i> Perbaiki Koordinat
                 </button>
             </div>
         </div>
@@ -578,6 +793,57 @@
 .btn-group {
     margin-bottom: 0;
 }
+
+/* Coordinate Details Modal Styles */
+#coordinateDetailsModal .modal-header {
+    border-bottom: 2px solid #dee2e6;
+}
+
+#coordinateDetailsModal .card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#coordinateDetailsModal .card-header {
+    font-weight: 600;
+}
+
+#coordinateDetailsModal code {
+    font-size: 1.1rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+#coordinateDetailsModal .badge-lg {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+}
+
+#coordinateDetailsModal .alert-heading {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Quality score badge colors */
+.quality-excellent {
+    background-color: #28a745;
+    color: white;
+}
+
+.quality-good {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.quality-fair {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.quality-poor {
+    background-color: #dc3545;
+    color: white;
+}
 </style>
 @endpush
 
@@ -591,5 +857,7 @@
     }
 </script>
 
+<script src="{{ asset('js/toko-coordinate-details.js') }}?v={{ time() }}"></script>
 <script src="{{ asset('js/toko.js') }}?v={{ time() }}"></script>
+<script src="{{ asset('js/toko-coordinate-details-handler.js') }}?v={{ time() }}"></script>
 @endpush

@@ -461,6 +461,7 @@ class TokoService
                 'toko_info' => [
                     'toko_id' => $toko->{Toko::FIELD_TOKO_ID},
                     'nama_toko' => $toko->{Toko::FIELD_NAMA_TOKO},
+                    'pemilik' => $toko->{Toko::FIELD_PEMILIK},
                     'alamat' => $toko->{Toko::FIELD_ALAMAT},
                     'wilayah' => $toko->{Toko::FIELD_WILAYAH_KELURAHAN} . ', ' . $toko->{Toko::FIELD_WILAYAH_KECAMATAN} . ', ' . $toko->{Toko::FIELD_WILAYAH_KOTA_KABUPATEN}
                 ],
