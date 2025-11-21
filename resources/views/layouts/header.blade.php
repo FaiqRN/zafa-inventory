@@ -34,6 +34,13 @@
                         <i class="fas fa-user mr-2"></i> Profile
                     </a>
                     <div class="dropdown-divider"></div>
+                    <a href="{{ route('profile.edit') }}" class="dropdown-item">
+                        <i class="fas fa-pencil-alt mr-2"></i> Edit Profil
+                    </a>
+                    <a href="{{ route('profile.change-password') }}" class="dropdown-item">
+                        <i class="fas fa-sync-alt mr-2"></i> Ubah Password
+                    </a>
+                    <div class="dropdown-divider"></div>
                     <a href="{{ route('logout') }}" class="dropdown-item" 
                     onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout

@@ -14,6 +14,7 @@ class Barang extends Model
     public const FIELD_BARANG_KODE = 'barang_kode';
     public const FIELD_NAMA_BARANG = 'nama_barang';
     public const FIELD_HARGA_AWAL_BARANG = 'harga_awal_barang';
+    public const FIELD_TANGGAL_STOCK_BARANG = 'tanggal_stock_barang';
     public const FIELD_STOK = 'stok';
     public const FIELD_SATUAN = 'satuan';
     public const FIELD_KETERANGAN = 'keterangan';
@@ -99,5 +100,65 @@ class Barang extends Model
         $nextNum = intval($numPart) + 1;
         
         return $prefix . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get available stock dynamically
+     * This uses BarangHelper to calculate real-time stock
+     *
+     * @return int
+     */
+    public function getAvailableStockAttribute()
+    {
+        // Avoid circular dependency by checking if helper exists
+        if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
+            return \App\Helpers\MasterData\barang\BarangHelper::calculateAvailableStock($this->barang_id);
+        }
+        
+        return $this->stok ?? 0;
+    }
+
+    /**
+     * Get stock status (sufficient, low_stock, out_of_stock)
+     *
+     * @return string
+     */
+    public function getStockStatusAttribute()
+    {
+        $availableStock = $this->available_stock;
+        $baseStock = $this->stok ?? 0;
+        
+        if ($availableStock <= 0) {
+            return 'out_of_stock';
+        }
+        
+        $lowStockThreshold = max(10, $baseStock * 0.2);
+        
+        if ($availableStock <= $lowStockThreshold) {
+            return 'low_stock';
+        }
+        
+        return 'sufficient';
+    }
+
+    /**
+     * Get detailed stock breakdown
+     *
+     * @return array
+     */
+    public function getStockDetailsAttribute()
+    {
+        if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
+            return \App\Helpers\MasterData\barang\BarangHelper::getStockDetails($this->barang_id);
+        }
+        
+        return [
+            'base_stock' => $this->stok ?? 0,
+            'pemesanan_out' => 0,
+            'pengiriman_out' => 0,
+            'retur_in' => 0,
+            'available_stock' => $this->stok ?? 0,
+            'stock_status' => 'sufficient'
+        ];
     }
 }

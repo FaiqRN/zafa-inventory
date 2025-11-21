@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Barang;
+use App\Helpers\MasterData\barang\BarangHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Str;
 
 class BarangController extends Controller
 {
@@ -34,22 +34,25 @@ class BarangController extends Controller
      */
     public function getData(Request $request)
     {
-        // Ambil HANYA data yang tidak terhapus (is_deleted = 0) dan urutkan berdasarkan kode barang
-        $data = Barang::where('is_deleted', 0)->orderBy('barang_kode', 'asc')->get();
+        // Get active barang with stock information
+        $data = BarangHelper::getActiveBarang();
         
         $response = DataTables::of($data)
             ->addIndexColumn()
             ->addColumn('action', function($row) {
                 return ''; // This will be handled by JavaScript
             })
+            ->addColumn('available_stock', function($row) {
+                return $row->available_stock;
+            })
+            ->addColumn('stock_status', function($row) {
+                return $row->stock_status;
+            })
             ->rawColumns(['action'])
             ->make(true);
             
-        // Tambahkan header untuk mencegah caching
-        return $response
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+        // Add no-cache headers
+        return $response->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -64,10 +67,7 @@ class BarangController extends Controller
         return response()->json([
             'status' => 'success',
             'kode' => $kode
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -95,15 +95,10 @@ class BarangController extends Controller
             ], 422);
         }
 
-        // Generate barang_id unik
-        $barangId = 'BRG' . strtoupper(Str::random(7));
-        
-        // Check if ID already exists and regenerate if needed
-        while (Barang::find($barangId)) {
-            $barangId = 'BRG' . strtoupper(Str::random(7));
-        }
+        // Generate unique barang_id using helper
+        $barangId = BarangHelper::generateUniqueBarangId();
 
-        // Tambah data barang baru
+        // Create new barang
         $barang = new Barang();
         $barang->barang_id = $barangId;
         $barang->barang_kode = $request->barang_kode;
@@ -114,14 +109,14 @@ class BarangController extends Controller
         $barang->is_deleted = 0;
         $barang->save();
 
+        // Get barang with stock details
+        $barangWithStock = BarangHelper::getBarangById($barangId);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Data barang berhasil ditambahkan',
-            'data' => $barang
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+            'data' => $barangWithStock
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -132,7 +127,7 @@ class BarangController extends Controller
      */
     public function edit($id)
     {
-        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        $barang = BarangHelper::getBarangById($id);
         
         if (!$barang) {
             return response()->json([
@@ -144,10 +139,7 @@ class BarangController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => $barang
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -193,14 +185,14 @@ class BarangController extends Controller
         $barang->keterangan = $request->keterangan;
         $barang->save();
 
+        // Get updated barang with stock details
+        $barangWithStock = BarangHelper::getBarangById($id);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Data barang berhasil diperbarui',
-            'data' => $barang
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+            'data' => $barangWithStock
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -227,23 +219,84 @@ class BarangController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Data barang berhasil dihapus'
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
+    /**
+     * Get list of all barang with stock information for transaction modules
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getList(Request $request)
     {
-        // Ambil HANYA data yang tidak terhapus (is_deleted = 0) dan urutkan berdasarkan kode barang
-        $data = Barang::where('is_deleted', 0)->orderBy('barang_kode', 'asc')->get();
+        // Get active barang with stock information
+        $data = BarangHelper::getActiveBarang();
         
         return response()->json([
             'status' => 'success',
             'data' => $data
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Get detailed stock information for a specific barang
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStockInfo($id)
+    {
+        $barang = BarangHelper::getBarangById($id);
+        
+        if (!$barang) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data barang tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'barang_id' => $barang->barang_id,
+                'barang_kode' => $barang->barang_kode,
+                'nama_barang' => $barang->nama_barang,
+                'satuan' => $barang->satuan,
+                'stock_details' => $barang->stock_details
+            ]
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Validate stock availability for transaction
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateStock(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'barang_id' => 'required|string|exists:barang,barang_id',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validation = BarangHelper::validateStockAvailability(
+            $request->barang_id,
+            $request->quantity
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $validation
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 }

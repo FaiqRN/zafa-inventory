@@ -159,7 +159,12 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         Route::put('/update/{id}', [BarangController::class, 'update'])->name('barang.update');
         Route::delete('/destroy/{id}', [BarangController::class, 'destroy'])->name('barang.destroy');
         Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
+        
+        // Stock management endpoints
+        Route::get('/{id}/stock-info', [BarangController::class, 'getStockInfo'])->name('barang.stockInfo');
+        Route::post('/validate-stock', [BarangController::class, 'validateStock'])->name('barang.validateStock');
     });
+
     
     Route::prefix('toko')->group(function() {
         // Basic CRUD routes
