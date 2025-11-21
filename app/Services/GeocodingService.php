@@ -24,30 +24,57 @@ class GeocodingService
                 return $cachedResult;
             }
             
-            // 2. Coba berbagai provider API secara berurutan
-            $providers = [
-                'geocodeWithGoogleMapsAPI',     // Google Maps (paling akurat untuk API)
-                'geocodeWithLocationIQ',        // LocationIQ (gratis 5,000/day)
-                'geocodeWithOpenCage',          // OpenCage (gratis 2,500/day)
-                'geocodeWithMapBox',            // MapBox (gratis 100,000/month)
-                'geocodeWithHere',              // Here (gratis 250,000/month)
-                'geocodeWithNominatim',         // OpenStreetMap (gratis dengan rate limit)
-                'geocodeWithPositionStack'      // PositionStack (gratis 25,000/month)
+            // 2. Coba provider cascade dengan timeout handling
+            $startTime = microtime(true);
+            $timeout = 15; // 15 seconds total timeout
+            
+            // Priority cascade: Internal DB -> Google Maps -> LocationIQ -> Nominatim
+            $cascadeProviders = [
+                ['method' => 'tryInternalDatabase', 'timeout' => 2],
+                ['method' => 'tryGoogleMaps', 'timeout' => 5],
+                ['method' => 'tryLocationIQ', 'timeout' => 4],
+                ['method' => 'tryNominatim', 'timeout' => 4]
             ];
             
-            foreach ($providers as $provider) {
-                $result = self::$provider($cleanAddress);
-                if ($result && self::validateCoordinates($result)) {
-                    Log::info('Geocoding SUCCESS with: ' . $provider);
+            foreach ($cascadeProviders as $providerConfig) {
+                // Check if total timeout exceeded
+                $elapsedTime = microtime(true) - $startTime;
+                if ($elapsedTime >= $timeout) {
+                    Log::warning('Geocoding timeout exceeded after ' . round($elapsedTime, 2) . ' seconds');
+                    break;
+                }
+                
+                $method = $providerConfig['method'];
+                $providerTimeout = $providerConfig['timeout'];
+                
+                Log::info("Trying provider: {$method} (timeout: {$providerTimeout}s)");
+                
+                try {
+                    // Execute provider method with timeout
+                    $result = self::$method($cleanAddress);
                     
-                    // Cache hasil API untuk penggunaan berikutnya
-                    self::cacheCoordinatesToDatabase($cleanAddress, $result);
-                    
-                    return $result;
+                    if ($result && self::validateCoordinates($result)) {
+                        Log::info('Geocoding SUCCESS with: ' . $method);
+                        
+                        // Add quality info to result
+                        $qualityInfo = self::validateGeocodeQuality($result);
+                        $result['quality_score'] = $qualityInfo['score'];
+                        $result['quality_level'] = $qualityInfo['level'];
+                        $result['quality_badge'] = $qualityInfo['badge'];
+                        $result['quality_color'] = $qualityInfo['color'];
+                        $result['needs_improvement'] = $qualityInfo['needs_improvement'];
+                        
+                        // Cache hasil API untuk penggunaan berikutnya
+                        self::cacheCoordinatesToDatabase($cleanAddress, $result);
+                        
+                        return $result;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Provider {$method} failed: " . $e->getMessage());
                 }
                 
                 // Delay antar provider untuk menghindari rate limiting
-                usleep(200000); // 0.2 detik delay
+                usleep(300000); // 0.3 detik delay
             }
             
             // 3. Return null jika semua provider gagal - untuk akurasi maksimal
@@ -71,6 +98,107 @@ class GeocodingService
             Log::info('Cached geocoding result for: ' . $address);
         } catch (\Exception $e) {
             Log::warning('Failed to cache geocoding result: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Try internal kelurahan database untuk lookup coordinates
+     */
+    private static function tryInternalDatabase($address)
+    {
+        try {
+            // Extract kelurahan name from address
+            $addressLower = strtolower($address);
+            
+            // Try to find kelurahan in database
+            $kelurahan = \App\Models\KelurahanCoordinate::active()
+                ->where(function($query) use ($addressLower) {
+                    // Search in nama and nama_normalized
+                    $query->whereRaw('LOWER(nama) LIKE ?', ["%{$addressLower}%"])
+                          ->orWhereRaw('LOWER(nama_normalized) LIKE ?', ["%{$addressLower}%"]);
+                })
+                ->first();
+
+            if ($kelurahan) {
+                Log::info('Internal Database: Found kelurahan - ' . $kelurahan->nama);
+                
+                return [
+                    'latitude' => (float) $kelurahan->latitude,
+                    'longitude' => (float) $kelurahan->longitude,
+                    'formatted_address' => $kelurahan->full_location,
+                    'accuracy' => 'high',
+                    'provider' => 'internal_database',
+                    'confidence' => 0.75,
+                    'kelurahan_name' => $kelurahan->nama,
+                    'kecamatan' => $kelurahan->kecamatan,
+                    'kota' => $kelurahan->kota,
+                    'validation_passed' => true
+                ];
+            }
+            
+            Log::info('Internal Database: No matching kelurahan found');
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::warning('Internal Database lookup failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Try Google Maps API dengan error handling
+     */
+    private static function tryGoogleMaps($address)
+    {
+        try {
+            $result = self::geocodeWithGoogleMapsAPI($address);
+            if ($result) {
+                Log::info('Google Maps: Success');
+                return $result;
+            }
+            Log::info('Google Maps: No valid result');
+            return null;
+        } catch (\Exception $e) {
+            Log::warning('Google Maps: Exception - ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Try LocationIQ sebagai backup
+     */
+    private static function tryLocationIQ($address)
+    {
+        try {
+            $result = self::geocodeWithLocationIQ($address);
+            if ($result) {
+                Log::info('LocationIQ: Success');
+                return $result;
+            }
+            Log::info('LocationIQ: No valid result');
+            return null;
+        } catch (\Exception $e) {
+            Log::warning('LocationIQ: Exception - ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Try Nominatim sebagai final fallback
+     */
+    private static function tryNominatim($address)
+    {
+        try {
+            $result = self::geocodeWithNominatim($address);
+            if ($result) {
+                Log::info('Nominatim: Success');
+                return $result;
+            }
+            Log::info('Nominatim: No valid result');
+            return null;
+        } catch (\Exception $e) {
+            Log::warning('Nominatim: Exception - ' . $e->getMessage());
+            return null;
         }
     }
 
@@ -492,6 +620,67 @@ class GeocodingService
     }
 
     /**
+     * Validate coordinate range untuk check latitude/longitude validity
+     * Returns array dengan validation result dan error messages
+     */
+    public static function validateCoordinateRange($latitude, $longitude)
+    {
+        $errors = [];
+        $isValid = true;
+
+        // Validate latitude range (-90 to 90)
+        if (!is_numeric($latitude)) {
+            $errors[] = 'Latitude harus berupa angka';
+            $isValid = false;
+        } elseif ($latitude < -90 || $latitude > 90) {
+            $errors[] = 'Latitude harus berada dalam range -90 sampai 90';
+            $isValid = false;
+        }
+
+        // Validate longitude range (-180 to 180)
+        if (!is_numeric($longitude)) {
+            $errors[] = 'Longitude harus berupa angka';
+            $isValid = false;
+        } elseif ($longitude < -180 || $longitude > 180) {
+            $errors[] = 'Longitude harus berada dalam range -180 sampai 180';
+            $isValid = false;
+        }
+
+        // Check for zero coordinates (likely invalid)
+        if ($latitude == 0 && $longitude == 0) {
+            $errors[] = 'Koordinat (0, 0) tidak valid';
+            $isValid = false;
+        }
+
+        // Additional validation checks
+        $inIndonesia = false;
+        $inMalangRegion = false;
+
+        if ($isValid) {
+            $inIndonesia = self::isInIndonesia($latitude, $longitude);
+            $inMalangRegion = self::isInMalangRegion($latitude, $longitude);
+
+            if (!$inIndonesia) {
+                $errors[] = 'Koordinat berada di luar wilayah Indonesia';
+            }
+
+            if (!$inMalangRegion) {
+                $errors[] = 'Koordinat berada di luar wilayah Malang Raya';
+            }
+        }
+
+        return [
+            'is_valid' => $isValid,
+            'in_indonesia' => $inIndonesia,
+            'in_malang_region' => $inMalangRegion,
+            'errors' => $errors,
+            'warnings' => !$inMalangRegion && $inIndonesia ? ['Koordinat di luar wilayah Malang Raya'] : [],
+            'latitude' => $latitude,
+            'longitude' => $longitude
+        ];
+    }
+
+    /**
      * Validasi hasil geocoding dengan kriteria yang ketat
      */
     private static function validateCoordinates($result)
@@ -773,77 +962,137 @@ class GeocodingService
     }
 
     /**
-     * Validasi kualitas koordinat berdasarkan provider dan akurasi
+     * Calculate quality score untuk geocoding result
+     * Score range: 0-100
+     */
+    public static function calculateQualityScore($result)
+    {
+        if (!$result || !isset($result['latitude']) || !isset($result['longitude'])) {
+            return 0;
+        }
+
+        $score = 50; // base score
+        
+        // Provider bonus (30 points max)
+        if (isset($result['provider'])) {
+            switch ($result['provider']) {
+                case 'google_maps':
+                    $score += 30;
+                    break;
+                case 'locationiq':
+                    $score += 25;
+                    break;
+                case 'here':
+                    $score += 23;
+                    break;
+                case 'opencage':
+                    $score += 20;
+                    break;
+                case 'mapbox':
+                    $score += 18;
+                    break;
+                case 'internal_database':
+                    $score += 15;
+                    break;
+                case 'nominatim':
+                    $score += 12;
+                    break;
+                case 'positionstack':
+                    $score += 10;
+                    break;
+                case 'interactive_map':
+                    return 100; // Manual selection always gets perfect score
+            }
+        }
+        
+        // Accuracy bonus (20 points max)
+        if (isset($result['accuracy'])) {
+            switch ($result['accuracy']) {
+                case 'very high':
+                    $score += 20;
+                    break;
+                case 'high':
+                    $score += 15;
+                    break;
+                case 'medium':
+                    $score += 10;
+                    break;
+                case 'low':
+                    $score += 5;
+                    break;
+            }
+        } elseif (isset($result['location_type'])) {
+            // Google Maps specific location types
+            switch ($result['location_type']) {
+                case 'ROOFTOP':
+                    $score += 20;
+                    break;
+                case 'RANGE_INTERPOLATED':
+                    $score += 15;
+                    break;
+                case 'GEOMETRIC_CENTER':
+                    $score += 10;
+                    break;
+                case 'APPROXIMATE':
+                    $score += 5;
+                    break;
+            }
+        }
+        
+        // Malang region bonus (10 points)
+        if (self::isInMalangRegion($result['latitude'], $result['longitude'])) {
+            $score += 10;
+        }
+        
+        // Confidence bonus (10 points max)
+        if (isset($result['confidence'])) {
+            $score += min(10, $result['confidence'] * 10);
+        }
+        
+        // Validation passed bonus (5 points)
+        if (isset($result['validation_passed']) && $result['validation_passed']) {
+            $score += 5;
+        }
+        
+        return min(100, max(0, $score));
+    }
+
+    /**
+     * Validate geocode quality dan return quality level dengan score
      */
     public static function validateGeocodeQuality($result)
     {
-        if (!$result) {
-            return ['quality' => 'failed', 'score' => 0, 'issues' => ['No result returned']];
-        }
+        $score = self::calculateQualityScore($result);
         
-        $issues = [];
-        $score = 0;
-        
-        // Provider scoring
-        $providerScores = [
-            'google_maps' => 90,
-            'locationiq' => 80,
-            'opencage' => 75,
-            'mapbox' => 70,
-            'here' => 70,
-            'nominatim' => 60,
-            'positionstack' => 50
-        ];
-        
-        $providerScore = $providerScores[$result['provider']] ?? 30;
-        $score += $providerScore * 0.4;
-        
-        // Accuracy scoring
-        $accuracyScores = [
-            'very high' => 30,
-            'high' => 25,
-            'medium' => 15,
-            'low' => 5
-        ];
-        
-        $accuracyScore = $accuracyScores[$result['accuracy']] ?? 0;
-        $score += $accuracyScore;
-        
-        // Confidence scoring
-        if (isset($result['confidence'])) {
-            $score += $result['confidence'] * 20;
-        }
-        
-        // Regional validation
-        if (self::isInMalangRegion($result['latitude'], $result['longitude'])) {
-            $score += 10;
+        // Determine quality level based on score
+        if ($score >= 90) {
+            $level = 'excellent';
+            $badge = 'Sangat Akurat';
+            $color = 'success';
+        } elseif ($score >= 80) {
+            $level = 'good';
+            $badge = 'Akurat';
+            $color = 'primary';
+        } elseif ($score >= 70) {
+            $level = 'fair';
+            $badge = 'Cukup Akurat';
+            $color = 'warning';
         } else {
-            $issues[] = 'Coordinates outside Malang region';
-            $score -= 15;
-        }
-        
-        // Determine quality level
-        if ($score >= 80) {
-            $quality = 'excellent';
-        } elseif ($score >= 60) {
-            $quality = 'good';
-        } elseif ($score >= 40) {
-            $quality = 'fair';
-        } elseif ($score >= 20) {
-            $quality = 'poor';
-        } else {
-            $quality = 'very poor';
+            $level = 'poor';
+            $badge = 'Kurang Akurat';
+            $color = 'danger';
         }
         
         return [
-            'quality' => $quality,
-            'score' => round($score, 1),
-            'provider_score' => $providerScore,
-            'accuracy_score' => $accuracyScore,
-            'confidence_score' => isset($result['confidence']) ? round($result['confidence'] * 20, 1) : 0,
-            'regional_bonus' => self::isInMalangRegion($result['latitude'], $result['longitude']) ? 10 : -15,
-            'issues' => $issues,
-            'recommendations' => $score < 60 ? ['Consider manual verification', 'Check address spelling'] : []
+            'score' => $score,
+            'level' => $level,
+            'badge' => $badge,
+            'color' => $color,
+            'needs_improvement' => $score < 70,
+            'in_malang_region' => self::isInMalangRegion($result['latitude'], $result['longitude']),
+            'provider' => $result['provider'] ?? 'unknown',
+            'accuracy' => $result['accuracy'] ?? $result['location_type'] ?? 'unknown',
+            'confidence' => $result['confidence'] ?? null
         ];
     }
 

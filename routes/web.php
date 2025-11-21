@@ -173,27 +173,34 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
 
     
     Route::prefix('toko')->group(function() {
-        // Basic CRUD routes
+        // Basic CRUD routes (non-parameterized first)
         Route::get('/', [TokoController::class, 'index'])->name('toko.index');
         Route::get('/list', [TokoController::class, 'getList'])->name('toko.list');
         Route::get('/data', [TokoController::class, 'getData'])->name('toko.data');
         Route::get('/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
         Route::post('/', [TokoController::class, 'store'])->name('toko.store');
-        Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
-        Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
-        Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
-        Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
         
         // Wilayah routes
         Route::get('/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
         Route::get('/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
         Route::get('/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
         
+        // Kelurahan coordinates API routes (MUST be before /{id})
+        Route::get('/kelurahan-coordinates', [TokoController::class, 'getKelurahanCoordinates'])->name('toko.kelurahanCoordinates');
+        Route::get('/kelurahan/search', [TokoController::class, 'searchKelurahan'])->name('toko.searchKelurahan');
+        Route::get('/kelurahan/by-name', [TokoController::class, 'getKelurahanByName'])->name('toko.kelurahanByName');
+        
         // Enhanced geocoding routes
         Route::post('/preview-geocode', [TokoController::class, 'previewGeocode'])->name('toko.previewGeocode');
         Route::post('/geocode', [TokoController::class, 'geocodeToko'])->name('toko.geocodeToko');
         Route::post('/batch-geocode', [TokoController::class, 'batchGeocodeToko'])->name('toko.batchGeocodeToko');
         Route::post('/validate-coordinates', [TokoController::class, 'validateMapCoordinates'])->name('toko.validateCoordinates');
+        
+        // Parameterized routes (MUST be last to avoid catching specific routes)
+        Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
+        Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
+        Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
+        Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
     });
     
     Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');
