@@ -8,6 +8,7 @@ use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MarketMapController;
@@ -218,6 +219,18 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         Route::post('/import', [CustomerController::class, 'import'])->name('customer.import');
         Route::post('/sync-pemesanan', [CustomerController::class, 'syncFromPemesanan'])->name('customer.syncPemesanan');
         Route::get('/debug-tables', [CustomerController::class, 'debugTables'])->name('customer.debugTables');
+    });
+    
+    // ===============================
+    // USER MANAGEMENT ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'user'], function() {
+        Route::get('/', [UserController::class, 'index'])->name('user.index');
+        Route::get('/data', [UserController::class, 'getData'])->name('user.data');
+        Route::post('/', [UserController::class, 'store'])->name('user.store');
+        Route::get('/{id}/edit', [UserController::class, 'edit'])->name('user.edit');
+        Route::put('/{id}', [UserController::class, 'update'])->name('user.update');
+        Route::delete('/{id}', [UserController::class, 'destroy'])->name('user.destroy');
     });
     
     // Route Transaksi

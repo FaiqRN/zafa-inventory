@@ -28,9 +28,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="nama_lengkap">Nama Lengkap <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="nama_lengkap" name="nama_lengkap" 
-                                           value="{{ old('nama_lengkap', $user->nama_lengkap) }}" required>
+                                    <label for="firstname">Nama Depan <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="firstname" name="firstname" 
+                                           value="{{ old('firstname', $user->firstname) }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="lastname">Nama Belakang</label>
+                                    <input type="text" class="form-control" id="lastname" name="lastname" 
+                                           value="{{ old('lastname', $user->lastname) }}">
                                 </div>
                                 <div class="form-group">
                                     <label for="email">Email <span class="text-danger">*</span></label>
@@ -56,6 +61,8 @@
                                         <option value="P" {{ old('jenis_kelamin', $user->jenis_kelamin) == 'P' ? 'selected' : '' }}>Perempuan</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="tempat_lahir">Tempat Lahir</label>
                                     <input type="text" class="form-control" id="tempat_lahir" name="tempat_lahir" 
@@ -66,11 +73,9 @@
                                     <input type="date" class="form-control" id="tanggal_lahir" name="tanggal_lahir" 
                                            value="{{ old('tanggal_lahir', $user->tanggal_lahir ? $user->tanggal_lahir->format('Y-m-d') : '') }}">
                                 </div>
-                            </div>
-                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="alamat">Alamat <span class="text-danger">*</span></label>
-                                    <textarea class="form-control" id="alamat" name="alamat" rows="4" required>{{ old('alamat', $user->alamat) }}</textarea>
+                                    <textarea class="form-control" id="alamat" name="alamat" rows="3" required>{{ old('alamat', $user->alamat) }}</textarea>
                                 </div>
                                 <div class="form-group">
                                     <label for="foto">Foto Profil</label>

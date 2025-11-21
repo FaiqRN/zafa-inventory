@@ -9,7 +9,7 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">
-                <i class="fas fa-store"></i> Data Toko dengan Smart Address Indonesia
+                <i class=></i> Data Toko dengan Smart Address Indonesia
             </h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-primary" id="btnTambah">

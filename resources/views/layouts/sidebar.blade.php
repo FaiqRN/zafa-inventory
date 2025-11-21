@@ -140,6 +140,14 @@
                 </a>
             </li>
 
+            <!-- Sistem -->
+            <li class="nav-item">
+                <a href="{{ url('/user') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
+                    <i class="nav-icon fas fa-cogs"></i>
+                    <p>Sistem</p>
+                </a>
+            </li>
+
         </ul>
     </nav>
 </div>

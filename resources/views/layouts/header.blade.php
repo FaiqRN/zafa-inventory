@@ -7,9 +7,6 @@
                 <i class="fas fa-bars"></i>
             </a>
         </li>
-        <li class="nav-item d-none d-sm-inline-block">
-            <a href="{{ url('/') }}" class="nav-link">Dashboard</a>
-        </li>
     </ul>
 
     <!-- Right navbar links -->
