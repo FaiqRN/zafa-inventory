@@ -221,7 +221,15 @@
                                     <span class="badge badge-success ml-2">AUTO-DETECT!</span>
                                 </label>
                                 <div class="map-container" style="border: 2px solid #dee2e6; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                                    <div id="interactiveMap" style="height: 450px; width: 100%;"></div>
+                                    <div id="interactiveMap" style="height: 450px; width: 100%;">
+                                        <!-- Loading indicator -->
+                                        <div id="mapLoadingIndicator" style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f8f9fa;">
+                                            <div class="text-center">
+                                                <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                                                <div>Memuat peta...</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="mt-3">
                                     <!-- Enhanced Instructions -->
@@ -337,10 +345,6 @@
 @endsection
 
 @push('css')
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-
 <style>
 /* Enhanced Table Styling */
 #table-toko {
@@ -578,9 +582,14 @@
 @endpush
 
 @push('js')
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Debug: Check if Leaflet loaded -->
+<script>
+    if (typeof L !== 'undefined') {
+        console.log('✅ Leaflet library loaded successfully, version:', L.version);
+    } else {
+        console.error('❌ Leaflet library failed to load!');
+    }
+</script>
 
 <script src="{{ asset('js/toko.js') }}?v={{ time() }}"></script>
 @endpush

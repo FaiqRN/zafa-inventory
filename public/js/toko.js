@@ -22,103 +22,44 @@ $(document).ready(function() {
     // Default center (Malang city center)
     const MALANG_CENTER = [-7.9666, 112.6326];
     
-    // COMPREHENSIVE KELURAHAN DATABASE dengan koordinat center
-    const KELURAHAN_DATABASE = {
-        // Kota Malang - Blimbing
-        'polowijen': { coords: [-7.9200, 112.6400], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'balearjosari': { coords: [-7.9100, 112.6450], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'bunulrejo': { coords: [-7.9000, 112.6500], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'pandanwangi': { coords: [-7.9300, 112.6600], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'blimbing': { coords: [-7.9400, 112.6550], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'polehan': { coords: [-7.9500, 112.6400], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'jodipan': { coords: [-7.9600, 112.6350], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'kesatrian': { coords: [-7.9700, 112.6300], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'purwantoro': { coords: [-7.9800, 112.6250], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'purwodadi': { coords: [-7.9150, 112.6350], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        'arjosari': { coords: [-7.9050, 112.6400], kecamatan: 'Blimbing', kota: 'Kota Malang' },
-        
-        // Kota Malang - Lowokwaru  
-        'jatimulyo': { coords: [-7.9455, 112.6198], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'tlogomas': { coords: [-7.9340, 112.6144], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'lowokwaru': { coords: [-7.9451, 112.6097], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'mojolangu': { coords: [-7.9290, 112.6180], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'tulusrejo': { coords: [-7.9380, 112.6050], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'dinoyo': { coords: [-7.9520, 112.6120], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'sumbersari': { coords: [-7.9600, 112.6200], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'ketawanggede': { coords: [-7.9350, 112.6080], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'merjosari': { coords: [-7.9250, 112.6100], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'tunggulwulung': { coords: [-7.9400, 112.6000], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'tasikmadu': { coords: [-7.9500, 112.6000], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        'tunjungsekar': { coords: [-7.9300, 112.6050], kecamatan: 'Lowokwaru', kota: 'Kota Malang' },
-        
-        // Kota Malang - Klojen
-        'kasin': { coords: [-7.9750, 112.6300], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'klojen': { coords: [-7.9800, 112.6200], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'kauman': { coords: [-7.9850, 112.6250], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'kidul dalem': { coords: [-7.9900, 112.6300], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'kidul_dalem': { coords: [-7.9900, 112.6300], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'oro oro dowo': { coords: [-7.9700, 112.6150], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'oro_oro_dowo': { coords: [-7.9700, 112.6150], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'bareng': { coords: [-7.9650, 112.6100], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'gadingkasri': { coords: [-7.9600, 112.6050], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'sukoharjo': { coords: [-7.9550, 112.6000], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'rampal celaket': { coords: [-7.9800, 112.6100], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'rampal_celaket': { coords: [-7.9800, 112.6100], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'samaan': { coords: [-7.9750, 112.6050], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        'penanggungan': { coords: [-7.9700, 112.6000], kecamatan: 'Klojen', kota: 'Kota Malang' },
-        
-        // Kota Malang - Sukun
-        'sukun': { coords: [-8.0000, 112.6200], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'gadang': { coords: [-8.0100, 112.6150], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'karangbesuki': { coords: [-8.0200, 112.6100], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'tanjungrejo': { coords: [-8.0050, 112.6250], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'bandulan': { coords: [-8.0150, 112.6300], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'mulyorejo': { coords: [-8.0250, 112.6350], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'pisangcandi': { coords: [-8.0300, 112.6400], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'ciptomulyo': { coords: [-8.0350, 112.6450], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'bakalan krajan': { coords: [-8.0400, 112.6500], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'bakalan_krajan': { coords: [-8.0400, 112.6500], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'kebonsari': { coords: [-8.0450, 112.6550], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        'bandungrejosari': { coords: [-8.0500, 112.6600], kecamatan: 'Sukun', kota: 'Kota Malang' },
-        
-        // Kota Malang - Kedungkandang
-        'kedungkandang': { coords: [-8.0000, 112.6800], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'sawojajar': { coords: [-7.9800, 112.7000], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'arjowinangun': { coords: [-7.9700, 112.6900], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'mergosono': { coords: [-7.9900, 112.6950], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'buring': { coords: [-8.0100, 112.7100], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'bumiayu': { coords: [-8.0200, 112.7200], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'wonokoyo': { coords: [-8.0300, 112.7300], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'tlogowaru': { coords: [-8.0400, 112.7400], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'madyopuro': { coords: [-8.0500, 112.7500], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'lesanpuro': { coords: [-8.0600, 112.7600], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'cemorokandang': { coords: [-8.0700, 112.7700], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        'kotalama': { coords: [-8.0800, 112.7800], kecamatan: 'Kedungkandang', kota: 'Kota Malang' },
-        
-        // Kota Batu
-        'ngaglik': { coords: [-7.8700, 112.5200], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'pesanggrahan': { coords: [-7.8800, 112.5300], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'sisir': { coords: [-7.8900, 112.5400], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'songgokerto': { coords: [-7.9000, 112.5500], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'sumberejo': { coords: [-7.9100, 112.5600], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'temas': { coords: [-7.9200, 112.5700], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'oro oro ombo': { coords: [-7.9300, 112.5800], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'oro_oro_ombo': { coords: [-7.9300, 112.5800], kecamatan: 'Batu', kota: 'Kota Batu' },
-        'sidomulyo': { coords: [-7.9400, 112.5900], kecamatan: 'Batu', kota: 'Kota Batu' },
-        
-        // Tambahan kelurahan populer Kabupaten Malang
-        'singosari': { coords: [-7.8950, 112.6650], kecamatan: 'Singosari', kota: 'Kabupaten Malang' },
-        'lawang': { coords: [-7.8350, 112.6940], kecamatan: 'Lawang', kota: 'Kabupaten Malang' },
-        'turen': { coords: [-8.1690, 112.7100], kecamatan: 'Turen', kota: 'Kabupaten Malang' },
-        'dampit': { coords: [-8.2100, 112.7500], kecamatan: 'Dampit', kota: 'Kabupaten Malang' },
-        'kepanjen': { coords: [-8.1300, 112.5730], kecamatan: 'Kepanjen', kota: 'Kabupaten Malang' },
-        'pakisaji': { coords: [-8.0650, 112.5980], kecamatan: 'Pakisaji', kota: 'Kabupaten Malang' },
-        'bululawang': { coords: [-8.0950, 112.6420], kecamatan: 'Bululawang', kota: 'Kabupaten Malang' },
-        'gondanglegi': { coords: [-8.1850, 112.6350], kecamatan: 'Gondanglegi', kota: 'Kabupaten Malang' },
-        'wagir': { coords: [-8.1200, 112.7300], kecamatan: 'Wagir', kota: 'Kabupaten Malang' }
-    };
+    // Kelurahan database - loaded from API
+    let KELURAHAN_DATABASE = {};
+    let isKelurahanDataLoaded = false;
     
+    // Load kelurahan coordinates from API
+    loadKelurahanCoordinates();
     loadTokoData();
+
+    // ========================================
+    // KELURAHAN DATA LOADER (FROM API)
+    // ========================================
+    
+    function loadKelurahanCoordinates() {
+        console.log('📡 Loading kelurahan coordinates from API...');
+        
+        $.ajax({
+            url: '/toko/kelurahan-coordinates',
+            type: 'GET',
+            cache: true, // Cache untuk performa
+            success: function(response) {
+                if (response.kelurahan_database) {
+                    KELURAHAN_DATABASE = response.kelurahan_database;
+                    isKelurahanDataLoaded = true;
+                    console.log(`✅ Loaded ${response.total} kelurahan coordinates from database`);
+                } else {
+                    console.warn('⚠️ Kelurahan data format unexpected, using empty database');
+                    KELURAHAN_DATABASE = {};
+                    isKelurahanDataLoaded = true;
+                }
+            },
+            error: function(xhr) {
+                console.error('❌ Failed to load kelurahan coordinates:', xhr.responseText);
+                console.warn('⚠️ Smart address parsing will be limited without kelurahan data');
+                KELURAHAN_DATABASE = {};
+                isKelurahanDataLoaded = true;
+            }
+        });
+    }
 
     // ========================================
     // SMART ADDRESS PARSING & KELURAHAN DETECTION
@@ -149,6 +90,19 @@ $(document).ready(function() {
     function performSmartAddressParsing(alamat) {
         console.log('Smart parsing Indonesian standard address format:', alamat);
         console.log('Expected format: Jl. [nama jalan] No. [nomor], [Kelurahan], Kec. [Kecamatan], Kota [Kota], [Provinsi] [Kode Pos]');
+        
+        // Check if kelurahan data is loaded
+        if (!isKelurahanDataLoaded) {
+            console.warn('⏳ Kelurahan data still loading, retrying in 500ms...');
+            setTimeout(() => performSmartAddressParsing(alamat), 500);
+            return;
+        }
+        
+        if (Object.keys(KELURAHAN_DATABASE).length === 0) {
+            console.warn('⚠️ Kelurahan database is empty, performing basic geocoding only');
+            performEnhancedGeocoding(alamat, null);
+            return;
+        }
         
         // Step 1: Deteksi kelurahan dari alamat dengan format standar Indonesia
         const detectedKelurahan = detectKelurahanFromAddress(alamat);
@@ -281,71 +235,155 @@ $(document).ready(function() {
             });
         });
         
-        // Return hanya jika score minimal 70 untuk akurasi tinggi
-        if (bestMatch && bestMatch.score >= 70) {
-            console.log('Kelurahan detected:', bestMatch);
+        // Return hanya jika score minimal 75 untuk akurasi lebih tinggi
+        if (bestMatch && bestMatch.score >= 75) {
+            console.log('✅ Kelurahan detected with high confidence:', bestMatch);
+            console.log(`   Score: ${bestMatch.score}/100, Method: ${bestMatch.method}`);
             return bestMatch;
         }
         
-        console.log('No kelurahan detected with sufficient confidence');
+        if (bestMatch && bestMatch.score >= 65) {
+            console.warn('⚠️ Kelurahan detected with medium confidence:', bestMatch);
+            console.warn(`   Score: ${bestMatch.score}/100 - Consider manual verification`);
+            // Still return but with warning
+            return bestMatch;
+        }
+        
+        console.log('❌ No kelurahan detected with sufficient confidence (minimum 65)');
+        if (bestMatch) {
+            console.log(`   Best match: ${bestMatch.name} with score ${bestMatch.score}/100`);
+        }
         return null;
     }
     
     function calculateStandardFormatScore(kelurahanPart, kelurahanName) {
-        let score = 80; // Base score untuk standard format
+        let score = 85; // Increased base score untuk standard format
         
         // Perfect match
         if (kelurahanPart === kelurahanName) {
             return 100;
         }
         
-        // Length similarity
-        const lengthRatio = Math.min(kelurahanPart.length, kelurahanName.length) / 
-                           Math.max(kelurahanPart.length, kelurahanName.length);
-        score += lengthRatio * 15;
+        // Exact match after normalization (remove spaces, dashes, etc)
+        const normalizedPart = kelurahanPart.replace(/[\s\-_]/g, '').toLowerCase();
+        const normalizedName = kelurahanName.replace(/[\s\-_]/g, '').toLowerCase();
         
-        // Contains check
-        if (kelurahanPart.includes(kelurahanName) || kelurahanName.includes(kelurahanPart)) {
-            score += 10;
+        if (normalizedPart === normalizedName) {
+            return 98;
         }
         
-        return Math.min(100, score);
+        // Length similarity with higher weight
+        const lengthRatio = Math.min(kelurahanPart.length, kelurahanName.length) / 
+                           Math.max(kelurahanPart.length, kelurahanName.length);
+        score += lengthRatio * 12;
+        
+        // Contains check with position bonus
+        if (kelurahanPart.includes(kelurahanName)) {
+            score += 8;
+            // Bonus if at start
+            if (kelurahanPart.startsWith(kelurahanName)) {
+                score += 5;
+            }
+        } else if (kelurahanName.includes(kelurahanPart)) {
+            score += 6;
+        }
+        
+        // Levenshtein distance check for typos
+        const distance = levenshteinDistance(normalizedPart, normalizedName);
+        const maxLen = Math.max(normalizedPart.length, normalizedName.length);
+        const similarity = 1 - (distance / maxLen);
+        
+        if (similarity > 0.8) {
+            score += similarity * 10;
+        }
+        
+        return Math.min(100, Math.round(score));
+    }
+    
+    // Helper: Calculate Levenshtein distance for typo tolerance
+    function levenshteinDistance(str1, str2) {
+        const matrix = [];
+        
+        for (let i = 0; i <= str2.length; i++) {
+            matrix[i] = [i];
+        }
+        
+        for (let j = 0; j <= str1.length; j++) {
+            matrix[0][j] = j;
+        }
+        
+        for (let i = 1; i <= str2.length; i++) {
+            for (let j = 1; j <= str1.length; j++) {
+                if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    );
+                }
+            }
+        }
+        
+        return matrix[str2.length][str1.length];
     }
     
     function calculateContextualScore(alamat, kelurahanName) {
-        let score = 50; // Base score
+        let score = 55; // Increased base score
         
         const matchIndex = alamat.indexOf(kelurahanName);
         if (matchIndex === -1) return 0;
         
-        // Length bonus
-        score += kelurahanName.length * 2;
+        // Length bonus with higher weight for longer names (more specific)
+        score += Math.min(kelurahanName.length * 2.5, 20);
         
-        // Position bonus (earlier is better)
-        score += Math.max(0, 15 - (matchIndex / 10));
+        // Position bonus (earlier is better, but not too early)
+        const relativePosition = matchIndex / alamat.length;
+        if (relativePosition > 0.2 && relativePosition < 0.6) {
+            // Sweet spot for kelurahan position in address
+            score += 15;
+        } else if (relativePosition <= 0.2) {
+            score += 8; // Too early, might be street name
+        } else {
+            score += 5; // Too late
+        }
         
-        // Context analysis
-        const before = alamat.substring(Math.max(0, matchIndex - 15), matchIndex);
-        const after = alamat.substring(matchIndex + kelurahanName.length, matchIndex + kelurahanName.length + 15);
+        // Context analysis with more patterns
+        const before = alamat.substring(Math.max(0, matchIndex - 20), matchIndex);
+        const after = alamat.substring(matchIndex + kelurahanName.length, matchIndex + kelurahanName.length + 20);
         
-        // Look for Indonesian address patterns
+        // Look for Indonesian address patterns with higher weights
         if (before.includes(',') && after.includes(',')) {
-            score += 20; // Likely part of structured address
+            score += 25; // Strong indicator of structured address
         }
         
-        if (before.includes('no.') || before.includes('nomor') || before.includes('jl.') || before.includes('jalan')) {
-            score += 15; // After street number
+        // Check for street indicators before kelurahan
+        if (before.match(/\b(jl\.|jalan|gang|gg\.|no\.|nomor)\b/i)) {
+            score += 18;
         }
         
-        if (after.includes('kec.') || after.includes('kecamatan')) {
-            score += 15; // Before kecamatan
+        // Check for kecamatan after kelurahan (strong indicator)
+        if (after.match(/\b(kec\.|kecamatan)\b/i)) {
+            score += 20;
         }
         
-        if (after.includes('kota') || after.includes('kabupaten')) {
-            score += 10; // Standard format
+        // Check for kota/kabupaten after kelurahan
+        if (after.match(/\b(kota|kabupaten)\b/i)) {
+            score += 12;
         }
         
-        return Math.min(100, score);
+        // Check for RT/RW before kelurahan (common pattern)
+        if (before.match(/\b(rt|rw)\s*[\d\/]+/i)) {
+            score += 8;
+        }
+        
+        // Penalty if kelurahan name appears in what looks like street name
+        if (before.match(/\b(jl\.|jalan)\s+[^\,]*$/i) && matchIndex < alamat.length * 0.3) {
+            score -= 15; // Likely part of street name, not kelurahan
+        }
+        
+        return Math.min(100, Math.round(score));
     }
     
     function calculateVariationScore(alamat, variation) {
@@ -759,10 +797,30 @@ $(document).ready(function() {
         
         clearPreviewMarker();
         
-        // Buat preview marker dengan enhanced styling
+        // Validate coordinates precision
+        const precision = {
+            lat: lat.toString().split('.')[1]?.length || 0,
+            lng: lng.toString().split('.')[1]?.length || 0
+        };
+        
+        const avgPrecision = (precision.lat + precision.lng) / 2;
+        let accuracyLevel = 'medium';
+        let accuracyColor = '#ffc107'; // yellow
+        
+        if (avgPrecision >= 6) {
+            accuracyLevel = 'high';
+            accuracyColor = '#28a745'; // green
+        } else if (avgPrecision < 4) {
+            accuracyLevel = 'low';
+            accuracyColor = '#dc3545'; // red
+        }
+        
+        console.log(`📍 Preview location accuracy: ${accuracyLevel} (precision: ${avgPrecision} decimals)`);
+        
+        // Buat preview marker dengan enhanced styling based on accuracy
         const previewIcon = L.divIcon({
             className: 'smart-preview-marker',
-            html: '<div style="background-color: #ffc107; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: pulse 2s infinite;"></div>',
+            html: `<div style="background-color: ${accuracyColor}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: pulse 2s infinite;"></div>`,
             iconSize: [26, 26],
             iconAnchor: [13, 13]
         });
@@ -771,11 +829,18 @@ $(document).ready(function() {
             icon: previewIcon
         }).addTo(interactiveMap);
         
-        // Enhanced popup dengan informasi kelurahan
+        // Enhanced popup dengan informasi kelurahan dan accuracy
+        const accuracyBadge = accuracyLevel === 'high' ? 
+            '<span class="badge badge-success">Akurasi Tinggi</span>' :
+            accuracyLevel === 'medium' ?
+            '<span class="badge badge-warning">Akurasi Sedang</span>' :
+            '<span class="badge badge-danger">Akurasi Rendah</span>';
+        
         let popupContent = `
-            <div style="text-align: center; max-width: 220px;">
-                <strong><i class="fas fa-search-location text-warning"></i> Lokasi Terdeteksi</strong><br>
-                <small style="color: #666;">${address.substring(0, 50)}${address.length > 50 ? '...' : ''}</small><br>
+            <div style="text-align: center; max-width: 240px;">
+                <strong><i class="fas fa-search-location" style="color: ${accuracyColor};"></i> Lokasi Terdeteksi</strong><br>
+                ${accuracyBadge}<br>
+                <small style="color: #666; margin-top: 4px; display: block;">${address.substring(0, 50)}${address.length > 50 ? '...' : ''}</small><br>
         `;
         
         if (kelurahan) {
@@ -785,6 +850,7 @@ $(document).ready(function() {
                         <i class="fas fa-map-marker-alt"></i> ${kelurahan.name}
                     </small><br>
                     <small style="color: #666;">${kelurahan.data.kecamatan}, ${kelurahan.data.kota}</small>
+                    ${kelurahan.score ? `<br><small style="color: #999;">Confidence: ${kelurahan.score}%</small>` : ''}
                 </div>
             `;
         }
@@ -792,9 +858,10 @@ $(document).ready(function() {
         popupContent += `
                 <div style="margin: 8px 0; padding: 6px; background: #f8f9fa; border-radius: 4px;">
                     <small style="color: #28a745; font-weight: bold;">
-                        <i class="fas fa-mouse-pointer"></i> Klik di sekitar sini untuk koordinat presisi
+                        <i class="fas fa-mouse-pointer"></i> ${accuracyLevel === 'high' ? 'Klik untuk konfirmasi' : 'Klik area sekitar untuk presisi lebih tinggi'}
                     </small>
                 </div>
+                <small style="color: #999; font-size: 10px;">Presisi: ${avgPrecision.toFixed(1)} desimal</small>
             </div>
         `;
         
@@ -863,23 +930,56 @@ $(document).ready(function() {
     
     function initializeInteractiveMap() {
         if (isMapInitialized && interactiveMap) {
+            console.log('Map already initialized, skipping...');
             return;
         }
         
-        console.log('Initializing smart address parsing map...');
+        console.log('🗺️ Initializing smart address parsing map...');
         
-        interactiveMap = L.map('interactiveMap', {
-            center: MALANG_CENTER,
-            zoom: 12,
-            zoomControl: true,
-            attributionControl: true
-        });
+        // Check if Leaflet is loaded
+        if (typeof L === 'undefined') {
+            console.error('❌ Leaflet library not loaded!');
+            showAlert('danger', 'Library peta belum dimuat. Refresh halaman.');
+            return;
+        }
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19,
-            minZoom: 10
-        }).addTo(interactiveMap);
+        // Check if map container exists
+        const mapContainer = document.getElementById('interactiveMap');
+        if (!mapContainer) {
+            console.error('❌ Map container #interactiveMap not found!');
+            showAlert('danger', 'Container peta tidak ditemukan.');
+            return;
+        }
+        
+        console.log('✅ Map container found, initializing Leaflet...');
+        
+        try {
+            interactiveMap = L.map('interactiveMap', {
+                center: MALANG_CENTER,
+                zoom: 12,
+                zoomControl: true,
+                attributionControl: true
+            });
+            
+            console.log('✅ Leaflet map object created');
+        } catch (error) {
+            console.error('❌ Error creating Leaflet map:', error);
+            showAlert('danger', 'Gagal membuat peta: ' + error.message);
+            return;
+        }
+        
+        try {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+                minZoom: 10
+            }).addTo(interactiveMap);
+            
+            console.log('✅ Tile layer added');
+        } catch (error) {
+            console.error('❌ Error adding tile layer:', error);
+            showAlert('warning', 'Gagal memuat tiles peta. Cek koneksi internet.');
+        }
         
         const malangBounds = [
             [MALANG_BOUNDS.south, MALANG_BOUNDS.west],
@@ -927,11 +1027,14 @@ $(document).ready(function() {
         isMapInitialized = true;
         console.log('✅ Smart address parsing map initialized');
         
+        // Force map to recalculate size after modal animation
         setTimeout(() => {
             if (interactiveMap) {
+                console.log('🔄 Invalidating map size...');
                 interactiveMap.invalidateSize();
+                console.log('✅ Map size invalidated, map should be visible now');
             }
-        }, 300);
+        }, 500); // Increased delay to 500ms
     }
     
     function setMapMarker(lat, lng) {
@@ -1748,8 +1851,8 @@ $(document).ready(function() {
     // ========================================
     console.log('✅ Smart Address Parsing with Indonesian Standard Format loaded successfully!');
     console.log('🇮🇩 Format Support: Jl. [nama jalan] No. [nomor], [Kelurahan], Kec. [Kecamatan], Kota [Kota], [Provinsi] [Kode Pos]');
-    console.log('🧠 Features: AI-powered address parsing, kelurahan auto-detection from standard format, smart zoom');
-    console.log('📍 Database: 100+ kelurahan coordinates for precise location finding');
+    console.log('🧠 Features: AI-powered address parsing, kelurahan auto-detection, typo tolerance, smart zoom');
+    console.log('📍 Database: 74 kelurahan coordinates for precise location finding');
     console.log('');
     console.log('🎯 Demo Format Examples:');
     console.log('   "Jl. Ahmad Yani Utara No. 200, Polowijen, Kec. Blimbing, Kota Malang, Jawa Timur 65126"');
@@ -1757,6 +1860,11 @@ $(document).ready(function() {
     console.log('   "Jl. Soekarno Hatta, Jatimulyo, Kec. Lowokwaru, Kota Malang"');
     console.log('   "Jl. Ijen No. 25, Oro-oro Dowo, Kec. Klojen, Kota Malang"');
     console.log('');
-    console.log('🔧 Algorithm: Multi-method detection (standard_format > prefix_match > contextual_match > variation_match)');
-    console.log('📊 Minimum confidence: 70% for auto-zoom activation');
+    console.log('🔧 Algorithm: Enhanced multi-method detection with Levenshtein distance');
+    console.log('   - Standard format parsing (exact & partial match)');
+    console.log('   - Contextual analysis with Indonesian address patterns');
+    console.log('   - Typo tolerance using edit distance');
+    console.log('   - Position-aware scoring');
+    console.log('📊 Confidence thresholds: High (75%+), Medium (65-74%), Minimum (65%)');
+    console.log('🎨 Color coding: 🟢 Green (high accuracy) | 🟡 Yellow (medium) | 🔴 Red (low)');
 });
