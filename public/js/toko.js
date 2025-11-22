@@ -11,6 +11,10 @@ $(document).ready(function () {
     let isMapInitialized = false;
     let searchTimeout = null;
 
+    // Tolerance tracking for 50m validation
+    let initialGeocodedPosition = null;
+    const MAX_TOLERANCE_METERS = 50;
+
     // Malang Region Bounds
     const MALANG_BOUNDS = {
         north: -7.4,
@@ -29,6 +33,300 @@ $(document).ready(function () {
     // Load kelurahan coordinates from API
     loadKelurahanCoordinates();
     loadTokoData();
+
+    // ========================================
+    // ADVANCED FUZZY MATCHING ALGORITHMS
+    // ========================================
+
+    /**
+     * Calculate Levenshtein distance between two strings (Simple version)
+     * Returns the minimum number of edits needed to transform one string into another
+     * Used for basic fuzzy matching in advanced algorithms
+     */
+    function levenshteinDistanceSimple(str1, str2) {
+        const len1 = str1.length;
+        const len2 = str2.length;
+        const matrix = [];
+
+        for (let i = 0; i <= len1; i++) matrix[i] = [i];
+        for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+
+        for (let i = 1; i <= len1; i++) {
+            for (let j = 1; j <= len2; j++) {
+                if (str1[i - 1] === str2[j - 1]) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // substitution
+                        matrix[i][j - 1] + 1,     // insertion
+                        matrix[i - 1][j] + 1      // deletion
+                    );
+                }
+            }
+        }
+        return matrix[len1][len2];
+    }
+
+    /**
+     * Calculate similarity percentage based on Levenshtein distance
+     */
+    function levenshteinSimilarity(str1, str2) {
+        const maxLen = Math.max(str1.length, str2.length);
+        if (maxLen === 0) return 100;
+        const distance = levenshteinDistanceSimple(str1.toLowerCase(), str2.toLowerCase());
+        return Math.round(((maxLen - distance) / maxLen) * 100);
+    }
+
+    /**
+     * Calculate Jaro-Winkler similarity (better for short strings and prefix matching)
+     */
+    function jaroWinklerSimilarity(str1, str2) {
+        str1 = str1.toLowerCase();
+        str2 = str2.toLowerCase();
+        if (str1 === str2) return 100;
+
+        const len1 = str1.length;
+        const len2 = str2.length;
+        const matchDistance = Math.floor(Math.max(len1, len2) / 2) - 1;
+
+        const str1Matches = new Array(len1).fill(false);
+        const str2Matches = new Array(len2).fill(false);
+
+        let matches = 0;
+        let transpositions = 0;
+
+        // Find matches
+        for (let i = 0; i < len1; i++) {
+            const start = Math.max(0, i - matchDistance);
+            const end = Math.min(i + matchDistance + 1, len2);
+            for (let j = start; j < end; j++) {
+                if (str2Matches[j] || str1[i] !== str2[j]) continue;
+                str1Matches[i] = str2Matches[j] = true;
+                matches++;
+                break;
+            }
+        }
+
+        if (matches === 0) return 0;
+
+        // Count transpositions
+        let k = 0;
+        for (let i = 0; i < len1; i++) {
+            if (!str1Matches[i]) continue;
+            while (!str2Matches[k]) k++;
+            if (str1[i] !== str2[k]) transpositions++;
+            k++;
+        }
+
+        // Jaro similarity
+        const jaro = (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3;
+
+        // Prefix bonus
+        let commonPrefix = 0;
+        for (let i = 0; i < Math.min(4, Math.min(str1.length, str2.length)); i++) {
+            if (str1[i] === str2[i]) commonPrefix++;
+            else break;
+        }
+
+        const jaroWinkler = jaro + (commonPrefix * 0.1 * (1 - jaro));
+        return Math.round(jaroWinkler * 100);
+    }
+
+    /**
+     * Indonesian street/place name variations mapping
+     * Handles common spelling variations in Indonesian names
+     */
+    const INDONESIAN_NAME_VARIATIONS = {
+        'ahmad': ['achmad', 'ahmat', 'achmat'],
+        'muhammad': ['mohammad', 'mohamad', 'muh', 'moh', 'muhamad'],
+        'soekarno': ['sukarno'],
+        'soepomo': ['supomo'],
+        'soetomo': ['sutomo'],
+        'diponegoro': ['dipanegara', 'dipanegoro'],
+        'sudirman': ['soedirman'],
+        'thamrin': ['tamrin'],
+        'hatta': ['hata'],
+        'veteran': ['feteran'],
+        'pahlawan': ['phalawan'],
+        'merdeka': ['mardeka'],
+        'gatot': ['gatut'],
+        'subroto': ['subroto'],
+        'basuki': ['basuki'],
+        'rahmat': ['rachmat', 'rahmad', 'rachmat'],
+    };
+
+    /**
+     * Normalize Indonesian name with variations
+     */
+    function normalizeIndonesianName(name) {
+        let normalized = name.toLowerCase().trim();
+        normalized = normalized.replace(/[^a-z0-9\s]/g, '');
+        normalized = normalized.replace(/\s+/g, '');
+
+        // Apply variations
+        for (const [standard, variants] of Object.entries(INDONESIAN_NAME_VARIATIONS)) {
+            for (const variant of variants) {
+                if (normalized.includes(variant)) {
+                    normalized = normalized.replace(variant, standard);
+                }
+            }
+        }
+
+        return normalized;
+    }
+
+    /**
+     * Extract street name from full address
+     */
+    function extractStreetName(address) {
+        if (!address) return '';
+
+        const patterns = [
+            /(?:jalan|jl\.?)\s+([^,\d]+?)(?:\s+(?:no\.?|nomor)\s*\d+)?(?:,|$)/i,
+            /(?:gang|gg\.?)\s+([^,\d]+?)(?:\s+(?:no\.?|nomor)\s*\d+)?(?:,|$)/i,
+        ];
+
+        for (const pattern of patterns) {
+            const match = address.match(pattern);
+            if (match && match[1]) {
+                return match[1].trim();
+            }
+        }
+
+        // Fallback: get first part before comma
+        const parts = address.split(',');
+        if (parts[0]) {
+            return parts[0].replace(/^(?:jalan|jl\.?|gang|gg\.?)\s+/i, '').trim();
+        }
+
+        return '';
+    }
+
+    /**
+     * Extract meaningful tokens from address
+     */
+    function extractAddressTokens(input) {
+        // Remove common prefixes and noise words
+        let cleaned = input.toLowerCase();
+        cleaned = cleaned.replace(/^(jalan|jl\.?|gang|gg\.?)\s+/i, '');
+        cleaned = cleaned.replace(/\b(no\.?|nomor|rt\.?|rw\.?|kec\.?|kecamatan|kel\.?|kelurahan|kota|kabupaten|kab\.?)\b/gi, '');
+        cleaned = cleaned.replace(/\b(terusan|trs\.?|raya|barat|timur|selatan|utara)\b/gi, '');
+
+        // Split and filter tokens
+        const tokens = cleaned.split(/[\s,.\-_\/]+/).filter(token => {
+            return token.length >= 2 && !/^\d+$/.test(token);
+        });
+
+        return [...new Set(tokens)];
+    }
+
+    /**
+     * Token-based similarity for long addresses
+     */
+    function tokenBasedSimilarity(input, target) {
+        const inputTokens = extractAddressTokens(input);
+        const targetTokens = extractAddressTokens(target);
+
+        if (inputTokens.length === 0 || targetTokens.length === 0) return 0;
+
+        let matchedScore = 0;
+        let totalWeight = 0;
+
+        for (const inputToken of inputTokens) {
+            let bestMatch = 0;
+            const tokenWeight = inputToken.length; // Longer tokens have more weight
+
+            for (const targetToken of targetTokens) {
+                // Exact token match
+                if (inputToken === targetToken) {
+                    bestMatch = 100;
+                    break;
+                }
+
+                // Substring match
+                if (inputToken.includes(targetToken) || targetToken.includes(inputToken)) {
+                    const minLen = Math.min(inputToken.length, targetToken.length);
+                    const maxLen = Math.max(inputToken.length, targetToken.length);
+                    const substringScore = (minLen / maxLen) * 95;
+                    bestMatch = Math.max(bestMatch, substringScore);
+                    continue;
+                }
+
+                // Jaro-Winkler for fuzzy match
+                const jwScore = jaroWinklerSimilarity(inputToken, targetToken);
+                bestMatch = Math.max(bestMatch, jwScore);
+            }
+
+            matchedScore += bestMatch * tokenWeight;
+            totalWeight += tokenWeight;
+        }
+
+        return totalWeight > 0 ? Math.round(matchedScore / totalWeight) : 0;
+    }
+
+    /**
+     * POWERFUL Advanced fuzzy matching combining multiple algorithms
+     * Uses: Token-based + Jaro-Winkler + Levenshtein + Indonesian name variations
+     */
+    function advancedFuzzyMatch(str1, str2) {
+        const normalized1 = str1.toLowerCase().trim();
+        const normalized2 = str2.toLowerCase().trim();
+        if (normalized1 === normalized2) return 100;
+
+        const scores = [];
+
+        // 1. Basic Levenshtein + Jaro-Winkler (original algorithm)
+        const levenshtein = levenshteinSimilarity(normalized1, normalized2);
+        const jaroWinkler = jaroWinklerSimilarity(normalized1, normalized2);
+        const basicScore = Math.round((jaroWinkler * 0.6) + (levenshtein * 0.4));
+        if (basicScore >= 50) scores.push(basicScore);
+
+        // 2. Normalized with Indonesian variations
+        const normalizedVar1 = normalizeIndonesianName(str1);
+        const normalizedVar2 = normalizeIndonesianName(str2);
+        if (normalizedVar1 === normalizedVar2) return 100;
+
+        const varLevenshtein = levenshteinSimilarity(normalizedVar1, normalizedVar2);
+        const varJaroWinkler = jaroWinklerSimilarity(normalizedVar1, normalizedVar2);
+        const varScore = Math.round((varJaroWinkler * 0.6) + (varLevenshtein * 0.4));
+        if (varScore >= 50) scores.push(varScore);
+
+        // 3. Token-based matching for longer strings
+        if (str1.length > 15 || str2.length > 15) {
+            const tokenScore = tokenBasedSimilarity(str1, str2);
+            if (tokenScore >= 50) scores.push(tokenScore);
+        }
+
+        // 4. Contains check
+        const cleanStr1 = normalized1.replace(/[^a-z0-9]/g, '');
+        const cleanStr2 = normalized2.replace(/[^a-z0-9]/g, '');
+        if (cleanStr1.includes(cleanStr2) || cleanStr2.includes(cleanStr1)) {
+            const minLen = Math.min(cleanStr1.length, cleanStr2.length);
+            const maxLen = Math.max(cleanStr1.length, cleanStr2.length);
+            if (minLen >= 3) {
+                const containsScore = 70 + (minLen / maxLen * 25);
+                scores.push(Math.round(containsScore));
+            }
+        }
+
+        // 5. Extract street name and compare
+        const street1 = extractStreetName(str1);
+        const street2 = extractStreetName(str2);
+        if (street1 && street2) {
+            const streetNorm1 = normalizeIndonesianName(street1);
+            const streetNorm2 = normalizeIndonesianName(street2);
+            if (streetNorm1 === streetNorm2) {
+                scores.push(95);
+            } else {
+                const streetJW = jaroWinklerSimilarity(streetNorm1, streetNorm2);
+                if (streetJW >= 70) scores.push(streetJW);
+            }
+        }
+
+        // Return highest score
+        if (scores.length === 0) return 0;
+        return Math.max(...scores);
+    }
 
     // ========================================
     // KELURAHAN DATA LOADER (FROM API)
@@ -81,8 +379,8 @@ $(document).ready(function () {
     // ========================================
 
     /**
-     * Parse Indonesian standard address format
-     * Format: Jl. [nama jalan] No. [nomor], [Kelurahan], Kec. [Kecamatan], Kota [Kota], [Provinsi] [Kode Pos]
+     * Parse Indonesian standard address format with enhanced NLP
+     * Format: Jl. [nama jalan] No. [nomor], RT/RW, [Kelurahan], Kec. [Kecamatan], Kota [Kota], [Provinsi] [Kode Pos]
      * 
      * @param {string} alamat - Full address string
      * @returns {object} Parsed address components
@@ -91,6 +389,9 @@ $(document).ready(function () {
         if (!alamat || typeof alamat !== 'string') {
             return {
                 street: '',
+                streetNumber: '',
+                rtRw: '',
+                building: '',
                 kelurahan: '',
                 kecamatan: '',
                 kota: '',
@@ -101,6 +402,9 @@ $(document).ready(function () {
 
         const result = {
             street: '',
+            streetNumber: '',
+            rtRw: '',
+            building: '',
             kelurahan: '',
             kecamatan: '',
             kota: '',
@@ -108,70 +412,143 @@ $(document).ready(function () {
             postalCode: ''
         };
 
+        // Pre-processing: normalize common variations
+        let processedAddress = alamat
+            .replace(/\bJln\b/gi, 'Jalan')
+            .replace(/\bJl\b(?!\.)/gi, 'Jl.')
+            .replace(/\bGg\b(?!\.)/gi, 'Gg.')
+            .replace(/\bNo\b(?!\.)/gi, 'No.')
+            .replace(/\bKec\b(?!\.)/gi, 'Kec.')
+            .replace(/\bKel\b(?!\.)/gi, 'Kel.')
+            .replace(/\bKab\b(?!\.)/gi, 'Kab.');
+
+        // Extract RT/RW first (before splitting by comma)
+        const rtRwMatch = processedAddress.match(/\b(RT\.?\s*\/?\s*RW\.?\s*\d+\s*\/?\s*\d+|RT\.?\s*\d+\s*\/?\s*RW\.?\s*\d+|RT\.?\s*\d+|RW\.?\s*\d+)\b/i);
+        if (rtRwMatch) {
+            result.rtRw = rtRwMatch[0].trim();
+            // Remove RT/RW from address for cleaner parsing
+            processedAddress = processedAddress.replace(rtRwMatch[0], '').replace(/\s+/g, ' ').trim();
+        }
+
+        // Extract building/complex/apartment names
+        const buildingPatterns = [
+            /\b(Perumahan|Perum|Komplek|Kompleks|Komp\.|Apartemen|Apt\.|Ruko|Gedung|Gd\.)\s+([^,]+)/gi,
+            /\b(Cluster|Blok)\s+([A-Z0-9]+)/gi
+        ];
+
+        buildingPatterns.forEach(pattern => {
+            const match = processedAddress.match(pattern);
+            if (match && !result.building) {
+                result.building = match[0].trim();
+            }
+        });
+
         // Split by comma separator
-        const parts = alamat.split(',').map(part => part.trim()).filter(part => part.length > 0);
+        const parts = processedAddress.split(',').map(part => part.trim()).filter(part => part.length > 0);
 
         if (parts.length === 0) {
             return result;
         }
 
-        // Process each part
+        // Enhanced pattern matching for each part
         parts.forEach((part, index) => {
             const partLower = part.toLowerCase();
 
-            // Detect street pattern (usually first part with Jl., Gang, No.)
-            if (index === 0 || partLower.match(/\b(jl\.|jalan|gang|gg\.|no\.|nomor)\b/i)) {
-                if (!result.street) {
+            // 1. STREET DETECTION (Enhanced)
+            if (!result.street) {
+                // Match street patterns with number
+                const streetWithNumber = part.match(/^(Jl\.|Jalan|Gg\.|Gang)\s+(.+?)(?:\s+No\.?\s*(\d+[A-Za-z]?))?$/i);
+                if (streetWithNumber) {
+                    result.street = streetWithNumber[1] + ' ' + streetWithNumber[2].trim();
+                    if (streetWithNumber[3]) {
+                        result.streetNumber = streetWithNumber[3];
+                    }
+                    return;
+                }
+
+                // First part is usually street if it contains street indicators
+                if (index === 0 || partLower.match(/\b(jl\.|jalan|gang|gg\.)\b/i)) {
                     result.street = part;
+
+                    // Extract street number if present
+                    const numberMatch = part.match(/\bNo\.?\s*(\d+[A-Za-z]?)\b/i);
+                    if (numberMatch) {
+                        result.streetNumber = numberMatch[1];
+                    }
+                    return;
                 }
             }
 
-            // Detect kecamatan pattern: "Kec. [nama]" or "Kecamatan [nama]"
+            // 2. KECAMATAN DETECTION (Enhanced)
             if (partLower.match(/\b(kec\.|kecamatan)\b/i)) {
                 result.kecamatan = part
                     .replace(/\bkec\.\s*/i, '')
                     .replace(/\bkecamatan\s*/i, '')
                     .trim();
+                return;
             }
 
-            // Detect kota pattern: "Kota [nama]" or "Kabupaten [nama]"
-            else if (partLower.match(/\b(kota|kabupaten)\b/i)) {
+            // 3. KOTA/KABUPATEN DETECTION (Enhanced)
+            if (partLower.match(/\b(kota|kabupaten|kab\.)\b/i)) {
                 result.kota = part.trim();
+                return;
             }
 
-            // Detect provinsi pattern
-            else if (partLower.match(/\b(jawa timur|jawa tengah|jawa barat|east java)\b/i)) {
+            // 4. PROVINSI DETECTION
+            if (partLower.match(/\b(jawa timur|jawa tengah|jawa barat|east java|jatim)\b/i)) {
                 result.provinsi = part.trim();
+                return;
             }
 
-            // Detect postal code (5 digits)
-            else if (partLower.match(/\b\d{5}\b/)) {
+            // 5. POSTAL CODE DETECTION
+            if (partLower.match(/\b\d{5}\b/)) {
                 result.postalCode = part.match(/\d{5}/)[0];
+                return;
             }
 
-            // Extract kelurahan from position 2 (after street, before kecamatan)
-            // This is the standard Indonesian address format
-            else if (index === 1 && !result.kelurahan && !partLower.match(/\b(kec\.|kecamatan|kota|kabupaten|rt|rw)\b/i)) {
-                result.kelurahan = part;
-            }
+            // 6. KELURAHAN DETECTION (Enhanced with multiple strategies)
+            if (!result.kelurahan) {
+                // Strategy 1: Explicit kelurahan prefix
+                if (partLower.match(/\b(kel\.|kelurahan|desa)\b/i)) {
+                    result.kelurahan = part
+                        .replace(/\bkel\.\s*/i, '')
+                        .replace(/\bkelurahan\s*/i, '')
+                        .replace(/\bdesa\s*/i, '')
+                        .trim();
+                    return;
+                }
 
-            // Fallback: if not matched yet and doesn't contain special keywords, might be kelurahan
-            else if (!result.kelurahan &&
-                !partLower.match(/\b(jl\.|jalan|gang|no\.|kec\.|kecamatan|kota|kabupaten|rt|rw)\b/i) &&
-                index > 0) {
-                result.kelurahan = part;
+                // Strategy 2: Position-based detection (after street, before kecamatan)
+                // Kelurahan is typically in position 1 or 2 (after street)
+                if (index >= 1 && index <= 2 && !partLower.match(/\b(kec\.|kecamatan|kota|kabupaten|rt|rw|jl\.|jalan|gang|no\.|perumahan|komplek)\b/i)) {
+                    // Additional validation: check if it's not a building/complex name
+                    if (!result.building || !part.includes(result.building)) {
+                        result.kelurahan = part;
+                        return;
+                    }
+                }
+
+                // Strategy 3: Fallback - any unmatched part that doesn't contain keywords
+                if (index > 0 &&
+                    !partLower.match(/\b(jl\.|jalan|gang|no\.|kec\.|kecamatan|kota|kabupaten|kab\.|rt|rw|perumahan|komplek|cluster|blok)\b/i)) {
+                    result.kelurahan = part;
+                }
             }
         });
 
-        // Normalize all components
+        // Post-processing: Clean up and normalize
         Object.keys(result).forEach(key => {
             if (result[key]) {
                 result[key] = normalizeAddressComponent(result[key]);
             }
         });
 
-        console.log('📍 [ADDRESS PARSER] Parsed Indonesian address:');
+        // Enhanced logging with more details
+        console.log('📍 [ADDRESS PARSER] Enhanced parsing result:');
         console.log('   🏠 Street:', result.street || '(not detected)');
+        console.log('   🔢 Street Number:', result.streetNumber || '(not detected)');
+        console.log('   📍 RT/RW:', result.rtRw || '(not detected)');
+        console.log('   🏢 Building/Complex:', result.building || '(not detected)');
         console.log('   🏘️  Kelurahan:', result.kelurahan || '(not detected)');
         console.log('   🏙️  Kecamatan:', result.kecamatan || '(not detected)');
         console.log('   🌆 Kota:', result.kota || '(not detected)');
@@ -182,7 +559,7 @@ $(document).ready(function () {
     }
 
     /**
-     * Normalize address component by cleaning text
+     * Normalize address component by cleaning text with enhanced rules
      * 
      * @param {string} component - Address component to normalize
      * @returns {string} Normalized component
@@ -200,16 +577,25 @@ $(document).ready(function () {
         // Remove special characters at start/end
         normalized = normalized.replace(/^[,.\-_\s]+|[,.\-_\s]+$/g, '');
 
-        // Normalize common abbreviations
+        // Normalize common abbreviations (preserve dots for proper nouns)
         normalized = normalized
-            .replace(/\bJl\.\s*/gi, 'Jalan ')
-            .replace(/\bGg\.\s*/gi, 'Gang ')
-            .replace(/\bNo\.\s*/gi, 'Nomor ')
-            .replace(/\bKec\.\s*/gi, 'Kecamatan ')
-            .replace(/\bKel\.\s*/gi, 'Kelurahan ');
+            .replace(/\bJln\.?\s*/gi, 'Jalan ')
+            .replace(/\bJl\.?\s*/gi, 'Jalan ')
+            .replace(/\bGg\.?\s*/gi, 'Gang ')
+            .replace(/\bNo\.?\s*/gi, 'Nomor ')
+            .replace(/\bKec\.?\s*/gi, 'Kecamatan ')
+            .replace(/\bKel\.?\s*/gi, 'Kelurahan ')
+            .replace(/\bKab\.?\s*/gi, 'Kabupaten ')
+            .replace(/\bPerum\.?\s*/gi, 'Perumahan ')
+            .replace(/\bKomp\.?\s*/gi, 'Komplek ')
+            .replace(/\bApt\.?\s*/gi, 'Apartemen ')
+            .replace(/\bGd\.?\s*/gi, 'Gedung ');
 
         // Remove duplicate spaces again after replacements
         normalized = normalized.replace(/\s+/g, ' ').trim();
+
+        // Capitalize first letter of each word for proper nouns
+        normalized = normalized.replace(/\b\w/g, char => char.toUpperCase());
 
         return normalized;
     }
@@ -320,10 +706,35 @@ $(document).ready(function () {
             showSearchStatus('success', message);
             zoomToDetectedKelurahan(detectedKelurahan);
 
-            // Step 3: Lakukan geocoding untuk alamat lengkap
-            setTimeout(() => {
-                performEnhancedGeocoding(alamat, detectedKelurahan);
-            }, 1500); // Beri waktu untuk zoom selesai
+            // Step 3: Lakukan deteksi jalan (Async)
+            detectJalanFromAddress(alamat, detectedKelurahan.data.id, function (detectedJalan) {
+                if (detectedJalan) {
+                    let streetMessage = `Jalan "${detectedJalan.nama_jalan}" terdeteksi!`;
+                    showSearchStatus('success', streetMessage);
+
+                    // Use street coordinates
+                    const streetLocation = {
+                        lat: parseFloat(detectedJalan.latitude),
+                        lng: parseFloat(detectedJalan.longitude)
+                    };
+
+                    updateMarkerPosition(streetLocation.lat, streetLocation.lng);
+                    map.setView([streetLocation.lat, streetLocation.lng], 17);
+
+                    // Fill form data if needed
+                    // ...
+
+                    // Perform enhanced geocoding as validation/backup
+                    setTimeout(() => {
+                        performEnhancedGeocoding(alamat, detectedKelurahan);
+                    }, 1000);
+                } else {
+                    // Fallback to standard geocoding if street not found
+                    setTimeout(() => {
+                        performEnhancedGeocoding(alamat, detectedKelurahan);
+                    }, 1500);
+                }
+            });
         } else {
             // Fallback: Try to use parsed address components (Kota & Kecamatan)
             if (parsedAddress.kota && parsedAddress.kecamatan) {
@@ -493,6 +904,33 @@ $(document).ready(function () {
                     }
                 }
             });
+
+            // ========================================
+            // METHOD 6: ADVANCED FUZZY MATCHING
+            // Score: 70-92 (String similarity algorithms)
+            // Uses Levenshtein + Jaro-Winkler for typo tolerance
+            // ========================================
+
+            // Try fuzzy matching if no high-confidence match yet
+            if (bestScore < 90) {
+                const fuzzyScore = advancedFuzzyMatch(kelurahanNameLower, alamatLower);
+
+                if (fuzzyScore >= 70) {
+                    const finalScore = Math.min(92, fuzzyScore);
+
+                    if (finalScore > bestScore) {
+                        bestScore = finalScore;
+                        bestMatch = {
+                            key: kelurahanKey,
+                            name: kelurahanName,
+                            data: kelurahanData,
+                            score: finalScore,
+                            method: 'advanced_fuzzy'
+                        };
+                        console.log(`   🔍 Advanced fuzzy: ${kelurahanName} (${fuzzyScore}%)`);
+                    }
+                }
+            }
         });
 
         // ========================================
@@ -535,6 +973,52 @@ $(document).ready(function () {
         }
 
         return null;
+    }
+
+    /**
+     * Detect jalan from address using backend API
+     * 
+     * @param {string} alamat - Full address string
+     * @param {number} kelurahanId - ID of detected kelurahan
+     * @param {function} callback - Callback function with result
+     */
+    function detectJalanFromAddress(alamat, kelurahanId, callback) {
+        if (!kelurahanId) {
+            callback(null);
+            return;
+        }
+
+        console.log('🔍 Detecting jalan from address:', alamat, 'Kelurahan ID:', kelurahanId);
+
+        $.ajax({
+            url: '/toko/search-jalan',
+            type: 'GET',
+            data: {
+                keyword: alamat,
+                kelurahan_id: kelurahanId,
+                limit: 1
+            },
+            success: function (response) {
+                if (response.status === 'success' && response.results.length > 0) {
+                    // Check match score
+                    const jalan = response.results[0];
+                    if (jalan.match_score >= 70) {
+                        console.log('✅ Jalan detected:', jalan);
+                        callback(jalan);
+                    } else {
+                        console.log('⚠️ Jalan found but low score:', jalan.match_score);
+                        callback(null);
+                    }
+                } else {
+                    console.log('❌ No jalan detected');
+                    callback(null);
+                }
+            },
+            error: function () {
+                console.error('❌ Error searching jalan');
+                callback(null);
+            }
+        });
     }
 
     /**
@@ -901,6 +1385,14 @@ $(document).ready(function () {
                         // Threshold: 75 (High/Excellent)
                         if (geocodeInfo.quality_score >= 75) {
                             console.log('   ✨ High quality match - Auto-selecting coordinates');
+
+                            // Store initial geocoded position for tolerance tracking
+                            storeInitialGeocodedPosition(
+                                geocodeInfo.latitude,
+                                geocodeInfo.longitude,
+                                geocodeInfo.formatted_address
+                            );
+
                             updateCoordinateFields(geocodeInfo.latitude, geocodeInfo.longitude);
                             showFinalMarker(geocodeInfo.latitude, geocodeInfo.longitude, geocodeInfo.formatted_address);
                             showLocationStatus(geocodeInfo.latitude, geocodeInfo.longitude, true);
@@ -964,15 +1456,25 @@ $(document).ready(function () {
         });
     }
 
+    /**
+     * Build smart, complete address for geocoding with enhanced NLP
+     * Uses parsed address components and fuzzy matching for accuracy
+     * 
+     * @param {string} alamat - Original address string
+     * @param {object} kelurahan - Detected kelurahan object
+     * @returns {string} Enhanced address optimized for geocoding
+     */
     function buildSmartAddress(alamat, kelurahan) {
         let fullAddress = alamat.trim();
 
-        // Parse alamat untuk melihat komponen yang sudah ada
+        // Parse alamat to understand existing components
+        const parsedAddress = parseIndonesianAddress(alamat);
         const addressParts = fullAddress.split(',').map(part => part.trim());
         const addressLower = fullAddress.toLowerCase();
 
-        console.log('Building smart address from:', fullAddress);
-        console.log('Detected kelurahan:', kelurahan);
+        console.log('🏗️  Building smart address from:', fullAddress);
+        console.log('📋 Parsed components:', parsedAddress);
+        console.log('📍 Detected kelurahan:', kelurahan);
 
         // Jika kelurahan terdeteksi, pastikan alamat sudah lengkap dengan format standar
         if (kelurahan) {
@@ -986,21 +1488,31 @@ $(document).ready(function () {
             let hasKota = false;
             let hasProvinsi = false;
 
-            // Check existing components
+            // Check existing components with fuzzy matching enhancement
             addressParts.forEach(part => {
                 const partLower = part.toLowerCase();
 
-                if (partLower.includes(kelurahanName.toLowerCase())) {
+                // Enhanced kelurahan detection with fuzzy matching
+                if (partLower.includes(kelurahanName.toLowerCase()) ||
+                    advancedFuzzyMatch(part, kelurahanName) >= 80) {
                     hasKelurahan = true;
                 }
+
+                // Enhanced kecamatan detection
                 if (partLower.includes('kec.') || partLower.includes('kecamatan') ||
-                    partLower.includes(kecamatanName.toLowerCase())) {
+                    partLower.includes(kecamatanName.toLowerCase()) ||
+                    advancedFuzzyMatch(part, kecamatanName) >= 80) {
                     hasKecamatan = true;
                 }
+
+                // Enhanced kota detection  
+                const kotaSimplified = kotaName.toLowerCase().replace('kota ', '').replace('kabupaten ', '');
                 if (partLower.includes('kota') || partLower.includes('kabupaten') ||
-                    partLower.includes(kotaName.toLowerCase().replace('kota ', '').replace('kabupaten ', ''))) {
+                    partLower.includes(kotaSimplified) ||
+                    advancedFuzzyMatch(part, kotaName) >= 80) {
                     hasKota = true;
                 }
+
                 if (partLower.includes('jawa timur') || partLower.includes('east java')) {
                     hasProvinsi = true;
                 }
@@ -1361,99 +1873,6 @@ $(document).ready(function () {
         });
 
         console.log('✅ Preview marker displayed');
-    }
-
-    /**
-     * Show final marker (red) with popup
-     * Requirements: 1.5, 2.1, 2.2
-     * 
-     * @param {number} lat - Latitude
-     * @param {number} lng - Longitude
-     * @param {string} popupText - Text to display in popup
-     */
-    function showFinalMarker(lat, lng, popupText) {
-        if (!interactiveMap) {
-            console.warn('⚠️ Cannot show final marker: map not initialized');
-            return;
-        }
-
-        // Clear existing markers
-        clearAllMarkers();
-
-        console.log(`📍 Showing final marker at [${lat}, ${lng}]`);
-
-        // Create red final marker with enhanced styling
-        const finalIcon = L.divIcon({
-            className: 'final-marker',
-            html: '<div style="background-color: #dc3545; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5);"></div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        });
-
-        currentMarker = L.marker([lat, lng], {
-            icon: finalIcon,
-            draggable: true
-        }).addTo(interactiveMap);
-
-        // Bind popup with provided text
-        const popupContent = `
-            <div style="text-align: center;">
-                <strong><i class="fas fa-store text-danger"></i> Lokasi Final Toko</strong><br>
-                <small style="color: #666; margin-top: 4px; display: block;">${popupText}</small><br>
-                <code style="background: #f8f9fa; padding: 2px 4px; border-radius: 3px;">${lat.toFixed(6)}, ${lng.toFixed(6)}</code><br>
-                <small class="text-muted">Geser marker untuk penyesuaian halus</small>
-            </div>
-        `;
-
-        currentMarker.bindPopup(popupContent).openPopup();
-
-        // Add drag end listener for marker adjustment
-        currentMarker.on('dragend', function (e) {
-            const newLat = e.target.getLatLng().lat;
-            const newLng = e.target.getLatLng().lng;
-
-            console.log(`🖱️ Final marker dragged to [${newLat}, ${newLng}]`);
-
-            if (isWithinMalangRegion(newLat, newLng)) {
-                updateCoordinateFields(newLat, newLng);
-                showLocationStatus(newLat, newLng, true);
-
-                // Update popup with new coordinates
-                currentMarker.setPopupContent(`
-                    <div style="text-align: center;">
-                        <strong><i class="fas fa-store text-danger"></i> Lokasi Final Toko</strong><br>
-                        <small style="color: #666;">Lokasi disesuaikan</small><br>
-                        <code style="background: #f8f9fa; padding: 2px 4px; border-radius: 3px;">${newLat.toFixed(6)}, ${newLng.toFixed(6)}</code><br>
-                        <small class="text-muted">Geser marker untuk penyesuaian halus</small>
-                    </div>
-                `);
-            } else {
-                showAlert('warning', 'Lokasi tidak valid! Marker dikembalikan ke posisi sebelumnya.');
-                currentMarker.setLatLng([lat, lng]);
-            }
-        });
-
-        console.log('✅ Final marker displayed');
-    }
-
-    /**
-     * Clear all markers from map (both preview and final)
-     * Requirements: 1.5, 2.1, 2.2
-     */
-    function clearAllMarkers() {
-        console.log('🧹 Clearing all markers from map');
-
-        if (currentMarker && interactiveMap) {
-            interactiveMap.removeLayer(currentMarker);
-            currentMarker = null;
-            console.log('  ✓ Final marker removed');
-        }
-
-        if (previewMarker && interactiveMap) {
-            interactiveMap.removeLayer(previewMarker);
-            previewMarker = null;
-            console.log('  ✓ Preview marker removed');
-        }
     }
 
     /**
@@ -2906,6 +3325,342 @@ $(document).ready(function () {
             searchTimeout = null;
         }
     }
+
+    // ========================================
+    // MARKER MANAGEMENT FUNCTIONS
+    // ========================================
+
+    // Global variable for tolerance circle
+    let toleranceCircle = null;
+
+    /**
+     * Show final marker with draggable functionality and tolerance circle
+     * Requirements: 2.1, 2.2, 7.1, 7.2
+     * 
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @param {string} label - Marker label/popup text
+     */
+    function showFinalMarker(lat, lng, label) {
+        if (!interactiveMap) {
+            console.warn('⚠️ Map not initialized, cannot show marker');
+            return;
+        }
+
+        console.log(`📍 Showing final marker at [${lat}, ${lng}]`);
+
+        // Clear previous markers and circles
+        clearAllMarkers();
+
+        // Create draggable marker with custom icon
+        const markerIcon = L.divIcon({
+            className: 'final-marker',
+            html: `<div style="background-color: #dc3545; width: 24px; height: 24px; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.6);"></div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+
+        currentMarker = L.marker([lat, lng], {
+            icon: markerIcon,
+            draggable: true,
+            autoPan: true
+        }).addTo(interactiveMap);
+
+        // Bind popup with location info
+        const popupContent = `
+            <div style="text-align: center; min-width: 200px;">
+                <strong><i class="fas fa-map-marker-alt" style="color: #dc3545;"></i> Lokasi Toko</strong><br>
+                <small style="color: #666;">${label}</small><br>
+                <code style="font-size: 11px; background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">
+                    ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                </code><br>
+                <small style="color: #28a745; margin-top: 4px; display: block;">
+                    <i class="fas fa-arrows-alt"></i> Marker dapat digeser
+                </small>
+            </div>
+        `;
+        currentMarker.bindPopup(popupContent).openPopup();
+
+        // Add tolerance circle (50 meters radius)
+        toleranceCircle = L.circle([lat, lng], {
+            radius: MAX_TOLERANCE_METERS,
+            color: '#28a745',
+            fillColor: '#28a745',
+            fillOpacity: 0.1,
+            weight: 2,
+            dashArray: '5, 5'
+        }).addTo(interactiveMap);
+
+        // Bind popup to circle
+        toleranceCircle.bindPopup(`
+            <div style="text-align: center;">
+                <strong><i class="fas fa-circle-notch"></i> Radius Toleransi</strong><br>
+                <span class="badge badge-success">${MAX_TOLERANCE_METERS} meter</span><br>
+                <small style="color: #666; margin-top: 4px; display: block;">
+                    Marker harus berada dalam radius ini
+                </small>
+            </div>
+        `);
+
+        // Event: Marker drag start
+        currentMarker.on('dragstart', function (e) {
+            console.log('🖱️ Marker drag started');
+            if (toleranceCircle) {
+                toleranceCircle.setStyle({ color: '#ffc107', fillColor: '#ffc107' });
+            }
+        });
+
+        // Event: Marker dragging
+        currentMarker.on('drag', function (e) {
+            const newLatLng = e.target.getLatLng();
+
+            // Update tolerance circle position
+            if (toleranceCircle) {
+                toleranceCircle.setLatLng(newLatLng);
+            }
+
+            // Update coordinate fields in real-time
+            updateCoordinateFields(newLatLng.lat, newLatLng.lng);
+        });
+
+        // Event: Marker drag end
+        currentMarker.on('dragend', function (e) {
+            const newLatLng = e.target.getLatLng();
+            const newLat = newLatLng.lat;
+            const newLng = newLatLng.lng;
+
+            console.log(`📍 Marker dragged to [${newLat}, ${newLng}]`);
+
+            // Validate if still within Malang region
+            if (!isWithinMalangRegion(newLat, newLng)) {
+                showAlert('warning', 'Lokasi di luar wilayah Malang Raya! Marker dikembalikan ke posisi sebelumnya.');
+                currentMarker.setLatLng([lat, lng]);
+                if (toleranceCircle) {
+                    toleranceCircle.setLatLng([lat, lng]);
+                }
+                updateCoordinateFields(lat, lng);
+                return;
+            }
+
+            // Update coordinate fields
+            updateCoordinateFields(newLat, newLng);
+
+            // Update popup content
+            currentMarker.setPopupContent(`
+                <div style="text-align: center; min-width: 200px;">
+                    <strong><i class="fas fa-map-marker-alt" style="color: #dc3545;"></i> Lokasi Toko</strong><br>
+                    <small style="color: #666;">Posisi disesuaikan manual</small><br>
+                    <code style="font-size: 11px; background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">
+                        ${newLat.toFixed(6)}, ${newLng.toFixed(6)}
+                    </code><br>
+                    <small style="color: #28a745; margin-top: 4px; display: block;">
+                        <i class="fas fa-check-circle"></i> Posisi tersimpan
+                    </small>
+                </div>
+            `);
+
+            // Validate tolerance if initial position exists
+            if (initialGeocodedPosition) {
+                validateMarkerTolerance(newLat, newLng);
+            }
+
+            // Reset circle color
+            if (toleranceCircle) {
+                toleranceCircle.setStyle({ color: '#28a745', fillColor: '#28a745' });
+            }
+
+            // Show location status
+            showLocationStatus(newLat, newLng, true);
+
+            console.log('✅ Marker position updated successfully');
+        });
+
+        // Pan to marker location
+        interactiveMap.panTo([lat, lng]);
+
+        console.log('✅ Final marker and tolerance circle displayed');
+    }
+
+    /**
+     * Update marker position (for street detection)
+     * Requirements: 1.3
+     * 
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     */
+    function updateMarkerPosition(lat, lng) {
+        if (!interactiveMap) {
+            console.warn('⚠️ Map not initialized, cannot update marker');
+            return;
+        }
+
+        console.log(`🔄 Updating marker position to [${lat}, ${lng}]`);
+
+        if (currentMarker) {
+            // Update existing marker position
+            currentMarker.setLatLng([lat, lng]);
+
+            // Update tolerance circle position
+            if (toleranceCircle) {
+                toleranceCircle.setLatLng([lat, lng]);
+            }
+
+            // Update popup
+            currentMarker.setPopupContent(`
+                <div style="text-align: center; min-width: 200px;">
+                    <strong><i class="fas fa-map-marker-alt" style="color: #dc3545;"></i> Lokasi Toko</strong><br>
+                    <small style="color: #666;">Dari deteksi jalan</small><br>
+                    <code style="font-size: 11px; background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">
+                        ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                    </code>
+                </div>
+            `).openPopup();
+
+            // Pan to new position
+            interactiveMap.panTo([lat, lng]);
+        } else {
+            // Create new marker if doesn't exist
+            showFinalMarker(lat, lng, 'Lokasi dari deteksi jalan');
+        }
+
+        // Update coordinate fields
+        updateCoordinateFields(lat, lng);
+
+        console.log('✅ Marker position updated');
+    }
+
+    /**
+     * Clear all markers and circles from map
+     * Requirements: 2.2
+     */
+    function clearAllMarkers() {
+        if (!interactiveMap) return;
+
+        console.log('🧹 Clearing all markers and circles');
+
+        // Remove current marker
+        if (currentMarker) {
+            interactiveMap.removeLayer(currentMarker);
+            currentMarker = null;
+        }
+
+        // Remove preview marker
+        if (previewMarker) {
+            interactiveMap.removeLayer(previewMarker);
+            previewMarker = null;
+        }
+
+        // Remove tolerance circle
+        if (toleranceCircle) {
+            interactiveMap.removeLayer(toleranceCircle);
+            toleranceCircle = null;
+        }
+
+        console.log('✅ All markers and circles cleared');
+    }
+
+    // ========================================
+    // TOLERANCE VALIDATION (50M ACCURACY)
+    // ========================================
+
+    /**
+     * Calculate distance between two coordinates in meters using Haversine formula
+     */
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371000; // Earth radius in meters
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+
+        return Math.round(distance * 100) / 100;
+    }
+
+    /**
+     * Show tolerance status badge
+     */
+    function showToleranceStatus(distanceMeters, withinTolerance) {
+        const statusHtml = withinTolerance
+            ? `<span class="badge badge-success"><i class="fas fa-check-circle"></i> Dalam Toleransi (${distanceMeters}m)</span>`
+            : `<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Melebihi Toleransi (${distanceMeters}m, maks: ${MAX_TOLERANCE_METERS}m)</span>`;
+
+        let $toleranceStatus = $('#toleranceStatus');
+        if ($toleranceStatus.length === 0) {
+            $('#mapContainer').after('<div id="toleranceStatus" class="mt-2"></div>');
+            $toleranceStatus = $('#toleranceStatus');
+        }
+        $toleranceStatus.html(statusHtml).show();
+    }
+
+    /**
+     * Show tolerance warning when marker moved > 50m
+     */
+    function showToleranceWarning(distanceMeters) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Marker Digeser Terlalu Jauh',
+            html: `
+                <p>Marker telah digeser <strong>${distanceMeters} meter</strong> dari posisi hasil geocoding.</p>
+                <p>Toleransi maksimal: <strong>${MAX_TOLERANCE_METERS} meter</strong></p>
+                <p>Selisih: <strong>${Math.round(distanceMeters - MAX_TOLERANCE_METERS)} meter</strong></p>
+                <hr>
+                <p class="text-muted">Pastikan lokasi marker sudah tepat sesuai alamat toko.</p>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Tetap Gunakan Posisi Ini',
+            cancelButtonText: 'Kembalikan ke Posisi Geocoding',
+            confirmButtonColor: '#f39c12',
+            cancelButtonColor: '#3085d6'
+        }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.cancel && initialGeocodedPosition && currentMarker) {
+                currentMarker.setLatLng([initialGeocodedPosition.lat, initialGeocodedPosition.lng]);
+                updateCoordinateFields(initialGeocodedPosition.lat, initialGeocodedPosition.lng);
+                showToleranceStatus(0, true);
+                console.log('🔄 Marker reset to initial geocoded position');
+            }
+        });
+    }
+
+    /**
+     * Store initial geocoded position for tolerance tracking
+     */
+    function storeInitialGeocodedPosition(lat, lng, address) {
+        initialGeocodedPosition = { lat: lat, lng: lng, address: address };
+        console.log('📍 Stored initial geocoded position:', initialGeocodedPosition);
+        showToleranceStatus(0, true);
+    }
+
+    /**
+     * Validate marker position against tolerance
+     */
+    function validateMarkerTolerance(newLat, newLng) {
+        if (!initialGeocodedPosition) return;
+
+        const distance = calculateDistance(
+            initialGeocodedPosition.lat,
+            initialGeocodedPosition.lng,
+            newLat,
+            newLng
+        );
+
+        const withinTolerance = distance <= MAX_TOLERANCE_METERS;
+        console.log(`📏 Distance from geocoded position: ${distance}m (tolerance: ${MAX_TOLERANCE_METERS}m)`);
+
+        showToleranceStatus(distance, withinTolerance);
+
+        if (!withinTolerance) {
+            showToleranceWarning(distance);
+        }
+    }
+
+    // ========================================
+    // FORM MANAGEMENT
+    // ========================================
 
     function clearErrors() {
         $('.is-invalid').removeClass('is-invalid');

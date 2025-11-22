@@ -103,9 +103,12 @@ function displayCoordinateDetails(data) {
     } else if (provider === 'nominatim') {
         providerBadgeClass = 'badge-warning';
         providerText = 'Nominatim OSM';
+    } else if (provider === 'internal_street_database') {
+        providerBadgeClass = 'badge-success';
+        providerText = 'Database Jalan (Street Level)';
     } else if (provider === 'internal_database') {
         providerBadgeClass = 'badge-info';
-        providerText = 'Database Internal';
+        providerText = 'Database Kelurahan (Area Level)';
     }
 
     $('#detail-provider').removeClass().addClass(`badge ${providerBadgeClass}`).text(providerText);
@@ -186,6 +189,34 @@ function displayCoordinateDetails(data) {
         } else {
             $('#detail-distance').text('N/A');
         }
+    }
+
+    // Tolerance check display (if available)
+    if (data.tolerance_check) {
+        const toleranceHtml = data.tolerance_check.within_tolerance
+            ? `<span class="badge badge-success">
+                 <i class="fas fa-check-circle"></i> 
+                 Dalam Toleransi (${data.tolerance_check.distance_meters}m dari posisi geocoding)
+               </span>`
+            : `<span class="badge badge-warning">
+                 <i class="fas fa-exclamation-triangle"></i> 
+                 Melebihi Toleransi (${data.tolerance_check.distance_meters}m, maks: ${data.tolerance_check.max_tolerance_meters}m)
+               </span>`;
+
+        // Find or create tolerance status element
+        let $toleranceElement = $('#detail-tolerance-status');
+        if ($toleranceElement.length === 0) {
+            $('#detail-confidence').parent().after(`
+                <div class="form-group row">
+                    <label class="col-sm-4 col-form-label">Status Toleransi:</label>
+                    <div class="col-sm-8">
+                        <div id="detail-tolerance-status" class="mt-2"></div>
+                    </div>
+                </div>
+            `);
+            $toleranceElement = $('#detail-tolerance-status');
+        }
+        $toleranceElement.html(toleranceHtml).show();
     }
 
     // Show warnings for low quality coordinates

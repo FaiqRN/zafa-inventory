@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\KelurahanCoordinate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class KelurahanCoordinateSeeder extends Seeder
 {
@@ -14,7 +15,9 @@ class KelurahanCoordinateSeeder extends Seeder
     public function run(): void
     {
         // Truncate table untuk fresh seed
+        Schema::disableForeignKeyConstraints();
         DB::table('kelurahan_coordinates')->truncate();
+        Schema::enableForeignKeyConstraints();
 
         // Load data dari wilayah_malang.json
         $jsonPath = public_path('data/wilayah_malang.json');
@@ -384,6 +387,7 @@ class KelurahanCoordinateSeeder extends Seeder
 
     /**
      * Generate default coordinates berdasarkan kota/kecamatan
+     * FIXED: Reduced random offset from ±11km to ±25-30 meters for accuracy
      */
     private function generateDefaultCoordinates(string $kota, string $kecamatan): array
     {
@@ -396,9 +400,11 @@ class KelurahanCoordinateSeeder extends Seeder
 
         $baseCoords = $kotaDefaults[$kota] ?? ['lat' => -7.9666, 'lng' => 112.6326];
         
-        // Add small random offset untuk variasi
-        $latOffset = (rand(-100, 100) / 1000);
-        $lngOffset = (rand(-100, 100) / 1000);
+        // Add minimal random offset untuk variasi (~25-30 meters)
+        // CRITICAL FIX: Changed from rand(-100, 100) / 1000 (±11km) to rand(-25, 25) / 100000 (±25-30m)
+        // 0.00025 degrees ≈ 25-30 meters at Malang's latitude
+        $latOffset = (rand(-25, 25) / 100000);
+        $lngOffset = (rand(-25, 25) / 100000);
         
         return [
             'lat' => round($baseCoords['lat'] + $latOffset, 8),

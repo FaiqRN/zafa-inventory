@@ -306,19 +306,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Map Status Info -->
-                                    <div id="mapStatus" class="mt-2" style="display: none;">
-                                        <div class="alert alert-info alert-sm mb-0">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-map-pin mr-2"></i>
-                                                <div>
-                                                    <strong>Lokasi Dipilih:</strong>
-                                                    <div id="selectedLocationInfo" class="small"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>

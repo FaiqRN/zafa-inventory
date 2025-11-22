@@ -208,15 +208,28 @@ class TokoService
      * @param string $address
      * @return array
      */
-    public static function previewGeocode(string $address): array
+    public static function previewGeocode(string $address, $detectedKelurahan = null): array
     {
         try {
             Log::info("Preview geocoding for: {$address}");
+            if ($detectedKelurahan) {
+                Log::info("With detected kelurahan: " . json_encode($detectedKelurahan));
+            }
 
-            $geocodeResult = GeocodingService::geocodeAddress($address);
+            $geocodeResult = GeocodingService::geocodeAddress($address, $detectedKelurahan);
 
             if ($geocodeResult) {
                 $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
+
+                // Extract match score for transparency
+                $matchScore = $geocodeResult['match_score'] ?? null;
+                $parsedAddress = $geocodeResult['parsed_address'] ?? null;
+
+                // Build provider info with match score
+                $providerInfo = $geocodeResult['provider'];
+                if ($matchScore !== null) {
+                    $providerInfo .= " (match: {$matchScore}%)";
+                }
 
                 return [
                     'success' => true,
@@ -227,8 +240,10 @@ class TokoService
                         'longitude' => $geocodeResult['longitude'],
                         'formatted_address' => $geocodeResult['formatted_address'],
                         'provider' => $geocodeResult['provider'],
+                        'provider_display' => $providerInfo,
                         'accuracy' => $geocodeResult['accuracy'],
                         'confidence' => $geocodeResult['confidence'] ?? 0,
+                        'match_score' => $matchScore,
                         'quality' => $qualityCheck['quality'],
                         'quality_score' => $qualityCheck['score'],
                         'quality_badge' => TokoHelper::getQualityBadge($qualityCheck['quality']),
@@ -236,7 +251,12 @@ class TokoService
                         'region_status' => GeocodingService::isInMalangRegion($geocodeResult['latitude'], $geocodeResult['longitude'])
                             ? '✓ Dalam wilayah Malang'
                             : '⚠ Di luar wilayah Malang',
-                        'recommendations' => $qualityCheck['recommendations'] ?? []
+                        'recommendations' => $qualityCheck['recommendations'] ?? [],
+                        'jalan_id' => $geocodeResult['jalan_id'] ?? null,
+                        'kelurahan_id' => $geocodeResult['kelurahan_id'] ?? null,
+                        'kelurahan_name' => $geocodeResult['kelurahan_name'] ?? null,
+                        'kecamatan' => $geocodeResult['kecamatan'] ?? null,
+                        'parsed_address' => $parsedAddress
                     ]
                 ];
             }

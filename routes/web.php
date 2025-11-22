@@ -190,6 +190,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         Route::get('/kelurahan-coordinates', [TokoController::class, 'getKelurahanCoordinates'])->name('toko.kelurahanCoordinates');
         Route::get('/kelurahan/search', [TokoController::class, 'searchKelurahan'])->name('toko.searchKelurahan');
         Route::get('/kelurahan/by-name', [TokoController::class, 'getKelurahanByName'])->name('toko.kelurahanByName');
+        Route::get('/search-jalan', [TokoController::class, 'searchJalan'])->name('toko.searchJalan');
         
         // Enhanced geocoding routes
         Route::post('/preview-geocode', [TokoController::class, 'previewGeocode'])->name('toko.previewGeocode');

@@ -10,7 +10,7 @@ class GeocodingService
     /**
      * Geocode alamat dengan strategi multi-provider
      */
-    public static function geocodeAddress($address)
+    public static function geocodeAddress($address, $detectedKelurahan = null)
     {
         try {
             $cleanAddress = self::cleanAddress($address);
@@ -28,9 +28,10 @@ class GeocodingService
             $startTime = microtime(true);
             $timeout = 15; // 15 seconds total timeout
             
-            // Priority cascade: Internal DB -> Google Maps -> LocationIQ -> Nominatim
+            // Priority cascade: Internal Street DB -> Internal Kelurahan DB -> Google Maps -> LocationIQ -> Nominatim
             $cascadeProviders = [
-                ['method' => 'tryInternalDatabase', 'timeout' => 2],
+                ['method' => 'tryInternalStreetDatabase', 'timeout' => 3],
+                ['method' => 'tryInternalKelurahanDatabase', 'timeout' => 2],
                 ['method' => 'tryGoogleMaps', 'timeout' => 5],
                 ['method' => 'tryLocationIQ', 'timeout' => 4],
                 ['method' => 'tryNominatim', 'timeout' => 4]
@@ -51,7 +52,11 @@ class GeocodingService
                 
                 try {
                     // Execute provider method with timeout
-                    $result = self::$method($cleanAddress);
+                    if ($method === 'tryInternalKelurahanDatabase' || $method === 'tryInternalStreetDatabase') {
+                        $result = self::$method($cleanAddress, $detectedKelurahan);
+                    } else {
+                        $result = self::$method($cleanAddress);
+                    }
                     
                     if ($result && self::validateCoordinates($result)) {
                         Log::info('Geocoding SUCCESS with: ' . $method);
@@ -102,52 +107,380 @@ class GeocodingService
     }
 
     /**
-     * Try internal kelurahan database untuk lookup coordinates
+     * Try internal street database for lookup coordinates dengan NLP enhanced
      */
-    private static function tryInternalDatabase($address)
+    private static function tryInternalStreetDatabase($address, $detectedKelurahan = null)
     {
         try {
-            // Extract kelurahan name from address
-            $addressLower = strtolower($address);
-            
-            // Try to find kelurahan in database
-            $kelurahan = \App\Models\KelurahanCoordinate::active()
-                ->where(function($query) use ($addressLower) {
-                    // Search in nama and nama_normalized
-                    $query->whereRaw('LOWER(nama) LIKE ?', ["%{$addressLower}%"])
-                          ->orWhereRaw('LOWER(nama_normalized) LIKE ?', ["%{$addressLower}%"]);
-                })
-                ->first();
+            // Parse alamat untuk extract informasi yang relevan
+            $parsedAddress = self::parseIndonesianAddressNLP($address);
+            Log::info('Internal Street Database: Parsed address', $parsedAddress);
+
+            // Cari kelurahan ID jika ada detected kelurahan
+            $kelurahanId = null;
+            if ($detectedKelurahan && !empty($detectedKelurahan['kelurahan'])) {
+                $kelurahan = \App\Models\KelurahanCoordinate::active()
+                    ->where(function($q) use ($detectedKelurahan) {
+                        $kelName = strtolower($detectedKelurahan['kelurahan']);
+                        $q->whereRaw('LOWER(nama) = ?', [$kelName])
+                          ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelName]);
+                    })
+                    ->first();
+                if ($kelurahan) {
+                    $kelurahanId = $kelurahan->id;
+                    Log::info('Internal Street Database: Found kelurahan context - ' . $kelurahan->nama);
+                }
+            }
+
+            // Jika tidak ada detected kelurahan, coba extract dari alamat
+            if (!$kelurahanId && !empty($parsedAddress['kelurahan'])) {
+                $kelurahan = \App\Models\KelurahanCoordinate::active()
+                    ->where(function($q) use ($parsedAddress) {
+                        $kelName = strtolower($parsedAddress['kelurahan']);
+                        $q->whereRaw('LOWER(nama) LIKE ?', ["%{$kelName}%"])
+                          ->orWhereRaw('LOWER(nama_normalized) LIKE ?', ["%{$kelName}%"]);
+                    })
+                    ->first();
+                if ($kelurahan) {
+                    $kelurahanId = $kelurahan->id;
+                }
+            }
+
+            // Fuzzy search dengan konteks kelurahan - threshold lebih rendah untuk alamat panjang
+            $minScore = strlen($address) > 50 ? 65 : 70;
+            $streets = \App\Models\Jalan::fuzzySearch($address, $kelurahanId, 3, $minScore);
+
+            if ($streets->isNotEmpty()) {
+                $jalan = $streets->first();
+                $matchScore = $jalan->match_score ?? 0;
+
+                Log::info("Internal Street Database: Found street - {$jalan->nama_jalan} (score: {$matchScore})");
+
+                // Calculate confidence based on match score
+                $confidence = min(0.99, 0.70 + ($matchScore / 100 * 0.29));
+
+                // Determine accuracy based on score
+                $accuracy = 'high';
+                if ($matchScore >= 95) {
+                    $accuracy = 'very high';
+                    $confidence = 0.98;
+                } elseif ($matchScore >= 85) {
+                    $accuracy = 'high';
+                } elseif ($matchScore >= 70) {
+                    $accuracy = 'medium';
+                    $confidence = max(0.75, $confidence);
+                }
+
+                return [
+                    'latitude' => (float) $jalan->latitude,
+                    'longitude' => (float) $jalan->longitude,
+                    'formatted_address' => $jalan->full_location,
+                    'accuracy' => $accuracy,
+                    'provider' => 'internal_street_database',
+                    'confidence' => $confidence,
+                    'match_score' => $matchScore,
+                    'jalan_id' => $jalan->id,
+                    'kelurahan_id' => $jalan->kelurahan_id,
+                    'kelurahan_name' => $jalan->kelurahan ? $jalan->kelurahan->nama : null,
+                    'kecamatan' => $jalan->kelurahan ? $jalan->kelurahan->kecamatan : null,
+                    'kota' => $jalan->kelurahan ? $jalan->kelurahan->kota : null,
+                    'validation_passed' => $matchScore >= 75,
+                    'parsed_address' => $parsedAddress
+                ];
+            }
+
+            Log::info('Internal Street Database: No matching street found');
+            return null;
+
+        } catch (\Exception $e) {
+            Log::warning('Internal Street Database lookup failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * NLP Parser untuk alamat Indonesia - extract komponen alamat
+     */
+    public static function parseIndonesianAddressNLP($address)
+    {
+        $result = [
+            'street' => '',
+            'street_number' => '',
+            'rt_rw' => '',
+            'building' => '',
+            'kelurahan' => '',
+            'kecamatan' => '',
+            'kota' => '',
+            'provinsi' => '',
+            'postal_code' => '',
+            'raw' => $address
+        ];
+
+        if (empty($address)) return $result;
+
+        // Normalize address
+        $normalized = $address;
+        $normalized = preg_replace('/\s+/', ' ', trim($normalized));
+
+        // Extract RT/RW
+        if (preg_match('/\bRT\.?\s*(\d+)\s*[\/\s]*RW\.?\s*(\d+)/i', $normalized, $matches)) {
+            $result['rt_rw'] = "RT {$matches[1]}/RW {$matches[2]}";
+            $normalized = preg_replace('/\bRT\.?\s*\d+\s*[\/\s]*RW\.?\s*\d+/i', '', $normalized);
+        }
+
+        // Extract postal code
+        if (preg_match('/\b(\d{5})\b/', $normalized, $matches)) {
+            $result['postal_code'] = $matches[1];
+            $normalized = preg_replace('/\b\d{5}\b/', '', $normalized);
+        }
+
+        // Extract Provinsi
+        $provinsiPatterns = [
+            'jawa timur' => 'Jawa Timur',
+            'jatim' => 'Jawa Timur',
+            'east java' => 'Jawa Timur',
+            'jawa tengah' => 'Jawa Tengah',
+            'jawa barat' => 'Jawa Barat',
+        ];
+        foreach ($provinsiPatterns as $pattern => $value) {
+            if (stripos($normalized, $pattern) !== false) {
+                $result['provinsi'] = $value;
+                $normalized = preg_replace('/\b' . preg_quote($pattern, '/') . '\b/i', '', $normalized);
+                break;
+            }
+        }
+
+        // Extract Kota/Kabupaten
+        if (preg_match('/(?:kota|kabupaten|kab\.?)\s+([^,]+)/i', $normalized, $matches)) {
+            $result['kota'] = trim($matches[1]);
+            $normalized = preg_replace('/(?:kota|kabupaten|kab\.?)\s+[^,]+/i', '', $normalized);
+        }
+
+        // Extract Kecamatan
+        if (preg_match('/(?:kec\.?|kecamatan)\s+([^,]+)/i', $normalized, $matches)) {
+            $result['kecamatan'] = trim($matches[1]);
+            $normalized = preg_replace('/(?:kec\.?|kecamatan)\s+[^,]+/i', '', $normalized);
+        }
+
+        // Extract Kelurahan/Desa
+        if (preg_match('/(?:kel\.?|kelurahan|desa|ds\.?)\s+([^,]+)/i', $normalized, $matches)) {
+            $result['kelurahan'] = trim($matches[1]);
+            $normalized = preg_replace('/(?:kel\.?|kelurahan|desa|ds\.?)\s+[^,]+/i', '', $normalized);
+        }
+
+        // Extract Street dengan nomor
+        $streetPatterns = [
+            '/(?:jalan|jl\.?)\s+([^,]+?)(?:\s+(?:no\.?|nomor)\s*(\d+[A-Za-z]?))?(?:,|$)/i',
+            '/(?:gang|gg\.?)\s+([^,]+?)(?:\s+(?:no\.?|nomor)\s*(\d+[A-Za-z]?))?(?:,|$)/i',
+        ];
+
+        foreach ($streetPatterns as $pattern) {
+            if (preg_match($pattern, $normalized, $matches)) {
+                $result['street'] = trim($matches[1]);
+                if (!empty($matches[2])) {
+                    $result['street_number'] = $matches[2];
+                }
+                break;
+            }
+        }
+
+        // Extract standalone street number if not found
+        if (empty($result['street_number'])) {
+            if (preg_match('/\b(?:no\.?|nomor)\s*(\d+[A-Za-z]?)\b/i', $normalized, $matches)) {
+                $result['street_number'] = $matches[1];
+            }
+        }
+
+        // If kelurahan still empty, try to extract from comma-separated parts
+        if (empty($result['kelurahan'])) {
+            $parts = array_map('trim', explode(',', $normalized));
+            foreach ($parts as $index => $part) {
+                // Skip first part (usually street), skip parts with keywords
+                if ($index === 0) continue;
+                if (preg_match('/\b(jl\.?|jalan|gang|gg\.?|no\.?|kec\.?|kota|kab\.?|rt|rw)\b/i', $part)) continue;
+
+                // Clean part
+                $cleanPart = trim(preg_replace('/[^a-zA-Z\s]/', '', $part));
+                if (strlen($cleanPart) >= 3 && strlen($cleanPart) <= 30) {
+                    $result['kelurahan'] = $cleanPart;
+                    break;
+                }
+            }
+        }
+
+        // Extract building/complex names
+        if (preg_match('/(?:perumahan|perum|komplek|komp\.?|apartemen|apt\.?|ruko|gedung|gd\.?)\s+([^,]+)/i', $normalized, $matches)) {
+            $result['building'] = trim($matches[1]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Try internal kelurahan database for lookup coordinates dengan fuzzy matching
+     */
+    private static function tryInternalKelurahanDatabase($address, $detectedKelurahan = null)
+    {
+        try {
+            $kelurahan = null;
+            $matchScore = 0;
+
+            // 1. If detected kelurahan is provided, try exact match first
+            if ($detectedKelurahan && !empty($detectedKelurahan['kelurahan'])) {
+                $kelurahanName = strtolower(trim($detectedKelurahan['kelurahan']));
+                $kelurahan = \App\Models\KelurahanCoordinate::active()
+                    ->where(function($query) use ($kelurahanName) {
+                        $query->whereRaw('LOWER(nama) = ?', [$kelurahanName])
+                              ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelurahanName]);
+                    })
+                    ->first();
+
+                if ($kelurahan) {
+                    $matchScore = 100;
+                    Log::info('Internal Database: Found exact kelurahan match - ' . $kelurahan->nama);
+                }
+            }
+
+            // 2. If not found, try fuzzy matching with NLP parsed kelurahan
+            if (!$kelurahan) {
+                $parsedAddress = self::parseIndonesianAddressNLP($address);
+                $kelurahanFromParsed = !empty($parsedAddress['kelurahan']) ? strtolower($parsedAddress['kelurahan']) : null;
+
+                if ($kelurahanFromParsed) {
+                    // Get all active kelurahan for fuzzy matching
+                    $allKelurahan = \App\Models\KelurahanCoordinate::active()->get();
+
+                    $bestMatch = null;
+                    $bestScore = 0;
+
+                    foreach ($allKelurahan as $kel) {
+                        $kelNama = strtolower($kel->nama);
+                        $kelNormalized = strtolower($kel->nama_normalized ?? $kel->nama);
+
+                        // Calculate fuzzy score
+                        $score = self::calculateKelurahanFuzzyScore($kelurahanFromParsed, $kelNama, $kelNormalized);
+
+                        if ($score > $bestScore && $score >= 70) {
+                            $bestScore = $score;
+                            $bestMatch = $kel;
+                        }
+                    }
+
+                    if ($bestMatch) {
+                        $kelurahan = $bestMatch;
+                        $matchScore = $bestScore;
+                        Log::info("Internal Database: Found fuzzy kelurahan match - {$kelurahan->nama} (score: {$matchScore})");
+                    }
+                }
+            }
+
+            // 3. Last resort - search kelurahan name in full address
+            if (!$kelurahan) {
+                $addressLower = strtolower($address);
+                $addressNormalized = preg_replace('/[^a-z0-9]/', '', $addressLower);
+
+                $allKelurahan = \App\Models\KelurahanCoordinate::active()->get();
+
+                foreach ($allKelurahan as $kel) {
+                    $kelNormalized = preg_replace('/[^a-z0-9]/', '', strtolower($kel->nama));
+
+                    // Check if kelurahan name is contained in address
+                    if (strlen($kelNormalized) >= 4 && str_contains($addressNormalized, $kelNormalized)) {
+                        // Calculate position score - earlier position = better
+                        $pos = strpos($addressNormalized, $kelNormalized);
+                        $posScore = max(0, 80 - ($pos / strlen($addressNormalized) * 20));
+
+                        if ($posScore > $matchScore) {
+                            $kelurahan = $kel;
+                            $matchScore = $posScore;
+                        }
+                    }
+                }
+
+                if ($kelurahan) {
+                    Log::info("Internal Database: Found kelurahan in address - {$kelurahan->nama} (score: {$matchScore})");
+                }
+            }
 
             if ($kelurahan) {
-                Log::info('Internal Database: Found kelurahan - ' . $kelurahan->nama);
-                
+                Log::info('Internal Database: Final kelurahan - ' . $kelurahan->nama);
+
                 $isGenerated = ($kelurahan->source ?? 'generated') === 'generated';
-                $accuracy = $kelurahan->accuracy ?? ($isGenerated ? 'low' : 'high');
-                $confidence = $isGenerated ? 0.3 : 0.85;
-                
+                $baseAccuracy = $kelurahan->accuracy ?? ($isGenerated ? 'low' : 'medium');
+
+                // Adjust accuracy based on match score
+                if ($matchScore >= 95) {
+                    $accuracy = 'high';
+                } elseif ($matchScore >= 80) {
+                    $accuracy = 'medium';
+                } else {
+                    $accuracy = $baseAccuracy;
+                }
+
+                // Calculate confidence based on match score and source
+                $baseConfidence = $isGenerated ? 0.4 : 0.7;
+                $confidence = $baseConfidence + ($matchScore / 100 * 0.25);
+
                 return [
                     'latitude' => (float) $kelurahan->latitude,
                     'longitude' => (float) $kelurahan->longitude,
-                    'formatted_address' => $kelurahan->full_location,
+                    'formatted_address' => $kelurahan->full_location ?? "{$kelurahan->nama}, {$kelurahan->kecamatan}, {$kelurahan->kota}",
                     'accuracy' => $accuracy,
                     'provider' => 'internal_database',
-                    'confidence' => $confidence,
+                    'confidence' => min(0.95, $confidence),
+                    'match_score' => $matchScore,
                     'kelurahan_name' => $kelurahan->nama,
                     'kecamatan' => $kelurahan->kecamatan,
                     'kota' => $kelurahan->kota,
-                    'validation_passed' => !$isGenerated, // Only pass validation if not generated
+                    'validation_passed' => $matchScore >= 75 && !$isGenerated,
                     'is_generated' => $isGenerated
                 ];
             }
-            
+
             Log::info('Internal Database: No matching kelurahan found');
             return null;
-            
+
         } catch (\Exception $e) {
             Log::warning('Internal Database lookup failed: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Calculate fuzzy score untuk kelurahan matching
+     */
+    private static function calculateKelurahanFuzzyScore($input, $kelNama, $kelNormalized)
+    {
+        // Normalize input
+        $inputNormalized = preg_replace('/[^a-z0-9]/', '', strtolower($input));
+        $kelNamaNormalized = preg_replace('/[^a-z0-9]/', '', strtolower($kelNama));
+
+        // Exact match
+        if ($inputNormalized === $kelNamaNormalized) {
+            return 100;
+        }
+
+        // Contains match
+        if (str_contains($inputNormalized, $kelNamaNormalized) || str_contains($kelNamaNormalized, $inputNormalized)) {
+            $minLen = min(strlen($inputNormalized), strlen($kelNamaNormalized));
+            $maxLen = max(strlen($inputNormalized), strlen($kelNamaNormalized));
+            return 75 + ($minLen / $maxLen * 20);
+        }
+
+        // Jaro-Winkler similarity
+        $jwScore = \App\Models\Jalan::jaroWinklerSimilarity($inputNormalized, $kelNamaNormalized);
+
+        // Levenshtein similarity
+        $maxLen = max(strlen($inputNormalized), strlen($kelNamaNormalized));
+        if ($maxLen > 0) {
+            $distance = levenshtein($inputNormalized, $kelNamaNormalized);
+            $levScore = round((($maxLen - $distance) / $maxLen) * 100);
+        } else {
+            $levScore = 0;
+        }
+
+        // Combined score - prioritize Jaro-Winkler for short strings
+        return round(($jwScore * 0.6) + ($levScore * 0.4));
     }
 
     /**
@@ -967,6 +1300,54 @@ class GeocodingService
     }
 
     /**
+     * Calculate distance between two coordinates in meters using Haversine formula
+     * 
+     * @param float $lat1 First latitude
+     * @param float $lon1 First longitude
+     * @param float $lat2 Second latitude
+     * @param float $lon2 Second longitude
+     * @return float Distance in meters
+     */
+    public static function calculateDistance($lat1, $lon1, $lat2, $lon2)
+    {
+        $earthRadius = 6371000; // Earth radius in meters
+        
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        
+        $a = sin($dLat/2) * sin($dLat/2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon/2) * sin($dLon/2);
+        
+        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+        $distance = $earthRadius * $c;
+        
+        return round($distance, 2); // Return distance in meters with 2 decimal precision
+    }
+
+    /**
+     * Validate coordinate tolerance (default 50m max)
+     * 
+     * @param float $originalLat Original latitude
+     * @param float $originalLon Original longitude
+     * @param float $newLat New latitude
+     * @param float $newLon New longitude
+     * @param int $maxToleranceMeters Maximum allowed distance in meters (default 50)
+     * @return array Validation result with distance and tolerance info
+     */
+    public static function validateCoordinateTolerance($originalLat, $originalLon, $newLat, $newLon, $maxToleranceMeters = 50)
+    {
+        $distance = self::calculateDistance($originalLat, $originalLon, $newLat, $newLon);
+        
+        return [
+            'within_tolerance' => $distance <= $maxToleranceMeters,
+            'distance_meters' => $distance,
+            'max_tolerance_meters' => $maxToleranceMeters,
+            'exceeded_by_meters' => max(0, $distance - $maxToleranceMeters),
+            'tolerance_percentage' => $maxToleranceMeters > 0 ? round(($distance / $maxToleranceMeters) * 100, 1) : 0
+        ];
+    }
+    /**
      * Calculate quality score untuk geocoding result
      * Score range: 0-100
      */
@@ -977,12 +1358,23 @@ class GeocodingService
         }
 
         $score = 50; // base score
-        
-        // Provider bonus (30 points max)
+
+        // Provider bonus (30 points max) - internal street database now prioritized
         if (isset($result['provider'])) {
             switch ($result['provider']) {
                 case 'google_maps':
                     $score += 30;
+                    break;
+                case 'internal_street_database':
+                    // Street-level database is very accurate for local addresses
+                    $matchScore = $result['match_score'] ?? 70;
+                    if ($matchScore >= 90) {
+                        $score += 28; // Almost as good as Google for high matches
+                    } elseif ($matchScore >= 80) {
+                        $score += 25;
+                    } else {
+                        $score += 20;
+                    }
                     break;
                 case 'locationiq':
                     $score += 25;
@@ -997,7 +1389,13 @@ class GeocodingService
                     $score += 18;
                     break;
                 case 'internal_database':
-                    $score += 15;
+                    // Kelurahan-level is less precise than street-level
+                    $matchScore = $result['match_score'] ?? 70;
+                    if ($matchScore >= 90) {
+                        $score += 18;
+                    } else {
+                        $score += 15;
+                    }
                     break;
                 case 'nominatim':
                     $score += 12;
