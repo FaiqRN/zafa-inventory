@@ -17,8 +17,8 @@ class UserController extends Controller
     public function index()
     {
         $breadcrumb = new stdClass();
-        $breadcrumb->title = 'Manajemen User';
-        $breadcrumb->list = ['Home', 'Sistem', 'User'];
+        $breadcrumb->title = 'Sistem';
+        $breadcrumb->list = ['Home', 'Manajemen User', 'Sistem'];
 
         $rolesForCreate = UserHelper::getAllRoles(true); // Only Ketua & Karyawan
         $rolesForEdit = UserHelper::getAllRoles(false); // All roles including Admin

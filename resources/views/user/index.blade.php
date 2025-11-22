@@ -9,7 +9,7 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">
-                <i class=></i> Data User
+                <i class=></i> Data Pengguna Sistem 
             </h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-primary" id="btnTambahUser">
