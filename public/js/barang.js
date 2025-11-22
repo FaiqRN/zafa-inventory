@@ -1,11 +1,11 @@
-$(document).ready(function() {
+$(document).ready(function () {
     // Variables
     let selectedBarangId = null;
     let selectedBarangData = null;
-    
+
     // Load data barang saat halaman dibuka
     loadBarangData();
-    
+
     // ========================================
     // LOAD DATA BARANG
     // ========================================
@@ -14,7 +14,7 @@ $(document).ready(function() {
             url: '/barang/list',
             type: 'GET',
             cache: false,
-            beforeSend: function() {
+            beforeSend: function () {
                 $('#barang-table-body').html(`
                     <tr>
                         <td colspan="6" class="text-center py-4 text-muted">
@@ -23,7 +23,7 @@ $(document).ready(function() {
                     </tr>
                 `);
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.status === 'success' && response.data && response.data.length > 0) {
                     renderBarangTable(response.data);
                 } else {
@@ -36,7 +36,7 @@ $(document).ready(function() {
                     `);
                 }
             },
-            error: function() {
+            error: function () {
                 $('#barang-table-body').html(`
                     <tr>
                         <td colspan="6" class="text-center py-4 text-danger">
@@ -47,13 +47,13 @@ $(document).ready(function() {
             }
         });
     }
-    
+
     // ========================================
     // RENDER TABEL BARANG
     // ========================================
     function renderBarangTable(data) {
         let html = '';
-        $.each(data, function(index, item) {
+        $.each(data, function (index, item) {
             const harga = formatRupiah(item.harga_awal_barang);
             const keterangan = item.keterangan || '-';
             html += `
@@ -75,40 +75,40 @@ $(document).ready(function() {
             `;
         });
         $('#barang-table-body').html(html);
-        
+
         // Re-highlight jika ada yang dipilih
         if (selectedBarangId) {
             $(`.barang-row[data-id="${selectedBarangId}"]`).addClass('selected-row');
         }
     }
-    
+
     // ========================================
     // LOAD DETAIL STOK
     // ========================================
     function loadStokDetail(barangId, namaBarang, satuan) {
         selectedBarangId = barangId;
         selectedBarangData = { nama: namaBarang, satuan: satuan };
-        
+
         // Highlight row
         $('.barang-row').removeClass('selected-row');
         $(`.barang-row[data-id="${barangId}"]`).addClass('selected-row');
-        
+
         // Update header
         $('#detail-title').html(`<i class="fas fa-clipboard-list mr-2"></i>Detail Stok → ${namaBarang}`);
-        
-        // Show button tambah stok
-        $('#btnTambahStok').show();
-        
+
+        // Show action buttons
+        $('#detail-action-buttons').show();
+
         // Hide empty state, show table
         $('#detail-content').hide();
         $('#detail-table-container').show();
-        
+
         // Load data stok
         $.ajax({
             url: `/barang/${barangId}/stok`,
             type: 'GET',
             cache: false,
-            beforeSend: function() {
+            beforeSend: function () {
                 $('#stok-table-body').html(`
                     <tr>
                         <td colspan="2" class="text-center py-4 text-muted">
@@ -117,7 +117,7 @@ $(document).ready(function() {
                     </tr>
                 `);
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.status === 'success' && response.data && response.data.length > 0) {
                     renderStokTable(response.data, satuan);
                 } else {
@@ -130,7 +130,7 @@ $(document).ready(function() {
                     `);
                 }
             },
-            error: function() {
+            error: function () {
                 $('#stok-table-body').html(`
                     <tr>
                         <td colspan="2" class="text-center py-4 text-danger">
@@ -141,13 +141,13 @@ $(document).ready(function() {
             }
         });
     }
-    
+
     // ========================================
     // RENDER TABEL STOK
     // ========================================
     function renderStokTable(data, satuan) {
         let html = '';
-        $.each(data, function(index, item) {
+        $.each(data, function (index, item) {
             html += `
                 <tr>
                     <td>${formatTanggal(item.tanggal_stock_barang)}</td>
@@ -157,11 +157,11 @@ $(document).ready(function() {
         });
         $('#stok-table-body').html(html);
     }
-    
+
     // ========================================
     // EVENT: KLIK ICON MATA / ROW
     // ========================================
-    $(document).on('click', '.btn-action-view', function(e) {
+    $(document).on('click', '.btn-action-view', function (e) {
         e.stopPropagation();
         const barangId = $(this).data('id');
         const row = $(`.barang-row[data-id="${barangId}"]`);
@@ -169,72 +169,93 @@ $(document).ready(function() {
         const satuan = row.data('satuan');
         loadStokDetail(barangId, namaBarang, satuan);
     });
-    
-    $(document).on('click', '.barang-row', function(e) {
+
+    $(document).on('click', '.barang-row', function (e) {
         if ($(e.target).closest('.btn').length) return;
         const barangId = $(this).data('id');
         const namaBarang = $(this).data('nama');
         const satuan = $(this).data('satuan');
         loadStokDetail(barangId, namaBarang, satuan);
     });
-    
+
+    // ========================================
+    // EVENT: TAMBAH STOK (FIFO) - FROM DETAIL PANEL
+    // ========================================
+    $('#btnTambahStok').click(function () {
+        if (!selectedBarangId) {
+            showAlert('warning', 'Pilih barang terlebih dahulu');
+            return;
+        }
+        window.location.href = `/barang/${selectedBarangId}/tambah-stok`;
+    });
+
+    // ========================================
+    // EVENT: RIWAYAT STOK (FIFO) - FROM DETAIL PANEL
+    // ========================================
+    $('#btnRiwayatStok').click(function () {
+        if (!selectedBarangId) {
+            showAlert('warning', 'Pilih barang terlebih dahulu');
+            return;
+        }
+        window.location.href = `/barang/${selectedBarangId}/riwayat-stok`;
+    });
     // ========================================
     // EVENT: TAMBAH BARANG
     // ========================================
-    $('#btnTambah').click(function() {
+    $('#btnTambah').click(function () {
         $('#modalBarangLabel').html('<i class="fas fa-box mr-2"></i>Tambah Barang');
         $('#formBarang')[0].reset();
         $('#barang_id').val('');
         $('.is-invalid').removeClass('is-invalid');
         $('.invalid-feedback').text('');
-        
+
         // Generate kode barang otomatis
         $.ajax({
             url: '/barang/generate-kode',
             type: 'GET',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     $('#barang_kode').val(response.kode);
                 }
             }
         });
-        
+
         $('#modalBarang').modal('show');
     });
-    
+
     // ========================================
     // EVENT: SUBMIT FORM BARANG
     // ========================================
-    $('#formBarang').submit(function(e) {
+    $('#formBarang').submit(function (e) {
         e.preventDefault();
-        
+
         const barangId = $('#barang_id').val();
         const url = barangId ? `/barang/update/${barangId}` : '/barang/store';
         const method = 'POST';
-        
+
         let formData = $(this).serialize();
         if (barangId) {
             formData += '&_method=PUT';
         }
-        
+
         $.ajax({
             url: url,
             type: method,
             data: formData,
-            beforeSend: function() {
+            beforeSend: function () {
                 $('#btnSimpan').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     $('#modalBarang').modal('hide');
                     loadBarangData();
                     showAlert('success', response.message);
                 }
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
-                    $.each(errors, function(field, messages) {
+                    $.each(errors, function (field, messages) {
                         $(`#${field}`).addClass('is-invalid');
                         $(`#error-${field}`).text(messages[0]);
                     });
@@ -244,20 +265,20 @@ $(document).ready(function() {
                     console.error('Error response:', xhr.responseJSON);
                 }
             },
-            complete: function() {
+            complete: function () {
                 $('#btnSimpan').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan');
             }
         });
     });
-    
+
     // ========================================
     // EVENT: HAPUS BARANG - SWEETALERT
     // ========================================
-    $(document).on('click', '.btn-action-delete', function(e) {
+    $(document).on('click', '.btn-action-delete', function (e) {
         e.stopPropagation();
         const barangId = $(this).data('id');
         const namaBarang = $(this).data('nama');
-        
+
         // SweetAlert confirmation
         Swal.fire({
             title: 'Konfirmasi Hapus',
@@ -286,13 +307,13 @@ $(document).ready(function() {
             }
         });
     });
-    
+
     function deleteBarang(barangId) {
         $.ajax({
             url: `/barang/destroy/${barangId}`,
             type: 'DELETE',
             data: { _token: $('meta[name="csrf-token"]').attr('content') },
-            beforeSend: function() {
+            beforeSend: function () {
                 Swal.fire({
                     title: 'Menghapus...',
                     html: '<i class="fas fa-spinner fa-spin fa-3x"></i>',
@@ -300,7 +321,7 @@ $(document).ready(function() {
                     allowOutsideClick: false
                 });
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     Swal.fire({
                         icon: 'success',
@@ -313,13 +334,13 @@ $(document).ready(function() {
                     if (selectedBarangId === barangId) {
                         $('#detail-content').show();
                         $('#detail-table-container').hide();
-                        $('#btnTambahStok').hide();
+                        $('#detail-action-buttons').hide();
                         $('#detail-title').html('<i class="fas fa-clipboard-list mr-2"></i>Detail Stok Barang');
                         selectedBarangId = null;
                     }
                 }
             },
-            error: function() {
+            error: function () {
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal!',
@@ -329,104 +350,38 @@ $(document).ready(function() {
             }
         });
     }
-    
-    // Old modal delete handler removed - now using SweetAlert
-    
-    // ========================================
-    // EVENT: TAMBAH STOK
-    // ========================================
-    $('#btnTambahStok').click(function() {
-        if (!selectedBarangId) {
-            showAlert('warning', 'Pilih barang terlebih dahulu');
-            return;
-        }
-        
-        $('#modalStokLabel').html('<i class="fas fa-boxes mr-2"></i>Tambah Stok Barang');
-        $('#formStok')[0].reset();
-        $('#stok_id').val('');
-        $('#stok_barang_id').val(selectedBarangId);
-        $('#stok_nama_barang').val(selectedBarangData.nama);
-        $('#stok_satuan').text(selectedBarangData.satuan);
-        $('#tanggal_stock_barang').val(new Date().toISOString().split('T')[0]);
-        $('#stok').val('');
-        $('.is-invalid').removeClass('is-invalid');
-        $('.invalid-feedback').text('');
-        $('#modalStok').modal('show');
-    });
-    
-    // ========================================
-    // EVENT: SUBMIT FORM STOK
-    // ========================================
-    $('#formStok').submit(function(e) {
-        e.preventDefault();
-        
-        const stokId = $('#stok_id').val();
-        const url = stokId ? `/barang/stok/update/${stokId}` : '/barang/stok/store';
-        
-        $.ajax({
-            url: url,
-            type: 'POST',
-            data: $(this).serialize(),
-            beforeSend: function() {
-                $('#btnSimpanStok').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
-            },
-            success: function(response) {
-                if (response.status === 'success') {
-                    $('#modalStok').modal('hide');
-                    loadStokDetail(selectedBarangId, selectedBarangData.nama, selectedBarangData.satuan);
-                    loadBarangData();
-                    showAlert('success', response.message);
-                }
-            },
-            error: function(xhr) {
-                if (xhr.status === 422) {
-                    const errors = xhr.responseJSON.errors;
-                    $.each(errors, function(field, messages) {
-                        let fieldId = field === 'catatan' ? 'catatan_stok' : field;
-                        $(`#${fieldId}`).addClass('is-invalid');
-                        $(`#error-${fieldId}`).text(messages[0]);
-                    });
-                } else {
-                    showAlert('danger', 'Terjadi kesalahan');
-                }
-            },
-            complete: function() {
-                $('#btnSimpanStok').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan');
-            }
-        });
-    });
-    
+
     // ========================================
     // SEARCH
     // ========================================
-    $('#searchBarang').on('keyup', function() {
+    $('#searchBarang').on('keyup', function () {
         const value = $(this).val().toLowerCase();
-        $('#barang-table-body tr').filter(function() {
+        $('#barang-table-body tr').filter(function () {
             $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
     });
-    
-    $('#searchStok').on('keyup', function() {
+
+    $('#searchStok').on('keyup', function () {
         const value = $(this).val().toLowerCase();
-        $('#stok-table-body tr').filter(function() {
+        $('#stok-table-body tr').filter(function () {
             $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
     });
-    
+
     // ========================================
     // UTILITY FUNCTIONS
     // ========================================
     function formatRupiah(number) {
         return 'Rp ' + new Intl.NumberFormat('id-ID').format(number);
     }
-    
+
     function formatTanggal(dateString) {
         if (!dateString) return '-';
         const date = new Date(dateString);
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         return date.toLocaleDateString('id-ID', options);
     }
-    
+
     function showAlert(type, message) {
         const iconMap = {
             success: 'check-circle',
@@ -434,7 +389,7 @@ $(document).ready(function() {
             warning: 'exclamation-triangle',
             info: 'info-circle'
         };
-        
+
         const alert = `
             <div class="alert alert-${type} alert-dismissible fade show" role="alert">
                 <i class="fas fa-${iconMap[type]} mr-2"></i>
@@ -444,12 +399,12 @@ $(document).ready(function() {
                 </button>
             </div>
         `;
-        
+
         $('#alert-container').html(alert);
         $('html, body').animate({ scrollTop: 0 }, 400);
-        
-        setTimeout(function() {
-            $('.alert').fadeOut(400, function() {
+
+        setTimeout(function () {
+            $('.alert').fadeOut(400, function () {
                 $(this).remove();
             });
         }, 5000);

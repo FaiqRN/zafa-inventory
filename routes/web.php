@@ -170,6 +170,12 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         // Stock management endpoints
         Route::get('/{id}/stock-info', [BarangController::class, 'getStockInfo'])->name('barang.stockInfo');
         Route::post('/validate-stock', [BarangController::class, 'validateStock'])->name('barang.validateStock');
+        
+        // FIFO Stock Management endpoints
+        Route::get('/{id}/tambah-stok', [BarangController::class, 'tambahStok'])->name('barang.tambah-stok');
+        Route::post('/{id}/tambah-stok', [BarangController::class, 'storeTambahStok'])->name('barang.store-tambah-stok');
+        Route::get('/{id}/riwayat-stok', [BarangController::class, 'riwayatStok'])->name('barang.riwayat-stok');
+        Route::get('/{id}/detail-batch-datatable', [BarangController::class, 'detailBatchDatatable'])->name('barang.detail-batch-datatable');
     });
 
     

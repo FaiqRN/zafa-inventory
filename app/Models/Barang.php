@@ -69,6 +69,11 @@ class Barang extends Model
         return $this->hasMany(Pemesanan::class, Pemesanan::FIELD_BARANG_ID, self::FIELD_BARANG_ID);
     }
 
+    public function barangStok()
+    {
+        return $this->hasMany(BarangStok::class, BarangStok::FIELD_BARANG_ID, self::FIELD_BARANG_ID);
+    }
+
     public function toko()
     {
         return $this->belongsToMany(Toko::class, BarangToko::TABLE, self::FIELD_BARANG_ID, Toko::FIELD_TOKO_ID)

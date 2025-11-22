@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Barang;
 use App\Helpers\MasterData\barang\BarangHelper;
+use App\Helpers\MasterData\barang\BarangStokHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -469,5 +470,120 @@ class BarangController extends Controller
             'status' => 'success',
             'message' => 'Stok barang berhasil diperbarui'
         ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Show form tambah stok (FIFO)
+     *
+     * @param string $id
+     * @return \Illuminate\Http\Response
+     */
+    public function tambahStok($id)
+    {
+        $barang = Barang::find($id);
+        
+        if (!$barang) {
+            return redirect()->route('barang.index')->with('error', 'Data barang tidak ditemukan');
+        }
+
+        return view('barang.tambah-stok', [
+            'activemenu' => 'barang',
+            'barang' => $barang,
+            'breadcrumb' => (object) [
+                'title' => 'Tambah Stok',
+                'list' => ['Home', 'Master Data', 'Data Barang', 'Tambah Stok']
+            ]
+        ]);
+    }
+
+    /**
+     * Store tambah stok (FIFO)
+     *
+     * @param Request $request
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeTambahStok(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'jumlah' => 'required|integer|min:1',
+            'tanggal' => 'required|date|before_or_equal:today',
+            'catatan' => 'nullable|string|max:255',
+        ], [
+            'jumlah.required' => 'Jumlah stok harus diisi',
+            'jumlah.min' => 'Jumlah stok minimal 1',
+            'tanggal.required' => 'Tanggal stok harus diisi',
+            'tanggal.before_or_equal' => 'Tanggal stok tidak boleh melebihi hari ini',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $result = BarangStokHelper::tambahStok(
+            $id,
+            $request->jumlah,
+            $request->tanggal,
+            $request->catatan
+        );
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result['data']
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
+        }
+    }
+
+    /**
+     * Show riwayat stok (FIFO)
+     *
+     * @param string $id
+     * @return \Illuminate\Http\Response
+     */
+    public function riwayatStok($id)
+    {
+        $barang = Barang::find($id);
+        
+        if (!$barang) {
+            return redirect()->route('barang.index')->with('error', 'Data barang tidak ditemukan');
+        }
+
+        $summary = BarangStokHelper::getStokSummary($id);
+
+        return view('barang.riwayat-stok', [
+            'activemenu' => 'barang',
+            'barang' => $barang,
+            'summary' => $summary,
+            'breadcrumb' => (object) [
+                'title' => 'Riwayat Stok',
+                'list' => ['Home', 'Master Data', 'Data Barang', 'Riwayat Stok']
+            ]
+        ]);
+    }
+
+    /**
+     * Get detail batch for DataTables
+     *
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function detailBatchDatatable($id)
+    {
+        $batches = BarangStokHelper::getDetailBatch($id);
+        
+        return DataTables::of($batches)
+            ->addIndexColumn()
+            ->make(true);
     }
 }

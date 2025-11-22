@@ -50,7 +50,6 @@ class BarangTokoHelper
                       ->from(BarangToko::TABLE)
                       ->where(BarangToko::FIELD_TOKO_ID, $tokoId);
             })
-            ->where(Barang::FIELD_IS_DELETED, 0)
             ->orderBy(Barang::FIELD_NAMA_BARANG, 'asc')
             ->get();
     }

@@ -25,8 +25,8 @@ class BarangHelper
             return 0;
         }
 
-        // Base stock from barang table
-        $baseStock = $barang->stok ?? 0;
+        // Use FIFO system - get stok tersedia from BarangStokHelper
+        $stokTersedia = BarangStokHelper::getStokTersedia($barangId);
 
         // Stock out from Pemesanan (only processed orders)
         $pemesananOut = Pemesanan::where(Pemesanan::FIELD_BARANG_ID, $barangId)
@@ -42,7 +42,7 @@ class BarangHelper
             ->sum(Retur::FIELD_JUMLAH_RETUR);
 
         // Calculate available stock
-        $availableStock = $baseStock - $pemesananOut - $pengirimanOut + $returIn;
+        $availableStock = $stokTersedia - $pemesananOut - $pengirimanOut + $returIn;
 
         return max(0, $availableStock); // Ensure non-negative
     }
@@ -60,15 +60,19 @@ class BarangHelper
         if (!$barang) {
             return [
                 'base_stock' => 0,
+                'fifo_stock' => 0,
                 'pemesanan_out' => 0,
                 'pengiriman_out' => 0,
                 'retur_in' => 0,
                 'available_stock' => 0,
-                'stock_status' => 'out_of_stock'
+                'stock_status' => 'out_of_stock',
+                'batch_info' => []
             ];
         }
 
         $baseStock = $barang->stok ?? 0;
+        $fifoStock = BarangStokHelper::getStokTersedia($barangId);
+        $batchSummary = BarangStokHelper::getStokSummary($barangId);
 
         $pemesananOut = Pemesanan::where(Pemesanan::FIELD_BARANG_ID, $barangId)
             ->whereIn(Pemesanan::FIELD_STATUS_PEMESANAN, ['diproses', 'dikirim', 'selesai'])
@@ -80,15 +84,19 @@ class BarangHelper
         $returIn = Retur::where(Retur::FIELD_BARANG_ID, $barangId)
             ->sum(Retur::FIELD_JUMLAH_RETUR);
 
-        $availableStock = max(0, $baseStock - $pemesananOut - $pengirimanOut + $returIn);
+        $availableStock = max(0, $fifoStock - $pemesananOut - $pengirimanOut + $returIn);
 
         return [
             'base_stock' => $baseStock,
+            'fifo_stock' => $fifoStock,
             'pemesanan_out' => $pemesananOut,
             'pengiriman_out' => $pengirimanOut,
             'retur_in' => $returIn,
             'available_stock' => $availableStock,
-            'stock_status' => self::getStockStatus($availableStock, $baseStock)
+            'stock_status' => self::getStockStatus($availableStock, $baseStock),
+            'batch_count' => $batchSummary['total_batch'],
+            'oldest_batch_date' => $batchSummary['batch_tertua'],
+            'newest_batch_date' => $batchSummary['batch_terbaru']
         ];
     }
 
@@ -264,6 +272,23 @@ class BarangHelper
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0'
+        ];
+    }
+
+    /**
+     * Get stock batch summary for display in UI
+     *
+     * @param string $barangId
+     * @return array
+     */
+    public static function getStockBatchSummary($barangId)
+    {
+        $batches = BarangStokHelper::getDetailBatch($barangId);
+        $summary = BarangStokHelper::getStokSummary($barangId);
+        
+        return [
+            'batches' => $batches,
+            'summary' => $summary
         ];
     }
 }
