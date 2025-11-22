@@ -140,12 +140,12 @@
                 </a>
             </li>
 
-            <!-- Manajemen User -->
+            <!-- User -->
             <li class="nav-item">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['user']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-users-cog"></i>
                     <p>
-                        Manajemen User
+                        Sistem Pengaturan
                         <i class="right fas fa-angle-left"></i>
                     </p>
                 </a>
@@ -153,7 +153,7 @@
                     <li class="nav-item">
                         <a href="{{ route('user.index') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Sistem</p>
+                            <p>Manajemen User</p>
                         </a>
                     </li>
                 </ul>
