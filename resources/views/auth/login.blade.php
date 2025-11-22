@@ -213,36 +213,124 @@
       }
     }
 
+    /* ============================================
+       SPLASH SCREEN STYLES - ELEGANT DESIGN
+       ============================================ */
+    
     #splash-screen {
       position: fixed;
       inset: 0;
-      background: linear-gradient(to right, #fdfdfc, #ebe8e0);
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 9999;
       flex-direction: column;
+      transition: opacity 0.5s ease;
     }
 
-    #splash-screen h1 {
+    /* ===== WELCOME STATE - Warm & Friendly ===== */
+    #splash-screen.welcome {
+      background: linear-gradient(135deg, #fdfbfb 0%, #f7f4ec 100%);
+    }
+
+    #splash-screen.welcome .splash-icon {
+      font-size: 120px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+    }
+
+    #splash-screen.welcome h1 {
       font-size: 78px;
       color: #ffd43b;
       font-weight: 700;
       margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
     }
 
-    #splash-screen p {
+    #splash-screen.welcome p {
       font-size: 48px;
       color: #fece0b;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* ===== REJECTED STATE - Elegant & Clear ===== */
+    #splash-screen.rejected {
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+      animation: gentleShake 0.5s ease;
+    }
+
+    #splash-screen.rejected .splash-icon {
+      font-size: 120px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 12px rgba(220, 14, 14, 0.2));
+      animation: gentlePulse 1.5s ease infinite;
+    }
+
+    #splash-screen.rejected h1 {
+      font-size: 78px;
+      color: #DC0E0E;
+      font-weight: 700;
+      margin-bottom: 15px;
+      text-shadow: 2px 2px 6px rgba(220, 14, 14, 0.1);
+      letter-spacing: 2px;
+    }
+
+    #splash-screen.rejected p {
+      font-size: 36px;
+      color: #DC0E0E;
+      text-align: center;
+      max-width: 700px;
+      padding: 0 20px;
+      line-height: 1.4;
+      font-weight: 500;
+      text-shadow: 1px 1px 3px rgba(220, 14, 14, 0.08);
+    }
+
+    /* ===== ANIMATIONS - Subtle & Professional ===== */
+    @keyframes gentleShake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+      20%, 40%, 60%, 80% { transform: translateX(4px); }
+    }
+
+    @keyframes gentlePulse {
+      0%, 100% { 
+        transform: scale(1); 
+        opacity: 1; 
+      }
+      50% { 
+        transform: scale(1.08); 
+        opacity: 0.9; 
+      }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    .fade-out {
+      animation: fadeOut 0.5s ease forwards;
     }
   </style>
 </head>
 <body>
 
 <!-- Splash Screen -->
-<div id="splash-screen">
-  <h1>Hello 👋</h1>
-  <p>Welcome to ZafaSys</p>
+<div id="splash-screen" class="welcome">
+  <!-- Welcome Content -->
+  <div id="splash-content-welcome">
+    <div class="splash-icon">👋</div>
+    <h1>Hello</h1>
+    <p>Welcome to ZafaSys</p>
+  </div>
+  
+  <!-- Rejected Content -->
+  <div id="splash-content-rejected" style="display: none;">
+    <div class="splash-icon">🙅‍♀️</div>
+    <h1>Oops!</h1>
+    <p id="error-detail">Username atau password tidak valid</p>
+  </div>
 </div>
 
 <!-- Login Form -->
@@ -301,12 +389,51 @@
 
 <!-- JavaScript -->
 <script>
+  // Check if there are validation errors
+  const hasErrors = {{ $errors->any() ? 'true' : 'false' }};
+  const errorMessage = @json($errors->first('username') ?? 'Username atau password tidak valid');
+  
   window.addEventListener('load', function () {
-    setTimeout(function () {
-      document.getElementById('splash-screen').style.display = 'none';
-    }, 2000);
+    const splashScreen = document.getElementById('splash-screen');
+    const welcomeContent = document.getElementById('splash-content-welcome');
+    const rejectedContent = document.getElementById('splash-content-rejected');
+    const errorDetail = document.getElementById('error-detail');
+    
+    if (hasErrors) {
+      // Show rejected state - elegant error display
+      splashScreen.className = 'rejected';
+      welcomeContent.style.display = 'none';
+      rejectedContent.style.display = 'flex';
+      rejectedContent.style.flexDirection = 'column';
+      rejectedContent.style.alignItems = 'center';
+      errorDetail.textContent = errorMessage;
+      
+      // Hide splash screen after 2.8 seconds (slightly longer for error reading)
+      setTimeout(function () {
+        splashScreen.classList.add('fade-out');
+        setTimeout(function() {
+          splashScreen.style.display = 'none';
+        }, 500);
+      }, 2800);
+    } else {
+      // Show welcome state - friendly greeting
+      splashScreen.className = 'welcome';
+      welcomeContent.style.display = 'flex';
+      welcomeContent.style.flexDirection = 'column';
+      welcomeContent.style.alignItems = 'center';
+      rejectedContent.style.display = 'none';
+      
+      // Hide splash screen after 2 seconds
+      setTimeout(function () {
+        splashScreen.classList.add('fade-out');
+        setTimeout(function() {
+          splashScreen.style.display = 'none';
+        }, 500);
+      }, 2000);
+    }
   });
 
+  // Toggle Password Visibility
   const togglePassword = document.querySelector('#togglePassword');
   const passwordInput = document.querySelector('#password');
 
