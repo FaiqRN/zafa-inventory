@@ -81,7 +81,7 @@ class BarangController extends Controller
     {
         // Validasi input
         $validator = Validator::make($request->all(), [
-            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode,NULL,barang_id,is_deleted,0',
+            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode',
             'nama_barang' => 'required|string|max:100',
             'harga_awal_barang' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:20',
@@ -108,7 +108,6 @@ class BarangController extends Controller
         $barang->stok = 0;  // Default stok 0
         $barang->satuan = $request->satuan;
         $barang->keterangan = $request->keterangan;
-        $barang->is_deleted = 0;
         $barang->save();
 
         // Get barang with stock details
@@ -153,7 +152,7 @@ class BarangController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        $barang = Barang::where('barang_id', $id)->first();
         
         if (!$barang) {
             return response()->json([
@@ -164,7 +163,7 @@ class BarangController extends Controller
 
         // Validasi input
         $validator = Validator::make($request->all(), [
-            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode,' . $id . ',barang_id,is_deleted,0',
+            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode,' . $id . ',barang_id',
             'nama_barang' => 'required|string|max:100',
             'harga_awal_barang' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:20',
@@ -198,14 +197,14 @@ class BarangController extends Controller
     }
 
     /**
-     * Soft delete the specified resource from storage.
+     * Delete the specified resource from storage.
      *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
-        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        $barang = Barang::where('barang_id', $id)->first();
         
         if (!$barang) {
             return response()->json([
@@ -214,9 +213,8 @@ class BarangController extends Controller
             ], 404);
         }
 
-        // Soft delete - update is_deleted flag
-        $barang->is_deleted = 1;
-        $barang->save();
+        // Delete barang
+        $barang->delete();
 
         return response()->json([
             'success' => true,
@@ -232,9 +230,8 @@ class BarangController extends Controller
      */
     public function getList(Request $request)
     {
-        // Get active barang
-        $barangList = Barang::where('is_deleted', 0)
-            ->orderBy('barang_kode', 'asc')
+        // Get all barang
+        $barangList = Barang::orderBy('barang_kode', 'asc')
             ->get(['barang_id', 'barang_kode', 'nama_barang', 'harga_awal_barang', 'satuan', 'keterangan', 'stok']);
         
         return response()->json([
@@ -312,7 +309,7 @@ class BarangController extends Controller
      */
     public function getStokBarang($id)
     {
-        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        $barang = Barang::where('barang_id', $id)->first();
         
         if (!$barang) {
             return response()->json([
@@ -321,11 +318,9 @@ class BarangController extends Controller
             ], 404);
         }
 
-        // Get stok records for this barang (assuming we'll create a barang_stok table)
-        // For now, return sample data structure
+        // Get stok records for this barang
         $stokData = DB::table('barang_stok')
             ->where('barang_id', $id)
-            ->where('is_deleted', 0)
             ->orderBy('tanggal_stock_barang', 'desc')
             ->get();
 
@@ -364,7 +359,6 @@ class BarangController extends Controller
             'tanggal_stock_barang' => $request->tanggal_stock_barang,
             'stok' => $request->stok,
             'catatan' => $request->catatan,
-            'is_deleted' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -372,7 +366,6 @@ class BarangController extends Controller
         // Update total stok di tabel barang
         $totalStok = DB::table('barang_stok')
             ->where('barang_id', $request->barang_id)
-            ->where('is_deleted', 0)
             ->sum('stok');
 
         Barang::where('barang_id', $request->barang_id)->update([
@@ -383,7 +376,6 @@ class BarangController extends Controller
         // Get updated stok data
         $stokData = DB::table('barang_stok')
             ->where('barang_id', $request->barang_id)
-            ->where('is_deleted', 0)
             ->orderBy('tanggal_stock_barang', 'desc')
             ->get();
 
@@ -404,7 +396,6 @@ class BarangController extends Controller
     {
         $stok = DB::table('barang_stok')
             ->where('id', $id)
-            ->where('is_deleted', 0)
             ->first();
         
         if (!$stok) {
@@ -431,7 +422,6 @@ class BarangController extends Controller
     {
         $stok = DB::table('barang_stok')
             ->where('id', $id)
-            ->where('is_deleted', 0)
             ->first();
         
         if (!$stok) {
@@ -469,7 +459,6 @@ class BarangController extends Controller
         // Recalculate total stok
         $totalStok = DB::table('barang_stok')
             ->where('barang_id', $request->barang_id)
-            ->where('is_deleted', 0)
             ->sum('stok');
 
         Barang::where('barang_id', $request->barang_id)->update([

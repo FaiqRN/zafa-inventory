@@ -22,7 +22,6 @@ class CreateBarangTable extends Migration
             $table->date('tanggal_stock_barang')->nullable();
             $table->string('satuan', 20);
             $table->string('keterangan', 255)->nullable();
-            $table->boolean('is_deleted')->default(0);
             
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();

@@ -19,7 +19,6 @@ class CreateBarangStokTable extends Migration
             $table->date('tanggal_stock_barang');
             $table->integer('stok')->default(0)->comment('Jumlah stok yang ditambahkan');
             $table->text('catatan')->nullable()->comment('Catatan untuk stok ini');
-            $table->boolean('is_deleted')->default(0);
             
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();

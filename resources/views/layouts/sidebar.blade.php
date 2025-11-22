@@ -7,7 +7,7 @@
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <!-- Dashboard -->
             <li class="nav-item">
-                <a href="{{ url('/') }}" class="nav-link {{ ($activemenu == 'dashboard')? 'active' : '' }}">
+                <a href="{{ route('dashboard') }}" class="nav-link {{ ($activemenu == 'dashboard')? 'active' : '' }}">
                     <i class="nav-icon fas fa-home"></i>
                     <p>Beranda</p>
                 </a>
@@ -24,25 +24,25 @@
                 </a>
                 <ul class="nav nav-treeview">
                     <li class="nav-item">
-                        <a href="{{ url('/barang') }}" class="nav-link {{ ($activemenu == 'barang')? 'active' : '' }}">
+                        <a href="{{ route('barang.index') }}" class="nav-link {{ ($activemenu == 'barang')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Data Barang</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/toko') }}" class="nav-link {{ ($activemenu == 'toko')? 'active' : '' }}">
+                        <a href="{{ route('toko.index') }}" class="nav-link {{ ($activemenu == 'toko')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Data Toko</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/barang-toko') }}" class="nav-link {{ ($activemenu == 'barang-toko')? 'active' : '' }}">
+                        <a href="{{ route('barang-toko.index') }}" class="nav-link {{ ($activemenu == 'barang-toko')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Barang per Toko</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/customer') }}" class="nav-link {{ ($activemenu == 'customer')? 'active' : '' }}">
+                        <a href="{{ route('customer.index') }}" class="nav-link {{ ($activemenu == 'customer')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Data Customer</p>
                         </a>
@@ -61,19 +61,19 @@
                 </a>
                 <ul class="nav nav-treeview">
                     <li class="nav-item">
-                        <a href="{{ url('/pengiriman') }}" class="nav-link {{ ($activemenu == 'pengiriman')? 'active' : '' }}">
+                        <a href="{{ route('pengiriman.index') }}" class="nav-link {{ ($activemenu == 'pengiriman')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Pengiriman Barang</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/retur') }}" class="nav-link {{ ($activemenu == 'retur')? 'active' : '' }}">
+                        <a href="{{ route('retur.index') }}" class="nav-link {{ ($activemenu == 'retur')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Retur Barang</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/pemesanan') }}" class="nav-link {{ ($activemenu == 'pemesanan')? 'active' : '' }}">
+                        <a href="{{ route('pemesanan.index') }}" class="nav-link {{ ($activemenu == 'pemesanan')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Pemesanan</p>
                         </a>
@@ -126,7 +126,7 @@
             
             <!-- Market Map -->
             <li class="nav-item">
-                <a href="{{ url('/market-map') }}" class="nav-link {{ ($activemenu == 'market-map')? 'active' : '' }}">
+                <a href="{{ route('market-map.index') }}" class="nav-link {{ ($activemenu == 'market-map')? 'active' : '' }}">
                     <i class="nav-icon fas fa-map"></i>
                     <p>Market Map</p>
                 </a>
@@ -134,7 +134,7 @@
 
             <!-- Follow Up Pelanggan -->
             <li class="nav-item">
-                <a href="{{ url('/follow-up-pelanggan') }}" class="nav-link {{ ($activemenu == 'follow-up-pelanggan')? 'active' : '' }}">
+                <a href="{{ route('follow-up-pelanggan.index') }}" class="nav-link {{ ($activemenu == 'follow-up-pelanggan')? 'active' : '' }}">
                     <i class="nav-icon fas fa-envelope-open-text"></i>
                     <p>Follow Up Pelanggan</p>
                 </a>
@@ -142,7 +142,7 @@
 
             <!-- Sistem -->
             <li class="nav-item">
-                <a href="{{ url('/user') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
+                <a href="{{ route('user.index') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
                     <i class="nav-icon fas fa-cogs"></i>
                     <p>Sistem</p>
                 </a>

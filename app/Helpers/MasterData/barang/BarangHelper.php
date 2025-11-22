@@ -99,7 +99,7 @@ class BarangHelper
      */
     public static function getStockSummary()
     {
-        $barangList = Barang::where(Barang::FIELD_IS_DELETED, 0)->get();
+        $barangList = Barang::all();
 
         return $barangList->map(function ($barang) {
             $stockDetails = self::getStockDetails($barang->barang_id);
@@ -123,8 +123,7 @@ class BarangHelper
      */
     public static function getActiveBarang()
     {
-        $barangList = Barang::where(Barang::FIELD_IS_DELETED, 0)
-            ->orderBy(Barang::FIELD_BARANG_KODE, 'asc')
+        $barangList = Barang::orderBy(Barang::FIELD_BARANG_KODE, 'asc')
             ->get();
 
         return $barangList->map(function ($barang) {
@@ -143,7 +142,7 @@ class BarangHelper
      */
     public static function getBarangWithLowStock($threshold = 10)
     {
-        $barangList = Barang::where(Barang::FIELD_IS_DELETED, 0)->get();
+        $barangList = Barang::all();
 
         return $barangList->filter(function ($barang) use ($threshold) {
             $availableStock = self::calculateAvailableStock($barang->barang_id);
@@ -165,7 +164,6 @@ class BarangHelper
     public static function getBarangById($barangId)
     {
         $barang = Barang::where(Barang::FIELD_BARANG_ID, $barangId)
-            ->where(Barang::FIELD_IS_DELETED, 0)
             ->first();
 
         if ($barang) {
@@ -223,8 +221,7 @@ class BarangHelper
      */
     public static function validateBarangKode($kode, $excludeId = null)
     {
-        $query = Barang::where(Barang::FIELD_BARANG_KODE, $kode)
-            ->where(Barang::FIELD_IS_DELETED, 0);
+        $query = Barang::where(Barang::FIELD_BARANG_KODE, $kode);
 
         if ($excludeId) {
             $query->where(Barang::FIELD_BARANG_ID, '!=', $excludeId);

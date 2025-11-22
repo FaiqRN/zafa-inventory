@@ -18,7 +18,6 @@ class Barang extends Model
     public const FIELD_STOK = 'stok';
     public const FIELD_SATUAN = 'satuan';
     public const FIELD_KETERANGAN = 'keterangan';
-    public const FIELD_IS_DELETED = 'is_deleted';
     public const FIELD_CREATED_AT = 'created_at';
     public const FIELD_UPDATED_AT = 'updated_at';
     public const FIELD_USER_CREATE = 'user_create';
@@ -38,7 +37,6 @@ class Barang extends Model
         self::FIELD_STOK,
         self::FIELD_SATUAN,
         self::FIELD_KETERANGAN,
-        self::FIELD_IS_DELETED,
         self::FIELD_USER_CREATE,
         self::FIELD_USER_UPDATE,
     ];
@@ -47,15 +45,9 @@ class Barang extends Model
         self::FIELD_STOK => 'integer',
         self::FIELD_HARGA_AWAL_BARANG => 'decimal:2',
         self::FIELD_TANGGAL_STOCK_BARANG => 'date',
-        self::FIELD_IS_DELETED => 'boolean',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
     ];
-
-    public function scopeNotDeleted($query)
-    {
-        return $query->where(self::FIELD_IS_DELETED, 0);
-    }
 
     public function barangToko()
     {
@@ -85,9 +77,8 @@ class Barang extends Model
     
     public static function generateBarangKode()
     {
-        // Get last barang that is not deleted, ordered by kode
-        $lastBarang = self::where(self::FIELD_IS_DELETED, 0)
-                          ->orderBy(self::FIELD_BARANG_KODE, 'desc')
+        // Get last barang ordered by kode
+        $lastBarang = self::orderBy(self::FIELD_BARANG_KODE, 'desc')
                           ->first();
         
         if (!$lastBarang) {

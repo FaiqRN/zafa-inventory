@@ -6,12 +6,12 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">
-                <i class="fa fa-fw fa-tags"></i> Pilih Toko
+                <i class=""></i> 
             </h3>
         </div>
         <div class="card-body">
             <div class="form-group">
-                <label for="toko_select">Toko</label>
+                <label for="toko_select">Pilih Toko</label>
                 <select class="form-control" id="toko_select">
                     <option value="">-- Pilih Toko --</option>
                     @foreach($toko as $t)
