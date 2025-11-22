@@ -356,7 +356,6 @@
       <!-- Username -->
       <div class="form-group">
         <label for="username">Username</label>
-        <i class='bx bx-user input-icon-left'></i>
         <input type="text" name="username" id="username" placeholder="Enter your username" value="{{ old('username') }}">
         @error('username')
           <span class="error-message">{{ $message }}</span>
@@ -366,9 +365,7 @@
       <!-- Password -->
       <div class="form-group">
         <label for="password">Password</label>
-        <i class='bx bx-lock input-icon-left'></i>
         <input type="password" name="password" id="password" placeholder="Enter your password">
-        <i class='bx bx-show toggle-password' id="togglePassword"></i>
         @error('password')
           <span class="error-message">{{ $message }}</span>
         @enderror
