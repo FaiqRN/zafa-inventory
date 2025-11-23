@@ -1,5 +1,15 @@
 @extends('layouts.template')
 
+@section('page_title', 'Pengiriman Barang')
+
+@php
+    $activemenu = 'pengiriman';
+    $breadcrumb = (object) [
+        'title' => 'Pengiriman Barang',
+        'list' => ['Home', 'Transaksi', 'Pengiriman Barang']
+    ];
+@endphp
+
 @section('content')
 <div class="card">
     <div class="card-header">
@@ -30,15 +40,12 @@
                     <option value="batal">Batal</option>
                 </select>
             </div>
+
             <div class="col-md-2">
-                <label>Tanggal Mulai</label>
-                <input type="date" id="filter_start_date" class="form-control">
+                <label>Tanggal</label>
+                <input type="date" id="filter_tanggal" class="form-control">
             </div>
-            <div class="col-md-2">
-                <label>Tanggal Akhir</label>
-                <input type="date" id="filter_end_date" class="form-control">
-            </div>
-            <div class="col-md-2">
+            <div class="col-md-2 offset-md-2">
                 <label>&nbsp;</label>
                 <button type="button" class="btn btn-info btn-block" onclick="filterData()">
                     <i class="fas fa-filter"></i> Filter
@@ -139,12 +146,6 @@ $(document).ready(function() {
                             <button type="button" class="btn btn-success btn-sm" onclick="updateStatus('${data}', 'terkirim')" title="Ubah ke Terkirim">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="updateStatus('${data}', 'batal')" title="Batalkan">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
-                    } else if (row.status === 'terkirim') {
-                        btnStatus = `
                             <button type="button" class="btn btn-danger btn-sm" onclick="updateStatus('${data}', 'batal')" title="Batalkan">
                                 <i class="fas fa-times"></i>
                             </button>

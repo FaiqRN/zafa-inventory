@@ -46,6 +46,17 @@ class PengirimanController extends Controller
             $query->whereDate(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '<=', $request->end_date);
         }
         
+        if ($request->has('tanggal_mulai') && !empty($request->tanggal_mulai)) {
+            $query->whereDate(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '>=', $request->tanggal_mulai);
+        }
+        
+        if ($request->has('tanggal_akhir') && !empty($request->tanggal_akhir)) {
+            $query->whereDate(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '<=', $request->tanggal_akhir);
+        }
+        
+        $query->orderBy(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, 'desc')
+              ->orderBy(Pengiriman::FIELD_NOMER_PENGIRIMAN, 'desc');
+        
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('toko_nama', function($row) {

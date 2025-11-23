@@ -224,9 +224,39 @@ function addBarangRow() {
 function updateBarangInfo(select) {
     const selectedOption = $(select).find('option:selected');
     const row = $(select).closest('tr');
+    const selectedBarangId = $(select).val();
+    
+    if (selectedBarangId) {
+        const isDuplicate = checkDuplicateBarang(selectedBarangId, row.attr('id'));
+        if (isDuplicate) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Duplikasi Barang',
+                text: 'Barang ini sudah dipilih. Silakan pilih barang lain.'
+            });
+            $(select).val('');
+            row.find('.satuan-input').val('');
+            row.find('.harga-input').val('');
+            return;
+        }
+    }
     
     row.find('.satuan-input').val(selectedOption.data('satuan'));
     row.find('.harga-input').val(new Intl.NumberFormat('id-ID').format(selectedOption.data('harga')));
+}
+
+function checkDuplicateBarang(barangId, currentRowId) {
+    let isDuplicate = false;
+    $('#barang-rows tr').each(function() {
+        if ($(this).attr('id') !== currentRowId) {
+            const existingBarangId = $(this).find('.barang-select').val();
+            if (existingBarangId === barangId) {
+                isDuplicate = true;
+                return false;
+            }
+        }
+    });
+    return isDuplicate;
 }
 
 function removeBarangRow(index) {

@@ -256,11 +256,9 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     Route::group(['prefix' => 'retur'], function() {
         Route::get('/', [ReturController::class, 'index'])->name('retur.index');
         Route::get('/data', [ReturController::class, 'getData'])->name('retur.data');
-        Route::get('/get-pengiriman', [ReturController::class, 'getPengiriman'])->name('retur.getPengiriman');
         Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
         Route::get('/export', [ReturController::class, 'export'])->name('retur.export');
-        Route::get('/{id}', [ReturController::class, 'show'])->name('retur.show');
-        Route::delete('/{id}', [ReturController::class, 'destroy'])->name('retur.destroy');
+        Route::get('/{nomerPengiriman}', [ReturController::class, 'show'])->name('retur.show');
     });
     
     Route::group(['prefix' => 'pemesanan'], function() {
