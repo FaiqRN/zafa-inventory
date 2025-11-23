@@ -232,7 +232,7 @@ class ProductVelocityController extends Controller
     {
         try {
             $periodStart = Carbon::now()->subMonths(6); // Extended to 6 months for better data
-            $products = Barang::where('is_deleted', 0)->get();
+            $products = Barang::all();
             
             if ($products->isEmpty()) {
                 return $this->getDefaultProductCategories();

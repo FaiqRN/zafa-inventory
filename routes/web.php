@@ -225,7 +225,6 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         Route::delete('/{id}', [CustomerController::class, 'destroy'])->name('customer.destroy');
         Route::post('/import', [CustomerController::class, 'import'])->name('customer.import');
         Route::post('/sync-pemesanan', [CustomerController::class, 'syncFromPemesanan'])->name('customer.syncPemesanan');
-        Route::get('/debug-tables', [CustomerController::class, 'debugTables'])->name('customer.debugTables');
     });
     
     // ===============================
