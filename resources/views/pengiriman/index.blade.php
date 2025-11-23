@@ -169,47 +169,77 @@ $(document).ready(function() {
 });
 
 function updateStatus(nomer, status) {
-    let message = '';
+    let title = '';
+    let text = '';
+    let icon = 'warning';
+    
     if (status === 'terkirim') {
-        message = 'Ubah status ke "Terkirim"?\n⚠️ Stok barang akan berkurang sesuai jumlah pengiriman.';
+        title = 'Ubah Status ke Terkirim?';
+        text = 'Stok barang akan berkurang sesuai jumlah pengiriman';
+        icon = 'question';
     } else if (status === 'batal') {
-        message = 'Ubah status ke "Batal"?\n⚠️ Jika pengiriman sudah terkirim, stok akan dikembalikan.';
+        title = 'Batalkan Pengiriman?';
+        text = 'Jika pengiriman sudah terkirim, stok akan dikembalikan';
+        icon = 'warning';
     }
     
-    if (confirm(message)) {
-        $.ajax({
-            url: "{{ url('pengiriman') }}/" + nomer + "/update_status",
-            type: "POST",
-            data: {
-                _token: '{{ csrf_token() }}',
-                status: status
-            },
-            success: function(response) {
-                if (response.status === 'success') {
+    Swal.fire({
+        title: title,
+        text: text,
+        icon: icon,
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Lanjutkan',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: "{{ url('pengiriman') }}/" + nomer + "/update_status",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    status: status
+                },
+                beforeSend: function() {
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: response.message,
-                        timer: 1500
+                        title: 'Memproses...',
+                        text: 'Mohon tunggu sebentar',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
                     });
-                    dataTable.ajax.reload();
-                } else {
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        dataTable.ajax.reload();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: response.message
+                        });
+                    }
+                },
+                error: function(xhr) {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Gagal',
-                        text: response.message
+                        title: 'Error!',
+                        text: xhr.responseJSON?.message || 'Terjadi kesalahan pada server'
                     });
                 }
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: xhr.responseJSON?.message || 'Terjadi kesalahan'
-                });
-            }
-        });
-    }
+            });
+        }
+    });
 }
 
 function showDetail(nomer) {

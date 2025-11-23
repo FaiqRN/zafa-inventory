@@ -163,6 +163,17 @@ $(document).ready(function() {
         // Debug: log data yang akan dikirim
         console.log('Sending items:', items);
 
+        // Tampilkan loading
+        Swal.fire({
+            title: 'Menyimpan...',
+            text: 'Mohon tunggu sebentar',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         $.ajax({
             url: $(this).attr('action'),
             type: 'POST',
@@ -174,9 +185,10 @@ $(document).ready(function() {
                     $('#myModal').modal('hide');
                     Swal.fire({
                         icon: 'success',
-                        title: 'Berhasil',
+                        title: 'Berhasil!',
                         text: response.message,
-                        timer: 1500
+                        timer: 2000,
+                        showConfirmButton: false
                     });
                     dataTable.ajax.reload();
                 } else {
@@ -189,16 +201,18 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 console.error('Error response:', xhr.responseJSON);
-                let errorMsg = 'Terjadi kesalahan';
+                let errorMsg = 'Terjadi kesalahan pada server';
                 if (xhr.responseJSON?.errors) {
-                    errorMsg = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                    const errors = Object.values(xhr.responseJSON.errors).flat();
+                    errorMsg = errors.join('\n');
                 } else if (xhr.responseJSON?.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error',
-                    text: errorMsg
+                    title: 'Gagal Menyimpan!',
+                    html: errorMsg.replace(/\n/g, '<br>'),
+                    confirmButtonText: 'OK'
                 });
             }
         });
@@ -313,6 +327,26 @@ function checkDuplicateBarang(barangId, currentRowId) {
 }
 
 function removeBarangRow(index) {
-    $(`#row-${index}`).remove();
+    Swal.fire({
+        title: 'Hapus Barang?',
+        text: 'Barang ini akan dihapus dari daftar',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $(`#row-${index}`).remove();
+            Swal.fire({
+                icon: 'success',
+                title: 'Terhapus!',
+                text: 'Barang berhasil dihapus',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
 }
 </script>
