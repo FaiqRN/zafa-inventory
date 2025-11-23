@@ -243,18 +243,22 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // Route Transaksi
     Route::group(['prefix' => 'pengiriman'], function() {
         Route::get('/', [PengirimanController::class, 'index'])->name('pengiriman.index');
-        Route::get('/data', [PengirimanController::class, 'getData'])->name('pengiriman.data');
-        Route::get('/get-nomer', [PengirimanController::class, 'getNomerPengiriman'])->name('pengiriman.getNomerPengiriman');
-        Route::get('/get-barang-by-toko', [PengirimanController::class, 'getBarangByToko'])->name('pengiriman.getBarangByToko');
-        Route::put('/{id}/update-status', [PengirimanController::class, 'updateStatus'])->name('pengiriman.updateStatus');
-        Route::get('/export', [PengirimanController::class, 'export'])->name('pengiriman.export');
-        Route::get('/list', [PengirimanController::class, 'getList'])->name('pengiriman.list');
-        Route::post('/', [PengirimanController::class, 'store'])->name('pengiriman.store');
-        Route::get('/{id}/edit', [PengirimanController::class, 'edit'])->name('pengiriman.edit');
-        Route::put('/{id}', [PengirimanController::class, 'update'])->name('pengiriman.update');
+        Route::post('/list', [PengirimanController::class, 'getData'])->name('pengiriman.list');
+        Route::get('/get_nomer', [PengirimanController::class, 'getNomerPengiriman'])->name('pengiriman.getNomer');
+        Route::get('/get_barang', [PengirimanController::class, 'getBarangByToko'])->name('pengiriman.getBarang');
+        Route::get('/create_ajax', function() {
+            $toko = \App\Helpers\MasterData\pengiriman\PengirimanHelper::getAllTokoOrdered();
+            return view('pengiriman.create_ajax', compact('toko'));
+        })->name('pengiriman.createAjax');
+        Route::post('/ajax', [PengirimanController::class, 'store'])->name('pengiriman.storeAjax');
+        Route::get('/{id}/show_ajax', function($id) {
+            $pengiriman = \App\Helpers\MasterData\pengiriman\PengirimanHelper::getPengirimanById($id);
+            return view('pengiriman.show_ajax', compact('pengiriman'));
+        })->name('pengiriman.showAjax');
+        Route::post('/{id}/update_status', [PengirimanController::class, 'updateStatus'])->name('pengiriman.updateStatus');
+        Route::get('/print/{id}', [PengirimanController::class, 'print'])->name('pengiriman.print');
         Route::delete('/{id}', [PengirimanController::class, 'destroy'])->name('pengiriman.destroy');
     });
-    Route::resource('pengiriman', PengirimanController::class);
     
     Route::group(['prefix' => 'retur'], function() {
         Route::get('/', [ReturController::class, 'index'])->name('retur.index');
