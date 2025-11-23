@@ -10,14 +10,13 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>No. Pengiriman</label>
+                    <label>Nomor Pengiriman</label>
                     <input type="text" name="nomer_pengiriman" id="nomer_pengiriman" class="form-control" readonly>
-                    <small class="form-text text-muted">Nomor otomatis</small>
                 </div>
 
                 <div class="form-group">
                     <label>Tanggal Pengiriman <span class="text-danger">*</span></label>
-                    <input type="date" name="tanggal_pengiriman" id="tanggal_pengiriman" class="form-control" value="{{ date('Y-m-d') }}" required>
+                    <input type="date" name="tanggal_pengiriman" id="tanggal_pengiriman" class="form-control" required>
                 </div>
 
                 <div class="form-group">
@@ -37,18 +36,17 @@
                 </button>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered table-sm" id="table-barang">
+                    <table class="table table-bordered table-sm">
                         <thead>
                             <tr>
                                 <th width="40%">Barang</th>
                                 <th width="15%">Jumlah</th>
                                 <th width="15%">Satuan</th>
                                 <th width="20%">Harga</th>
-                                <th width="10%">Aksi</th>
+                                <th width="10%" class="text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="barang-rows">
-                            <!-- Dynamic rows akan ditambahkan di sini -->
                         </tbody>
                     </table>
                 </div>
@@ -66,7 +64,6 @@ let barangList = [];
 let rowIndex = 0;
 
 $(document).ready(function() {
-    // Generate nomor pengiriman otomatis
     $.ajax({
         url: "{{ url('pengiriman/get_nomer') }}",
         type: "GET",
@@ -75,7 +72,8 @@ $(document).ready(function() {
         }
     });
 
-    // Load barang saat toko dipilih
+    $('#tanggal_pengiriman').val(new Date().toISOString().split('T')[0]);
+
     $('#toko_id').change(function() {
         const tokoId = $(this).val();
         if (tokoId) {
@@ -86,11 +84,9 @@ $(document).ready(function() {
         }
     });
 
-    // Submit form
     $('#form-tambah-pengiriman').submit(function(e) {
         e.preventDefault();
         
-        // Validasi minimal 1 barang
         if ($('#barang-rows tr').length === 0) {
             Swal.fire({
                 icon: 'warning',
@@ -100,15 +96,12 @@ $(document).ready(function() {
             return false;
         }
 
-        // Kumpulkan data items
         const items = [];
         $('#barang-rows tr').each(function() {
             const row = $(this);
             items.push({
                 barang_id: row.find('.barang-select').val(),
-                jumlah: row.find('.jumlah-input').val(),
-                satuan: row.find('.satuan-input').val(),
-                harga: row.find('.harga-input').val()
+                jumlah: row.find('.jumlah-input').val()
             });
         });
 
@@ -130,7 +123,8 @@ $(document).ready(function() {
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil',
-                        text: response.message
+                        text: response.message,
+                        timer: 1500
                     });
                     dataTable.ajax.reload();
                 } else {
@@ -167,7 +161,6 @@ function loadBarangByToko(tokoId) {
             if (response.status === 'success') {
                 barangList = response.data;
                 $('#barang-rows').empty();
-                addBarangRow(); // Tambah 1 baris default
             }
         },
         error: function() {
@@ -204,18 +197,18 @@ function addBarangRow() {
     const row = `
         <tr id="row-${rowIndex}">
             <td>
-                <select class="form-control form-control-sm barang-select" name="items[${rowIndex}][barang_id]" onchange="updateBarangInfo(this)" required>
+                <select class="form-control form-control-sm barang-select" onchange="updateBarangInfo(this)" required>
                     ${options}
                 </select>
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm jumlah-input" name="items[${rowIndex}][jumlah]" min="1" required>
+                <input type="number" class="form-control form-control-sm jumlah-input" min="1" required>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm satuan-input" name="items[${rowIndex}][satuan]" readonly>
+                <input type="text" class="form-control form-control-sm satuan-input" readonly>
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm harga-input" name="items[${rowIndex}][harga]" step="0.01" readonly>
+                <input type="text" class="form-control form-control-sm harga-input" readonly>
             </td>
             <td class="text-center">
                 <button type="button" class="btn btn-danger btn-sm" onclick="removeBarangRow(${rowIndex})">
@@ -233,7 +226,7 @@ function updateBarangInfo(select) {
     const row = $(select).closest('tr');
     
     row.find('.satuan-input').val(selectedOption.data('satuan'));
-    row.find('.harga-input').val(selectedOption.data('harga'));
+    row.find('.harga-input').val(new Intl.NumberFormat('id-ID').format(selectedOption.data('harga')));
 }
 
 function removeBarangRow(index) {

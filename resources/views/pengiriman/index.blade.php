@@ -129,34 +129,34 @@ $(document).ready(function() {
                 orderable: false
             },
             {
-                data: 'pengiriman_id',
+                data: 'nomer_pengiriman',
                 className: 'text-center',
                 orderable: false,
                 render: function(data, type, row) {
                     let btnStatus = '';
                     if (row.status === 'proses') {
                         btnStatus = `
-                            <button onclick="updateStatus('${data}', 'terkirim')" class="btn btn-success btn-sm" title="Ubah ke Terkirim">
+                            <button type="button" class="btn btn-success btn-sm" onclick="updateStatus('${data}', 'terkirim')" title="Ubah ke Terkirim">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button onclick="updateStatus('${data}', 'batal')" class="btn btn-danger btn-sm" title="Batalkan">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="updateStatus('${data}', 'batal')" title="Batalkan">
                                 <i class="fas fa-times"></i>
                             </button>
                         `;
                     } else if (row.status === 'terkirim') {
                         btnStatus = `
-                            <button onclick="updateStatus('${data}', 'batal')" class="btn btn-warning btn-sm" title="Batalkan (Stok Dikembalikan)">
-                                <i class="fas fa-undo"></i>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="updateStatus('${data}', 'batal')" title="Batalkan">
+                                <i class="fas fa-times"></i>
                             </button>
                         `;
                     }
                     
                     return `
                         ${btnStatus}
-                        <button onclick="showDetail('${data}')" class="btn btn-info btn-sm" title="Detail">
+                        <button type="button" class="btn btn-info btn-sm" onclick="showDetail('${data}')" title="Detail">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <a href="{{ url('pengiriman/print') }}/${data}" target="_blank" class="btn btn-secondary btn-sm" title="Print Nota">
+                        <a href="{{ url('pengiriman') }}/${data}/print" target="_blank" class="btn btn-secondary btn-sm" title="Print">
                             <i class="fas fa-print"></i>
                         </a>
                     `;
@@ -167,7 +167,7 @@ $(document).ready(function() {
     });
 });
 
-function updateStatus(id, status) {
+function updateStatus(nomer, status) {
     let message = '';
     if (status === 'terkirim') {
         message = 'Ubah status ke "Terkirim"?\n⚠️ Stok barang akan berkurang sesuai jumlah pengiriman.';
@@ -177,7 +177,7 @@ function updateStatus(id, status) {
     
     if (confirm(message)) {
         $.ajax({
-            url: "{{ url('pengiriman') }}/" + id + "/update_status",
+            url: "{{ url('pengiriman') }}/" + nomer + "/update_status",
             type: "POST",
             data: {
                 _token: '{{ csrf_token() }}',
@@ -188,7 +188,8 @@ function updateStatus(id, status) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil',
-                        text: response.message
+                        text: response.message,
+                        timer: 1500
                     });
                     dataTable.ajax.reload();
                 } else {
@@ -210,8 +211,8 @@ function updateStatus(id, status) {
     }
 }
 
-function showDetail(id) {
-    modalAction("{{ url('pengiriman') }}/" + id + "/show_ajax");
+function showDetail(nomer) {
+    modalAction("{{ url('pengiriman') }}/" + nomer + "/show_ajax");
 }
 </script>
 @endpush

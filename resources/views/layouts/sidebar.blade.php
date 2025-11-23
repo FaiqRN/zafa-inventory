@@ -3,8 +3,9 @@
 @endphp
 <div class="sidebar">
     <!-- Sidebar Menu -->
-    <nav class="mt-2">
+    <nav class="mt-3">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            
             <!-- Dashboard -->
             <li class="nav-item">
                 <a href="{{ route('dashboard') }}" class="nav-link {{ ($activemenu == 'dashboard')? 'active' : '' }}">
@@ -14,7 +15,7 @@
             </li>
 
             <!-- Master Data -->
-            <li class="nav-item">
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-database"></i>
                     <p>
@@ -51,7 +52,7 @@
             </li>
 
             <!-- Transaksi -->
-            <li class="nav-item">
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['pengiriman', 'retur', 'pemesanan']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['pengiriman', 'retur', 'pemesanan']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-exchange-alt"></i>
                     <p>
@@ -81,8 +82,8 @@
                 </ul>
             </li>
 
-            <!-- Analytics - NEW ADVANCED SECTION -->
-            <li class="nav-item">
+            <!-- Analytics -->
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-brain"></i>
                     <p>
@@ -94,7 +95,7 @@
                     <li class="nav-item">
                         <a href="{{ route('analytics.index') }}" class="nav-link {{ ($activemenu == 'analytics')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Analytics Dashboard</p>
+                            <p>Dashboard</p>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -104,7 +105,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('analytics.inventory-optimization.index') }}" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')? 'active' : '' }}">
+                        <a href="{{ route('analytics.inventory-optimization.index') }}" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')?'active': ''}}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Inventory Optimization</p>
                         </a>
@@ -127,7 +128,7 @@
             <!-- Market Map -->
             <li class="nav-item">
                 <a href="{{ route('market-map.index') }}" class="nav-link {{ ($activemenu == 'market-map')? 'active' : '' }}">
-                    <i class="nav-icon fas fa-map"></i>
+                    <i class="nav-icon fas fa-map-marked-alt"></i>
                     <p>Market Map</p>
                 </a>
             </li>
@@ -140,8 +141,8 @@
                 </a>
             </li>
 
-            <!-- User -->
-            <li class="nav-item">
+            <!-- Sistem Pengaturan -->
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['user']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['user']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-users-cog"></i>
                     <p>
@@ -162,4 +163,3 @@
         </ul>
     </nav>
 </div>
-

@@ -14,7 +14,6 @@ class Barang extends Model
     public const FIELD_BARANG_KODE = 'barang_kode';
     public const FIELD_NAMA_BARANG = 'nama_barang';
     public const FIELD_HARGA_AWAL_BARANG = 'harga_awal_barang';
-    public const FIELD_TANGGAL_STOCK_BARANG = 'tanggal_stock_barang';
     public const FIELD_STOK = 'stok';
     public const FIELD_SATUAN = 'satuan';
     public const FIELD_KETERANGAN = 'keterangan';
@@ -33,7 +32,6 @@ class Barang extends Model
         self::FIELD_BARANG_KODE,
         self::FIELD_NAMA_BARANG,
         self::FIELD_HARGA_AWAL_BARANG,
-        self::FIELD_TANGGAL_STOCK_BARANG,
         self::FIELD_STOK,
         self::FIELD_SATUAN,
         self::FIELD_KETERANGAN,
@@ -44,7 +42,6 @@ class Barang extends Model
     protected $casts = [
         self::FIELD_STOK => 'integer',
         self::FIELD_HARGA_AWAL_BARANG => 'decimal:2',
-        self::FIELD_TANGGAL_STOCK_BARANG => 'date',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
     ];

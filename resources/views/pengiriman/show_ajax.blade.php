@@ -10,22 +10,22 @@
             <table class="table table-sm table-borderless">
                 <tr>
                     <th width="30%">No. Pengiriman</th>
-                    <td>{{ $pengiriman->nomer_pengiriman }}</td>
+                    <td>{{ $pengiriman['nomer_pengiriman'] }}</td>
                 </tr>
                 <tr>
                     <th>Tanggal</th>
-                    <td>{{ \Carbon\Carbon::parse($pengiriman->tanggal_pengiriman)->format('d/m/Y') }}</td>
+                    <td>{{ \Carbon\Carbon::parse($pengiriman['tanggal_pengiriman'])->format('d/m/Y') }}</td>
                 </tr>
                 <tr>
                     <th>Toko</th>
-                    <td>{{ $pengiriman->toko->nama_toko }}</td>
+                    <td>{{ $pengiriman['toko']->nama_toko }}</td>
                 </tr>
                 <tr>
                     <th>Status</th>
                     <td>
-                        @if($pengiriman->status === 'proses')
+                        @if($pengiriman['status'] === 'proses')
                             <span class="badge badge-warning">Proses</span>
-                        @elseif($pengiriman->status === 'terkirim')
+                        @elseif($pengiriman['status'] === 'terkirim')
                             <span class="badge badge-success">Terkirim</span>
                         @else
                             <span class="badge badge-danger">Batal</span>
@@ -48,23 +48,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($pengiriman->details as $index => $detail)
+                    @php $total_jumlah = 0; $total_nilai = 0; @endphp
+                    @foreach($pengiriman['items'] as $index => $item)
+                    @php 
+                        $subtotal = $item['jumlah'] * $item['harga']; 
+                        $total_jumlah += $item['jumlah'];
+                        $total_nilai += $subtotal;
+                    @endphp
                     <tr>
                         <td>{{ $index + 1 }}</td>
-                        <td>{{ $detail->barang->nama_barang }}</td>
-                        <td class="text-right">{{ number_format($detail->jumlah, 0, ',', '.') }}</td>
-                        <td>{{ $detail->satuan }}</td>
-                        <td class="text-right">Rp {{ number_format($detail->harga, 0, ',', '.') }}</td>
-                        <td class="text-right">Rp {{ number_format($detail->subtotal, 0, ',', '.') }}</td>
+                        <td>{{ $item['barang']->nama_barang }}</td>
+                        <td class="text-right">{{ number_format($item['jumlah'], 0, ',', '.') }}</td>
+                        <td>{{ $item['satuan'] }}</td>
+                        <td class="text-right">Rp {{ number_format($item['harga'], 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($subtotal, 0, ',', '.') }}</td>
                     </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
                         <th colspan="2">Total</th>
-                        <th class="text-right">{{ number_format($pengiriman->total_jumlah, 0, ',', '.') }}</th>
+                        <th class="text-right">{{ number_format($total_jumlah, 0, ',', '.') }}</th>
                         <th colspan="2"></th>
-                        <th class="text-right">Rp {{ number_format($pengiriman->total_nilai, 0, ',', '.') }}</th>
+                        <th class="text-right">Rp {{ number_format($total_nilai, 0, ',', '.') }}</th>
                     </tr>
                 </tfoot>
             </table>

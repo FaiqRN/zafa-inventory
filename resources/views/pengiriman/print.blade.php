@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Nota Pengiriman - {{ $pengiriman->nomer_pengiriman }}</title>
+    <title>Nota Pengiriman - {{ $pengiriman['nomer_pengiriman'] }}</title>
     <style>
         @page {
             size: A4;
@@ -88,15 +88,15 @@
     </div>
 
     <div class="header">
-        <div>[Tanggal: {{ \Carbon\Carbon::parse($pengiriman->tanggal_pengiriman)->format('d-m-Y') }}]</div>
-        <div>Tuan Toko: <strong>{{ $pengiriman->toko->nama_toko }}</strong></div>
+        <div>[Tanggal: {{ \Carbon\Carbon::parse($pengiriman['tanggal_pengiriman'])->format('d-m-Y') }}]</div>
+        <div>Tuan Toko: <strong>{{ $pengiriman['toko']->nama_toko }}</strong></div>
         <div style="text-align: right;">[Bayar Segar]</div>
     </div>
 
     <hr style="border: 1px solid black;">
 
     <div class="nota-info text-center">
-        <strong>NOTA NO. {{ $pengiriman->nomer_pengiriman }}</strong>
+        <strong>NOTA NO. ___________</strong>
     </div>
 
     <table>
@@ -109,11 +109,11 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($pengiriman->details as $detail)
+            @foreach($pengiriman['items'] as $item)
             <tr>
-                <td class="text-center">{{ $detail->jumlah }} {{ $detail->satuan }}</td>
-                <td>{{ $detail->barang->nama_barang }}</td>
-                <td class="text-center">{{ number_format($detail->harga, 0, ',', '.') }}</td>
+                <td class="text-center">{{ $item['jumlah'] }} {{ $item['satuan'] }}</td>
+                <td>{{ $item['barang']->nama_barang }}</td>
+                <td class="text-center">{{ number_format($item['harga'], 0, ',', '.') }}</td>
                 <td></td>
             </tr>
             @endforeach
@@ -149,10 +149,5 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // Auto print saat halaman dimuat (opsional)
-        // window.onload = function() { window.print(); }
-    </script>
 </body>
 </html>

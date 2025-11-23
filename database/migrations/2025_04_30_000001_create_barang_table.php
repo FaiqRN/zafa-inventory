@@ -19,7 +19,6 @@ class CreateBarangTable extends Migration
             $table->string('nama_barang', 100);
             $table->decimal('harga_awal_barang', 10, 2);
             $table->integer('stok')->default(0)->comment('Stok barang');
-            $table->date('tanggal_stock_barang')->nullable();
             $table->string('satuan', 20);
             $table->string('keterangan', 255)->nullable();
             

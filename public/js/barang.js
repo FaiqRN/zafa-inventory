@@ -148,10 +148,17 @@ $(document).ready(function () {
     function renderStokTable(data, satuan) {
         let html = '';
         $.each(data, function (index, item) {
+            const sisaStok = item.sisa_stok !== undefined ? item.sisa_stok : item.stok;
+            const terpakai = item.stok - sisaStok;
+            const badgeClass = sisaStok > 0 ? 'badge-success' : 'badge-secondary';
+            
             html += `
                 <tr>
                     <td>${formatTanggal(item.tanggal_stock_barang)}</td>
-                    <td class="text-center"><span class="badge badge-success badge-lg">${item.stok} ${satuan}</span></td>
+                    <td class="text-center">
+                        <span class="badge ${badgeClass} badge-lg">${sisaStok} ${satuan}</span>
+                        ${terpakai > 0 ? `<br><small class="text-muted">(Terpakai: ${terpakai})</small>` : ''}
+                    </td>
                 </tr>
             `;
         });
