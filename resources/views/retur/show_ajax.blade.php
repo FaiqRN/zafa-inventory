@@ -25,6 +25,12 @@
             <hr>
 
             <h6 class="mb-3">Daftar Barang & Data Retur</h6>
+            @if($isLocked)
+                <div class="alert alert-info">
+                    <i class="fas fa-lock"></i> Data retur sudah disimpan dan tidak dapat diubah lagi.
+                </div>
+            @endif
+            
             <form id="formRetur">
                 @csrf
                 <input type="hidden" name="nomer_pengiriman" value="{{ $nomerPengiriman }}">
@@ -33,14 +39,17 @@
                     <table class="table table-bordered table-sm">
                         <thead class="thead-light">
                             <tr>
-                                <th width="5%">No</th>
-                                <th width="25%">Nama Barang</th>
-                                <th width="10%">Jumlah Kirim</th>
-                                <th width="12%">Tanggal Retur</th>
-                                <th width="10%">Jumlah Retur</th>
-                                <th width="10%">Total Terjual</th>
-                                <th width="15%">Kondisi</th>
-                                <th width="13%">Keterangan</th>
+                                <th width="3%">No</th>
+                                <th width="15%">Nama Barang</th>
+                                <th width="8%">Tanggal Pengiriman</th>
+                                <th width="8%">Tanggal Retur</th>
+                                <th width="10%">Harga Awal Barang</th>
+                                <th width="7%">Jumlah Kirim</th>
+                                <th width="7%">Jumlah Retur</th>
+                                <th width="7%">Total Terjual</th>
+                                <th width="10%">Hasil</th>
+                                <th width="10%">Kondisi</th>
+                                <th width="15%">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -52,50 +61,74 @@
                                 $kondisi = $retur ? $retur->kondisi : 'Tidak Ada Retur';
                                 $keterangan = $retur ? $retur->keterangan : '';
                                 $totalTerjual = $item->jumlah_kirim - $jumlahRetur;
+                                $hargaAwalBarang = $item->barang->harga_awal_barang ?? 0;
+                                $hasil = $totalTerjual * $hargaAwalBarang;
                             @endphp
                             <tr>
                                 <td class="text-center">{{ $index + 1 }}</td>
                                 <td>{{ $item->barang->nama_barang }}</td>
-                                <td class="text-center">{{ $item->jumlah_kirim }}</td>
+                                <td class="text-center">{{ \Carbon\Carbon::parse($item->tanggal_pengiriman)->format('d/m/Y') }}</td>
                                 <td>
                                     <input type="hidden" name="items[{{ $index }}][pengiriman_id]" value="{{ $item->pengiriman_id }}">
-                                    <input type="date" 
-                                           class="form-control form-control-sm tanggal-retur" 
-                                           name="items[{{ $index }}][tanggal_retur]" 
-                                           value="{{ $tanggalRetur }}" 
-                                           required>
+                                    @if($isLocked)
+                                        <span>{{ \Carbon\Carbon::parse($tanggalRetur)->format('d/m/Y') }}</span>
+                                    @else
+                                        <input type="date" 
+                                               class="form-control form-control-sm tanggal-retur" 
+                                               name="items[{{ $index }}][tanggal_retur]" 
+                                               value="{{ $tanggalRetur }}" 
+                                               required>
+                                    @endif
                                 </td>
+                                <td class="text-right">{{ number_format($hargaAwalBarang, 2, ',', '.') }}</td>
+                                <td class="text-center">{{ $item->jumlah_kirim }}</td>
                                 <td>
-                                    <input type="number" 
-                                           class="form-control form-control-sm jumlah-retur" 
-                                           name="items[{{ $index }}][jumlah_retur]" 
-                                           value="{{ $jumlahRetur }}" 
-                                           min="0" 
-                                           max="{{ $item->jumlah_kirim }}"
-                                           data-max="{{ $item->jumlah_kirim }}"
-                                           data-index="{{ $index }}"
-                                           required>
+                                    @if($isLocked)
+                                        <span class="d-block text-center">{{ $jumlahRetur }}</span>
+                                    @else
+                                        <input type="number" 
+                                               class="form-control form-control-sm jumlah-retur" 
+                                               name="items[{{ $index }}][jumlah_retur]" 
+                                               value="{{ $jumlahRetur }}" 
+                                               min="0" 
+                                               max="{{ $item->jumlah_kirim }}"
+                                               data-max="{{ $item->jumlah_kirim }}"
+                                               data-index="{{ $index }}"
+                                               data-harga="{{ $hargaAwalBarang }}"
+                                               required>
+                                    @endif
                                 </td>
                                 <td class="text-center">
                                     <span class="total-terjual" data-index="{{ $index }}">{{ $totalTerjual }}</span>
                                 </td>
-                                <td>
-                                    <select class="form-control form-control-sm" 
-                                            name="items[{{ $index }}][kondisi]" 
-                                            required>
-                                        <option value="Tidak Ada Retur" {{ $kondisi == 'Tidak Ada Retur' ? 'selected' : '' }}>Tidak Ada Retur</option>
-                                        <option value="Rusak" {{ $kondisi == 'Rusak' ? 'selected' : '' }}>Rusak</option>
-                                        <option value="Kadaluarsa" {{ $kondisi == 'Kadaluarsa' ? 'selected' : '' }}>Kadaluarsa</option>
-                                        <option value="Cacat Produksi" {{ $kondisi == 'Cacat Produksi' ? 'selected' : '' }}>Cacat Produksi</option>
-                                        <option value="Kemasan Rusak" {{ $kondisi == 'Kemasan Rusak' ? 'selected' : '' }}>Kemasan Rusak</option>
-                                        <option value="Tidak Laku" {{ $kondisi == 'Tidak Laku' ? 'selected' : '' }}>Tidak Laku</option>
-                                        <option value="Lainnya" {{ $kondisi == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
-                                    </select>
+                                <td class="text-right">
+                                    <span class="hasil" data-index="{{ $index }}">{{ number_format($hasil, 2, ',', '.') }}</span>
                                 </td>
                                 <td>
-                                    <textarea class="form-control form-control-sm" 
-                                              name="items[{{ $index }}][keterangan]" 
-                                              rows="1">{{ $keterangan }}</textarea>
+                                    @if($isLocked)
+                                        <span>{{ $kondisi }}</span>
+                                    @else
+                                        <select class="form-control form-control-sm" 
+                                                name="items[{{ $index }}][kondisi]" 
+                                                required>
+                                            <option value="Tidak Ada Retur" {{ $kondisi == 'Tidak Ada Retur' ? 'selected' : '' }}>Tidak Ada Retur</option>
+                                            <option value="Rusak" {{ $kondisi == 'Rusak' ? 'selected' : '' }}>Rusak</option>
+                                            <option value="Kadaluarsa" {{ $kondisi == 'Kadaluarsa' ? 'selected' : '' }}>Kadaluarsa</option>
+                                            <option value="Cacat Produksi" {{ $kondisi == 'Cacat Produksi' ? 'selected' : '' }}>Cacat Produksi</option>
+                                            <option value="Kemasan Rusak" {{ $kondisi == 'Kemasan Rusak' ? 'selected' : '' }}>Kemasan Rusak</option>
+                                            <option value="Tidak Laku" {{ $kondisi == 'Tidak Laku' ? 'selected' : '' }}>Tidak Laku</option>
+                                            <option value="Lainnya" {{ $kondisi == 'Lainnya' ? 'selected' : '' }}>Lainnya</option>
+                                        </select>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($isLocked)
+                                        <span>{{ $keterangan }}</span>
+                                    @else
+                                        <textarea class="form-control form-control-sm" 
+                                                  name="items[{{ $index }}][keterangan]" 
+                                                  rows="1">{{ $keterangan }}</textarea>
+                                    @endif
                                 </td>
                             </tr>
                             @endforeach
@@ -106,19 +139,22 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            <button type="button" class="btn btn-primary" id="btnSimpanRetur">
-                <i class="fas fa-save"></i> Simpan Data Retur
-            </button>
+            @if(!$isLocked)
+                <button type="button" class="btn btn-primary" id="btnSimpanRetur">
+                    <i class="fas fa-save"></i> Simpan Data Retur
+                </button>
+            @endif
         </div>
     </div>
 </div>
 
 <script>
 $(document).ready(function() {
-    // Hitung ulang total terjual saat jumlah retur berubah
+    // Hitung ulang total terjual dan hasil saat jumlah retur berubah
     $('.jumlah-retur').on('input', function() {
         const index = $(this).data('index');
         const max = parseInt($(this).data('max'));
+        const harga = parseFloat($(this).data('harga')) || 0;
         let jumlahRetur = parseInt($(this).val()) || 0;
         
         // Validasi tidak melebihi jumlah kirim
@@ -133,7 +169,10 @@ $(document).ready(function() {
         }
         
         const totalTerjual = max - jumlahRetur;
+        const hasil = totalTerjual * harga;
+        
         $(`.total-terjual[data-index="${index}"]`).text(totalTerjual);
+        $(`.hasil[data-index="${index}"]`).text(hasil.toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
     });
     
     // Submit form

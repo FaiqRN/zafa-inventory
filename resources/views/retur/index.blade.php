@@ -27,12 +27,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label>Tanggal Mulai</label>
-                <input type="date" id="filter_start_date" class="form-control">
-            </div>
-            <div class="col-md-3">
-                <label>Tanggal Akhir</label>
-                <input type="date" id="filter_end_date" class="form-control">
+                <label>Tanggal</label>
+                <input type="date" id="filter_date" class="form-control">
             </div>
             <div class="col-md-3">
                 <label>&nbsp;</label>
@@ -90,8 +86,7 @@ $(document).ready(function() {
             type: "GET",
             data: function(d) {
                 d.toko_id = $('#filter_toko').val();
-                d.start_date = $('#filter_start_date').val();
-                d.end_date = $('#filter_end_date').val();
+                d.date = $('#filter_date').val();
             }
         },
         columns: [

@@ -50,13 +50,9 @@ class ReturController extends Controller
             $query->where('toko_id', $request->toko_id);
         }
     
-        // Filter by date range if provided
-        if ($request->has('start_date') && !empty($request->start_date)) {
-            $query->whereDate('tanggal_pengiriman', '>=', $request->start_date);
-        }
-        
-        if ($request->has('end_date') && !empty($request->end_date)) {
-            $query->whereDate('tanggal_pengiriman', '<=', $request->end_date);
+        // Filter by date if provided
+        if ($request->has('date') && !empty($request->date)) {
+            $query->whereDate('tanggal_pengiriman', $request->date);
         }
     
         $query->orderBy('tanggal_pengiriman', 'desc')
@@ -116,7 +112,19 @@ class ReturController extends Controller
         try {
             $nomerPengiriman = $request->nomer_pengiriman;
             
-            // Hapus data retur lama untuk nomer pengiriman ini
+            // Cek apakah data retur sudah di-lock
+            $existingRetur = Retur::where('nomer_pengiriman', $nomerPengiriman)
+                ->where('is_locked', true)
+                ->first();
+            
+            if ($existingRetur) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Data retur sudah disimpan dan tidak dapat diubah lagi'
+                ], 422);
+            }
+            
+            // Hapus data retur lama untuk nomer pengiriman ini (jika belum locked)
             Retur::where('nomer_pengiriman', $nomerPengiriman)->delete();
             
             // Simpan data retur baru
@@ -157,12 +165,13 @@ class ReturController extends Controller
                 $retur->hasil = $hasil;
                 $retur->kondisi = $item['kondisi'];
                 $retur->keterangan = $item['keterangan'] ?? null;
+                $retur->is_locked = true; // Set locked setelah disimpan
                 $retur->save();
             }
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Data retur berhasil disimpan'
+                'message' => 'Data retur berhasil disimpan dan dikunci'
             ]);
         } catch (\Exception $e) {
             Log::error('Error in store retur: ' . $e->getMessage());
@@ -193,10 +202,14 @@ class ReturController extends Controller
         // Ambil data retur jika sudah ada
         $returData = Retur::where('nomer_pengiriman', $nomerPengiriman)->get();
         
+        // Cek apakah data retur sudah di-lock
+        $isLocked = $returData->where('is_locked', true)->isNotEmpty();
+        
         return view('retur.show_ajax', [
             'pengiriman' => $pengiriman,
             'returData' => $returData,
-            'nomerPengiriman' => $nomerPengiriman
+            'nomerPengiriman' => $nomerPengiriman,
+            'isLocked' => $isLocked
         ]);
     }
 
@@ -221,8 +234,7 @@ class ReturController extends Controller
             $filters = [
                 'toko_id' => $request->input('toko_id'),
                 'barang_id' => $request->input('barang_id'),
-                'start_date' => $request->input('start_date'),
-                'end_date' => $request->input('end_date'),
+                'date' => $request->input('date'),
             ];
             
             // Log filters for debugging
@@ -240,11 +252,8 @@ class ReturController extends Controller
             if (!empty($filters['barang_id'])) {
                 $query->where('barang_id', $filters['barang_id']);
             }
-            if (!empty($filters['start_date'])) {
-                $query->whereDate('tanggal_retur', '>=', $filters['start_date']);
-            }
-            if (!empty($filters['end_date'])) {
-                $query->whereDate('tanggal_retur', '<=', $filters['end_date']);
+            if (!empty($filters['date'])) {
+                $query->whereDate('tanggal_retur', $filters['date']);
             }
             
             $dataCount = $query->count();

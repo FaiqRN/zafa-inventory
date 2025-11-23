@@ -24,6 +24,7 @@ class Retur extends Model
     public const FIELD_HASIL = 'hasil';
     public const FIELD_KONDISI = 'kondisi';
     public const FIELD_KETERANGAN = 'keterangan';
+    public const FIELD_IS_LOCKED = 'is_locked';
     public const FIELD_CREATED_AT = 'created_at';
     public const FIELD_UPDATED_AT = 'updated_at';
     public const FIELD_USER_CREATE = 'user_create';
@@ -48,6 +49,7 @@ class Retur extends Model
         self::FIELD_HASIL,
         self::FIELD_KONDISI,
         self::FIELD_KETERANGAN,
+        self::FIELD_IS_LOCKED,
         self::FIELD_USER_CREATE,
         self::FIELD_USER_UPDATE,
     ];
@@ -60,6 +62,7 @@ class Retur extends Model
         self::FIELD_JUMLAH_RETUR => 'integer',
         self::FIELD_TOTAL_TERJUAL => 'integer',
         self::FIELD_HASIL => 'decimal:2',
+        self::FIELD_IS_LOCKED => 'boolean',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
     ];
