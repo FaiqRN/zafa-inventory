@@ -596,9 +596,9 @@ class InventoryOptimizationController extends Controller
                 ->whereHas('toko', function($q) {
                     $q->where('is_active', true);
                 })
-                ->whereHas('barang', function($q) {
-                    $q->where('is_deleted', 0);
-                })
+                // ->whereHas('barang', function($q) {
+                //     $q->where('is_deleted', 0);
+                // })
                 ->get();
 
             $recommendations = collect();

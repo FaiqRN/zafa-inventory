@@ -149,7 +149,7 @@ class DashboardController extends Controller
                     )
                     ->whereBetween('pengiriman.tanggal_pengiriman', [$startDate, $endDate])
                     ->where('pengiriman.status', 'terkirim')
-                    ->where('barang.is_deleted', 0)
+                    // ->where('barang.is_deleted', 0)
                     ->groupBy('barang.barang_id', 'barang.nama_barang', 'barang.harga_awal_barang')
                     ->orderByDesc('total_terjual')
                     ->limit($limit)
@@ -172,7 +172,7 @@ class DashboardController extends Controller
                         DB::raw('COALESCE(COUNT(pengiriman.pengiriman_id), 0) as jumlah_transaksi'),
                         DB::raw('COALESCE(SUM(pengiriman.jumlah_kirim * barang.harga_awal_barang), 0) as total_penjualan')
                     )
-                    ->where('barang.is_deleted', 0)
+                    // ->where('barang.is_deleted', 0)
                     ->groupBy('barang.barang_id', 'barang.nama_barang', 'barang.harga_awal_barang')
                     ->orderBy('total_terjual', 'asc') // Yang paling sedikit terjual
                     ->limit($limit)
@@ -403,7 +403,7 @@ class DashboardController extends Controller
             Log::info("Dashboard - Loading statistik ringkasan for date: {$today}");
 
             // Total keseluruhan
-            $totalBarang = Barang::where('is_deleted', 0)->count();
+            $totalBarang = Barang::count();
             $totalToko = Toko::count();
             
             // Statistik bulan ini
@@ -537,12 +537,12 @@ class DashboardController extends Controller
                     'retur_12_months' => Retur::where('tanggal_retur', '>=', Carbon::now()->subMonths(12))->count(),
                     'barang_with_pengiriman' => DB::table('barang')
                         ->join('pengiriman', 'barang.barang_id', '=', 'pengiriman.barang_id')
-                        ->where('barang.is_deleted', 0)
+                        // ->where('barang.is_deleted', 0)
                         ->distinct('barang.barang_id')
                         ->count(),
                     'barang_without_pengiriman' => DB::table('barang')
                         ->leftJoin('pengiriman', 'barang.barang_id', '=', 'pengiriman.barang_id')
-                        ->where('barang.is_deleted', 0)
+                        // ->where('barang.is_deleted', 0)
                         ->whereNull('pengiriman.pengiriman_id')
                         ->count()
                 ]

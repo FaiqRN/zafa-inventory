@@ -19,11 +19,6 @@ class CustomerController extends Controller
      */
     public function index()
     {
-        // Log jumlah customer untuk debugging
-        $totalCustomers = Customer::count();
-        $customersFromPemesanan = Customer::whereNotNull('pemesanan_id')->count();
-        Log::info("Total customers: $totalCustomers, From pemesanan: $customersFromPemesanan");
-        
         return view('customer.index', [
             'activemenu' => 'customer',
             'breadcrumb' => (object) [
@@ -252,14 +247,6 @@ public function import(Request $request)
         $extension = strtolower($file->getClientOriginalExtension());
         $mimeType = $file->getMimeType();
         
-        // Log file information
-        Log::info('Import file details:', [
-            'name' => $originalName,
-            'extension' => $extension,
-            'mimeType' => $mimeType,
-            'size' => $file->getSize()
-        ]);
-        
         // Store file temporarily
         $tempPath = $file->getRealPath();
         $storedPath = storage_path('app/temp_imports/') . time() . '_' . $originalName;
@@ -271,7 +258,6 @@ public function import(Request $request)
         
         // Copy file to storage
         copy($tempPath, $storedPath);
-        Log::info('File stored at: ' . $storedPath);
         
         // Use different import methods based on file type
         if ($extension == 'csv' || $mimeType == 'text/csv' || $mimeType == 'text/plain') {
@@ -293,14 +279,6 @@ public function import(Request $request)
             $updated = $importer->getUpdatedCount();
             $errors = $importer->getErrors();
         }
-        
-        // Log import results
-        Log::info('Import completed:', [
-            'processed' => $processed,
-            'inserted' => $inserted,
-            'updated' => $updated,
-            'errors' => count($errors ?? [])
-        ]);
         
         // Clean up temporary file
         if (file_exists($storedPath)) {
@@ -339,12 +317,6 @@ public function import(Request $request)
     public function syncFromPemesanan()
     {
         try {
-            // Cek dulu koneksi ke tabel pemesanan
-            $totalPemesanan = DB::table('pemesanan')->count();
-            
-            // Log untuk debugging
-            Log::info('Total pemesanan: ' . $totalPemesanan);
-            
             // Get customers from pemesanan who don't exist in customer table yet
             $newCustomers = DB::table('pemesanan as p')
                 ->select(
@@ -359,8 +331,6 @@ public function import(Request $request)
                 ->whereNotNull('p.nama_pemesan')
                 ->whereRaw('p.pemesanan_id NOT IN (SELECT pemesanan_id FROM data_customer WHERE pemesanan_id IS NOT NULL)')
                 ->get();
-
-            Log::info('New customers found: ' . $newCustomers->count());
 
             if ($newCustomers->isEmpty()) {
                 return response()->json([
@@ -378,15 +348,10 @@ public function import(Request $request)
                 if (!empty($customer->email) && Customer::emailExists($customer->email)) {
                     continue;
                 }
-                
-                // Debug log
-                Log::info('Inserting customer: ' . json_encode($customerData));
 
                 Customer::create($customerData);
                 $inserted++;
             }
-            
-            Log::info('Successfully inserted ' . $inserted . ' new customers from pemesanan');
 
             return response()->json([
                 'status' => 'success',
@@ -399,37 +364,6 @@ public function import(Request $request)
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal menyinkronkan data: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    /**
-     * Debug database tables structure
-     */
-    public function debugTables()
-    {
-        try {
-            // Periksa struktur tabel pemesanan
-            $pemesananColumns = DB::getSchemaBuilder()->getColumnListing('pemesanan');
-            
-            // Periksa data pemesanan (ambil 5 record pertama)
-            $pemesananSamples = DB::table('pemesanan')->take(5)->get();
-            
-            // Periksa struktur tabel customer
-            $customerColumns = DB::getSchemaBuilder()->getColumnListing('data_customer');
-            
-            // Periksa data customer (ambil 5 record pertama)
-            $customerSamples = DB::table('data_customer')->take(5)->get();
-            
-            return response()->json([
-                'pemesanan_columns' => $pemesananColumns,
-                'pemesanan_samples' => $pemesananSamples,
-                'customer_columns' => $customerColumns,
-                'customer_samples' => $customerSamples
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => $e->getMessage()
             ], 500);
         }
     }

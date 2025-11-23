@@ -18,10 +18,6 @@
                         </button>
                         <button type="button" class="btn btn-info btn-sm" id="btnSyncPemesanan">
                             <i class="fas fa-sync"></i> Sinkronkan dari Pemesanan
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btnDebugTables">
-                            <i class="fas fa-bug"></i> Debug Tables
-                        </button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -148,55 +144,6 @@
                     <button type="submit" class="btn btn-primary" id="btnSimpanImport">Import</button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Debug -->
-<div class="modal fade" id="modalDebug" tabindex="-1" role="dialog" aria-labelledby="modalDebugLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalDebugLabel">Debug Database Tables</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Tabel Pemesanan</h5>
-                            </div>
-                            <div class="card-body">
-                                <h6>Kolom Tabel:</h6>
-                                <pre id="pemesananColumns" class="bg-light p-2"></pre>
-                                
-                                <h6 class="mt-3">Contoh Data:</h6>
-                                <pre id="pemesananSamples" class="bg-light p-2"></pre>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Tabel Customer</h5>
-                            </div>
-                            <div class="card-body">
-                                <h6>Kolom Tabel:</h6>
-                                <pre id="customerColumns" class="bg-light p-2"></pre>
-                                
-                                <h6 class="mt-3">Contoh Data:</h6>
-                                <pre id="customerSamples" class="bg-light p-2"></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            </div>
         </div>
     </div>
 </div>

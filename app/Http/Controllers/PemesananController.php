@@ -18,7 +18,7 @@ class PemesananController extends Controller
      */
     public function index()
     {
-        $barang = Barang::where('is_deleted', 0)->orderBy('nama_barang', 'asc')->get();
+        $barang = Barang::orderBy('nama_barang', 'asc')->get();
         
         return view('pemesanan.index', [
             'activemenu' => 'pemesanan',
