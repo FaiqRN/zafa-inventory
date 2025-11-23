@@ -7,14 +7,16 @@
     <div class="row">
         <!-- PANEL KIRI: DATA BARANG -->
         <div class="col-lg-5 col-md-12 mb-3">
-            <div class="card shadow-sm border-0 modern-card">
-                <div class="card-header modern-header-left d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 font-weight-bold">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title">
                         <i class="fas fa-boxes mr-2"></i> Data Barang
-                    </h5>
-                    <button type="button" class="btn btn-success btn-sm" id="btnTambah">
-                        <i class="fas fa-plus mr-1"></i> Tambah Barang
-                    </button>
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-success btn-sm" id="btnTambah">
+                            <i class="fas fa-plus mr-1"></i> Tambah Barang
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="card-body p-3">
@@ -77,12 +79,12 @@
         
         <!-- PANEL KANAN: DETAIL STOK BARANG -->
         <div class="col-lg-7 col-md-12 mb-3">
-            <div class="card shadow-sm border-0 modern-card">
-                <div class="card-header modern-header-right d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 font-weight-bold" id="detail-title">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title" id="detail-title">
                         <i class="fas fa-clipboard-list mr-2"></i> Detail Stok Barang
-                    </h5>
-                    <div id="detail-action-buttons" style="display: none;">
+                    </h3>
+                    <div class="card-tools" id="detail-action-buttons" style="display: none;">
                         <button type="button" class="btn btn-success btn-sm" id="btnTambahStok">
                             <i class="fas fa-plus mr-1"></i> Tambah Stok
                         </button>

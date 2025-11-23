@@ -2,8 +2,8 @@
 <nav class="main-header navbar navbar-expand navbar-white navbar-light">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
-        <li class="nav-item">
-            <a class="nav-link" data-widget="pushmenu" href="#" role="button">
+        <li class="nav-item" style="z-index: 10000; position: relative;">
+            <a class="nav-link" data-widget="pushmenu" href="#" role="button" style="pointer-events: auto !important; z-index: 99999 !important;">
                 <i class="fas fa-bars"></i>
             </a>
         </li>

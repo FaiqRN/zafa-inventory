@@ -48,6 +48,7 @@
       --zafa-dark: #4A2511;        /* Logo Text - Dark Brown */
       --zafa-light: #FFFEF7;       /* Warm White - Sidebar */
       --zafa-cream: #FFF9E6;       /* Light Cream - Hover */
+      --zafa-header: #FFF2C6;      /* NEW: Warm Cream Header */
     }
 
     /* Sidebar - Subtle Cream Background for Visual Separation */
@@ -176,14 +177,19 @@
       margin: 0 !important;
     }
 
-    /* Header/Navbar - Clean White */
+    /* ========================================
+       FIXED: Header/Navbar dengan Warna Baru
+       ======================================== */
     .main-header.navbar {
-      background-color: white !important;
-      border-bottom: 2px solid #F5F5F5 !important;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+      background-color: var(--zafa-header) !important; /* #FFF2C6 - Warm Cream */
+      border-bottom: 2px solid var(--zafa-yellow) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
     }
 
-    /* FIX: Pushmenu Button (Hamburger) - SUPER VISIBLE */
+    /* ========================================
+       FIXED: Pushmenu Button (Hamburger) 
+       dengan Z-Index dan Positioning Tinggi
+       ======================================== */
     .navbar-nav .nav-link[data-widget="pushmenu"] {
       color: var(--zafa-dark) !important;
       background-color: var(--zafa-yellow) !important;
@@ -194,6 +200,13 @@
       border: 3px solid var(--zafa-orange) !important;
       box-shadow: 0 2px 8px rgba(255,193,7,0.4) !important;
       margin-right: 10px !important;
+      /* CRITICAL FIX: Z-index tinggi agar selalu di depan */
+      position: relative !important;
+      z-index: 9999 !important;
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
     .navbar-nav .nav-link[data-widget="pushmenu"]:hover {
@@ -204,10 +217,29 @@
       box-shadow: 0 4px 12px rgba(255,152,0,0.5) !important;
     }
 
+    .navbar-nav .nav-link[data-widget="pushmenu"]:active {
+      transform: scale(0.95) !important;
+    }
+
     .navbar-nav .nav-link[data-widget="pushmenu"] i {
       font-size: 1.3rem !important;
       font-weight: 900 !important;
       display: block !important;
+      pointer-events: none !important; /* Icon tidak mengganggu click event */
+    }
+
+    /* FIX: Ensure navbar items tidak overlap dengan pushmenu button */
+    .navbar-nav {
+      position: relative !important;
+      z-index: 9998 !important;
+    }
+
+    /* FIX: Ensure pushmenu tetap visible di collapsed state */
+    .sidebar-mini.sidebar-collapse .navbar-nav .nav-link[data-widget="pushmenu"] {
+      display: inline-flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
     }
 
     /* Header Navigation Links */
@@ -221,7 +253,7 @@
 
     .navbar-nav .nav-link:hover {
       color: var(--zafa-orange) !important;
-      background-color: var(--zafa-cream) !important;
+      background-color: rgba(255, 152, 0, 0.1) !important;
     }
 
     /* Fullscreen Button */
@@ -231,23 +263,20 @@
 
     .navbar-nav .nav-link[data-widget="fullscreen"]:hover {
       color: var(--zafa-orange) !important;
-      background-color: var(--zafa-cream) !important;
+      background-color: rgba(255, 152, 0, 0.1) !important;
     }
 
     /* User Dropdown */
     .dropdown-menu {
-      border: 1px solid #E0E0E0 !important;
       border-radius: 10px !important;
       box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
-      background-color: white !important;
+      border: 1px solid #E0E0E0 !important;
     }
 
     .dropdown-item {
       color: var(--zafa-dark) !important;
-      transition: all 0.25s ease !important;
       padding: 10px 20px !important;
-      border-radius: 8px !important;
-      margin: 3px 8px !important;
+      transition: all 0.25s ease !important;
     }
 
     .dropdown-item:hover {
@@ -255,121 +284,110 @@
       color: var(--zafa-orange) !important;
     }
 
-    /* User Profile Image Border */
-    .img-circle {
-      border: 2px solid var(--zafa-yellow) !important;
+    .dropdown-item i {
+      color: var(--zafa-orange) !important;
     }
 
-    /* Footer - Clean & Minimal */
+    /* Buttons */
+    .btn-primary {
+      background-color: var(--zafa-yellow) !important;
+      border-color: var(--zafa-yellow) !important;
+      color: white !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+      transition: all 0.25s ease !important;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--zafa-orange) !important;
+      border-color: var(--zafa-orange) !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(255,152,0,0.3) !important;
+    }
+
+    .btn-success {
+      background-color: var(--zafa-turquoise) !important;
+      border-color: var(--zafa-turquoise) !important;
+      color: white !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+    }
+
+    .btn-success:hover {
+      background-color: var(--zafa-teal) !important;
+      border-color: var(--zafa-teal) !important;
+      transform: translateY(-2px) !important;
+    }
+
+    .btn-info {
+      background-color: var(--zafa-turquoise) !important;
+      border-color: var(--zafa-turquoise) !important;
+      color: white !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+    }
+
+    .btn-info:hover {
+      background-color: var(--zafa-teal) !important;
+      border-color: var(--zafa-teal) !important;
+    }
+
+    .btn-warning {
+      background-color: var(--zafa-orange) !important;
+      border-color: var(--zafa-orange) !important;
+      color: white !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+    }
+
+    .btn-danger {
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+    }
+
+    /* Footer */
     .main-footer {
-      background-color: white !important;
+      background-color: var(--zafa-light) !important;
+      border-top: 2px solid var(--zafa-yellow) !important;
       color: var(--zafa-dark) !important;
-      border-top: 2px solid #F5F5F5 !important;
-      font-weight: 500 !important;
     }
 
     .main-footer a {
       color: var(--zafa-orange) !important;
       font-weight: 600 !important;
       text-decoration: none !important;
-      transition: all 0.25s ease !important;
     }
 
     .main-footer a:hover {
-      color: var(--zafa-turquoise) !important;
+      color: var(--zafa-yellow) !important;
     }
 
-    .main-footer .float-right {
-      color: #757575 !important;
-    }
-
-    /* Control Sidebar */
-    .control-sidebar-dark {
-      background-color: var(--zafa-dark) !important;
-    }
-
-    /* Breadcrumb Styling */
-    .content-header {
-      background-color: white !important;
-      border-bottom: 1px solid #F5F5F5 !important;
-      padding: 16px 20px !important;
-    }
-
+    /* Breadcrumb */
     .breadcrumb {
       background-color: transparent !important;
+      padding: 0 !important;
       margin-bottom: 0 !important;
     }
 
-    .breadcrumb-item a {
-      color: #757575 !important;
-      text-decoration: none !important;
-      transition: all 0.25s ease !important;
-    }
-
-    .breadcrumb-item a:hover {
-      color: var(--zafa-orange) !important;
+    .breadcrumb-item {
+      color: #666 !important;
     }
 
     .breadcrumb-item.active {
-      color: var(--zafa-orange) !important;
-      font-weight: 600 !important;
-    }
-
-    .breadcrumb-item + .breadcrumb-item::before {
-      color: #BDBDBD !important;
-    }
-
-    /* Page Title */
-    .content-header h1 {
       color: var(--zafa-dark) !important;
-      font-weight: 700 !important;
-    }
-
-    /* Button Customizations */
-    .btn-primary {
-      background-color: var(--zafa-turquoise) !important;
-      border: none !important;
-      color: white !important;
       font-weight: 600 !important;
-      transition: all 0.25s ease !important;
     }
 
-    .btn-primary:hover, .btn-primary:focus {
-      background-color: var(--zafa-teal) !important;
-      transform: translateY(-1px) !important;
-      box-shadow: 0 4px 8px rgba(38,198,218,0.3) !important;
+    .breadcrumb-item a {
+      color: var(--zafa-orange) !important;
+      text-decoration: none !important;
     }
 
-    .btn-warning {
-      background-color: var(--zafa-yellow) !important;
-      border: none !important;
-      color: white !important;
-      font-weight: 600 !important;
-      transition: all 0.25s ease !important;
+    .breadcrumb-item a:hover {
+      color: var(--zafa-yellow) !important;
     }
 
-    .btn-warning:hover, .btn-warning:focus {
-      background-color: var(--zafa-orange) !important;
-      transform: translateY(-1px) !important;
-      box-shadow: 0 4px 8px rgba(255,152,0,0.3) !important;
-      color: white !important;
-    }
-
-    .btn-danger {
-      background-color: #E53935 !important;
-      border: none !important;
-      color: white !important;
-      font-weight: 600 !important;
-      transition: all 0.25s ease !important;
-    }
-
-    .btn-danger:hover, .btn-danger:focus {
-      background-color: #C62828 !important;
-      transform: translateY(-1px) !important;
-      box-shadow: 0 4px 8px rgba(229,57,53,0.3) !important;
-    }
-
-    /* Scrollbar Customization */
+    /* Scrollbar Styling */
     .sidebar::-webkit-scrollbar {
       width: 6px !important;
     }
@@ -483,9 +501,14 @@
         font-size: 0.85rem !important;
         padding-left: 45px !important;
       }
+
+      /* FIX: Pushmenu button tetap visible di mobile */
+      .navbar-nav .nav-link[data-widget="pushmenu"] {
+        z-index: 10000 !important;
+      }
     }
 
-    /* Sidebar Collapsed State - FIX */
+    /* Sidebar Collapsed State - ENHANCED FIX */
     .sidebar-mini.sidebar-collapse .main-sidebar {
       width: 4.6rem !important;
     }
@@ -520,6 +543,21 @@
       margin-right: 0 !important;
       width: 50px !important;
       height: 50px !important;
+    }
+
+    /* CRITICAL FIX: Ensure pushmenu always clickable in all states */
+    body.sidebar-mini.sidebar-collapse .navbar-nav .nav-link[data-widget="pushmenu"],
+    body.sidebar-mini .navbar-nav .nav-link[data-widget="pushmenu"] {
+      pointer-events: auto !important;
+      visibility: visible !important;
+      display: inline-flex !important;
+      z-index: 99999 !important;
+    }
+
+    /* Prevent any overlay from blocking pushmenu */
+    .navbar-nav .nav-item:first-child {
+      z-index: 10000 !important;
+      position: relative !important;
     }
   </style>
 
@@ -595,6 +633,32 @@
 <script>
   $.ajaxSetup({headers:{'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')}})
 </script>
+
+<script>
+  // CRITICAL FIX: Force pushmenu to work properly
+  $(document).ready(function() {
+    // Ensure pushmenu button is always clickable
+    $('[data-widget="pushmenu"]').css({
+      'pointer-events': 'auto',
+      'z-index': '99999',
+      'position': 'relative'
+    });
+
+    // Add extra click handler to ensure it works
+    $('[data-widget="pushmenu"]').on('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Toggle sidebar manually if AdminLTE doesn't work
+      if ($('body').hasClass('sidebar-collapse')) {
+        $('body').removeClass('sidebar-collapse');
+      } else {
+        $('body').addClass('sidebar-collapse');
+      }
+    });
+  });
+</script>
+
 @stack('js')
 <script>
   if (window.history.replaceState) {
