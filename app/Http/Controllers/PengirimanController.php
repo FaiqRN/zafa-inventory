@@ -108,6 +108,9 @@ class PengirimanController extends Controller
 
     public function ajax(Request $request)
     {
+        // Log untuk debugging
+        Log::info('Pengiriman Request Data:', $request->all());
+        
         $validator = Validator::make($request->all(), [
             'tanggal_pengiriman' => 'required|date',
             'toko_id' => 'required|exists:toko,toko_id',
@@ -117,6 +120,7 @@ class PengirimanController extends Controller
         ]);
         
         if ($validator->fails()) {
+            Log::error('Validation Failed:', $validator->errors()->toArray());
             return response()->json([
                 'status' => 'error',
                 'errors' => $validator->errors()

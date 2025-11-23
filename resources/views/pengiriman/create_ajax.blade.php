@@ -60,8 +60,17 @@
 </form>
 
 <script>
-let barangList = [];
-let rowIndex = 0;
+// Cek apakah variabel sudah ada, jika belum baru deklarasikan
+if (typeof window.pengirimanBarangList === 'undefined') {
+    window.pengirimanBarangList = [];
+}
+if (typeof window.pengirimanRowIndex === 'undefined') {
+    window.pengirimanRowIndex = 0;
+}
+
+// Reset untuk setiap modal baru
+window.pengirimanBarangList = [];
+window.pengirimanRowIndex = 0;
 
 $(document).ready(function() {
     $.ajax({
@@ -79,7 +88,7 @@ $(document).ready(function() {
         if (tokoId) {
             loadBarangByToko(tokoId);
         } else {
-            barangList = [];
+            window.pengirimanBarangList = [];
             $('#barang-rows').empty();
         }
     });
@@ -87,6 +96,7 @@ $(document).ready(function() {
     $('#form-tambah-pengiriman').submit(function(e) {
         e.preventDefault();
         
+        // Validasi minimal 1 barang
         if ($('#barang-rows tr').length === 0) {
             Swal.fire({
                 icon: 'warning',
@@ -96,27 +106,69 @@ $(document).ready(function() {
             return false;
         }
 
+        // Kumpulkan data items
         const items = [];
+        let hasError = false;
+        
         $('#barang-rows tr').each(function() {
             const row = $(this);
+            const barangId = row.find('.barang-select').val();
+            const jumlah = row.find('.jumlah-input').val();
+            
+            // Validasi setiap item harus terisi
+            if (!barangId || !jumlah || jumlah <= 0) {
+                hasError = true;
+                return false; // break loop
+            }
+            
             items.push({
-                barang_id: row.find('.barang-select').val(),
-                jumlah: row.find('.jumlah-input').val()
+                barang_id: barangId,
+                jumlah: parseInt(jumlah)
             });
         });
 
-        const formData = {
-            _token: '{{ csrf_token() }}',
-            nomer_pengiriman: $('#nomer_pengiriman').val(),
-            tanggal_pengiriman: $('#tanggal_pengiriman').val(),
-            toko_id: $('#toko_id').val(),
-            items: items
-        };
+        // Validasi jika ada item yang tidak lengkap
+        if (hasError) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Perhatian',
+                text: 'Pastikan semua barang dan jumlah sudah terisi dengan benar'
+            });
+            return false;
+        }
+
+        // Validasi items tidak kosong
+        if (items.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Perhatian',
+                text: 'Minimal harus ada 1 barang yang valid'
+            });
+            return false;
+        }
+
+        // Buat FormData dengan array notation yang benar
+        const formData = new FormData();
+        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('nomer_pengiriman', $('#nomer_pengiriman').val());
+        formData.append('tanggal_pengiriman', $('#tanggal_pengiriman').val());
+        formData.append('toko_id', $('#toko_id').val());
+        
+        // Tambahkan items dengan array notation
+        items.forEach(function(item, index) {
+            formData.append(`items[${index}][barang_id]`, item.barang_id);
+            formData.append(`items[${index}][jumlah]`, item.jumlah);
+        });
+
+        // Debug: log data yang akan dikirim
+        console.log('Sending items:', items);
 
         $.ajax({
             url: $(this).attr('action'),
             type: 'POST',
             data: formData,
+            processData: false,
+            contentType: false,
             success: function(response) {
                 if (response.status === 'success') {
                     $('#myModal').modal('hide');
@@ -136,6 +188,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
+                console.error('Error response:', xhr.responseJSON);
                 let errorMsg = 'Terjadi kesalahan';
                 if (xhr.responseJSON?.errors) {
                     errorMsg = Object.values(xhr.responseJSON.errors).flat().join('\n');
@@ -159,7 +212,7 @@ function loadBarangByToko(tokoId) {
         data: { toko_id: tokoId },
         success: function(response) {
             if (response.status === 'success') {
-                barangList = response.data;
+                window.pengirimanBarangList = response.data;
                 $('#barang-rows').empty();
             }
         },
@@ -174,7 +227,7 @@ function loadBarangByToko(tokoId) {
 }
 
 function addBarangRow() {
-    if (barangList.length === 0) {
+    if (window.pengirimanBarangList.length === 0) {
         Swal.fire({
             icon: 'warning',
             title: 'Perhatian',
@@ -183,9 +236,9 @@ function addBarangRow() {
         return;
     }
 
-    rowIndex++;
+    window.pengirimanRowIndex++;
     let options = '<option value="">- Pilih Barang -</option>';
-    barangList.forEach(function(barang) {
+    window.pengirimanBarangList.forEach(function(barang) {
         options += `<option value="${barang.barang_id}" 
                             data-satuan="${barang.satuan}" 
                             data-harga="${barang.harga}"
@@ -195,7 +248,7 @@ function addBarangRow() {
     });
 
     const row = `
-        <tr id="row-${rowIndex}">
+        <tr id="row-${window.pengirimanRowIndex}">
             <td>
                 <select class="form-control form-control-sm barang-select" onchange="updateBarangInfo(this)" required>
                     ${options}
@@ -211,7 +264,7 @@ function addBarangRow() {
                 <input type="text" class="form-control form-control-sm harga-input" readonly>
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-danger btn-sm" onclick="removeBarangRow(${rowIndex})">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeBarangRow(${window.pengirimanRowIndex})">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
