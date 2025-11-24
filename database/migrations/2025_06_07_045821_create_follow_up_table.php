@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('phone_number', 20); // Nomor WhatsApp tujuan
             $table->string('customer_name', 100); // Nama customer
             $table->string('customer_email', 100)->nullable(); // Email customer
-            $table->enum('source_channel', ['shopee', 'tokopedia', 'whatsapp', 'instagram', 'langsung'])->nullable();
+            $table->enum('source_channel', ['shopee', 'tokopedia', 'whatsapp', 'instagram', 'langsung', 'manual', 'unknown'])->nullable();
             
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();

@@ -252,6 +252,15 @@ class FollowUpPelangganController extends Controller
                         }
 
                         // Create follow up record in database
+                        // Normalize source_channel to match ENUM values
+                        $sourceChannel = $customer['orderSource'] ?? null;
+                        $validSources = ['shopee', 'tokopedia', 'whatsapp', 'instagram', 'langsung'];
+                        
+                        // Map 'manual' or 'unknown' to 'langsung'
+                        if ($sourceChannel && !in_array(strtolower($sourceChannel), $validSources)) {
+                            $sourceChannel = 'langsung';
+                        }
+                        
                         $followUpData = [
                             'customer_name' => $customer['name'],
                             'phone_number' => $phone,
@@ -259,7 +268,7 @@ class FollowUpPelangganController extends Controller
                             'target_type' => $targetType,
                             'message' => $message,
                             'images' => !empty($imagePaths) ? json_encode($imagePaths) : null,
-                            'source_channel' => $customer['orderSource'] ?? null,
+                            'source_channel' => $sourceChannel,
                             'status' => 'pending',
                             'created_at' => now(),
                             'updated_at' => now()
