@@ -333,8 +333,9 @@ $(document).ready(function () {
             url: '/pemesanan/get-id',
             type: 'GET',
             success: function (response) {
-                $('#pemesanan_id').val(response.pemesanan_id);
-                $('#no_pemesanan').val(response.pemesanan_id);
+                const nomorPemesanan = response.nomor_pemesanan || response.pemesanan_id;
+                $('#pemesanan_id').val(nomorPemesanan);
+                $('#no_pemesanan').val(nomorPemesanan);
             },
             error: function (xhr) {
                 Swal.fire('Error', 'Gagal mengambil nomor pemesanan', 'error');
@@ -368,8 +369,9 @@ $(document).ready(function () {
                 const data = response.data;
 
                 // Fill basic fields
+                const nomorPemesanan = data.nomor_pemesanan || data.pemesanan_id;
                 $('#pemesanan_id').val(data.pemesanan_id);
-                $('#no_pemesanan').val(data.pemesanan_id);
+                $('#no_pemesanan').val(nomorPemesanan);
                 $('#nama_pemesan').val(data.nama_pemesan);
                 $('#alamat_pemesan').val(data.alamat_pemesan);
                 $('#barang_id').val(data.barang_id).trigger('change');

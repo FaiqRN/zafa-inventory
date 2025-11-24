@@ -7,6 +7,7 @@ use App\Models\Barang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 
@@ -99,50 +100,59 @@ class PemesananController extends Controller
      * @return string
      */
     /**
-     * Generate Nomor Pemesanan (Grouping Key)
+     * Generate Nomor Pemesanan (GROUP ID untuk multiple items)
+     * Format: PSN20241124001
      *
      * @return string
      */
     private function generateNomorPemesanan()
     {
-        // Cari nomor pemesanan terakhir yang valid
-        $lastPemesanan = Pemesanan::whereNotNull('nomor_pemesanan')
-            ->orderBy('created_at', 'desc')
+        $today = date('Ymd');
+        $prefix = 'PSN';
+        
+        // Cari nomor pemesanan terakhir hari ini
+        $lastPemesanan = Pemesanan::where('nomor_pemesanan', 'like', $prefix . $today . '%')
+            ->orderBy('nomor_pemesanan', 'desc')
             ->first();
         
         if (!$lastPemesanan) {
-            // Cek jika ada data lama dengan format PSN-XXXXX di pemesanan_id
-            $lastOld = Pemesanan::orderBy('created_at', 'desc')->first();
-            if ($lastOld && preg_match('/^PSN-(\d+)$/', $lastOld->pemesanan_id)) {
-                // Gunakan logic lama untuk transisi
-                $lastId = $lastOld->pemesanan_id;
-            } else {
-                return 'PSN-00001';
-            }
-        } else {
-            $lastId = $lastPemesanan->nomor_pemesanan;
+            return $prefix . $today . '001';
         }
         
-        if (preg_match('/^PSN-(\d+)$/', $lastId, $matches)) {
-            $number = intval($matches[1]);
-            $nextNumber = $number + 1;
-            $nextId = 'PSN-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-        } else {
-            $nextId = 'PSN-00001';
+        // Ambil 3 digit terakhir dan increment
+        $lastNumber = intval(substr($lastPemesanan->nomor_pemesanan, -3));
+        $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        
+        return $prefix . $today . $newNumber;
+    }
+
+    /**
+     * Generate Pemesanan ID (PRIMARY KEY unik per item)
+     * Format: PS0001, PS0002, dst
+     *
+     * @return string
+     */
+    private function generatePemesananId()
+    {
+        $lastPemesanan = Pemesanan::orderBy('pemesanan_id', 'desc')->first();
+        
+        if (!$lastPemesanan) {
+            return 'PS0001';
         }
         
-        // Pastikan unik (meskipun harusnya sudah unik karena logic increment)
-        while (Pemesanan::where('nomor_pemesanan', $nextId)->exists()) {
-            if (preg_match('/^PSN-(\d+)$/', $nextId, $matches)) {
-                $number = intval($matches[1]);
-                $nextNumber = $number + 1;
-                $nextId = 'PSN-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-            } else {
-                $nextId = 'PSN-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
-            }
+        $lastId = $lastPemesanan->pemesanan_id;
+        $prefix = 'PS';
+        
+        // Validasi format
+        if (!preg_match('/^PS\d+$/', $lastId)) {
+            return 'PS0001';
         }
         
-        return $nextId;
+        // Ambil angka dan increment
+        $numPart = substr($lastId, strlen($prefix));
+        $nextNum = intval($numPart) + 1;
+        
+        return $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -152,11 +162,12 @@ class PemesananController extends Controller
      */
     public function getPemesananId()
     {
-        $pemesananId = $this->generateNomorPemesanan();
+        $nomorPemesanan = $this->generateNomorPemesanan();
         
         return response()->json([
             'status' => 'success',
-            'pemesanan_id' => $pemesananId
+            'nomor_pemesanan' => $nomorPemesanan,
+            'pemesanan_id' => $nomorPemesanan // Backward compatibility
         ]);
     }
 
@@ -276,14 +287,34 @@ private function validatePemesanan($data, $previousStatus = null)
 
         DB::beginTransaction();
         try {
-            // Generate Nomor Pemesanan (Grouping)
-            $nomorPemesanan = $request->input('pemesanan_id') ?: $this->generateNomorPemesanan();
+            // Generate Nomor Pemesanan (GROUP ID) - PSN20241124001
+            $nomorPemesanan = $request->input('nomor_pemesanan');
             
-            // Loop insert
+            // Jika tidak ada, generate baru
+            if (!$nomorPemesanan) {
+                $nomorPemesanan = $this->generateNomorPemesanan();
+            }
+            
+            // Validasi format: PSN20241124001 (14 karakter)
+            $nomorPemesanan = trim($nomorPemesanan);
+            if (!preg_match('/^PSN\d{11}$/', $nomorPemesanan)) {
+                throw new \Exception("Format nomor pemesanan tidak valid: {$nomorPemesanan}. Harus PSN20241124001");
+            }
+            
+            // Log untuk debugging
+            Log::info('Store Pemesanan', [
+                'nomor_pemesanan' => $nomorPemesanan,
+                'total_items' => count($items)
+            ]);
+            
+            // Loop insert setiap item
             foreach ($items as $index => $item) {
                 $pemesanan = new Pemesanan();
-                // Generate Unique ID per row: PO-XXXXX-1, PO-XXXXX-2
-                $pemesanan->pemesanan_id = $nomorPemesanan . '-' . ($index + 1);
+                
+                // Generate Unique Pemesanan ID (PRIMARY KEY): PS0001, PS0002, dst
+                $pemesananId = $this->generatePemesananId();
+                
+                $pemesanan->pemesanan_id = $pemesananId;
                 $pemesanan->nomor_pemesanan = $nomorPemesanan;
                 
                 $pemesanan->barang_id = $item['barang_id'];
@@ -335,6 +366,15 @@ private function validatePemesanan($data, $previousStatus = null)
             
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Log error detail untuk debugging
+            Log::error('Error Store Pemesanan', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'request_data' => $request->except(['_token'])
+            ]);
+            
             return response()->json([
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()

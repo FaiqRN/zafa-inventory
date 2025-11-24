@@ -3,39 +3,42 @@ $(document).ready(function () {
     let itemsData = []; // Array untuk menyimpan semua items
     let itemCounter = 0;
     let barangList = []; // Data barang dari server
+    let barangLoaded = false; // Flag untuk track apakah data sudah loaded
 
     // Load barang data
-    $.ajax({
-        url: '/barang/list', // Endpoint yang sudah ada di routes
-        method: 'GET',
-        success: function (response) {
-            if (response.status === 'success' && response.data) {
-                barangList = response.data.map(function (item) {
-                    return {
-                        id: item.barang_id,
-                        kode: item.barang_kode,
-                        nama: item.nama_barang,
-                        harga: item.harga_awal_barang,
-                        stok: item.stok,
-                        satuan: item.satuan
-                    };
-                });
-            }
-        },
-        error: function () {
-            // Fallback: ambil dari dropdown yang sudah ada
-            $('#barang_id option').each(function () {
-                if ($(this).val()) {
-                    barangList.push({
-                        id: $(this).val(),
-                        nama: $(this).text().split(' - ')[0],
-                        harga: $(this).data('harga'),
-                        stok: $(this).data('stok')
+    function loadBarangData() {
+        return $.ajax({
+            url: '/barang/list',
+            method: 'GET',
+            success: function (response) {
+                console.log('Barang data loaded:', response);
+                if (response.status === 'success' && response.data) {
+                    barangList = response.data.map(function (item) {
+                        return {
+                            id: item.barang_id,
+                            kode: item.barang_kode || '',
+                            nama: item.nama_barang,
+                            harga: parseFloat(item.harga_awal_barang) || 0,
+                            stok: parseInt(item.stok) || 0,
+                            satuan: item.satuan || 'pcs'
+                        };
                     });
+                    barangLoaded = true;
+                    console.log('Total barang loaded:', barangList.length);
+                } else {
+                    console.error('Invalid response format:', response);
                 }
-            });
-        }
-    });
+            },
+            error: function (xhr, status, error) {
+                console.error('Error loading barang:', error);
+                console.error('Response:', xhr.responseText);
+                barangLoaded = false;
+            }
+        });
+    }
+
+    // Load data saat halaman dimuat
+    loadBarangData();
 
     // Format currency
     function formatRupiah(angka) {
@@ -48,20 +51,22 @@ $(document).ready(function () {
 
         // Loop through barangList dari API
         if (barangList && barangList.length > 0) {
+            console.log('Using barangList from AJAX');
             barangList.forEach(function (barang) {
-                const displayText = `${barang.kode || ''} - ${barang.nama} (Stok: ${barang.stok})`;
-                barangOptions += `<option value="${barang.id}" data-harga="${barang.harga}" data-stok="${barang.stok}">${displayText}</option>`;
+                const displayText = `${barang.kode} - ${barang.nama} (Stok: ${barang.stok})`;
+                barangOptions += `<option value="${barang.id}" data-harga="${barang.harga}" data-stok="${barang.stok}" data-nama="${barang.nama}">${displayText}</option>`;
             });
         } else {
-            // Fallback: ambil dari dropdown yang ada
-            $('#barang_id option').each(function () {
+            // Fallback: ambil dari hidden select yang berisi data dari blade
+            console.log('Using fallback from blade template');
+            $('#barang_fallback option').each(function () {
                 if ($(this).val()) {
-                    const barangId = $(this).val();
-                    const namaBarang = $(this).text();
-                    const harga = $(this).data('harga');
-                    const stok = $(this).data('stok');
-
-                    barangOptions += `<option value="${barangId}" data-harga="${harga}" data-stok="${stok}">${namaBarang}</option>`;
+                    barangOptions += `<option value="${$(this).val()}" 
+                                        data-harga="${$(this).data('harga')}" 
+                                        data-stok="${$(this).data('stok')}"
+                                        data-nama="${$(this).data('nama')}">
+                                        ${$(this).text()}
+                                    </option>`;
                 }
             });
         }
@@ -306,14 +311,34 @@ $(document).ready(function () {
         // Set barang_id pertama untuk kompatibilitas dengan database existing
         $('#barang_id').val(items[0].barang_id);
 
+        // Kirim nomor_pemesanan yang sudah di-generate
+        if (!$('#nomor_pemesanan').length) {
+            $('<input>').attr({
+                type: 'hidden',
+                id: 'nomor_pemesanan',
+                name: 'nomor_pemesanan'
+            }).appendTo('#formPemesanan');
+        }
+        $('#nomor_pemesanan').val($('#no_pemesanan').val());
+
         return true;
     };
 
     // Initialize with one item row when modal opens
     $('#btnTambahPemesanan').click(function () {
-        $('#items-container').empty();
-        itemCounter = 0;
-        addItemRow(); // Add first row
+        // Reload barang data jika belum loaded atau kosong
+        if (!barangLoaded || barangList.length === 0) {
+            console.log('Reloading barang data...');
+            loadBarangData().done(function() {
+                $('#items-container').empty();
+                itemCounter = 0;
+                addItemRow();
+            });
+        } else {
+            $('#items-container').empty();
+            itemCounter = 0;
+            addItemRow();
+        }
     });
 
     // Set tanggal default ke hari ini
