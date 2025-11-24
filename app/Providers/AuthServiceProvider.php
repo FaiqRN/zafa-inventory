@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -21,6 +21,28 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::define('view-analytics', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'ketua']);
+        });
+
+        Gate::define('view-market-map', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'ketua']);
+        });
+
+        Gate::define('manage-users', function ($user) {
+            return $user->role->nama_role === 'admin';
+        });
+
+        Gate::define('manage-master-data', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'ketua']);
+        });
+
+        Gate::define('view-barang', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'karyawan']);
+        });
+
+        Gate::define('view-reports', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'ketua']);
+        });
     }
 }

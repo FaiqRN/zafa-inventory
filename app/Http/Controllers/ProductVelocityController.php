@@ -10,19 +10,6 @@ use App\Models\Retur;
 use App\Helpers\AnalyticsHelper;
 use App\Exports\ProductVelocityExport;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use Maatwebsite\Excel\Facades\Excel;
-use Exception;
-
-class ProductVelocityController extends Controller
-{
-    /**
-     * Display Product Velocity Analytics
-     */
-    public function index()
-    {
         try {
             $breadcrumb = (object)[
                 'title' => 'Product Velocity Analytics',

@@ -13,19 +13,6 @@ use App\Exports\PartnerPerformanceExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\JsonResponse;
-use Maatwebsite\Excel\Facades\Excel;
-use Exception;
-use Illuminate\Support\Facades\Validator;
-
-class PartnerPerformanceController extends Controller
-{
-    /**
-     * Display Partner Performance Analytics
-     */
-    public function index()
-    {
         try {
             $breadcrumb = (object)[
                 'title' => 'Partner Performance Analytics',

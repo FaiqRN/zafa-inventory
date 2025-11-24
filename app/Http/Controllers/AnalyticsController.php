@@ -15,6 +15,10 @@ use Exception;
 
 class AnalyticsController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-analytics');
+    }
     /**
      * Analytics Dashboard Main - Overview Only
      */

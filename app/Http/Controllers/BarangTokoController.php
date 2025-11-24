@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Validator;
 
 class BarangTokoController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:manage-master-data');
+    }
     /**
      * Display a listing of the resource.
      */

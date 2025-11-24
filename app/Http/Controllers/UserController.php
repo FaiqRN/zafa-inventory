@@ -11,6 +11,10 @@ use stdClass;
 
 class UserController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:manage-users');
+    }
     /**
      * Display a listing of users
      */

@@ -15,6 +15,7 @@
             </li>
 
             <!-- Master Data -->
+            @can('manage-master-data')
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-database"></i>
@@ -50,6 +51,19 @@
                     </li>
                 </ul>
             </li>
+            @endcan
+
+            <!-- Data Barang for Karyawan (who can't access full Master Data) -->
+            @cannot('manage-master-data')
+                @can('view-barang')
+                <li class="nav-item">
+                    <a href="{{ route('barang.index') }}" class="nav-link {{ ($activemenu == 'barang')? 'active' : '' }}">
+                        <i class="nav-icon fas fa-box"></i>
+                        <p>Data Barang</p>
+                    </a>
+                </li>
+                @endcan
+            @endcannot
 
             <!-- Transaksi -->
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['pengiriman', 'retur', 'pemesanan']))? 'menu-open' : '' }}">
@@ -82,7 +96,29 @@
                 </ul>
             </li>
 
+            <!-- Laporan -->
+            @can('view-reports')
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['laporan-toko']))? 'menu-open' : '' }}">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['laporan-toko']))? 'active' : '' }}">
+                    <i class="nav-icon fas fa-file-alt"></i>
+                    <p>
+                        Laporan
+                        <i class="right fas fa-angle-left"></i>
+                    </p>
+                </a>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="{{ route('laporan.toko') }}" class="nav-link {{ ($activemenu == 'laporan-toko')? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>Laporan Toko</p>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            @endcan
+
             <!-- Analytics -->
+            @can('view-analytics')
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-brain"></i>
@@ -124,14 +160,17 @@
                     </li>
                 </ul>
             </li>
+            @endcan
             
             <!-- Market Map -->
+            @can('view-market-map')
             <li class="nav-item">
                 <a href="{{ route('market-map.index') }}" class="nav-link {{ ($activemenu == 'market-map')? 'active' : '' }}">
                     <i class="nav-icon fas fa-map-marked-alt"></i>
                     <p>Market Map</p>
                 </a>
             </li>
+            @endcan
 
             <!-- Follow Up Pelanggan -->
             <li class="nav-item">
@@ -142,6 +181,7 @@
             </li>
 
             <!-- Sistem Pengaturan -->
+            @can('manage-users')
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['user']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['user']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-users-cog"></i>
@@ -159,6 +199,7 @@
                     </li>
                 </ul>
             </li>
+            @endcan
 
         </ul>
     </nav>

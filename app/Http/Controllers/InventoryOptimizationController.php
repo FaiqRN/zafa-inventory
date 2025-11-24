@@ -26,6 +26,10 @@ use Illuminate\Support\Facades\Schema;
 
 class InventoryOptimizationController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-analytics');
+    }
     /**
      * Display Inventory Optimization Analytics
      */

@@ -14,6 +14,10 @@ use Yajra\DataTables\Facades\DataTables;
 
 class TokoController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:manage-master-data');
+    }
     /**
      * Display a listing of the resource.
      *

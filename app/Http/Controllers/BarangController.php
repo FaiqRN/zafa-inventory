@@ -12,6 +12,10 @@ use Yajra\DataTables\Facades\DataTables;
 
 class BarangController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-barang');
+    }
     /**
      * Display a listing of the resource.
      *

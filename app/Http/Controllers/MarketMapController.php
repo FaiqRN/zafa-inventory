@@ -16,6 +16,10 @@ use Carbon\Carbon;
 
 class MarketMapController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-market-map');
+    }
     // Cache duration in minutes
     const CACHE_DURATION = 30; // Increased cache duration
     
