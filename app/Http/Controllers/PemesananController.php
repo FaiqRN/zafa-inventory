@@ -6,6 +6,7 @@ use App\Models\Pemesanan;
 use App\Models\Barang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 
@@ -97,38 +98,47 @@ class PemesananController extends Controller
      *
      * @return string
      */
-    private function generatePemesananId()
+    /**
+     * Generate Nomor Pemesanan (Grouping Key)
+     *
+     * @return string
+     */
+    private function generateNomorPemesanan()
     {
-        // Dapatkan pemesanan ID terakhir
-        $lastPemesanan = Pemesanan::orderBy('created_at', 'desc')->first();
+        // Cari nomor pemesanan terakhir yang valid
+        $lastPemesanan = Pemesanan::whereNotNull('nomor_pemesanan')
+            ->orderBy('created_at', 'desc')
+            ->first();
         
         if (!$lastPemesanan) {
-            return 'PO-00001';
+            // Cek jika ada data lama dengan format PSN-XXXXX di pemesanan_id
+            $lastOld = Pemesanan::orderBy('created_at', 'desc')->first();
+            if ($lastOld && preg_match('/^PSN-(\d+)$/', $lastOld->pemesanan_id)) {
+                // Gunakan logic lama untuk transisi
+                $lastId = $lastOld->pemesanan_id;
+            } else {
+                return 'PSN-00001';
+            }
+        } else {
+            $lastId = $lastPemesanan->nomor_pemesanan;
         }
         
-        $lastId = $lastPemesanan->pemesanan_id;
-        
-        // Extract number part if format is PO-XXXXX
-        if (preg_match('/^PO-(\d+)$/', $lastId, $matches)) {
+        if (preg_match('/^PSN-(\d+)$/', $lastId, $matches)) {
             $number = intval($matches[1]);
             $nextNumber = $number + 1;
-            $nextId = 'PO-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            $nextId = 'PSN-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
         } else {
-            // If format doesn't match, start fresh
-            $nextId = 'PO-00001';
+            $nextId = 'PSN-00001';
         }
         
-        // Verifikasi bahwa ID belum digunakan
-        while (Pemesanan::where('pemesanan_id', $nextId)->exists()) {
-            // Jika masih ada konflik, tambahkan lagi
-            if (preg_match('/^PO-(\d+)$/', $nextId, $matches)) {
+        // Pastikan unik (meskipun harusnya sudah unik karena logic increment)
+        while (Pemesanan::where('nomor_pemesanan', $nextId)->exists()) {
+            if (preg_match('/^PSN-(\d+)$/', $nextId, $matches)) {
                 $number = intval($matches[1]);
                 $nextNumber = $number + 1;
-                $nextId = 'PO-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                $nextId = 'PSN-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
             } else {
-                // Fallback jika format tidak sesuai
-                $random = rand(1, 99999);
-                $nextId = 'PO-' . str_pad($random, 5, '0', STR_PAD_LEFT);
+                $nextId = 'PSN-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
             }
         }
         
@@ -142,12 +152,7 @@ class PemesananController extends Controller
      */
     public function getPemesananId()
     {
-        $pemesananId = $this->generatePemesananId();
-        
-        // Pastikan ID belum digunakan
-        while (Pemesanan::where('pemesanan_id', $pemesananId)->exists()) {
-            $pemesananId = $this->generatePemesananId();
-        }
+        $pemesananId = $this->generateNomorPemesanan();
         
         return response()->json([
             'status' => 'success',
@@ -238,68 +243,104 @@ private function validatePemesanan($data, $previousStatus = null)
  * @param  \Illuminate\Http\Request  $request
  * @return \Illuminate\Http\JsonResponse
  */
-public function store(Request $request)
-{
-    // Set default tanggal_pemesanan to today if not provided
-    if (!$request->has('tanggal_pemesanan') || empty($request->tanggal_pemesanan)) {
-        $request->merge(['tanggal_pemesanan' => Carbon::today()->format('Y-m-d')]);
+    public function store(Request $request)
+    {
+        // Set default tanggal_pemesanan to today if not provided
+        if (!$request->has('tanggal_pemesanan') || empty($request->tanggal_pemesanan)) {
+            $request->merge(['tanggal_pemesanan' => Carbon::today()->format('Y-m-d')]);
+        }
+        
+        // Parse items_data
+        $items = json_decode($request->items_data, true);
+        
+        if (!$items || empty($items)) {
+             return response()->json([
+                'status' => 'error',
+                'message' => 'Data barang tidak valid atau kosong'
+            ], 422);
+        }
+
+        // Validasi Stok Dulu
+        foreach ($items as $item) {
+            $barang = Barang::find($item['barang_id']);
+            if (!$barang) {
+                return response()->json(['status' => 'error', 'message' => 'Barang tidak ditemukan: ' . $item['barang_id']], 404);
+            }
+            if ($barang->stok < $item['jumlah']) {
+                return response()->json([
+                    'status' => 'error', 
+                    'message' => "Stok barang {$barang->nama_barang} tidak mencukupi! Stok: {$barang->stok}"
+                ], 422);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            // Generate Nomor Pemesanan (Grouping)
+            $nomorPemesanan = $request->input('pemesanan_id') ?: $this->generateNomorPemesanan();
+            
+            // Loop insert
+            foreach ($items as $index => $item) {
+                $pemesanan = new Pemesanan();
+                // Generate Unique ID per row: PO-XXXXX-1, PO-XXXXX-2
+                $pemesanan->pemesanan_id = $nomorPemesanan . '-' . ($index + 1);
+                $pemesanan->nomor_pemesanan = $nomorPemesanan;
+                
+                $pemesanan->barang_id = $item['barang_id'];
+                $pemesanan->jumlah_pesanan = $item['jumlah'];
+                $pemesanan->total = $item['subtotal']; // Total per item row
+                
+                // Data umum dari request
+                $pemesanan->nama_pemesan = $request->nama_pemesan;
+                $pemesanan->tanggal_pemesanan = $request->tanggal_pemesanan;
+                $pemesanan->alamat_pemesan = $request->alamat_pemesan;
+                $pemesanan->pemesanan_dari = $request->pemesanan_dari;
+                $pemesanan->metode_pembayaran = $request->metode_pembayaran;
+                $pemesanan->status_pemesanan = $request->status_pemesanan;
+                $pemesanan->no_telp_pemesan = $request->no_telp_pemesan;
+                $pemesanan->email_pemesan = $request->email_pemesan;
+                $pemesanan->catatan_pemesanan = $request->catatan_pemesanan;
+                
+                // Set dates based on status
+                switch ($request->status_pemesanan) {
+                    case 'diproses':
+                        $pemesanan->tanggal_diproses = $request->tanggal_diproses ?? Carbon::now()->format('Y-m-d');
+                        break;
+                    case 'dikirim':
+                        $pemesanan->tanggal_diproses = $request->tanggal_diproses ?? Carbon::now()->format('Y-m-d');
+                        $pemesanan->tanggal_dikirim = $request->tanggal_dikirim ?? Carbon::now()->format('Y-m-d');
+                        break;
+                    case 'selesai':
+                        $pemesanan->tanggal_diproses = $request->tanggal_diproses ?? Carbon::now()->format('Y-m-d');
+                        $pemesanan->tanggal_dikirim = $request->tanggal_dikirim ?? Carbon::now()->format('Y-m-d');
+                        $pemesanan->tanggal_selesai = $request->tanggal_selesai ?? Carbon::now()->format('Y-m-d');
+                        break;
+                }
+                
+                $pemesanan->save();
+                
+                // Kurangi stok
+                $barang = Barang::find($item['barang_id']);
+                $barang->stok -= $item['jumlah'];
+                $barang->save();
+            }
+            
+            DB::commit();
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data pemesanan berhasil ditambahkan',
+                'nomor_pemesanan' => $nomorPemesanan
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
     }
-    
-    // Validate request data with our custom function
-    $validator = $this->validatePemesanan($request->all());
-    
-    if ($validator->fails()) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Validasi gagal',
-            'errors' => $validator->errors()
-        ], 422);
-    }
-    
-    // Generate pemesanan ID if not provided
-    $pemesananId = $request->input('pemesanan_id') ?: $this->generatePemesananId();
-    
-    // Create new pemesanan
-    $pemesanan = new Pemesanan();
-    $pemesanan->pemesanan_id = $pemesananId;
-    $pemesanan->barang_id = $request->barang_id;
-    $pemesanan->nama_pemesan = $request->nama_pemesan;
-    $pemesanan->tanggal_pemesanan = $request->tanggal_pemesanan;
-    $pemesanan->alamat_pemesan = $request->alamat_pemesan;
-    $pemesanan->jumlah_pesanan = $request->jumlah_pesanan;
-    $pemesanan->total = $request->total;
-    $pemesanan->pemesanan_dari = $request->pemesanan_dari;
-    $pemesanan->metode_pembayaran = $request->metode_pembayaran;
-    $pemesanan->status_pemesanan = $request->status_pemesanan;
-    $pemesanan->no_telp_pemesan = $request->no_telp_pemesan;
-    $pemesanan->email_pemesan = $request->email_pemesan;
-    $pemesanan->catatan_pemesanan = $request->catatan_pemesanan;
-    
-    // Set date fields based on status for new orders
-    switch ($request->status_pemesanan) {
-        case 'diproses':
-            $pemesanan->tanggal_diproses = $request->tanggal_diproses ?? Carbon::now()->format('Y-m-d');
-            break;
-        case 'dikirim':
-            $pemesanan->tanggal_diproses = $request->tanggal_diproses ?? Carbon::now()->format('Y-m-d');
-            $pemesanan->tanggal_dikirim = $request->tanggal_dikirim ?? Carbon::now()->format('Y-m-d');
-            break;
-        case 'selesai':
-$pemesanan->tanggal_diproses = $request->tanggal_diproses ?? Carbon::now()->format('Y-m-d');
-            $pemesanan->tanggal_dikirim = $request->tanggal_dikirim ?? Carbon::now()->format('Y-m-d');
-            $pemesanan->tanggal_selesai = $request->tanggal_selesai ?? Carbon::now()->format('Y-m-d');
-            break;
-        // For pending and dibatalkan, dates remain null
-    }
-    
-    $pemesanan->save();
-    
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Data pemesanan berhasil ditambahkan',
-        'data' => $pemesanan
-    ]);
-}
 
     /**
      * Display the specified resource.
@@ -373,6 +414,39 @@ public function update(Request $request, $id)
         ], 422);
     }
     
+    // Validasi stok barang jika ada perubahan
+    $oldBarangId = $pemesanan->barang_id;
+    $oldJumlah = $pemesanan->jumlah_pesanan;
+    $newBarangId = $request->barang_id;
+    $newJumlah = $request->jumlah_pesanan;
+    
+    if ($oldBarangId != $newBarangId || $oldJumlah != $newJumlah) {
+        // Cek stok barang baru
+        $newBarang = Barang::find($newBarangId);
+        if (!$newBarang) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Barang tidak ditemukan'
+            ], 404);
+        }
+        
+        // Hitung stok yang tersedia (stok saat ini + jumlah lama jika barang sama)
+        $availableStock = $newBarang->stok;
+        if ($oldBarangId == $newBarangId) {
+            $availableStock += $oldJumlah;
+        }
+        
+        if ($availableStock < $newJumlah) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Stok barang tidak mencukupi! Stok tersedia: ' . $availableStock . ' ' . $newBarang->satuan,
+                'errors' => [
+                    'jumlah_pesanan' => ['Stok barang tidak mencukupi! Stok tersedia: ' . $availableStock . ' ' . $newBarang->satuan]
+                ]
+            ], 422);
+        }
+    }
+    
     // Update basic pemesanan data
     $pemesanan->barang_id = $request->barang_id;
     $pemesanan->nama_pemesan = $request->nama_pemesan;
@@ -419,11 +493,29 @@ public function update(Request $request, $id)
     
     // Update status
     $pemesanan->status_pemesanan = $request->status_pemesanan;
+    
+    // Sesuaikan stok barang jika ada perubahan (variabel sudah dideklarasikan di atas)
+    if ($oldBarangId != $newBarangId || $oldJumlah != $newJumlah) {
+        // Kembalikan stok barang lama
+        $oldBarang = Barang::find($oldBarangId);
+        if ($oldBarang) {
+            $oldBarang->stok = $oldBarang->stok + $oldJumlah;
+            $oldBarang->save();
+        }
+        
+        // Kurangi stok barang baru
+        $newBarang = Barang::find($newBarangId);
+        if ($newBarang) {
+            $newBarang->stok = $newBarang->stok - $newJumlah;
+            $newBarang->save();
+        }
+    }
+    
     $pemesanan->save();
     
     return response()->json([
         'status' => 'success',
-        'message' => 'Data pemesanan berhasil diperbarui',
+        'message' => 'Data pemesanan berhasil diperbarui dan stok barang telah disesuaikan',
         'data' => $pemesanan
     ]);
 }
@@ -445,12 +537,19 @@ public function update(Request $request, $id)
             ], 404);
         }
         
+        // Kembalikan stok barang sebelum menghapus pemesanan
+        $barang = Barang::find($pemesanan->barang_id);
+        if ($barang) {
+            $barang->stok = $barang->stok + $pemesanan->jumlah_pesanan;
+            $barang->save();
+        }
+        
         // Delete pemesanan
         $pemesanan->delete();
         
         return response()->json([
             'status' => 'success',
-            'message' => 'Data pemesanan berhasil dihapus'
+            'message' => 'Data pemesanan berhasil dihapus dan stok barang telah dikembalikan'
         ]);
     }
 }

@@ -1,19 +1,30 @@
 // Multi-Item Pemesanan JavaScript
-$(document).ready(function() {
+$(document).ready(function () {
     let itemsData = []; // Array untuk menyimpan semua items
     let itemCounter = 0;
     let barangList = []; // Data barang dari server
 
     // Load barang data
     $.ajax({
-        url: '/barang/list-all', // Endpoint untuk get all barang
+        url: '/barang/list', // Endpoint yang sudah ada di routes
         method: 'GET',
-        success: function(response) {
-            barangList = response;
+        success: function (response) {
+            if (response.status === 'success' && response.data) {
+                barangList = response.data.map(function (item) {
+                    return {
+                        id: item.barang_id,
+                        kode: item.barang_kode,
+                        nama: item.nama_barang,
+                        harga: item.harga_awal_barang,
+                        stok: item.stok,
+                        satuan: item.satuan
+                    };
+                });
+            }
         },
-        error: function() {
+        error: function () {
             // Fallback: ambil dari dropdown yang sudah ada
-            $('#barang_id option').each(function() {
+            $('#barang_id option').each(function () {
                 if ($(this).val()) {
                     barangList.push({
                         id: $(this).val(),
@@ -34,18 +45,26 @@ $(document).ready(function() {
     // Generate item row HTML
     function generateItemRow(index) {
         let barangOptions = '<option value="">-- Pilih Barang --</option>';
-        
-        // Loop through barangList dari dropdown yang ada
-        $('#barang_id option').each(function() {
-            if ($(this).val()) {
-                const barangId = $(this).val();
-                const namaBarang = $(this).text();
-                const harga = $(this).data('harga');
-                const stok = $(this).data('stok');
-                
-                barangOptions += `<option value="${barangId}" data-harga="${harga}" data-stok="${stok}">${namaBarang}</option>`;
-            }
-        });
+
+        // Loop through barangList dari API
+        if (barangList && barangList.length > 0) {
+            barangList.forEach(function (barang) {
+                const displayText = `${barang.kode || ''} - ${barang.nama} (Stok: ${barang.stok})`;
+                barangOptions += `<option value="${barang.id}" data-harga="${barang.harga}" data-stok="${barang.stok}">${displayText}</option>`;
+            });
+        } else {
+            // Fallback: ambil dari dropdown yang ada
+            $('#barang_id option').each(function () {
+                if ($(this).val()) {
+                    const barangId = $(this).val();
+                    const namaBarang = $(this).text();
+                    const harga = $(this).data('harga');
+                    const stok = $(this).data('stok');
+
+                    barangOptions += `<option value="${barangId}" data-harga="${harga}" data-stok="${stok}">${namaBarang}</option>`;
+                }
+            });
+        }
 
         return `
             <div class="card mb-3 item-row" data-index="${index}">
@@ -98,37 +117,37 @@ $(document).ready(function() {
     }
 
     // Remove item row
-    $(document).on('click', '.btn-remove-item', function() {
+    $(document).on('click', '.btn-remove-item', function () {
         const index = $(this).data('index');
         $(`.item-row[data-index="${index}"]`).remove();
-        
+
         // Remove from itemsData
         itemsData = itemsData.filter(item => item.index !== index);
-        
+
         calculateTotal();
         updateItemsCount();
     });
 
     // Handle barang selection change
-    $(document).on('change', '.barang-select', function() {
+    $(document).on('change', '.barang-select', function () {
         const index = $(this).data('index');
         const selectedOption = $(this).find('option:selected');
         const harga = selectedOption.data('harga') || 0;
         const stok = selectedOption.data('stok') || 0;
-        
+
         // Update hidden harga satuan
         $(`.harga-satuan[data-index="${index}"]`).val(harga);
-        
+
         // Show info
         $(`.harga-info-${index}`).html(`<i class="fas fa-tag"></i> ${formatRupiah(harga)}`);
         $(`.stok-info-${index}`).html(`<i class="fas fa-boxes"></i> Stok: ${stok}`);
-        
+
         // Calculate subtotal
         calculateItemSubtotal(index);
     });
 
     // Handle jumlah change
-    $(document).on('input', '.jumlah-input', function() {
+    $(document).on('input', '.jumlah-input', function () {
         const index = $(this).data('index');
         calculateItemSubtotal(index);
     });
@@ -138,10 +157,10 @@ $(document).ready(function() {
         const jumlah = parseFloat($(`.jumlah-input[data-index="${index}"]`).val()) || 0;
         const hargaSatuan = parseFloat($(`.harga-satuan[data-index="${index}"]`).val()) || 0;
         const subtotal = jumlah * hargaSatuan;
-        
+
         $(`.subtotal-display[data-index="${index}"]`).val(formatRupiah(subtotal));
         $(`.subtotal-value[data-index="${index}"]`).val(subtotal);
-        
+
         calculateTotal();
     }
 
@@ -149,20 +168,20 @@ $(document).ready(function() {
     function calculateTotal() {
         let totalKeseluruhan = 0;
         let totalItems = 0;
-        
-        $('.subtotal-value').each(function() {
+
+        $('.subtotal-value').each(function () {
             const subtotal = parseFloat($(this).val()) || 0;
             totalKeseluruhan += subtotal;
         });
-        
-        $('.jumlah-input').each(function() {
+
+        $('.jumlah-input').each(function () {
             const jumlah = parseInt($(this).val()) || 0;
             totalItems += jumlah;
         });
-        
+
         $('#total-keseluruhan').text(formatRupiah(totalKeseluruhan));
         $('#total-items-count').text(totalItems + ' item');
-        
+
         // Update hidden inputs untuk submit
         $('#total').val(totalKeseluruhan);
         $('#jumlah_pesanan').val(totalItems);
@@ -182,7 +201,7 @@ $(document).ready(function() {
     }
 
     // Add item button click
-    $('#btnAddItem').click(function() {
+    $('#btnAddItem').click(function () {
         addItemRow();
     });
 
@@ -190,20 +209,20 @@ $(document).ready(function() {
     function collectItemsData() {
         const items = [];
         let isValid = true;
-        
-        $('.item-row').each(function() {
+
+        $('.item-row').each(function () {
             const index = $(this).data('index');
             const barangId = $(`.barang-select[data-index="${index}"]`).val();
             const barangNama = $(`.barang-select[data-index="${index}"] option:selected`).text();
             const jumlah = $(`.jumlah-input[data-index="${index}"]`).val();
             const hargaSatuan = $(`.harga-satuan[data-index="${index}"]`).val();
             const subtotal = $(`.subtotal-value[data-index="${index}"]`).val();
-            
+
             if (!barangId || !jumlah || jumlah <= 0) {
                 isValid = false;
                 return false;
             }
-            
+
             items.push({
                 barang_id: barangId,
                 barang_nama: barangNama,
@@ -212,7 +231,7 @@ $(document).ready(function() {
                 subtotal: parseFloat(subtotal)
             });
         });
-        
+
         if (!isValid) {
             Swal.fire({
                 icon: 'error',
@@ -222,7 +241,7 @@ $(document).ready(function() {
             });
             return null;
         }
-        
+
         if (items.length === 0) {
             Swal.fire({
                 icon: 'warning',
@@ -232,23 +251,23 @@ $(document).ready(function() {
             });
             return null;
         }
-        
+
         return items;
     }
 
     // Update summary di step 3
-    function updateSummary() {
+    window.updateSummaryMultiItem = function () {
         const namaPemesan = $('#nama_pemesan').val() || '-';
         const noTelp = $('#no_telp_pemesan').val() || '-';
         const items = collectItemsData();
-        
+
         $('#summary-nama').text(namaPemesan);
         $('#summary-telp').text(noTelp);
-        
+
         if (items && items.length > 0) {
             let itemsHTML = '<div class="table-responsive"><table class="table table-sm mb-0">';
             itemsHTML += '<thead><tr><th>Barang</th><th class="text-center">Qty</th><th class="text-right">Subtotal</th></tr></thead><tbody>';
-            
+
             items.forEach(item => {
                 itemsHTML += `
                     <tr>
@@ -258,13 +277,13 @@ $(document).ready(function() {
                     </tr>
                 `;
             });
-            
+
             itemsHTML += '</tbody></table></div>';
             $('#summary-items-list').html(itemsHTML);
-            
+
             const totalItems = items.reduce((sum, item) => sum + item.jumlah, 0);
             const totalKeseluruhan = items.reduce((sum, item) => sum + item.subtotal, 0);
-            
+
             $('#summary-total-items').text(totalItems + ' item');
             $('#summary-total').text(formatRupiah(totalKeseluruhan));
         } else {
@@ -272,79 +291,29 @@ $(document).ready(function() {
             $('#summary-total-items').text('0 item');
             $('#summary-total').text('Rp 0');
         }
-    }
+    };
 
     // Validate step 2 (items)
-    function validateStep2() {
+    window.validateStep2 = function () {
         const items = collectItemsData();
         if (!items || items.length === 0) {
             return false;
         }
-        
+
         // Set items data untuk dikirim
         $('#items_data').val(JSON.stringify(items));
-        
+
         // Set barang_id pertama untuk kompatibilitas dengan database existing
         $('#barang_id').val(items[0].barang_id);
-        
+
         return true;
-    }
-
-    // Next step button
-    $('#btnNextStep').click(function() {
-        if (currentStep === 2) {
-            if (!validateStep2()) {
-                return;
-            }
-        }
-        
-        if (currentStep < totalSteps) {
-            showStep(currentStep + 1);
-        }
-    });
-
-    // Previous step button
-    $('#btnPrevStep').click(function() {
-        if (currentStep > 1) {
-            showStep(currentStep - 1);
-        }
-    });
-
-    // Show step function (sesuaikan dengan yang ada di pemesanan.js)
-    function showStep(step) {
-        $('.step-content').hide();
-        $(`#step-${step}`).show();
-        
-        $('.step-item').removeClass('active completed');
-        for (let i = 1; i < step; i++) {
-            $(`.step-item[data-step="${i}"]`).addClass('completed');
-        }
-        $(`.step-item[data-step="${step}"]`).addClass('active');
-        
-        if (step === 1) {
-            $('#btnPrevStep').hide();
-            $('#btnNextStep').show();
-            $('#btnSubmit').hide();
-        } else if (step === totalSteps) {
-            $('#btnPrevStep').show();
-            $('#btnNextStep').hide();
-            $('#btnSubmit').show();
-            updateSummary();
-        } else {
-            $('#btnPrevStep').show();
-            $('#btnNextStep').show();
-            $('#btnSubmit').hide();
-        }
-        
-        currentStep = step;
-    }
+    };
 
     // Initialize with one item row when modal opens
-    $('#btnTambahPemesanan').click(function() {
+    $('#btnTambahPemesanan').click(function () {
         $('#items-container').empty();
         itemCounter = 0;
         addItemRow(); // Add first row
-        showStep(1);
     });
 
     // Set tanggal default ke hari ini

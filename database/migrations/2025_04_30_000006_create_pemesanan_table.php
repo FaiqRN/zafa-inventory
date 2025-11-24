@@ -15,6 +15,7 @@ class CreatePemesananTable extends Migration
     {
         Schema::create('pemesanan', function (Blueprint $table) {
             $table->string('pemesanan_id', 10)->primary();
+            $table->string('nomor_pemesanan', 8)->nullable();
             $table->string('barang_id', 10);
             $table->string('nama_pemesan', 100);
             $table->date('tanggal_pemesanan');
