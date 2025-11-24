@@ -96,27 +96,6 @@
                 </ul>
             </li>
 
-            <!-- Laporan -->
-            @can('view-reports')
-            <li class="nav-item has-treeview {{ (in_array($activemenu, ['laporan-toko']))? 'menu-open' : '' }}">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['laporan-toko']))? 'active' : '' }}">
-                    <i class="nav-icon fas fa-file-alt"></i>
-                    <p>
-                        Laporan
-                        <i class="right fas fa-angle-left"></i>
-                    </p>
-                </a>
-                <ul class="nav nav-treeview">
-                    <li class="nav-item">
-                        <a href="{{ route('laporan.toko') }}" class="nav-link {{ ($activemenu == 'laporan-toko')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Laporan Toko</p>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-            @endcan
-
             <!-- Analytics -->
             @can('view-analytics')
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'menu-open' : '' }}">
