@@ -132,7 +132,7 @@
                                 <div class="step-circle">
                                     <i class="fas fa-box"></i>
                                 </div>
-                                <div class="step-label">Barang & Qty</div>
+                                <div class="step-label">Barang & Kuantitas</div>
                             </div>
                         </div>
                         <div class="col-4 text-center">
@@ -290,6 +290,21 @@
                         <input type="hidden" id="jumlah_pesanan" name="jumlah_pesanan">
                         <input type="hidden" id="total" name="total">
                         <input type="hidden" id="items_data" name="items_data">
+                        
+                        <!-- Hidden select untuk fallback data barang -->
+                        <select id="barang_fallback" style="display:none;">
+                            <option value="">-- Pilih Barang --</option>
+                            @foreach($barang as $b)
+                                <option value="{{ $b->barang_id }}" 
+                                        data-kode="{{ $b->barang_kode }}"
+                                        data-nama="{{ $b->nama_barang }}"
+                                        data-harga="{{ $b->harga_awal_barang }}" 
+                                        data-stok="{{ $b->stok }}"
+                                        data-satuan="{{ $b->satuan }}">
+                                    {{ $b->barang_kode }} - {{ $b->nama_barang }} (Stok: {{ $b->stok }})
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     
                     <!-- STEP 3: Pembayaran & Status -->
