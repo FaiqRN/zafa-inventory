@@ -99,21 +99,22 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         // ===== ANALYTICS 2: INVENTORY OPTIMIZATION =====
         Route::prefix('inventory-optimization')->name('inventory-optimization.')->group(function () {
             Route::get('/', [InventoryOptimizationController::class, 'index'])->name('index');
-            
+
             // Recommendation Actions
             Route::post('/apply', [InventoryOptimizationController::class, 'applyRecommendation'])->name('apply');
             Route::post('/apply-all', [InventoryOptimizationController::class, 'applyAllRecommendations'])->name('apply-all');
             Route::post('/customize', [InventoryOptimizationController::class, 'customizeRecommendation'])->name('customize');
             Route::post('/generate', [InventoryOptimizationController::class, 'refreshRecommendations'])->name('generate');
-            
+
             // Seasonal Configuration
             Route::get('/seasonal-config', [InventoryOptimizationController::class, 'getSeasonalAdjustments'])->name('seasonal-config');
+            Route::get('/seasonal-settings', [InventoryOptimizationController::class, 'seasonalSettings'])->name('seasonal-settings');
             Route::post('/update-seasonal', [InventoryOptimizationController::class, 'updateSeasonalConfiguration'])->name('update-seasonal');
-            
+
             // API Routes
             Route::get('/api/data', [InventoryOptimizationController::class, 'getOptimizationData'])->name('api.data');
             Route::get('/details/{recommendationId}', [InventoryOptimizationController::class, 'getRecommendationDetails'])->name('details');
-            
+
             // Export
             Route::get('/export', [InventoryOptimizationController::class, 'export'])->name('export');
         });
@@ -237,6 +238,43 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         Route::get('/{id}/edit', [UserController::class, 'edit'])->name('user.edit');
         Route::put('/{id}', [UserController::class, 'update'])->name('user.update');
         Route::delete('/{id}', [UserController::class, 'destroy'])->name('user.destroy');
+    });
+    
+    // ===============================
+    // MARKET MAP SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'market-map-settings', 'middleware' => 'can:manage-users'], function() {
+        Route::get('/', [\App\Http\Controllers\MarketMapSettingController::class, 'index'])->name('market-map-settings.index');
+        Route::post('/update', [\App\Http\Controllers\MarketMapSettingController::class, 'update'])->name('market-map-settings.update');
+        Route::post('/reset', [\App\Http\Controllers\MarketMapSettingController::class, 'reset'])->name('market-map-settings.reset');
+        Route::get('/value/{key}', [\App\Http\Controllers\MarketMapSettingController::class, 'getValue'])->name('market-map-settings.getValue');
+    });
+
+    // ===============================
+    // PARTNER PERFORMANCE SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'partner-performance-settings', 'middleware' => 'can:manage-users'], function() {
+        Route::get('/', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'index'])->name('partner-performance-settings.index');
+        Route::post('/update', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'update'])->name('partner-performance-settings.update');
+        Route::post('/reset', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'resetDefaults'])->name('partner-performance-settings.reset');
+    });
+
+    // ===============================
+    // INVENTORY OPTIMIZATION SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'inventory-optimization-settings', 'middleware' => 'can:manage-users'], function() {
+        Route::get('/', [InventoryOptimizationController::class, 'seasonalSettings'])->name('inventory-optimization.seasonal-settings');
+        Route::post('/update', [InventoryOptimizationController::class, 'updateSeasonalConfiguration'])->name('inventory-optimization.update-seasonal');
+    });
+
+    // ===============================
+    // SEASONAL INVENTORY SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'seasonal-inventory-settings', 'middleware' => 'can:manage-users'], function() {
+        Route::get('/', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'index'])->name('seasonal-inventory-settings.index');
+        Route::post('/update', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'update'])->name('seasonal-inventory-settings.update');
+        Route::post('/reset', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'reset'])->name('seasonal-inventory-settings.reset');
+        Route::get('/value/{key}', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'getValue'])->name('seasonal-inventory-settings.getValue');
     });
     
     // Route Transaksi

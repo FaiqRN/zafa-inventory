@@ -9,6 +9,19 @@ use App\Models\Pengiriman;
 use App\Models\Retur;
 use App\Exports\ProfitabilityAnalysisExport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use Exception;
+
+class ProfitabilityController extends Controller
+{
+    /**
+     * Display Profitability Analysis
+     */
+    public function index()
+    {
         try {
             $breadcrumb = (object)[
                 'title' => 'True Profitability Analysis',

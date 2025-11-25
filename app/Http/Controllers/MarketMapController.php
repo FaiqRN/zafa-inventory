@@ -7,6 +7,7 @@ use App\Models\Barang;
 use App\Models\BarangToko;
 use App\Models\Pengiriman;
 use App\Models\Retur;
+use App\Models\MarketMapSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,24 +21,94 @@ class MarketMapController extends Controller
     {
         $this->middleware('can:view-market-map');
     }
-    // Cache duration in minutes
-    const CACHE_DURATION = 30; // Increased cache duration
     
-    // CRM Configuration
-    const CLUSTER_RADIUS = 1.5; // km
-    const MAX_STORES_PER_CLUSTER = 5;
-    const MIN_PROFIT_MARGIN = 10; // percentage
-    const GOOD_PROFIT_MARGIN = 20; // percentage
-    const DEFAULT_HARGA_AWAL = 12000; // Rp
-    const DEFAULT_INITIAL_STOCK = 100; // units for new store
-    
-    // Malang region bounds
+    // Malang region bounds (static, tidak perlu setting)
     const MALANG_BOUNDS = [
         'north' => -7.4,
         'south' => -8.6,
         'west' => 111.8,
         'east' => 113.2
     ];
+
+    /**
+     * Get setting value with fallback to default
+     */
+    private function getSetting($key, $default)
+    {
+        return MarketMapSetting::getValue($key, $default);
+    }
+
+    /**
+     * Get cache duration from settings
+     */
+    private function getCacheDuration()
+    {
+        return (int) $this->getSetting('cache_duration', 30);
+    }
+
+    /**
+     * Get cluster radius from settings
+     */
+    private function getClusterRadius()
+    {
+        return (float) $this->getSetting('cluster_radius', 1.5);
+    }
+
+    /**
+     * Get max stores per cluster from settings
+     */
+    private function getMaxStoresPerCluster()
+    {
+        return (int) $this->getSetting('max_stores_per_cluster', 5);
+    }
+
+    /**
+     * Get min profit margin from settings
+     */
+    private function getMinProfitMargin()
+    {
+        return (float) $this->getSetting('min_profit_margin', 10);
+    }
+
+    /**
+     * Get good profit margin from settings
+     */
+    private function getGoodProfitMargin()
+    {
+        return (float) $this->getSetting('good_profit_margin', 20);
+    }
+
+    /**
+     * Get default harga awal from settings
+     */
+    private function getDefaultHargaAwal()
+    {
+        return (float) $this->getSetting('default_harga_awal', 12000);
+    }
+
+    /**
+     * Get default initial stock from settings
+     */
+    private function getDefaultInitialStock()
+    {
+        return (int) $this->getSetting('default_initial_stock', 100);
+    }
+
+    /**
+     * Get sold percentage for terkirim status
+     */
+    private function getSoldPercentageTerkirim()
+    {
+        return (float) $this->getSetting('sold_percentage_terkirim', 80) / 100;
+    }
+
+    /**
+     * Get sold percentage for all shipments
+     */
+    private function getSoldPercentageAll()
+    {
+        return (float) $this->getSetting('sold_percentage_all', 60) / 100;
+    }
 
     /**
      * Display CRM Market Intelligence main page
@@ -66,7 +137,7 @@ class MarketMapController extends Controller
         try {
             $cacheKey = 'crm_market_toko_data_' . auth()->id();
             
-            return Cache::remember($cacheKey, self::CACHE_DURATION, function () {
+            return Cache::remember($cacheKey, $this->getCacheDuration(), function () {
                 // Load data with relationships
                 $tokoData = Toko::with([
                     'barangToko.barang',
@@ -123,7 +194,7 @@ class MarketMapController extends Controller
                         'margin_percent' => 0,
                         'total_profit' => 0,
                         'roi' => 0,
-                        'harga_awal' => self::DEFAULT_HARGA_AWAL,
+                        'harga_awal' => $this->getDefaultHargaAwal(),
                         'harga_jual' => 0,
                         'total_terjual' => $performanceData['total_sold'],
                         'revenue' => $performanceData['revenue']
@@ -250,7 +321,7 @@ class MarketMapController extends Controller
             
             // IMPORTANT: Cache the processed stores for clustering
             $cacheKey = 'crm_profit_calculated_stores_' . auth()->id();
-            Cache::put($cacheKey, $processedStores, self::CACHE_DURATION);
+            Cache::put($cacheKey, $processedStores, $this->getCacheDuration());
             
             // Also update the main toko data cache
             $mainCacheKey = 'crm_market_toko_data_' . auth()->id();
@@ -259,7 +330,7 @@ class MarketMapController extends Controller
                 'data' => $processedStores,
                 'summary' => $summary,
                 'last_updated' => now()->toISOString()
-            ], self::CACHE_DURATION);
+            ], $this->getCacheDuration());
             
             Log::info('Profit calculation completed', [
                 'total_stores' => $totalStores,
@@ -304,7 +375,7 @@ class MarketMapController extends Controller
     public function createClusters(Request $request)
     {
         try {
-            $radius = $request->input('radius', self::CLUSTER_RADIUS);
+            $radius = $request->input('radius', $this->getClusterRadius());
             
             Log::info('Starting geographic clustering with radius: ' . $radius . 'km');
             
@@ -337,7 +408,7 @@ class MarketMapController extends Controller
             
             // Cache clusters
             $cacheKey = 'crm_clusters_' . auth()->id();
-            Cache::put($cacheKey, $clusters, self::CACHE_DURATION);
+            Cache::put($cacheKey, $clusters, $this->getCacheDuration());
             
             Log::info('Geographic clustering completed', [
                 'total_stores' => count($stores),
@@ -393,7 +464,7 @@ class MarketMapController extends Controller
             $recommendations = [];
             
             foreach ($clusters as $cluster) {
-                if ($cluster['metrics']['avg_margin'] >= self::MIN_PROFIT_MARGIN && 
+                if ($cluster['metrics']['avg_margin'] >= $this->getMinProfitMargin() && 
                     $cluster['expansion_potential'] > 0) {
                     
                     $recommendation = $this->createExpansionRecommendation($cluster);
@@ -415,7 +486,7 @@ class MarketMapController extends Controller
             
             // Cache recommendations
             $recCacheKey = 'crm_recommendations_' . auth()->id();
-            Cache::put($recCacheKey, $recommendations, self::CACHE_DURATION);
+            Cache::put($recCacheKey, $recommendations, $this->getCacheDuration());
             
             Log::info('Expansion plan generation completed', [
                 'total_clusters' => count($clusters),
@@ -724,13 +795,21 @@ class MarketMapController extends Controller
                 round((($currentMonth - $lastMonth) / $lastMonth) * 100, 1) : 
                 ($currentMonth > 0 ? 100 : 0);
             
-            // Calculate total sold from retur data
-            $totalSold = $toko->retur->sum('total_terjual') ?: 
-                        ($totalOrders * 10); // Estimate if no retur data
+            // Calculate total sold from REAL data (no estimation)
+            $totalSold = $this->calculateTotalSold($toko);
             
-            // Calculate revenue from retur data
-            $revenue = $toko->retur->sum('hasil') ?: 
-                      ($totalSold * self::DEFAULT_HARGA_AWAL * 1.2); // Estimate
+            // Calculate revenue from REAL data (no estimation)
+            // Priority 1: Use retur data (most accurate)
+            $revenue = $toko->retur->sum('hasil');
+            
+            // Priority 2: Calculate from barang_toko prices if no retur data
+            if ($revenue == 0 && $totalSold > 0) {
+                $barangTokoItems = $toko->barangToko()->with('barang')->get();
+                if ($barangTokoItems->isNotEmpty()) {
+                    $avgHargaJual = $barangTokoItems->avg('harga_barang_toko');
+                    $revenue = round($totalSold * $avgHargaJual);
+                }
+            }
             
             // Performance score calculation
             $performanceScore = $this->calculatePerformanceScore([
@@ -766,36 +845,70 @@ class MarketMapController extends Controller
     private function calculateStoreProfit($toko)
     {
         try {
-            // Get first barang for base price calculation
-            $firstBarangToko = $toko->barangToko->first();
-            $hargaAwal = $firstBarangToko && $firstBarangToko->barang ? 
-                $firstBarangToko->barang->harga_awal_barang : self::DEFAULT_HARGA_AWAL;
+            // Get average harga_awal from all barang in this toko
+            $barangTokoItems = $toko->barangToko()->with('barang')->get();
             
-            // Calculate average selling price based on store performance
-            $performanceMultiplier = $this->calculatePriceMultiplier($toko);
-            $hargaJual = round($hargaAwal * $performanceMultiplier);
+            if ($barangTokoItems->isEmpty()) {
+                // No products in this store, return defaults
+                return $this->getDefaultProfitMetrics();
+            }
             
-            // Calculate total sold units
+            // Calculate weighted average harga_awal (cost price)
+            $totalHargaAwal = 0;
+            $totalHargaJual = 0;
+            $itemCount = 0;
+            
+            foreach ($barangTokoItems as $barangToko) {
+                if ($barangToko->barang) {
+                    $totalHargaAwal += $barangToko->barang->harga_awal_barang;
+                    $totalHargaJual += $barangToko->harga_barang_toko; // Selling price from barang_toko
+                    $itemCount++;
+                }
+            }
+            
+            if ($itemCount === 0) {
+                return $this->getDefaultProfitMetrics();
+            }
+            
+            $avgHargaAwal = round($totalHargaAwal / $itemCount);
+            $avgHargaJual = round($totalHargaJual / $itemCount);
+            
+            // Calculate total sold units from real data
             $totalTerjual = $this->calculateTotalSold($toko);
             
-            // Calculate revenue from retur data or estimate
-            $revenue = $toko->retur->sum('hasil') ?: ($totalTerjual * $hargaJual);
+            // Calculate revenue from retur data (most accurate) or estimate from sales
+            $revenue = $toko->retur->sum('hasil');
             
-            // Core profit calculations
-            $profitPerUnit = $hargaJual - $hargaAwal;
-            $marginPercent = $hargaJual > 0 ? (($profitPerUnit / $hargaJual) * 100) : 0;
+            if ($revenue == 0 && $totalTerjual > 0) {
+                // If no retur data, calculate revenue from average selling price
+                $revenue = $totalTerjual * $avgHargaJual;
+            }
+            
+            // Core profit calculations based on REAL data
+            $profitPerUnit = $avgHargaJual - $avgHargaAwal;
+            $marginPercent = $avgHargaJual > 0 ? (($profitPerUnit / $avgHargaJual) * 100) : 0;
             $totalProfit = $profitPerUnit * $totalTerjual;
-            $roi = $hargaAwal > 0 && $totalTerjual > 0 ? 
-                (($totalProfit / ($hargaAwal * $totalTerjual)) * 100) : 0;
+            
+            // Calculate total cost (investment)
+            $totalCost = $avgHargaAwal * $totalTerjual;
+            $roi = $totalCost > 0 ? (($totalProfit / $totalCost) * 100) : 0;
             
             // Additional metrics
             $breakEvenUnits = $profitPerUnit > 0 ? 
-                ceil((self::DEFAULT_HARGA_AWAL * self::DEFAULT_INITIAL_STOCK) / $profitPerUnit) : 999;
-            $projectedMonthlyProfit = $profitPerUnit * max(1, floor($totalTerjual / 12));
+                ceil(($this->getDefaultHargaAwal() * $this->getDefaultInitialStock()) / $profitPerUnit) : 999;
+            
+            // Calculate monthly profit based on actual activity
+            $monthlyOrders = $toko->pengiriman()
+                ->where('tanggal_pengiriman', '>=', now()->subDays(30))
+                ->count();
+            
+            $projectedMonthlyProfit = $monthlyOrders > 0 ? 
+                round($totalProfit / max(1, floor($totalTerjual / ($monthlyOrders * 8)))) : 
+                round($profitPerUnit * max(1, floor($totalTerjual / 12)));
             
             return [
-                'harga_awal' => $hargaAwal,
-                'harga_jual' => $hargaJual,
+                'harga_awal' => $avgHargaAwal,
+                'harga_jual' => $avgHargaJual,
                 'total_terjual' => $totalTerjual,
                 'revenue' => $revenue,
                 'profit_per_unit' => round($profitPerUnit, 0),
@@ -1075,11 +1188,11 @@ class MarketMapController extends Controller
     private function getDefaultProfitMetrics()
     {
         return [
-            'harga_awal' => self::DEFAULT_HARGA_AWAL,
-            'harga_jual' => round(self::DEFAULT_HARGA_AWAL * 1.2),
+            'harga_awal' => $this->getDefaultHargaAwal(),
+            'harga_jual' => round($this->getDefaultHargaAwal() * 1.2),
             'total_terjual' => 0,
             'revenue' => 0,
-            'profit_per_unit' => round(self::DEFAULT_HARGA_AWAL * 0.2),
+            'profit_per_unit' => round($this->getDefaultHargaAwal() * 0.2),
             'margin_percent' => 16.7,
             'total_profit' => 0,
             'roi' => 0,
@@ -1112,21 +1225,33 @@ class MarketMapController extends Controller
 
     private function calculateTotalSold($toko)
     {
-        // Priority: Use retur data if available
+        // Priority 1: Use retur data (most accurate - actual sold units)
         $returTotal = $toko->retur->sum('total_terjual');
         if ($returTotal > 0) {
             return $returTotal;
         }
         
-        // Fallback: Estimate based on orders
-        $totalOrders = $toko->pengiriman->count();
-        $avgUnitsPerOrder = 8; // Conservative estimate
+        // Priority 2: Calculate from pengiriman data (jumlah_kirim for status 'terkirim')
+        // This is real data from shipments, not estimation
+        $totalKirim = $toko->pengiriman()
+            ->where('status', 'terkirim')
+            ->sum('jumlah_kirim');
         
-        // Add some realistic variation
-        $baseEstimate = $totalOrders * $avgUnitsPerOrder;
-        $variation = rand(-20, 30) / 100; // -20% to +30% variation
+        if ($totalKirim > 0) {
+            // Use percentage from settings (default 80%)
+            // This accounts for items that might be returned or still in store
+            return round($totalKirim * $this->getSoldPercentageTerkirim());
+        }
         
-        return max(1, round($baseEstimate * (1 + $variation)));
+        // Priority 3: If no terkirim data, use all pengiriman (including 'proses')
+        $totalAllKirim = $toko->pengiriman->sum('jumlah_kirim');
+        if ($totalAllKirim > 0) {
+            // Use percentage from settings (default 60%)
+            return round($totalAllKirim * $this->getSoldPercentageAll());
+        }
+        
+        // Last resort: return 0 if no data available
+        return 0;
     }
 
     /**
@@ -1165,7 +1290,7 @@ class MarketMapController extends Controller
                 );
                 
                 // Add to cluster if within radius and under max limit
-                if ($distance <= $radius && count($clusterStores) < self::MAX_STORES_PER_CLUSTER) {
+                if ($distance <= $radius && count($clusterStores) < $this->getMaxStoresPerCluster()) {
                     $clusterStores[] = $otherStore;
                     $processed[] = $otherStore['toko_id'];
                 }
@@ -1174,7 +1299,7 @@ class MarketMapController extends Controller
             // Calculate cluster metrics
             $clusterMetrics = $this->calculateClusterMetrics($clusterStores);
             $clusterCenter = $this->calculateClusterCenter($clusterStores);
-            $expansionPotential = max(0, self::MAX_STORES_PER_CLUSTER - count($clusterStores));
+            $expansionPotential = max(0, $this->getMaxStoresPerCluster() - count($clusterStores));
             
             // Create cluster object
             $cluster = [
@@ -1285,8 +1410,8 @@ class MarketMapController extends Controller
         $score += $marginScore;
         
         // Expansion potential weight (30%)
-        $expansionPotential = max(0, self::MAX_STORES_PER_CLUSTER - $storeCount);
-        $expansionScore = ($expansionPotential / self::MAX_STORES_PER_CLUSTER) * 30;
+        $expansionPotential = max(0, $this->getMaxStoresPerCluster() - $storeCount);
+        $expansionScore = ($expansionPotential / $this->getMaxStoresPerCluster()) * 30;
         $score += $expansionScore;
         
         // Performance weight (10%)
@@ -1318,7 +1443,7 @@ class MarketMapController extends Controller
         $avgStoreProfit = $cluster['store_count'] > 0 ?
             $cluster['metrics']['total_profit'] / $cluster['store_count'] : 0;
         
-        $totalInvestment = $expansionCount * self::DEFAULT_HARGA_AWAL * self::DEFAULT_INITIAL_STOCK;
+        $totalInvestment = $expansionCount * $this->getDefaultHargaAwal() * $this->getDefaultInitialStock();
         $projectedMonthlyProfit = $expansionCount * max(1, $avgStoreProfit / 12);
         $paybackPeriod = $projectedMonthlyProfit > 0 ? ceil($totalInvestment / $projectedMonthlyProfit) : 99;
         
@@ -1339,7 +1464,7 @@ class MarketMapController extends Controller
             'area_coverage' => $cluster['metrics']['area_coverage'],
             'avg_margin' => $avgMargin,
             'pricing_strategy' => $pricingStrategy,
-            'recommended_price' => round(self::DEFAULT_HARGA_AWAL * (1 + ($avgMargin / 100)), 0),
+            'recommended_price' => round($this->getDefaultHargaAwal() * (1 + ($avgMargin / 100)), 0),
             'total_investment' => $totalInvestment,
             'projected_monthly_profit' => round($projectedMonthlyProfit, 0),
             'projected_annual_profit' => round($projectedMonthlyProfit * 12, 0),

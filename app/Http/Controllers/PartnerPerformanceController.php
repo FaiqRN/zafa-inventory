@@ -12,7 +12,18 @@ use App\Models\BarangToko;
 use App\Exports\PartnerPerformanceExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
+use Exception;
+
+class PartnerPerformanceController extends Controller
+{
+    /**
+     * Display Partner Performance Analytics
+     */
+    public function index()
+    {
         try {
             $breadcrumb = (object)[
                 'title' => 'Partner Performance Analytics',

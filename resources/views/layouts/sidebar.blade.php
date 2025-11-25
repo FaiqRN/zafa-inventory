@@ -102,17 +102,11 @@
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-brain"></i>
                     <p>
-                        Analytics
+                        Report
                         <i class="right fas fa-angle-left"></i>
                     </p>
                 </a>
                 <ul class="nav nav-treeview">
-                    <li class="nav-item">
-                        <a href="{{ route('analytics.index') }}" class="nav-link {{ ($activemenu == 'analytics')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Dashboard</p>
-                        </a>
-                    </li>
                     <li class="nav-item">
                         <a href="{{ route('analytics.partner-performance.index') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
@@ -161,8 +155,8 @@
 
             <!-- Sistem Pengaturan -->
             @can('manage-users')
-            <li class="nav-item has-treeview {{ (in_array($activemenu, ['user']))? 'menu-open' : '' }}">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['user']))? 'active' : '' }}">
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'market-map-settings', 'partner-performance-settings', 'seasonal-inventory-settings']))? 'menu-open' : '' }}">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['user', 'market-map-settings', 'partner-performance-settings', 'seasonal-inventory-settings']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-users-cog"></i>
                     <p>
                         Sistem Pengaturan
@@ -174,6 +168,24 @@
                         <a href="{{ route('user.index') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Manajemen User</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('market-map-settings.index') }}" class="nav-link {{ ($activemenu == 'market-map-settings')? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>Pengaturan Market Map</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('partner-performance-settings.index') }}" class="nav-link {{ ($activemenu == 'partner-performance-settings')? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>Pengaturan Partner Performance</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('seasonal-inventory-settings.index') }}" class="nav-link {{ ($activemenu == 'seasonal-inventory-settings')? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>Pengaturan Seasonal Inventory</p>
                         </a>
                     </li>
                 </ul>

@@ -7,9 +7,21 @@ use App\Models\Toko;
 use App\Models\Barang;
 use App\Models\Pengiriman;
 use App\Models\Retur;
-use App\Helpers\AnalyticsHelper;
 use App\Exports\ProductVelocityExport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use Exception;
+
+class ProductVelocityController extends Controller
+{
+    /**
+     * Display Product Velocity Analytics
+     */
+    public function index()
+    {
         try {
             $breadcrumb = (object)[
                 'title' => 'Product Velocity Analytics',
@@ -42,7 +54,7 @@ use Illuminate\Http\Request;
     {
         try {
             $productCategories = $this->categorizeProductsByVelocity();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -65,7 +77,7 @@ use Illuminate\Http\Request;
     {
         try {
             $productCategories = $this->categorizeProductsByVelocity();
-            
+
             return Excel::download(
                 new ProductVelocityExport($productCategories),
                 'product_velocity_' . date('Y-m-d') . '.xlsx'
@@ -83,18 +95,18 @@ use Illuminate\Http\Request;
     {
         try {
             $productCategories = $this->categorizeProductsByVelocity();
-            
+
             $recommendations = [
                 'increase_production' => [],
                 'maintain_production' => [],
                 'reduce_production' => [],
                 'discontinue' => []
             ];
-            
+
             foreach ($productCategories as $category => $products) {
                 foreach ($products as $product) {
                     $recommendation = $this->generateProductRecommendation($product, $category);
-                    
+
                     switch ($category) {
                         case 'Hot Seller':
                             $recommendations['increase_production'][] = $recommendation;
@@ -111,7 +123,7 @@ use Illuminate\Http\Request;
                     }
                 }
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Portfolio optimization analysis completed',
@@ -148,7 +160,7 @@ use Illuminate\Http\Request;
 
             $productData = $this->getProductVelocityData($barangId);
             $topLocations = $this->getTopPerformingLocations($barangId);
-            
+
             return response()->json([
                 'success' => true,
                 'product' => $barang->nama_barang,
@@ -181,7 +193,7 @@ use Illuminate\Http\Request;
 
             $productData = $this->getProductVelocityData($barangId);
             $costAnalysis = $this->calculateDiscontinueCostAnalysis($barangId);
-            
+
             return response()->json([
                 'success' => true,
                 'product' => $barang->nama_barang,
@@ -220,11 +232,11 @@ use Illuminate\Http\Request;
         try {
             $periodStart = Carbon::now()->subMonths(6); // Extended to 6 months for better data
             $products = Barang::all();
-            
+
             if ($products->isEmpty()) {
                 return $this->getDefaultProductCategories();
             }
-            
+
             $categorizedProducts = $products->map(function ($barang) use ($periodStart) {
                 try {
                     // Get all shipments for this product
@@ -232,7 +244,7 @@ use Illuminate\Http\Request;
                         ->where('status', 'terkirim')
                         ->where('tanggal_pengiriman', '>=', $periodStart)
                         ->get();
-                    
+
                     if ($shipments->isEmpty()) {
                         return [
                             'barang' => $barang,
@@ -246,19 +258,19 @@ use Illuminate\Http\Request;
                             'monthly_trend' => 'stable'
                         ];
                     }
-                    
+
                     // Calculate metrics
                     $totalShipped = $shipments->sum('jumlah_kirim') ?? 0;
                     $totalReturned = $this->calculateTotalReturned($shipments);
                     $totalSold = max(0, $totalShipped - $totalReturned);
-                    
+
                     $sellThroughRate = $totalShipped > 0 ? ($totalSold / $totalShipped) * 100 : 0;
                     $returnRate = $totalShipped > 0 ? ($totalReturned / $totalShipped) * 100 : 0;
                     $avgDaysToSell = $this->calculateImprovedAverageDaysToSell($shipments, $barang->barang_id);
                     $velocityScore = $this->calculateImprovedVelocityScore($sellThroughRate, $avgDaysToSell, $totalSold, $returnRate);
                     $category = $this->categorizeVelocityImproved($velocityScore, $sellThroughRate, $avgDaysToSell, $returnRate);
                     $monthlyTrend = $this->calculateMonthlyTrend($barang->barang_id);
-                    
+
                     return [
                         'barang' => $barang,
                         'velocity_category' => $category,
@@ -285,7 +297,7 @@ use Illuminate\Http\Request;
                     ];
                 }
             });
-            
+
             $groupedProducts = $categorizedProducts->groupBy('velocity_category');
             return $this->ensureAllCategoriesExist($groupedProducts);
         } catch (Exception $e) {
@@ -301,7 +313,7 @@ use Illuminate\Http\Request;
     {
         try {
             $validDurations = [];
-            
+
             foreach ($shipments as $shipment) {
                 // Method 1: Use return date if available
                 $retur = Retur::where('pengiriman_id', $shipment->pengiriman_id)->first();
@@ -312,23 +324,23 @@ use Illuminate\Http\Request;
                     }
                     continue;
                 }
-                
+
                 // Method 2: Estimate based on shipment age and remaining inventory
                 $shipmentDate = Carbon::parse($shipment->tanggal_pengiriman);
                 $daysOld = $shipmentDate->diffInDays(Carbon::now());
-                
+
                 // If shipment is older than 30 days and no return, estimate sell-through time
                 if ($daysOld >= 30) {
                     $estimatedDays = min($daysOld * 0.7, 90); // Conservative estimate
                     $validDurations[] = $estimatedDays;
                 }
             }
-            
+
             if (empty($validDurations)) {
                 // Fallback: Use industry standard based on product turnover
                 return $this->getIndustryStandardDaysToSell();
             }
-            
+
             return array_sum($validDurations) / count($validDurations);
         } catch (Exception $e) {
             Log::warning('Calculate improved average days to sell error: ' . $e->getMessage());
@@ -349,24 +361,24 @@ use Illuminate\Http\Request;
                 'volume' => 0.20,        // Sales volume
                 'return_quality' => 0.15 // Return rate (inverse)
             ];
-            
+
             // Sell-through score (0-100)
             $sellThroughScore = min($sellThroughRate, 100);
-            
+
             // Speed score (faster = higher score)
             $speedScore = $avgDaysToSell > 0 ? max(0, 100 - (($avgDaysToSell / 90) * 100)) : 0;
-            
+
             // Volume score (logarithmic scale)
             $volumeScore = $totalSold > 0 ? min(100, (log($totalSold + 1) / log(1001)) * 100) : 0;
-            
+
             // Quality score (lower return rate = higher score)
             $qualityScore = max(0, 100 - ($returnRate * 2)); // Penalize returns heavily
-            
+
             $totalScore = ($sellThroughScore * $weights['sell_through']) +
                          ($speedScore * $weights['speed']) +
                          ($volumeScore * $weights['volume']) +
                          ($qualityScore * $weights['return_quality']);
-            
+
             return max(0, min(100, $totalScore));
         } catch (Exception $e) {
             Log::warning('Calculate improved velocity score error: ' . $e->getMessage());
@@ -383,17 +395,17 @@ use Illuminate\Http\Request;
         if ($sellThroughRate >= 80 && $avgDaysToSell <= 14 && $returnRate <= 10) {
             return 'Hot Seller';
         }
-        
+
         // Good Mover: Good performance across metrics
         if ($sellThroughRate >= 60 && $avgDaysToSell <= 30 && $returnRate <= 20) {
             return 'Good Mover';
         }
-        
+
         // Slow Mover: Moderate performance
         if ($sellThroughRate >= 30 && $avgDaysToSell <= 60) {
             return 'Slow Mover';
         }
-        
+
         // Dead Stock: Poor performance
         return 'Dead Stock';
     }
@@ -421,23 +433,23 @@ use Illuminate\Http\Request;
             $currentMonth = Carbon::now()->startOfMonth();
             $previousMonth = Carbon::now()->subMonth()->startOfMonth();
             $previousMonthEnd = Carbon::now()->subMonth()->endOfMonth();
-            
+
             $currentMonthSales = Pengiriman::where('barang_id', $barangId)
                 ->where('status', 'terkirim')
                 ->where('tanggal_pengiriman', '>=', $currentMonth)
                 ->sum('jumlah_kirim') ?? 0;
-            
+
             $previousMonthSales = Pengiriman::where('barang_id', $barangId)
                 ->where('status', 'terkirim')
                 ->whereBetween('tanggal_pengiriman', [$previousMonth, $previousMonthEnd])
                 ->sum('jumlah_kirim') ?? 0;
-            
+
             if ($previousMonthSales == 0) {
                 return $currentMonthSales > 0 ? 'improving' : 'stable';
             }
-            
+
             $changePercent = (($currentMonthSales - $previousMonthSales) / $previousMonthSales) * 100;
-            
+
             if ($changePercent > 10) return 'improving';
             if ($changePercent < -10) return 'declining';
             return 'stable';
@@ -467,19 +479,19 @@ use Illuminate\Http\Request;
                 'slow_movers' => [],
                 'dead_stock' => []
             ];
-            
+
             for ($i = 5; $i >= 0; $i--) {
                 $monthStart = Carbon::now()->subMonths($i)->startOfMonth();
                 $monthEnd = Carbon::now()->subMonths($i)->endOfMonth();
-                
+
                 $monthlyCategories = $this->categorizeProductsByVelocityForPeriod($monthStart, $monthEnd);
-                
+
                 $trends['hot_sellers'][] = $monthlyCategories->get('Hot Seller', collect())->count();
                 $trends['good_movers'][] = $monthlyCategories->get('Good Mover', collect())->count();
                 $trends['slow_movers'][] = $monthlyCategories->get('Slow Mover', collect())->count();
                 $trends['dead_stock'][] = $monthlyCategories->get('Dead Stock', collect())->count();
             }
-            
+
             return $trends;
         } catch (Exception $e) {
             Log::error('Get velocity trends error: ' . $e->getMessage());
@@ -504,8 +516,8 @@ use Illuminate\Http\Request;
                 ->where('pengiriman.status', 'terkirim')
                 ->where('pengiriman.tanggal_pengiriman', '>=', Carbon::now()->subMonths(3))
                 ->selectRaw('
-                    CASE 
-                        WHEN LOWER(CONCAT(toko.alamat, " ", toko.kecamatan, " ", toko.kota)) LIKE "%malang kota%" OR 
+                    CASE
+                        WHEN LOWER(CONCAT(toko.alamat, " ", toko.kecamatan, " ", toko.kota)) LIKE "%malang kota%" OR
                              LOWER(CONCAT(toko.alamat, " ", toko.kecamatan, " ", toko.kota)) LIKE "%kota malang%" THEN "Malang Kota"
                         WHEN LOWER(CONCAT(toko.alamat, " ", toko.kecamatan, " ", toko.kota)) LIKE "%batu%" THEN "Kota Batu"
                         WHEN LOWER(CONCAT(toko.alamat, " ", toko.kecamatan, " ", toko.kota)) LIKE "%malang%" THEN "Malang Kabupaten"
@@ -522,18 +534,18 @@ use Illuminate\Http\Request;
             if ($locationData->isNotEmpty()) {
                 $result = [];
                 $totalNetSales = $locationData->sum('net_sales');
-                
+
                 foreach ($locationData as $location) {
                     $percentage = $totalNetSales > 0 ? round(($location->net_sales / $totalNetSales) * 100) : 0;
                     $result[$location->wilayah] = $percentage;
                 }
-                
+
                 return $result;
             }
         } catch (Exception $e) {
             Log::warning('Error calculating location demand: ' . $e->getMessage());
         }
-        
+
         return [
             'Malang Kota' => 42,
             'Malang Kabupaten' => 28,
@@ -594,7 +606,7 @@ use Illuminate\Http\Request;
     private function getPotentialImpact($product, $category)
     {
         $baseRevenue = $product['total_sold'] * 15000; // Assuming avg price 15k
-        
+
         return match($category) {
             'Hot Seller' => 'Potential revenue increase: Rp ' . number_format($baseRevenue * 0.35),
             'Dead Stock' => 'Potential cost savings: Rp ' . number_format($baseRevenue * 0.15),
@@ -611,7 +623,7 @@ use Illuminate\Http\Request;
     {
         $sellThrough = $productData['avg_sell_through'];
         $daysToSell = $productData['avg_days_to_sell'];
-        
+
         if ($sellThrough >= 90 && $daysToSell <= 7) {
             return '40-50%';
         } elseif ($sellThrough >= 80 && $daysToSell <= 14) {
@@ -640,7 +652,7 @@ use Illuminate\Http\Request;
 
             $avgMonthly = $historical->avg('total') ?: 0;
             $trend = $this->calculateTrendMultiplier($historical);
-            
+
             return [
                 'current_average' => round($avgMonthly),
                 'forecast_next_month' => round($avgMonthly * $trend),
@@ -661,15 +673,15 @@ use Illuminate\Http\Request;
     private function calculateTrendMultiplier($historical)
     {
         if ($historical->count() < 2) return 1;
-        
+
         $recent = $historical->slice(-2);
         if ($recent->count() < 2) return 1;
-        
+
         $latest = $recent->last()->total;
         $previous = $recent->first()->total;
-        
+
         if ($previous == 0) return 1;
-        
+
         return min(1.5, max(0.5, $latest / $previous));
     }
 
@@ -694,7 +706,7 @@ use Illuminate\Http\Request;
         try {
             $currentInventory = $this->estimateCurrentInventory($barangId);
             $avgPrice = 15000; // Estimated average price
-            
+
             return [
                 'estimated_inventory_value' => 'Rp ' . number_format($currentInventory * $avgPrice),
                 'holding_cost_monthly' => 'Rp ' . number_format($currentInventory * $avgPrice * 0.02),
@@ -723,13 +735,13 @@ use Illuminate\Http\Request;
             ->where('status', 'terkirim')
             ->where('tanggal_pengiriman', '>=', Carbon::now()->subMonths(1))
             ->sum('jumlah_kirim');
-        
+
         $recentReturns = DB::table('retur')
             ->join('pengiriman', 'retur.pengiriman_id', '=', 'pengiriman.pengiriman_id')
             ->where('pengiriman.barang_id', $barangId)
             ->where('retur.tanggal_retur', '>=', Carbon::now()->subMonths(1))
             ->sum('retur.jumlah_retur');
-        
+
         return max(0, $recentShipments - ($recentShipments - $recentReturns));
     }
 
@@ -740,11 +752,11 @@ use Illuminate\Http\Request;
     {
         $avgMonthlySales = $this->getAverageMonthlySales($barangId);
         $estimatedInventory = $this->estimateCurrentInventory($barangId);
-        
+
         if ($avgMonthlySales <= 0) {
             return 'Never at current rate';
         }
-        
+
         $months = ceil($estimatedInventory / $avgMonthlySales);
         return $months . ' months at current sales rate';
     }
@@ -761,12 +773,9 @@ use Illuminate\Http\Request;
             ->where('pengiriman.tanggal_pengiriman', '>=', Carbon::now()->subMonths(6))
             ->selectRaw('SUM(pengiriman.jumlah_kirim - COALESCE(retur.jumlah_retur, 0)) as net_sales')
             ->first();
-        
+
         return ($sales->net_sales ?? 0) / 6; // 6 months average
     }
-
-    // ... Continue with remaining helper methods (getProductVelocityData, getTopPerformingLocations, etc.)
-    // These would follow the same pattern of improved error handling and calculations
 
     /**
      * Enhanced product velocity data calculation
@@ -774,12 +783,12 @@ use Illuminate\Http\Request;
     private function getProductVelocityData($barangId)
     {
         $periodStart = Carbon::now()->subMonths(6);
-        
+
         $shipments = Pengiriman::where('barang_id', $barangId)
             ->where('status', 'terkirim')
             ->where('tanggal_pengiriman', '>=', $periodStart)
             ->get();
-        
+
         if ($shipments->isEmpty()) {
             return [
                 'avg_sell_through' => 0,
@@ -790,16 +799,16 @@ use Illuminate\Http\Request;
                 'return_rate' => 0
             ];
         }
-        
+
         $totalShipped = $shipments->sum('jumlah_kirim') ?? 0;
         $totalReturned = $this->calculateTotalReturned($shipments);
         $totalSold = max(0, $totalShipped - $totalReturned);
-        
+
         $sellThroughRate = $totalShipped > 0 ? ($totalSold / $totalShipped) * 100 : 0;
         $returnRate = $totalShipped > 0 ? ($totalReturned / $totalShipped) * 100 : 0;
         $avgDaysToSell = $this->calculateImprovedAverageDaysToSell($shipments, $barangId);
         $velocityScore = $this->calculateImprovedVelocityScore($sellThroughRate, $avgDaysToSell, $totalSold, $returnRate);
-        
+
         return [
             'avg_sell_through' => round($sellThroughRate, 2),
             'avg_days_to_sell' => round($avgDaysToSell, 1),
@@ -822,7 +831,7 @@ use Illuminate\Http\Request;
             ->where('pengiriman.status', 'terkirim')
             ->where('pengiriman.tanggal_pengiriman', '>=', Carbon::now()->subMonths(3))
             ->selectRaw('
-                toko.nama_toko, 
+                toko.nama_toko,
                 SUM(pengiriman.jumlah_kirim) as total_shipped,
                 SUM(COALESCE(retur.jumlah_retur, 0)) as total_returned,
                 SUM(pengiriman.jumlah_kirim - COALESCE(retur.jumlah_retur, 0)) as net_sold
@@ -847,9 +856,9 @@ use Illuminate\Http\Request;
     private function calculateLocationPerformance($location)
     {
         if ($location->total_shipped == 0) return 'No Data';
-        
+
         $sellThroughRate = ($location->net_sold / $location->total_shipped) * 100;
-        
+
         if ($sellThroughRate >= 80) return 'Excellent';
         if ($sellThroughRate >= 60) return 'Good';
         if ($sellThroughRate >= 40) return 'Fair';
@@ -864,9 +873,8 @@ use Illuminate\Http\Request;
         // Get products with similar or better performance
         $currentProduct = Barang::find($barangId);
         if (!$currentProduct) return [];
-        
-        return Barang::where('is_deleted', 0)
-            ->where('barang_id', '!=', $barangId)
+
+        return Barang::where('barang_id', '!=', $barangId)
             ->limit(3)
             ->get(['barang_id', 'nama_barang', 'barang_kode'])
             ->map(function($product) {
@@ -893,7 +901,7 @@ use Illuminate\Http\Request;
                 'optimize_improve' => [],
                 'monitor_analyze' => []
             ];
-            
+
             foreach ($productCategories as $category => $products) {
                 foreach ($products->take(3) as $product) {
                     $recommendation = [
@@ -902,7 +910,7 @@ use Illuminate\Http\Request;
                         'sell_through' => $product['avg_sell_through'],
                         'days_to_sell' => $product['avg_days_to_sell']
                     ];
-                    
+
                     switch ($category) {
                         case 'Hot Seller':
                             $recommendation['action'] = 'Increase production by 30-50%';
@@ -931,7 +939,7 @@ use Illuminate\Http\Request;
                     }
                 }
             }
-            
+
             return $recommendations;
         } catch (Exception $e) {
             Log::error('Get strategic recommendations error: ' . $e->getMessage());
@@ -950,7 +958,7 @@ use Illuminate\Http\Request;
     private function getCategoryStatistics()
     {
         $productCategories = $this->categorizeProductsByVelocity();
-        
+
         return [
             'hot_sellers' => $productCategories->get('Hot Seller', collect())->count(),
             'good_movers' => $productCategories->get('Good Mover', collect())->count(),
@@ -980,13 +988,13 @@ use Illuminate\Http\Request;
     private function ensureAllCategoriesExist($groupedProducts)
     {
         $defaultCategories = $this->getDefaultProductCategories();
-        
+
         $defaultCategories->each(function ($emptyCollection, $category) use ($groupedProducts) {
             if (!$groupedProducts->has($category)) {
                 $groupedProducts->put($category, $emptyCollection);
             }
         });
-        
+
         return $groupedProducts;
     }
 
@@ -996,32 +1004,32 @@ use Illuminate\Http\Request;
     private function categorizeProductsByVelocityForPeriod($startDate, $endDate)
     {
         try {
-            $products = Barang::where('is_deleted', 0)->get();
-            
+            $products = Barang::all();
+
             if ($products->isEmpty()) {
                 return $this->getDefaultProductCategories();
             }
-            
+
             $categorizedProducts = $products->map(function ($barang) use ($startDate, $endDate) {
                 try {
                     $shipments = Pengiriman::where('barang_id', $barang->barang_id)
                         ->where('status', 'terkirim')
                         ->whereBetween('tanggal_pengiriman', [$startDate, $endDate])
                         ->get();
-                    
+
                     if ($shipments->isEmpty()) {
                         return ['velocity_category' => 'No Data'];
                     }
-                    
+
                     $totalShipped = $shipments->sum('jumlah_kirim') ?? 0;
                     $totalReturned = $this->calculateTotalReturned($shipments);
                     $totalSold = max(0, $totalShipped - $totalReturned);
-                    
+
                     $sellThroughRate = $totalShipped > 0 ? ($totalSold / $totalShipped) * 100 : 0;
                     $returnRate = $totalShipped > 0 ? ($totalReturned / $totalShipped) * 100 : 0;
                     $avgDaysToSell = $this->calculateImprovedAverageDaysToSell($shipments, $barang->barang_id);
                     $velocityScore = $this->calculateImprovedVelocityScore($sellThroughRate, $avgDaysToSell, $totalSold, $returnRate);
-                    
+
                     return [
                         'velocity_category' => $this->categorizeVelocityImproved($velocityScore, $sellThroughRate, $avgDaysToSell, $returnRate)
                     ];
@@ -1029,7 +1037,7 @@ use Illuminate\Http\Request;
                     return ['velocity_category' => 'No Data'];
                 }
             });
-            
+
             $grouped = $categorizedProducts->groupBy('velocity_category');
             return $this->ensureAllCategoriesExist($grouped);
         } catch (Exception $e) {

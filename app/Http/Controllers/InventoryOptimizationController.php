@@ -341,6 +341,30 @@ class InventoryOptimizationController extends Controller
     }
 
     /**
+     * Display Seasonal Settings Page
+     */
+    public function seasonalSettings()
+    {
+        try {
+            $breadcrumb = (object)[
+                'title' => 'Pengaturan Seasonal Inventory',
+                'list' => ['Home', 'Sistem Pengaturan', 'Seasonal Inventory']
+            ];
+
+            $seasonalData = $this->getSeasonalAdjustments();
+
+            return view('settings.seasonal-inventory', [
+                'breadcrumb' => $breadcrumb,
+                'seasonalData' => $seasonalData,
+                'activemenu' => 'inventory-optimization-settings'
+            ]);
+        } catch (Exception $e) {
+            Log::error('Seasonal settings view error: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat memuat pengaturan seasonal.');
+        }
+    }
+
+    /**
      * Get Seasonal Adjustments Configuration
      */
     public function getSeasonalAdjustments()

@@ -23,106 +23,31 @@
     <!-- Error Alert Container -->
     <div id="error-container"></div>
 
-    <!-- CRM Statistics Cards - FIXED WITH PROPER DATA BINDING -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-info hover-lift">
-                <div class="inner">
-                    <h3 id="total-partners" class="animate-counter">0</h3>
-                    <p>Total Toko</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-store"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-chart-line"></i> Geographic Distribution
-                    </span>
-                </div>
-            </div>
-        </div>
 
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-success hover-lift">
-                <div class="inner">
-                    <h3 id="geo-clusters" class="animate-counter">0</h3>
-                    <p>Geo Cluster</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-map-marked-alt"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-bullseye"></i> 1.5km Radius
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-warning hover-lift">
-                <div class="inner">
-                    <h3><span id="avg-margin" class="animate-counter">0</span>%</h3>
-                    <p>Avg Margin</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-percentage"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-arrow-up"></i> Profit Analysis
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 col-sm-6 mb-3">
-            <div class="small-box bg-danger hover-lift">
-                <div class="inner">
-                    <h3>Rp <span id="total-revenue" class="animate-counter">0</span></h3>
-                    <p>Total Revenue</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div class="small-box-footer">
-                    <span class="text-white">
-                        <i class="fas fa-coins"></i> Monthly Projection
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Tab Navigation System -->
     <div class="card shadow-lg-custom">
-        <div class="card-header bg-gradient-primary">
-            <h3 class="card-title text-white">
-                <i class="fas fa-chart-area mr-2"></i>
-                CRM Ekspansi Toko - Market Intelligence
-            </h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-sm btn-outline-light" id="btn-system-health">
                     <i class="fas fa-heartbeat mr-1"></i>System Health
                 </button>
             </div>
-        </div>
         <div class="card-body p-0">
             <!-- Tab Navigation -->
             <ul class="nav nav-tabs nav-justified" id="crmTabs" role="tablist">
                 <li class="nav-item">
                     <a class="nav-link active font-weight-bold" id="overview-tab" data-toggle="tab" href="#overview" role="tab">
-                        <i class="fas fa-chart-pie mr-2"></i>📈 Overview
+                        <i class=""></i>Overview
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link font-weight-bold" id="analysis-tab" data-toggle="tab" href="#analysis" role="tab">
-                        <i class="fas fa-search mr-2"></i>🔍 Analysis
+                        <i class=""></i>Analysis
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link font-weight-bold" id="expansion-tab" data-toggle="tab" href="#expansion" role="tab">
-                        <i class="fas fa-rocket mr-2"></i>🚀 Ekspansi
+                        <i class=""></i> Ekspansi
                     </a>
                 </li>
             </ul>
@@ -187,7 +112,7 @@
                             <div class="card card-outline card-secondary mb-3">
                                 <div class="card-header">
                                     <h3 class="card-title">
-                                        <i class="fas fa-tachometer-alt mr-2"></i>System Status
+                                        <i class=""></i>System Status
                                     </h3>
                                 </div>
                                 <div class="card-body">
@@ -253,7 +178,7 @@
                             <div class="card card-success">
                                 <div class="card-header">
                                     <h3 class="card-title">
-                                        <i class="fas fa-cogs mr-2"></i>Action Controls
+                                        <i class=""></i>Action Controls
                                     </h3>
                                 </div>
                                 <div class="card-body">
@@ -264,8 +189,8 @@
                                             Profit Analysis
                                         </h6>
                                         <button type="button" class="btn btn-warning btn-block btn-lg mb-2" id="btn-calculate-profit">
-                                            <i class="fas fa-calculator mr-2"></i>
-                                            💰 Hitung Profit Semua Toko
+                                            <i class=""></i>
+                                            Hitung Profit Semua Toko
                                         </button>
                                         <small class="text-muted">Analisis margin dan profitabilitas setiap toko partner</small>
                                     </div>
@@ -277,8 +202,8 @@
                                             Geographic Clustering
                                         </h6>
                                         <button type="button" class="btn btn-info btn-block btn-lg mb-2" id="btn-create-clustering" disabled>
-                                            <i class="fas fa-project-diagram mr-2"></i>
-                                            🗺️ Buat Geographic Clustering
+                                            <i class=""></i>
+                                            Buat Geographic Clustering
                                         </button>
                                         <small class="text-muted">Kelompokkan toko berdasarkan lokasi geografis (radius 1.5km)</small>
                                     </div>
@@ -290,8 +215,8 @@
                                             Expansion Planning
                                         </h6>
                                         <button type="button" class="btn btn-success btn-block btn-lg mb-2" id="btn-generate-expansion" disabled>
-                                            <i class="fas fa-rocket mr-2"></i>
-                                            🚀 Generate Expansion Plan
+                                            <i class=""></i>
+                                            Generate Expansion Plan
                                         </button>
                                         <small class="text-muted">Buat rekomendasi ekspansi berdasarkan analisis cluster</small>
                                     </div>
@@ -301,7 +226,7 @@
                                     <!-- System Controls -->
                                     <div class="system-controls">
                                         <h6 class="text-secondary">
-                                            <i class="fas fa-wrench mr-1"></i>
+                                            
                                             System Controls
                                         </h6>
                                         <div class="row">
@@ -331,7 +256,7 @@
                             <div class="card card-warning">
                                 <div class="card-header">
                                     <h3 class="card-title">
-                                        <i class="fas fa-chart-bar mr-2"></i>📈 Profit Analysis
+                                        <i class=""></i>Profit Analysis
                                     </h3>
                                     <div class="card-tools">
                                         <button type="button" class="btn btn-sm btn-outline-light" id="btn-export-profit">
@@ -361,7 +286,7 @@
                             <div class="card card-info">
                                 <div class="card-header">
                                     <h3 class="card-title">
-                                        <i class="fas fa-map-marked-alt mr-2"></i>🎯 Geographic Clusters
+                                        <i class=""></i>Geographic Clusters
                                     </h3>
                                     <div class="card-tools">
                                         <button type="button" class="btn btn-sm btn-outline-light" id="btn-export-clusters">
@@ -466,7 +391,7 @@
                             <div class="card card-success">
                                 <div class="card-header">
                                     <h3 class="card-title">
-                                        <i class="fas fa-rocket mr-2"></i>🚀 Expansion Planning & Recommendations
+                                        <i class=""></i>Expansion Planning & Recommendations
                                     </h3>
                                     <div class="card-tools">
                                         <div class="btn-group">
@@ -893,18 +818,7 @@
     animation: fadeIn 0.5s ease-in;
 }
 
-.animate-counter {
-    transition: all 0.3s ease;
-}
 
-.hover-lift {
-    transition: all 0.3s ease;
-}
-
-.hover-lift:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-10px); }
@@ -1176,9 +1090,7 @@
         padding: 15px;
     }
     
-    .small-box .inner h3 {
-        font-size: 24px;
-    }
+
 }
 
 /* Loading States */
@@ -1375,8 +1287,7 @@ function setupUIEnhancements() {
         fitMapBounds();
     });
     
-    // Animate statistics cards on load
-    animateStatisticsCards();
+
 }
 
 /**
@@ -1665,24 +1576,7 @@ function fitMapBounds() {
     }
 }
 
-/**
- * Animate statistics cards
- */
-function animateStatisticsCards() {
-    const cards = document.querySelectorAll('.small-box');
-    cards.forEach((card, index) => {
-        setTimeout(() => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            card.style.transition = 'all 0.5s ease';
-            
-            setTimeout(() => {
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, 100);
-        }, index * 200);
-    });
-}
+
 
 /**
  * Show system help - available globally
