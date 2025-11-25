@@ -85,22 +85,102 @@
     border-radius: 15px;
     font-weight: 500;
 }
+
+/* ========== UPDATED STATS CARD STYLES ========== */
 .stats-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 15px;
-    padding: 20px;
+    border-radius: 16px;
+    padding: 24px;
     margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
 }
+
+.stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+}
+
+/* Card 1 - Total Barang (Orange) */
+.stats-card.card-orange {
+    background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%);
+    color: white;
+}
+
+/* Card 2 - Total Toko Partner (Yellow/Gold) */
+.stats-card.card-yellow {
+    background: linear-gradient(135deg, #FFB347 0%, #FFA500 100%);
+    color: white;
+}
+
+/* Card 3 - Pengiriman Bulan Ini (Turquoise) */
+.stats-card.card-turquoise {
+    background: linear-gradient(135deg, #06BCC1 0%, #0FA4A8 100%);
+    color: white;
+}
+
+/* Card 4 - Retur Bulan Ini (Coral) */
+.stats-card.card-coral {
+    background: linear-gradient(135deg, #F4845F 0%, #E86A47 100%);
+    color: white;
+}
+
 .stats-number {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1;
+    position: relative;
+    z-index: 2;
 }
+
 .stats-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
+    font-size: 0.95rem;
+    opacity: 0.95;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    position: relative;
+    z-index: 2;
 }
+
+.stats-card .stats-icon {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 4rem;
+    opacity: 0.15;
+    z-index: 1;
+}
+
+/* Decorative elements */
+.stats-card::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    bottom: -30px;
+    right: -30px;
+    background: rgba(255,255,255,0.1);
+    z-index: 1;
+}
+
+/* ========== END STATS CARD STYLES ========== */
+
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -134,64 +214,7 @@
 
 @section('content')
 <div class="container-fluid">
-    
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-            <span class="sr-only">Loading...</span>
-        </div>
-        <h4 class="mt-3 text-primary">Memuat Dashboard...</h4>
-    </div>
 
-    <!-- Welcome Banner -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-info dashboard-card" style="background: linear-gradient(135deg, #eb7d07, #f14c05); border: none; color: white;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4><i class="fas fa-tachometer-alt mr-2"></i>Dashboard CRM</h4>
-                        <p class="mb-0">Monitor penjualan dan pengiriman secara real-time</p>
-                    </div>
-                    <div class="text-right">
-                        <small>Update terakhir: <span id="last-update">-</span></small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Statistics Cards Row -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-6">
-            <div class="stats-card">
-                <div class="stats-number animate-number" id="total-barang">0</div>
-                <div class="stats-label">Total Barang</div>
-                <i class="fas fa-boxes" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
-            </div>
-        </div>
-        <div class="col-lg-3 col-6">
-            <div class="stats-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
-                <div class="stats-number animate-number" id="total-toko">0</div>
-                <div class="stats-label">Total Toko Partner</div>
-                <i class="fas fa-store" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
-            </div>
-        </div>
-        <div class="col-lg-3 col-6">
-            <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div class="stats-number animate-number" id="pengiriman-bulan">0</div>
-                <div class="stats-label">Pengiriman Bulan Ini</div>
-                <i class="fas fa-truck" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
-            </div>
-        </div>
-        <div class="col-lg-3 col-6">
-            <div class="stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                <div class="stats-number animate-number" id="retur-bulan">0</div>
-                <div class="stats-label">Retur Bulan Ini</div>
-                <i class="fas fa-undo-alt" style="position: absolute; right: 15px; top: 15px; font-size: 2rem; opacity: 0.3;"></i>
-            </div>
-        </div>
-    </div>
-    
     <!-- Main row -->
     <div class="row">
         <!-- Left col -->

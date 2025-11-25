@@ -2,57 +2,6 @@
 
 @section('content')
 <div class="container-fluid">
-    <!-- Summary Cards -->
-    <div class="row">
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-info">
-                <div class="inner">
-                    <h3>{{ $summary['total_batch'] }}</h3>
-                    <p>Total Batch</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-layer-group"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-success">
-                <div class="inner">
-                    <h3>{{ number_format($summary['total_sisa_stok']) }}</h3>
-                    <p>Total Sisa Stok</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-boxes"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-warning">
-                <div class="inner">
-                    <h3>{{ number_format($summary['total_terpakai']) }}</h3>
-                    <p>Total Terpakai</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-truck"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-6">
-            <div class="small-box bg-secondary">
-                <div class="inner">
-                    <h3>{{ number_format($summary['total_stok_awal']) }}</h3>
-                    <p>Total Stok Awal</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-database"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <!-- Barang Info -->
     <div class="row">
         <div class="col-12">
@@ -96,7 +45,7 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-history mr-2"></i>Riwayat Batch Stok (FIFO)
+                        <i class="fas fa-history mr-2"></i>Riwayat Batch Stok
                     </h3>
                 </div>
                 <div class="card-body">
