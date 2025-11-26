@@ -407,7 +407,7 @@
                                 <div class="card-body">
                                     <!-- Prerequisites Check -->
                                     <div id="expansion-prerequisites" class="alert alert-info">
-                                        <h5><i class="fas fa-info-circle mr-2"></i>Prerequisites Check</h5>
+                                        <h5><i class=" mr-2"></i>Prerequisites Check</h5>
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <div class="prerequisite-item">
@@ -1337,7 +1337,7 @@ function updateSystemStatus() {
         if (profitStatus) profitStatus.className = 'badge badge-success';
         if (profitStatus) profitStatus.textContent = 'Completed';
         if (profitStep) profitStep.classList.add('completed');
-        if (profitButton) profitButton.innerHTML = '<i class="fas fa-check mr-2"></i>✅ Profit Calculated';
+        if (profitButton) profitButton.innerHTML = '<i class=" mr-2"></i> Profit Calculated';
         
         // Enable clustering button
         const clusteringButton = document.getElementById('btn-create-clustering');
@@ -1361,7 +1361,7 @@ function updateSystemStatus() {
         if (clusteringStatus) clusteringStatus.className = 'badge badge-success';
         if (clusteringStatus) clusteringStatus.textContent = 'Completed';
         if (clusteringStep) clusteringStep.classList.add('completed');
-        if (clusteringButton) clusteringButton.innerHTML = '<i class="fas fa-check mr-2"></i>✅ Clusters Created';
+        if (clusteringButton) clusteringButton.innerHTML = '<i class=" mr-2"></i> Clusters Created';
         
         // Enable expansion button
         const expansionButton = document.getElementById('btn-generate-expansion');
@@ -1385,7 +1385,7 @@ function updateSystemStatus() {
         if (expansionStatus) expansionStatus.className = 'badge badge-success';
         if (expansionStatus) expansionStatus.textContent = 'Completed';
         if (expansionStep) expansionStep.classList.add('completed');
-        if (expansionButton) expansionButton.innerHTML = '<i class="fas fa-check mr-2"></i>✅ Plan Generated';
+        if (expansionButton) expansionButton.innerHTML = '<i class=" mr-2"></i> Plan Generated';
     } else {
         if (expansionStatus) expansionStatus.className = 'badge badge-secondary';
         if (expansionStatus) expansionStatus.textContent = 'Not Started';
