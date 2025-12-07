@@ -556,7 +556,7 @@
         eyeShow.classList.remove('hide');
         togglePassword.setAttribute('title', 'Show password');
       }
-    }, 1500); // 1.5 detik
+    }, 200); // 0.2 detik
   });
 
   // Event: User klik icon mata (manual toggle)
