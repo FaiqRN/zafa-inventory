@@ -11,6 +11,7 @@ class Pemesanan extends Model
 
     public const TABLE = 'pemesanan';
     public const FIELD_PEMESANAN_ID = 'pemesanan_id';
+    public const FIELD_NOMOR_PEMESANAN = 'nomor_pemesanan';
     public const FIELD_BARANG_ID = 'barang_id';
     public const FIELD_NAMA_PEMESAN = 'nama_pemesan';
     public const FIELD_TANGGAL_PEMESANAN = 'tanggal_pemesanan';
@@ -38,6 +39,7 @@ class Pemesanan extends Model
 
     protected $fillable = [
         self::FIELD_PEMESANAN_ID,
+        self::FIELD_NOMOR_PEMESANAN,
         self::FIELD_BARANG_ID,
         self::FIELD_NAMA_PEMESAN,
         self::FIELD_TANGGAL_PEMESANAN,

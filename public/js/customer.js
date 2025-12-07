@@ -72,37 +72,6 @@ $(function() {
         $('#modalImport').modal('show');
     });
 
-    // Debug Tables
-    $('#btnDebugTables').click(function() {
-        $.ajax({
-            url: '/customer/debug-tables',
-            type: 'GET',
-            dataType: 'json',
-            beforeSend: function() {
-                $('#btnDebugTables').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Loading...');
-            },
-            success: function(response) {
-                // Format JSON data for display
-                $('#pemesananColumns').text(JSON.stringify(response.pemesanan_columns, null, 2));
-                $('#pemesananSamples').text(JSON.stringify(response.pemesanan_samples, null, 2));
-                $('#customerColumns').text(JSON.stringify(response.customer_columns, null, 2));
-                $('#customerSamples').text(JSON.stringify(response.customer_samples, null, 2));
-                
-                // Show the debug modal
-                $('#modalDebug').modal('show');
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal!',
-                    text: xhr.responseJSON?.message || 'Terjadi kesalahan saat mengambil data debug'
-                });
-            },
-            complete: function() {
-                $('#btnDebugTables').prop('disabled', false).html('<i class="fas fa-bug"></i> Debug Tables');
-            }
-        });
-    });
 
     // Sync from pemesanan
     $('#btnSyncPemesanan').click(function() {
@@ -117,8 +86,6 @@ $(function() {
                 $('#btnSyncPemesanan').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Menyinkronkan...');
             },
             success: function(response) {
-                console.log('Sync response:', response); // Log untuk debugging
-                
                 if (response.status === 'success') {
                     Swal.fire({
                         icon: 'success',
@@ -141,8 +108,6 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                console.error('Sync error:', xhr); // Log error untuk debugging
-                
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal!',
@@ -181,8 +146,6 @@ $(function() {
                 $('#btnSimpanImport').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Mengimpor...');
             },
             success: function(response) {
-                console.log('Import response:', response); // Log untuk debugging
-                
                 if (response.status === 'success') {
                     $('#modalImport').modal('hide');
                     Swal.fire({
@@ -200,8 +163,6 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                console.error('Import error:', xhr); // Log error untuk debugging
-                
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal!',
@@ -245,8 +206,6 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                console.error('Edit error:', xhr); // Log error untuk debugging
-                
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal!',
@@ -296,8 +255,6 @@ $(function() {
                         }
                     },
                     error: function(xhr) {
-                        console.error('Delete error:', xhr); // Log error untuk debugging
-                        
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal!',
@@ -330,8 +287,6 @@ $(function() {
                 $('#btnSimpan').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Menyimpan...');
             },
             success: function(response) {
-                console.log('Save response:', response); // Log untuk debugging
-                
                 if (response.status === 'success') {
                     $('#modalCustomer').modal('hide');
                     Swal.fire({
@@ -349,8 +304,6 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                console.error('Save error:', xhr); // Log error untuk debugging
-                
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal!',

@@ -13,13 +13,13 @@ class CRMExpansionSystem {
         this.expansionPlan = [];
         this.markers = []; // Track markers for cleanup
         this.clusterLayers = []; // Track cluster layers
-        
+
         // System state - FIXED STATE MANAGEMENT
         this.profitCalculated = false;
         this.clusteringDone = false;
         this.expansionGenerated = false;
         this.systemReady = false;
-        
+
         // System configuration sesuai dokumentasi
         this.config = {
             CLUSTER_RADIUS: 1.5, // km
@@ -36,7 +36,7 @@ class CRMExpansionSystem {
                 east: 113.2
             }
         };
-        
+
         // Color scheme untuk visualization
         this.colors = {
             excellent: '#28a745', // Green - Margin >20%
@@ -45,7 +45,7 @@ class CRMExpansionSystem {
             cluster: '#8b5cf6',   // Purple - Cluster boundary
             default: '#6c757d'    // Gray - Default
         };
-        
+
         // Performance tracking
         this.performanceMetrics = {
             loadTime: 0,
@@ -54,7 +54,7 @@ class CRMExpansionSystem {
             totalStores: 0,
             totalClusters: 0
         };
-        
+
         // API endpoints
         this.apiEndpoints = {
             getTokoData: '/market-map/toko-data',
@@ -64,14 +64,14 @@ class CRMExpansionSystem {
             clearCache: '/market-map/clear-cache',
             systemHealth: '/market-map/system-health'
         };
-        
+
         // Error handling and retry logic
         this.maxRetries = 3;
         this.retryDelay = 1000;
-        
+
         this.init();
     }
-    
+
     /**
      * Initialize the complete CRM system - FIXED
      */
@@ -79,35 +79,35 @@ class CRMExpansionSystem {
         try {
             console.log('🚀 Initializing CRM Expansion System...');
             const startTime = performance.now();
-            
+
             // Check dependencies
             if (!this.checkDependencies()) {
                 throw new Error('Required dependencies not available');
             }
-            
+
             // Initialize core components
             await this.initializeCore();
-            
+
             // Setup event handlers
             this.setupEventHandlers();
-            
+
             // Load initial data
             await this.loadInitialData();
-            
+
             // Mark system as ready
             this.systemReady = true;
-            
+
             // Performance tracking
             this.performanceMetrics.loadTime = performance.now() - startTime;
-            
+
             console.log(`✅ CRM System initialized in ${this.performanceMetrics.loadTime.toFixed(2)}ms`);
-            
+
         } catch (error) {
             console.error('❌ Critical error initializing CRM system:', error);
             this.handleCriticalError(error);
         }
     }
-    
+
     /**
      * Check required dependencies
      */
@@ -117,34 +117,34 @@ class CRMExpansionSystem {
             'SweetAlert': typeof Swal !== 'undefined',
             'jQuery': typeof $ !== 'undefined'
         };
-        
+
         const missing = Object.keys(required).filter(lib => !required[lib]);
-        
+
         if (missing.length > 0) {
             console.error('❌ Missing dependencies:', missing);
             this.showFallbackError(`Missing libraries: ${missing.join(', ')}`);
             return false;
         }
-        
+
         return true;
     }
-    
+
     /**
      * Initialize core system components
      */
     async initializeCore() {
         // Initialize map
         await this.initMap();
-        
+
         // Initialize UI components
         this.initializeUIComponents();
-        
+
         // Setup keyboard shortcuts
         this.setupKeyboardShortcuts();
-        
+
         console.log('✅ Core components initialized');
     }
-    
+
     /**
      * Initialize Leaflet map with enhanced configuration
      */
@@ -166,23 +166,23 @@ class CRMExpansionSystem {
                 maxZoom: 18,
                 crossOrigin: 'anonymous'
             }).addTo(this.map);
-            
+
             // Add map controls
             this.addMapControls();
-            
+
             console.log('✅ Map initialized successfully');
-            
+
         } catch (error) {
             throw new Error('Map initialization failed: ' + error.message);
         }
     }
-    
+
     /**
      * Add custom map controls
      */
     addMapControls() {
         // Add legend control
-        const legend = L.control({position: 'bottomright'});
+        const legend = L.control({ position: 'bottomright' });
         legend.onAdd = () => {
             const div = L.DomUtil.create('div', 'map-legend');
             div.innerHTML = this.createLegendHTML();
@@ -191,7 +191,7 @@ class CRMExpansionSystem {
         };
         legend.addTo(this.map);
     }
-    
+
     /**
      * Create legend HTML
      */
@@ -226,18 +226,18 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Initialize UI components
      */
     initializeUIComponents() {
         // Setup tab functionality
         this.setupTabSystem();
-        
+
         // Setup responsive behavior
         this.setupResponsiveBehavior();
     }
-    
+
     /**
      * Setup comprehensive event handlers - FIXED
      */
@@ -246,31 +246,31 @@ class CRMExpansionSystem {
         document.getElementById('btn-calculate-profit')?.addEventListener('click', () => {
             this.calculateProfitAllStores();
         });
-        
+
         document.getElementById('btn-create-clustering')?.addEventListener('click', () => {
             this.createGeographicClustering();
         });
-        
+
         document.getElementById('btn-generate-expansion')?.addEventListener('click', () => {
             this.generateExpansionPlan();
         });
-        
+
         // System control buttons
         document.getElementById('btn-refresh-data')?.addEventListener('click', () => {
             this.refreshAllData();
         });
-        
+
         document.getElementById('btn-clear-cache')?.addEventListener('click', () => {
             this.clearSystemCache();
         });
-        
+
         // Tab event handlers
         document.querySelectorAll('[data-toggle="tab"]').forEach(tab => {
             tab.addEventListener('shown.bs.tab', (e) => {
                 this.handleTabChange(e.target.getAttribute('href'));
             });
         });
-        
+
         // Window resize handler
         window.addEventListener('resize', this.debounce(() => {
             if (this.map) {
@@ -278,7 +278,7 @@ class CRMExpansionSystem {
             }
         }, 250));
     }
-    
+
     /**
      * Setup keyboard shortcuts
      */
@@ -289,19 +289,19 @@ class CRMExpansionSystem {
                 e.preventDefault();
                 this.calculateProfitAllStores();
             }
-            
+
             // Ctrl/Cmd + C: Create Clustering
             if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
                 e.preventDefault();
                 this.createGeographicClustering();
             }
-            
+
             // Ctrl/Cmd + E: Generate Expansion
             if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
                 e.preventDefault();
                 this.generateExpansionPlan();
             }
-            
+
             // F5: Refresh data
             if (e.key === 'F5') {
                 e.preventDefault();
@@ -309,28 +309,28 @@ class CRMExpansionSystem {
             }
         });
     }
-    
+
     /**
      * Load initial store data - FIXED WITH PROPER API INTEGRATION
      */
     async loadInitialData() {
         try {
             this.showLoading('Loading store data...');
-            
+
             const response = await this.fetchWithRetry(this.apiEndpoints.getTokoData);
-            
+
             if (response.success) {
                 this.storeData = response.data || [];
                 this.performanceMetrics.totalStores = this.storeData.length;
-                
+
                 // Update statistics
                 this.updateStatistics(response.summary);
-                
+
                 // Render stores on map
                 this.renderStoresOnMap();
-                
+
                 console.log(`✅ Loaded ${this.storeData.length} stores`);
-                
+
                 if (this.storeData.length === 0) {
                     this.showWarning('No Data', 'No store data found. Please check if there are active stores in the system.');
                 }
@@ -344,7 +344,7 @@ class CRMExpansionSystem {
             this.hideLoading();
         }
     }
-    
+
     /**
      * Enhanced fetch with retry mechanism - IMPROVED ERROR HANDLING
      */
@@ -361,59 +361,59 @@ class CRMExpansionSystem {
                         ...options.headers
                     }
                 });
-                
+
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 // Check if response indicates an error
                 if (data.success === false) {
                     throw new Error(data.message || 'API returned error status');
                 }
-                
+
                 return data;
-                
+
             } catch (error) {
                 console.warn(`Attempt ${i + 1}/${retries} failed:`, error.message);
-                
+
                 if (i === retries - 1) {
                     throw error;
                 }
-                
+
                 // Exponential backoff
                 await this.sleep(this.retryDelay * Math.pow(2, i));
             }
         }
     }
-    
+
     /**
      * Render stores on map with performance markers - FIXED
      */
     renderStoresOnMap() {
         try {
             const startTime = performance.now();
-            
+
             // Clear existing markers
             this.clearMapMarkers();
-            
+
             if (!this.storeData || this.storeData.length === 0) {
                 console.warn('⚠️ No store data to render');
                 this.updateVisibleCount(0);
                 return;
             }
-            
+
             // Create markers for stores with coordinates
-            const validStores = this.storeData.filter(store => 
-                store.has_coordinates && 
-                store.latitude && 
+            const validStores = this.storeData.filter(store =>
+                store.has_coordinates &&
+                store.latitude &&
                 store.longitude &&
                 !isNaN(parseFloat(store.latitude)) &&
                 !isNaN(parseFloat(store.longitude))
             );
-            
+
             validStores.forEach(store => {
                 const marker = this.createStoreMarker(store);
                 if (marker) {
@@ -421,20 +421,20 @@ class CRMExpansionSystem {
                     this.markers.push(marker); // Track for cleanup
                 }
             });
-            
+
             // Update visible count
             this.updateVisibleCount(validStores.length);
-            
+
             // Performance tracking
             this.performanceMetrics.renderTime = performance.now() - startTime;
-            
+
             console.log(`✅ Rendered ${validStores.length}/${this.storeData.length} stores in ${this.performanceMetrics.renderTime.toFixed(2)}ms`);
-            
+
         } catch (error) {
             console.error('❌ Error rendering stores:', error);
         }
     }
-    
+
     /**
      * Update visible partners count
      */
@@ -444,7 +444,7 @@ class CRMExpansionSystem {
             visibleElement.textContent = count;
         }
     }
-    
+
     /**
      * Create store marker with profit-based styling - FIXED
      */
@@ -453,7 +453,7 @@ class CRMExpansionSystem {
             // Determine marker color based on profit (if calculated)
             let color = this.colors.default;
             let title = store.nama_toko;
-            
+
             if (this.profitCalculated && store.profit_calculated && store.margin_percent !== undefined) {
                 if (store.margin_percent >= this.config.GOOD_PROFIT_MARGIN) {
                     color = this.colors.excellent;
@@ -466,7 +466,7 @@ class CRMExpansionSystem {
                     title += ` (${store.margin_percent.toFixed(1)}% - Poor)`;
                 }
             }
-            
+
             const marker = L.circleMarker([parseFloat(store.latitude), parseFloat(store.longitude)], {
                 radius: 8,
                 fillColor: color,
@@ -476,37 +476,37 @@ class CRMExpansionSystem {
                 fillOpacity: 0.7,
                 title: title
             });
-            
+
             // Create enhanced popup
             const popupContent = this.createStorePopup(store);
             marker.bindPopup(popupContent, {
                 maxWidth: 350,
                 className: 'store-popup-custom'
             });
-            
+
             // Add click handler
             marker.on('click', () => {
                 this.handleStoreClick(store);
             });
-            
+
             return marker;
-            
+
         } catch (error) {
             console.error('❌ Error creating marker for store:', store.toko_id, error);
             return null;
         }
     }
-    
+
     /**
      * Create enhanced store popup content - FIXED
      */
     createStorePopup(store) {
         let profitSection = '';
-        
+
         if (this.profitCalculated && store.profit_calculated && store.margin_percent !== undefined) {
-            const marginClass = store.margin_percent >= 20 ? 'success' : 
-                              store.margin_percent >= 10 ? 'warning' : 'danger';
-            
+            const marginClass = store.margin_percent >= 20 ? 'success' :
+                store.margin_percent >= 10 ? 'warning' : 'danger';
+
             profitSection = `
                 <div class="profit-section mt-3 p-2 bg-light rounded">
                     <h6 class="mb-2"><i class="fas fa-chart-line mr-1"></i>Profit Analysis</h6>
@@ -533,7 +533,7 @@ class CRMExpansionSystem {
                 </div>
             `;
         }
-        
+
         return `
             <div class="store-popup-content">
                 <div class="popup-header mb-2">
@@ -591,7 +591,7 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * MAIN FUNCTION: Calculate profit for all stores - FIXED WITH ENHANCED ERROR HANDLING
      */
@@ -601,53 +601,53 @@ class CRMExpansionSystem {
                 this.showWarning('System Not Ready', 'Please wait for system initialization to complete.');
                 return;
             }
-            
+
             if (this.storeData.length === 0) {
                 this.showWarning('No Data', 'No store data available for profit calculation. Please refresh the page or check your data.');
                 return;
             }
-            
+
             console.log('💰 Starting comprehensive profit calculation...');
             const startTime = performance.now();
-            
+
             this.showLoading('Calculating profit for all stores...');
-            
+
             // Call backend API for profit calculation
             const response = await this.fetchWithRetry(this.apiEndpoints.calculateProfit, {
                 method: 'POST'
             });
-            
+
             if (response.success && response.data && response.data.length > 0) {
                 // Update store data with calculated profit
                 this.storeData = response.data;
                 this.profitCalculated = true;
-                
+
                 // Update map with new profit colors
                 this.renderStoresOnMap();
-                
+
                 // Update statistics with new profit data
                 this.updateStatistics(response.summary);
                 this.updateProfitStatistics(response.statistics);
-                
+
                 // Render profit analysis in Analysis tab
                 this.renderProfitAnalysis();
-                
+
                 // Performance tracking
                 const calculationTime = performance.now() - startTime;
                 this.performanceMetrics.calculationTime = calculationTime;
-                
+
                 // Show success notification
                 this.showSuccess(
-                    'Profit Calculation Completed!', 
+                    'Profit Calculation Completed!',
                     `Analyzed ${response.statistics.processed_stores} stores. Avg margin: ${response.statistics.avg_margin}%`
                 );
-                
+
                 console.log(`✅ Profit calculation completed in ${calculationTime.toFixed(2)}ms`);
-                
+
             } else {
                 throw new Error(response.message || 'Failed to calculate profit - no data returned');
             }
-            
+
         } catch (error) {
             console.error('❌ Error calculating profit:', error);
             this.handleCalculationError('profit calculation', error);
@@ -655,14 +655,14 @@ class CRMExpansionSystem {
             this.hideLoading();
         }
     }
-    
+
     /**
      * Handle calculation errors with detailed messaging
      */
     handleCalculationError(operation, error) {
         let message = error.message || 'Unknown error occurred';
         let suggestions = [];
-        
+
         if (message.includes('No active stores found')) {
             suggestions.push('• Check if there are active stores in the database');
             suggestions.push('• Verify store data has been properly imported');
@@ -673,25 +673,25 @@ class CRMExpansionSystem {
             suggestions.push('• Complete profit analysis first');
             suggestions.push('• Create geographic clustering before generating expansion plans');
         }
-        
-        const suggestionText = suggestions.length > 0 ? 
+
+        const suggestionText = suggestions.length > 0 ?
             '\n\nSuggestions:\n' + suggestions.join('\n') : '';
-        
+
         this.showError(`Failed to perform ${operation}: ${message}${suggestionText}`);
     }
-    
+
     /**
      * Render profit analysis results in Analysis tab - FIXED
      */
     renderProfitAnalysis() {
         const container = document.getElementById('profit-analysis-content');
         if (!container) return;
-        
+
         // Filter and sort stores by margin percentage (descending)
         const sortedStores = this.storeData
             .filter(store => store.profit_calculated && store.margin_percent !== undefined)
             .sort((a, b) => b.margin_percent - a.margin_percent);
-        
+
         if (sortedStores.length === 0) {
             container.innerHTML = `
                 <div class="text-center text-muted py-5">
@@ -702,26 +702,26 @@ class CRMExpansionSystem {
             `;
             return;
         }
-        
+
         let html = '<div class="profit-analysis-results">';
-        
+
         // Add summary header
         html += this.createProfitSummaryHeader(sortedStores);
-        
+
         // Add individual store analysis
         sortedStores.forEach((store, index) => {
             html += this.createProfitStoreCard(store, index + 1);
         });
-        
+
         html += '</div>';
         container.innerHTML = html;
-        
+
         // Animate the cards
         setTimeout(() => {
             this.animateProfitCards();
         }, 100);
     }
-    
+
     /**
      * Create profit summary header - FIXED
      */
@@ -732,10 +732,10 @@ class CRMExpansionSystem {
         const poorStores = stores.filter(s => s.margin_percent < 10).length;
         const avgMargin = stores.reduce((sum, s) => sum + s.margin_percent, 0) / totalStores;
         const totalProfit = stores.reduce((sum, s) => sum + s.total_profit, 0);
-        
+
         return `
             <div class="profit-summary-header mb-4 p-3 bg-primary text-white rounded">
-                <h5 class="mb-3"><i class="fas fa-calculator mr-2"></i>Profit Analysis Summary</h5>
+                <h5 class="mb-3"><i class=" mr-2"></i>Profit Analysis Summary</h5>
                 <div class="row">
                     <div class="col-md-3">
                         <div class="text-center">
@@ -765,9 +765,9 @@ class CRMExpansionSystem {
                 <div class="row mt-2">
                     <div class="col-12">
                         <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-success" style="width: ${(excellentStores/totalStores)*100}%" title="Excellent"></div>
-                            <div class="progress-bar bg-warning" style="width: ${(goodStores/totalStores)*100}%" title="Good"></div>
-                            <div class="progress-bar bg-danger" style="width: ${(poorStores/totalStores)*100}%" title="Poor"></div>
+                            <div class="progress-bar bg-success" style="width: ${(excellentStores / totalStores) * 100}%" title="Excellent"></div>
+                            <div class="progress-bar bg-warning" style="width: ${(goodStores / totalStores) * 100}%" title="Good"></div>
+                            <div class="progress-bar bg-danger" style="width: ${(poorStores / totalStores) * 100}%" title="Poor"></div>
                         </div>
                         <small class="mt-1 d-block">
                             <span class="text-success">■</span> ${excellentStores} Excellent 
@@ -779,24 +779,24 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Create individual profit store card - FIXED
      */
     createProfitStoreCard(store, rank) {
-        const marginClass = store.margin_percent >= 20 ? 'success' : 
-                          store.margin_percent >= 10 ? 'warning' : 'danger';
-        
-        const marginIcon = store.margin_percent >= 20 ? 'fa-trophy' : 
-                          store.margin_percent >= 10 ? 'fa-thumbs-up' : 'fa-exclamation-triangle';
-        
+        const marginClass = store.margin_percent >= 20 ? 'success' :
+            store.margin_percent >= 10 ? 'warning' : 'danger';
+
+        const marginIcon = store.margin_percent >= 20 ? 'fa-trophy' :
+            store.margin_percent >= 10 ? 'fa-thumbs-up' : 'fa-exclamation-triangle';
+
         // Calculate expansion projection
         const expansionInvestment = this.config.DEFAULT_HARGA_AWAL * this.config.DEFAULT_INITIAL_STOCK;
-        const projectedROI = store.profit_per_unit > 0 ? 
+        const projectedROI = store.profit_per_unit > 0 ?
             ((store.profit_per_unit * this.config.DEFAULT_INITIAL_STOCK) / expansionInvestment) * 100 : 0;
-        const paybackMonths = store.projected_monthly_profit > 0 ? 
+        const paybackMonths = store.projected_monthly_profit > 0 ?
             Math.ceil(expansionInvestment / store.projected_monthly_profit) : 99;
-        
+
         return `
             <div class="profit-item border-left-${marginClass} mb-3" data-rank="${rank}">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -875,7 +875,7 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * MAIN FUNCTION: Create geographic clustering - FIXED WITH ENHANCED ERROR HANDLING
      */
@@ -885,22 +885,22 @@ class CRMExpansionSystem {
                 this.showWarning('System Not Ready', 'Please wait for system initialization to complete.');
                 return;
             }
-            
+
             if (!this.profitCalculated) {
                 this.showWarning('Prerequisites Not Met', 'Please calculate profit analysis first before creating clusters.');
                 return;
             }
-            
+
             if (this.storeData.length === 0) {
                 this.showWarning('No Data', 'No store data available for clustering.');
                 return;
             }
-            
+
             console.log('🗺️ Starting geographic clustering algorithm...');
             const startTime = performance.now();
-            
+
             this.showLoading('Creating geographic clusters with 1.5km radius...');
-            
+
             // Call backend API for clustering
             const response = await this.fetchWithRetry(this.apiEndpoints.createClusters, {
                 method: 'POST',
@@ -908,30 +908,30 @@ class CRMExpansionSystem {
                     radius: this.config.CLUSTER_RADIUS
                 })
             });
-            
+
             if (response.success && response.clusters && response.clusters.length > 0) {
                 this.clusters = response.clusters;
                 this.clusteringDone = true;
                 this.performanceMetrics.totalClusters = this.clusters.length;
-                
+
                 // Render cluster boundaries on map
                 this.renderClustersOnMap();
-                
+
                 // Update Analysis tab with cluster results
                 this.renderClusteringAnalysis();
-                
+
                 // Update statistics
                 this.updateClusteringStatistics();
-                
+
                 const processingTime = performance.now() - startTime;
-                
+
                 this.showSuccess(
                     'Geographic Clustering Completed!',
                     `Created ${this.clusters.length} clusters from ${response.total_stores} stores`
                 );
-                
+
                 console.log(`✅ Clustering completed: ${this.clusters.length} clusters in ${processingTime.toFixed(2)}ms`);
-                
+
             } else if (response.success && response.clusters && response.clusters.length === 0) {
                 this.showWarning(
                     'No Clusters Created',
@@ -940,7 +940,7 @@ class CRMExpansionSystem {
             } else {
                 throw new Error(response.message || 'Failed to create clusters');
             }
-            
+
         } catch (error) {
             console.error('❌ Error creating clusters:', error);
             this.handleCalculationError('geographic clustering', error);
@@ -948,7 +948,7 @@ class CRMExpansionSystem {
             this.hideLoading();
         }
     }
-    
+
     /**
      * Render cluster boundaries on map - FIXED
      */
@@ -956,12 +956,12 @@ class CRMExpansionSystem {
         try {
             // Remove existing cluster boundaries
             this.clearClusterBoundaries();
-            
+
             if (!this.clusters || this.clusters.length === 0) {
                 console.warn('⚠️ No clusters to render');
                 return;
             }
-            
+
             // Add cluster boundaries with enhanced styling
             this.clusters.forEach(cluster => {
                 const circle = L.circle(cluster.center, {
@@ -973,17 +973,17 @@ class CRMExpansionSystem {
                     fillOpacity: 0.1,
                     className: 'cluster-boundary'
                 });
-                
+
                 // Enhanced popup for cluster
                 const popupContent = this.createClusterPopup(cluster);
                 circle.bindPopup(popupContent, {
                     maxWidth: 400,
                     className: 'cluster-popup-custom'
                 });
-                
+
                 circle.addTo(this.map);
                 this.clusterLayers.push(circle); // Track for cleanup
-                
+
                 // Add cluster label
                 const label = L.marker(cluster.center, {
                     icon: L.divIcon({
@@ -992,25 +992,25 @@ class CRMExpansionSystem {
                         iconSize: [60, 20]
                     })
                 });
-                
+
                 label.addTo(this.map);
                 this.clusterLayers.push(label); // Track for cleanup
             });
-            
+
             console.log(`✅ Rendered ${this.clusters.length} cluster boundaries`);
-            
+
         } catch (error) {
             console.error('❌ Error rendering clusters:', error);
         }
     }
-    
+
     /**
      * Create enhanced cluster popup content - FIXED
      */
     createClusterPopup(cluster) {
-        const marginClass = cluster.metrics.avg_margin >= 20 ? 'success' : 
-                          cluster.metrics.avg_margin >= 15 ? 'warning' : 'danger';
-        
+        const marginClass = cluster.metrics.avg_margin >= 20 ? 'success' :
+            cluster.metrics.avg_margin >= 15 ? 'warning' : 'danger';
+
         return `
             <div class="cluster-popup-content">
                 <div class="popup-header mb-3">
@@ -1089,14 +1089,14 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Render clustering analysis results - FIXED
      */
     renderClusteringAnalysis() {
         const container = document.getElementById('clustering-analysis-content');
         if (!container) return;
-        
+
         if (this.clusters.length === 0) {
             container.innerHTML = `
                 <div class="text-center text-muted py-5">
@@ -1107,26 +1107,26 @@ class CRMExpansionSystem {
             `;
             return;
         }
-        
+
         let html = '<div class="clustering-analysis-results">';
-        
+
         // Add clustering summary
         html += this.createClusteringSummaryHeader();
-        
+
         // Add individual cluster analysis
         this.clusters.forEach((cluster, index) => {
             html += this.createClusterAnalysisCard(cluster, index + 1);
         });
-        
+
         html += '</div>';
         container.innerHTML = html;
-        
+
         // Animate the cards
         setTimeout(() => {
             this.animateClusterCards();
         }, 100);
     }
-    
+
     /**
      * Create clustering summary header
      */
@@ -1135,10 +1135,10 @@ class CRMExpansionSystem {
         const avgMargin = this.clusters.reduce((sum, c) => sum + c.metrics.avg_margin, 0) / totalClusters;
         const totalRevenue = this.clusters.reduce((sum, c) => sum + c.metrics.total_revenue, 0);
         const expansionOpportunities = this.clusters.reduce((sum, c) => sum + c.expansion_potential, 0);
-        
+
         return `
             <div class="clustering-summary-header mb-4 p-3 bg-info text-white rounded">
-                <h5 class="mb-3"><i class="fas fa-project-diagram mr-2"></i>Geographic Clustering Summary</h5>
+                <h5 class="mb-3"><i class=" mr-2"></i>Geographic Clustering Summary</h5>
                 <div class="row">
                     <div class="col-md-3">
                         <div class="text-center">
@@ -1168,14 +1168,14 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Create cluster analysis card
      */
     createClusterAnalysisCard(cluster, rank) {
-        const marginClass = cluster.metrics.avg_margin >= 20 ? 'success' : 
-                          cluster.metrics.avg_margin >= 15 ? 'warning' : 'danger';
-        
+        const marginClass = cluster.metrics.avg_margin >= 20 ? 'success' :
+            cluster.metrics.avg_margin >= 15 ? 'warning' : 'danger';
+
         return `
             <div class="cluster-item border-left-${marginClass} mb-3" data-rank="${rank}">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -1259,7 +1259,7 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * MAIN FUNCTION: Generate expansion plan - FIXED WITH ENHANCED ERROR HANDLING
      */
@@ -1269,42 +1269,42 @@ class CRMExpansionSystem {
                 this.showWarning('System Not Ready', 'Please wait for system initialization to complete.');
                 return;
             }
-            
+
             if (!this.profitCalculated || !this.clusteringDone) {
                 this.showWarning(
-                    'Prerequisites Not Met', 
+                    'Prerequisites Not Met',
                     'Please complete both profit analysis and geographic clustering before generating expansion plan.'
                 );
                 return;
             }
-            
+
             if (this.clusters.length === 0) {
                 this.showWarning('No Clusters', 'No clusters available for expansion planning.');
                 return;
             }
-            
+
             console.log('🚀 Generating comprehensive expansion plan...');
             const startTime = performance.now();
-            
+
             this.showLoading('Analyzing expansion opportunities and generating recommendations...');
-            
+
             // Call backend API for expansion plan generation
             const response = await this.fetchWithRetry(this.apiEndpoints.generateExpansion, {
                 method: 'POST'
             });
-            
+
             if (response.success && response.recommendations) {
                 this.expansionPlan = response.recommendations;
                 this.expansionGenerated = true;
-                
+
                 // Render expansion plan in Expansion tab
                 this.renderExpansionPlan();
-                
+
                 // Update statistics
                 this.updateExpansionStatistics();
-                
+
                 const processingTime = performance.now() - startTime;
-                
+
                 if (this.expansionPlan.length > 0) {
                     this.showSuccess(
                         'Expansion Plan Generated!',
@@ -1316,13 +1316,13 @@ class CRMExpansionSystem {
                         'No expansion opportunities were identified that meet the minimum criteria.'
                     );
                 }
-                
+
                 console.log(`✅ Expansion plan generated: ${this.expansionPlan.length} recommendations in ${processingTime.toFixed(2)}ms`);
-                
+
             } else {
                 throw new Error(response.message || 'Failed to generate expansion plan');
             }
-            
+
         } catch (error) {
             console.error('❌ Error generating expansion plan:', error);
             this.handleCalculationError('expansion plan generation', error);
@@ -1330,41 +1330,41 @@ class CRMExpansionSystem {
             this.hideLoading();
         }
     }
-    
+
     /**
      * Render expansion plan in Expansion tab - FIXED
      */
     renderExpansionPlan() {
         const container = document.getElementById('expansion-recommendations-content');
         if (!container) return;
-        
+
         if (this.expansionPlan.length === 0) {
             container.innerHTML = this.createNoRecommendationsMessage();
             return;
         }
-        
+
         let html = '<div class="expansion-recommendations-list">';
-        
+
         // Add expansion summary header
         html += this.createExpansionSummaryHeader();
-        
+
         // Add individual recommendations
         this.expansionPlan.forEach((recommendation, index) => {
             html += this.createRecommendationCard(recommendation, index + 1);
         });
-        
+
         // Add investment summary
         html += this.createInvestmentSummary();
-        
+
         html += '</div>';
         container.innerHTML = html;
-        
+
         // Animate the recommendation cards
         setTimeout(() => {
             this.animateRecommendationCards();
         }, 100);
     }
-    
+
     /**
      * Create expansion summary header - FIXED
      */
@@ -1373,13 +1373,13 @@ class CRMExpansionSystem {
         const highPriority = this.expansionPlan.filter(r => r.priority === 'TINGGI').length;
         const totalInvestment = this.expansionPlan.reduce((sum, r) => sum + r.total_investment, 0);
         const totalProjectedProfit = this.expansionPlan.reduce((sum, r) => sum + r.projected_monthly_profit, 0);
-        const avgPayback = totalRecommendations > 0 ? 
+        const avgPayback = totalRecommendations > 0 ?
             this.expansionPlan.reduce((sum, r) => sum + r.payback_period, 0) / totalRecommendations : 0;
-        
+
         return `
             <div class="expansion-summary-header mb-4 p-4 bg-gradient-success text-white rounded">
                 <h4 class="mb-3">
-                    <i class="fas fa-rocket mr-2"></i>Expansion Plan Summary
+                    <i class=" mr-2"></i>Expansion Plan Summary
                 </h4>
                 <div class="row">
                     <div class="col-md-3">
@@ -1424,15 +1424,15 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Create individual recommendation card - FIXED
      */
     createRecommendationCard(recommendation, rank) {
         const priorityClass = recommendation.priority.toLowerCase();
-        const riskClass = recommendation.risk_level === 'Low' ? 'success' : 
-                         recommendation.risk_level === 'Medium' ? 'warning' : 'danger';
-        
+        const riskClass = recommendation.risk_level === 'Low' ? 'success' :
+            recommendation.risk_level === 'Medium' ? 'warning' : 'danger';
+
         return `
             <div class="recommendation-item priority-${priorityClass} mb-4" data-rank="${rank}">
                 <div class="priority-badge">${recommendation.priority}</div>
@@ -1566,7 +1566,7 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Generate recommendation text based on metrics
      */
@@ -1581,7 +1581,7 @@ class CRMExpansionSystem {
             return `Feasible expansion opportunity. Review local market conditions and competition before proceeding.`;
         }
     }
-    
+
     /**
      * Create investment summary - FIXED
      */
@@ -1590,13 +1590,13 @@ class CRMExpansionSystem {
         const totalMonthlyProfit = this.expansionPlan.reduce((sum, r) => sum + r.projected_monthly_profit, 0);
         const totalAnnualProfit = totalMonthlyProfit * 12;
         const overallROI = totalInvestment > 0 ? (totalAnnualProfit / totalInvestment) * 100 : 0;
-        const avgPayback = this.expansionPlan.length > 0 ? 
+        const avgPayback = this.expansionPlan.length > 0 ?
             this.expansionPlan.reduce((sum, r) => sum + r.payback_period, 0) / this.expansionPlan.length : 0;
-        
+
         const highPriorityCount = this.expansionPlan.filter(r => r.priority === 'TINGGI').length;
         const mediumPriorityCount = this.expansionPlan.filter(r => r.priority === 'SEDANG').length;
         const lowPriorityCount = this.expansionPlan.filter(r => r.priority === 'RENDAH').length;
-        
+
         return `
             <div class="investment-summary mt-4 p-4 bg-light rounded">
                 <h5 class="mb-3">
@@ -1688,7 +1688,7 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Create no recommendations message
      */
@@ -1711,7 +1711,7 @@ class CRMExpansionSystem {
             </div>
         `;
     }
-    
+
     /**
      * Animation and UI enhancement methods
      */
@@ -1722,7 +1722,7 @@ class CRMExpansionSystem {
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
                 card.style.transition = 'all 0.3s ease';
-                
+
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
@@ -1731,7 +1731,7 @@ class CRMExpansionSystem {
             }, index * 100);
         });
     }
-    
+
     animateClusterCards() {
         const cards = document.querySelectorAll('.cluster-item');
         cards.forEach((card, index) => {
@@ -1739,7 +1739,7 @@ class CRMExpansionSystem {
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(20px)';
                 card.style.transition = 'all 0.3s ease';
-                
+
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
@@ -1748,7 +1748,7 @@ class CRMExpansionSystem {
             }, index * 100);
         });
     }
-    
+
     animateRecommendationCards() {
         const cards = document.querySelectorAll('.recommendation-item');
         cards.forEach((card, index) => {
@@ -1756,7 +1756,7 @@ class CRMExpansionSystem {
                 card.style.opacity = '0';
                 card.style.transform = 'translateX(-20px)';
                 card.style.transition = 'all 0.4s ease';
-                
+
                 setTimeout(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateX(0)';
@@ -1764,7 +1764,7 @@ class CRMExpansionSystem {
                 }, 50);
             }, index * 150);
         });
-        
+
         // Animate score bars
         setTimeout(() => {
             const scoreBars = document.querySelectorAll('.score-fill');
@@ -1772,14 +1772,14 @@ class CRMExpansionSystem {
                 const targetWidth = bar.getAttribute('data-target-width') || bar.style.width;
                 bar.style.width = '0%';
                 bar.style.transition = 'width 1s ease-in-out';
-                
+
                 setTimeout(() => {
                     bar.style.width = targetWidth + '%';
                 }, 100);
             });
         }, 500);
     }
-    
+
     /**
      * Utility and helper methods - FIXED
      */
@@ -1788,12 +1788,12 @@ class CRMExpansionSystem {
             const elements = {
                 'total-partners': summary.total_toko || 0,
                 'geo-clusters': this.clusters.length || 0,
-                'avg-margin': this.profitCalculated ? 
+                'avg-margin': this.profitCalculated ?
                     summary.avg_margin || 0 : 0,
-                'total-revenue': summary.total_revenue ? 
+                'total-revenue': summary.total_revenue ?
                     (summary.total_revenue / 1000000).toFixed(1) + 'M' : '0'
             };
-            
+
             Object.entries(elements).forEach(([id, value]) => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -1806,7 +1806,7 @@ class CRMExpansionSystem {
             console.warn('⚠️ Error updating statistics:', error);
         }
     }
-    
+
     updateProfitStatistics(statistics) {
         try {
             if (statistics) {
@@ -1819,7 +1819,7 @@ class CRMExpansionSystem {
             console.warn('⚠️ Error updating profit statistics:', error);
         }
     }
-    
+
     updateClusteringStatistics() {
         try {
             const geoClustersElement = document.getElementById('geo-clusters');
@@ -1830,12 +1830,12 @@ class CRMExpansionSystem {
             console.warn('⚠️ Error updating clustering statistics:', error);
         }
     }
-    
+
     updateExpansionStatistics() {
         // Additional statistics updates for expansion tab if needed
         console.log('✅ Expansion statistics updated');
     }
-    
+
     clearMapMarkers() {
         this.markers.forEach(marker => {
             if (this.map.hasLayer(marker)) {
@@ -1844,7 +1844,7 @@ class CRMExpansionSystem {
         });
         this.markers = [];
     }
-    
+
     clearClusterBoundaries() {
         this.clusterLayers.forEach(layer => {
             if (this.map.hasLayer(layer)) {
@@ -1853,7 +1853,7 @@ class CRMExpansionSystem {
         });
         this.clusterLayers = [];
     }
-    
+
     handleTabChange(tabId) {
         // Handle tab-specific logic
         if (tabId === '#analysis') {
@@ -1868,28 +1868,28 @@ class CRMExpansionSystem {
             }, 100);
         }
     }
-    
+
     async refreshAllData() {
         try {
             this.showLoading('Refreshing all data...');
-            
+
             // Reset states
             this.profitCalculated = false;
             this.clusteringDone = false;
             this.expansionGenerated = false;
             this.clusters = [];
             this.expansionPlan = [];
-            
+
             // Clear map elements
             this.clearMapMarkers();
             this.clearClusterBoundaries();
-            
+
             // Reload data
             await this.loadInitialData();
-            
+
             // Clear analysis tabs
             this.clearAnalysisTabs();
-            
+
             this.showSuccess('Data refreshed successfully!');
         } catch (error) {
             this.showError('Failed to refresh data: ' + error.message);
@@ -1897,12 +1897,12 @@ class CRMExpansionSystem {
             this.hideLoading();
         }
     }
-    
+
     clearAnalysisTabs() {
         const profitContainer = document.getElementById('profit-analysis-content');
         const clusterContainer = document.getElementById('clustering-analysis-content');
         const expansionContainer = document.getElementById('expansion-recommendations-content');
-        
+
         if (profitContainer) {
             profitContainer.innerHTML = `
                 <div class="text-center text-muted py-5">
@@ -1912,7 +1912,7 @@ class CRMExpansionSystem {
                 </div>
             `;
         }
-        
+
         if (clusterContainer) {
             clusterContainer.innerHTML = `
                 <div class="text-center text-muted py-5">
@@ -1922,7 +1922,7 @@ class CRMExpansionSystem {
                 </div>
             `;
         }
-        
+
         if (expansionContainer) {
             expansionContainer.innerHTML = `
                 <div class="text-center text-muted py-5">
@@ -1933,13 +1933,13 @@ class CRMExpansionSystem {
             `;
         }
     }
-    
+
     async clearSystemCache() {
         try {
             const response = await this.fetchWithRetry(this.apiEndpoints.clearCache, {
                 method: 'POST'
             });
-            
+
             if (response.success) {
                 this.showSuccess('Cache cleared successfully!');
                 await this.refreshAllData();
@@ -1950,7 +1950,7 @@ class CRMExpansionSystem {
             this.showError('Failed to clear cache: ' + error.message);
         }
     }
-    
+
     // UI Helper methods
     showLoading(message = 'Loading...') {
         const indicator = document.getElementById('loading-indicator');
@@ -1963,25 +1963,25 @@ class CRMExpansionSystem {
             `;
             indicator.style.display = 'block';
         }
-        
+
         const mapLoading = document.getElementById('map-loading');
         if (mapLoading) {
             mapLoading.style.display = 'flex';
         }
     }
-    
+
     hideLoading() {
         const indicator = document.getElementById('loading-indicator');
         if (indicator) {
             indicator.style.display = 'none';
         }
-        
+
         const mapLoading = document.getElementById('map-loading');
         if (mapLoading) {
             mapLoading.style.display = 'none';
         }
     }
-    
+
     showSuccess(title, message = '') {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -1996,7 +1996,7 @@ class CRMExpansionSystem {
             alert(title + (message ? '\n' + message : ''));
         }
     }
-    
+
     showError(message) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -2009,7 +2009,7 @@ class CRMExpansionSystem {
             alert('Error: ' + message);
         }
     }
-    
+
     showWarning(title, message) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -2022,7 +2022,7 @@ class CRMExpansionSystem {
             alert(title + '\n' + message);
         }
     }
-    
+
     showFallbackError(message) {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'alert alert-danger alert-dismissible fade show';
@@ -2032,20 +2032,20 @@ class CRMExpansionSystem {
                 <span>&times;</span>
             </button>
         `;
-        
+
         const container = document.querySelector('.container-fluid') || document.body;
         container.insertBefore(errorDiv, container.firstChild);
-        
+
         setTimeout(() => {
             if (errorDiv.parentNode) {
                 errorDiv.parentNode.removeChild(errorDiv);
             }
         }, 5000);
     }
-    
+
     handleCriticalError(error) {
         console.error('💥 Critical system error:', error);
-        
+
         const mapContainer = document.getElementById('market-map');
         if (mapContainer) {
             mapContainer.innerHTML = `
@@ -2061,7 +2061,7 @@ class CRMExpansionSystem {
             `;
         }
     }
-    
+
     // Utility functions
     debounce(func, wait) {
         let timeout;
@@ -2074,43 +2074,43 @@ class CRMExpansionSystem {
             timeout = setTimeout(later, wait);
         };
     }
-    
+
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    
+
     setupTabSystem() {
         // Enhanced tab functionality if needed
     }
-    
+
     setupResponsiveBehavior() {
         // Enhanced responsive behavior if needed
     }
-    
+
     handleStoreClick(store) {
         console.log('📊 Store clicked:', store.toko_id);
         // Additional store click handling
     }
-    
+
     // Placeholder methods for detail views
     showStoreDetail(storeId) {
         console.log('📊 Show store detail for:', storeId);
         // Implementation for store detail modal
         this.showInfo('Store Detail', `Showing details for store: ${storeId}`);
     }
-    
+
     showClusterDetail(clusterId) {
         console.log('🎯 Show cluster detail for:', clusterId);
         // Implementation for cluster detail modal
         this.showInfo('Cluster Detail', `Showing details for cluster: ${clusterId}`);
     }
-    
+
     showRecommendationDetail(clusterId) {
         console.log('🚀 Show recommendation detail for:', clusterId);
         // Implementation for recommendation detail modal
         this.showInfo('Recommendation Detail', `Showing recommendation details for cluster: ${clusterId}`);
     }
-    
+
     showInfo(title, message) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -2126,21 +2126,21 @@ class CRMExpansionSystem {
 }
 
 // Initialize the CRM system when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('🌟 Starting CRM Expansion System...');
-    
+
     // Check for required dependencies
     if (typeof L === 'undefined') {
         console.error('❌ Leaflet library not loaded');
         return;
     }
-    
+
     // Initialize the system
     window.crmApp = new CRMExpansionSystem();
 });
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', function() {
+window.addEventListener('beforeunload', function () {
     if (window.crmApp) {
         console.log('🧹 Cleaning up CRM system...');
     }

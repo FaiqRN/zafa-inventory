@@ -14,7 +14,8 @@ class CreatePemesananTable extends Migration
     public function up()
     {
         Schema::create('pemesanan', function (Blueprint $table) {
-            $table->string('pemesanan_id', 10)->primary();
+            $table->string('pemesanan_id', 20)->primary(); // Diperbesar untuk format PSN-00001-999
+            $table->string('nomor_pemesanan', 15)->nullable(); // Untuk format PSN-00001
             $table->string('barang_id', 10);
             $table->string('nama_pemesan', 100);
             $table->date('tanggal_pemesanan');

@@ -2,23 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\MasterData\BarangTokoHelper;
 use App\Models\Barang;
 use App\Models\Toko;
 use App\Models\BarangToko;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class BarangTokoController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:manage-master-data');
+    }
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        $toko = Toko::orderBy('nama_toko', 'asc')->get();
+        $toko = BarangTokoHelper::getAllTokoOrdered();
         
         return view('barang-toko.index', [
             'activemenu' => 'barang-toko',
@@ -40,15 +42,7 @@ class BarangTokoController extends Controller
     {
         $tokoId = $request->toko_id;
         
-        // Get barang that are not yet assigned to the selected toko
-        $barangList = Barang::whereNotIn('barang_id', function($query) use ($tokoId) {
-                $query->select('barang_id')
-                      ->from('barang_toko')
-                      ->where('toko_id', $tokoId);
-            })
-            ->where('is_deleted', 0)
-            ->orderBy('nama_barang', 'asc')
-            ->get();
+        $barangList = BarangTokoHelper::getAvailableBarangForToko($tokoId);
         
         return response()->json([
             'status' => 'success',
@@ -76,10 +70,7 @@ class BarangTokoController extends Controller
             ], 400);
         }
         
-        // Get barang-toko data with barang details
-        $barangTokoList = BarangToko::with('barang')
-            ->where('toko_id', $tokoId)
-            ->get();
+        $barangTokoList = BarangTokoHelper::getBarangTokoByToko($tokoId);
         
         return response()->json([
             'status' => 'success',
@@ -98,7 +89,7 @@ class BarangTokoController extends Controller
      */
     public function edit($id)
     {
-        $barangToko = BarangToko::with('barang')->find($id);
+        $barangToko = BarangTokoHelper::getBarangTokoById($id);
         
         if (!$barangToko) {
             return response()->json([
@@ -117,34 +108,6 @@ class BarangTokoController extends Controller
     }
 
     /**
-     * Generate a new barang_toko_id
-     * 
-     * @return string
-     */
-    private function generateBarangTokoId()
-    {
-        $lastBarangToko = BarangToko::orderBy('barang_toko_id', 'desc')->first();
-        
-        if (!$lastBarangToko) {
-            return 'BT001';
-        }
-        
-        $lastId = $lastBarangToko->barang_toko_id;
-        $prefix = 'BT';
-        
-        // Extract numeric part
-        if (preg_match('/^BT(\d+)$/', $lastId, $matches)) {
-            $number = intval($matches[1]);
-            $nextNumber = $number + 1;
-            $nextId = $prefix . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
-        } else {
-            $nextId = 'BT001';
-        }
-        
-        return $nextId;
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -153,11 +116,10 @@ class BarangTokoController extends Controller
     public function store(Request $request)
     {
         // Validasi input
-        $validator = Validator::make($request->all(), [
-            'toko_id' => 'required|string|exists:toko,toko_id',
-            'barang_id' => 'required|string|exists:barang,barang_id',
-            'harga_barang_toko' => 'required|numeric|min:0',
-        ]);
+        $validator = Validator::make(
+            $request->all(), 
+            BarangTokoHelper::validateBarangTokoData($request->all())
+        );
 
         if ($validator->fails()) {
             return response()->json([
@@ -168,30 +130,20 @@ class BarangTokoController extends Controller
         }
 
         // Check if barang already exists for this toko
-        $exists = BarangToko::where('toko_id', $request->toko_id)
-                            ->where('barang_id', $request->barang_id)
-                            ->exists();
-        
-        if ($exists) {
+        if (BarangTokoHelper::isBarangExistsForToko($request->toko_id, $request->barang_id)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Barang ini sudah terdaftar untuk toko yang dipilih'
             ], 422);
         }
 
-        // Generate unique barang_toko_id
-        $barangTokoId = $this->generateBarangTokoId();
-        
-        // Tambah data barang-toko baru
-        $barangToko = new BarangToko();
-        $barangToko->barang_toko_id = $barangTokoId;
-        $barangToko->toko_id = $request->toko_id;
-        $barangToko->barang_id = $request->barang_id;
-        $barangToko->harga_barang_toko = $request->harga_barang_toko;
-        $barangToko->save();
-
-        // Get barang details for response
-        $barangToko = BarangToko::with('barang')->find($barangTokoId);
+        // Create new barang-toko
+        $barangToko = BarangTokoHelper::createBarangToko([
+            'toko_id' => $request->toko_id,
+            'barang_id' => $request->barang_id,
+            'harga_barang_toko' => $request->harga_barang_toko,
+            'user_create' => auth()->user()->username ?? null,
+        ]);
 
         return response()->json([
             'status' => 'success',
@@ -212,7 +164,7 @@ class BarangTokoController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $barangToko = BarangToko::find($id);
+        $barangToko = BarangTokoHelper::getBarangTokoById($id);
         
         if (!$barangToko) {
             return response()->json([
@@ -222,9 +174,10 @@ class BarangTokoController extends Controller
         }
 
         // Validasi input
-        $validator = Validator::make($request->all(), [
-            'harga_barang_toko' => 'required|numeric|min:0',
-        ]);
+        $validator = Validator::make(
+            $request->all(), 
+            BarangTokoHelper::validateBarangTokoData($request->all(), true)
+        );
 
         if ($validator->fails()) {
             return response()->json([
@@ -235,11 +188,10 @@ class BarangTokoController extends Controller
         }
 
         // Update data barang-toko
-        $barangToko->harga_barang_toko = $request->harga_barang_toko;
-        $barangToko->save();
-
-        // Get updated barang-toko with barang details
-        $barangToko = BarangToko::with('barang')->find($id);
+        $barangToko = BarangTokoHelper::updateBarangToko($barangToko, [
+            'harga_barang_toko' => $request->harga_barang_toko,
+            'user_update' => auth()->user()->username ?? null,
+        ]);
 
         return response()->json([
             'status' => 'success',
@@ -259,7 +211,7 @@ class BarangTokoController extends Controller
      */
     public function destroy($id)
     {
-        $barangToko = BarangToko::find($id);
+        $barangToko = BarangTokoHelper::getBarangTokoById($id);
         
         if (!$barangToko) {
             return response()->json([
@@ -269,7 +221,7 @@ class BarangTokoController extends Controller
         }
 
         // Delete barang-toko relation
-        $barangToko->delete();
+        BarangTokoHelper::deleteBarangToko($barangToko);
 
         return response()->json([
             'status' => 'success',

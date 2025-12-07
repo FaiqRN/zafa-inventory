@@ -524,8 +524,6 @@ function displayCustomers(customers) {
     
     customers.forEach((customer, index) => {
         try {
-            const customerTypeLabel = getCustomerTypeLabel(customer.customerType || 'keseluruhan');
-            const customerTypeBadge = getCustomerTypeBadge(customer.customerType || 'keseluruhan');
             const initial = customer.initial || getInitialFromName(customer.name || 'Unknown');
             
             // FIXED: Better validation for phone numbers
@@ -534,28 +532,21 @@ function displayCustomers(customers) {
                 'No phone';
             
             const customerItem = `
-                <div class="customer-item p-3 border-bottom slide-in" data-customer-type="${customer.customerType || 'keseluruhan'}" data-customer-index="${index}">
+                <div class="customer-item" data-customer-type="${customer.customerType || 'keseluruhan'}" data-customer-index="${index}">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center flex-grow-1">
                             <div class="customer-initial-small">
                                 <span class="initial-text-small">${initial}</span>
                             </div>
-                            <div>
-                                <h6 class="mb-1 font-weight-bold">${customer.name || 'Unknown'}</h6>
-                                <p class="mb-1 text-muted small">${phoneDisplay}</p>
-                                <div>
-                                    <span class="badge ${customerTypeBadge} customer-badge mr-1">${customerTypeLabel}</span>
-                                    <span class="badge badge-info customer-badge">${customer.orderSource || 'unknown'}</span>
-                                </div>
+                            <div class="flex-grow-1">
+                                <div class="font-weight-bold mb-0">${customer.name || 'Unknown'}</div>
+                                <small class="text-muted d-block">${phoneDisplay}</small>
+                                <small class="text-muted">${customer.orderSource || 'unknown'}</small>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <small class="text-muted d-block">${customer.totalOrders || 0} pesanan</small>
-                            <small class="text-success d-block font-weight-bold">${customer.totalSpent || 'Rp 0'}</small>
-                            <button type="button" class="btn detail-btn btn-sm mt-1" onclick="showCustomerDetail(${index})">
-                                Detail
-                            </button>
-                        </div>
+                        <button class="btn btn-sm detail-btn" onclick="FollowUpModule.showCustomerDetail(${index})">
+                            Detail
+                        </button>
                     </div>
                 </div>
             `;
@@ -927,6 +918,8 @@ function resetForm() {
     uploadedImages = [];
     $('#imagePreviewArea').hide();
     $('#imagePreviewContainer').empty();
+    $('#uploadPlaceholder').show();
+    $('#imageInput').val('');
     $('.filter-checkbox').prop('checked', false);
     updateFilters();
     
@@ -935,36 +928,46 @@ function resetForm() {
 
 // FIXED: Setup Image Upload Functionality
 function setupImageUpload() {
-    const uploadArea = $('#uploadArea');
     const imageInput = $('#imageInput');
+    const uploadBox = $('.upload-box-elegant');
     
-    uploadArea.off('dragover dragleave drop click');
     imageInput.off('change');
-    
-    uploadArea.on('dragover', function(e) {
-        e.preventDefault();
-        $(this).addClass('dragover');
-    });
-    
-    uploadArea.on('dragleave', function(e) {
-        e.preventDefault();
-        $(this).removeClass('dragover');
-    });
-    
-    uploadArea.on('drop', function(e) {
-        e.preventDefault();
-        $(this).removeClass('dragover');
-        
-        const files = e.originalEvent.dataTransfer.files;
-        handleImageFiles(files);
-    });
-    
-    uploadArea.on('click', function() {
-        imageInput.click();
-    });
     
     imageInput.on('change', function() {
         handleImageFiles(this.files);
+    });
+    
+    // Drag and drop functionality
+    uploadBox.off('dragover dragleave drop');
+    
+    uploadBox.on('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).css({
+            'border-color': '#667eea',
+            'background': 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)'
+        });
+    });
+    
+    uploadBox.on('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).css({
+            'border-color': '#cbd5e0',
+            'background': 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+        });
+    });
+    
+    uploadBox.on('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).css({
+            'border-color': '#cbd5e0',
+            'background': 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+        });
+        
+        const files = e.originalEvent.dataTransfer.files;
+        handleImageFiles(files);
     });
 }
 
@@ -1005,29 +1008,47 @@ function handleImageFiles(files) {
 }
 
 /**
- * Add Image Preview - FIXED
+ * Add Image Preview - FIXED with Elegant Design
  */
 function addImagePreview(src, name, file) {
     const previewArea = $('#imagePreviewArea');
     const previewContainer = $('#imagePreviewContainer');
+    const uploadPlaceholder = $('#uploadPlaceholder');
     
     const imageIndex = uploadedImages.length;
     const imagePreview = `
-        <div class="image-preview-container fade-in" data-index="${imageIndex}">
-            <img src="${src}" alt="${name}" style="width: 100px; height: 100px; object-fit: cover;" class="img-thumbnail" onclick="showFullImage('${src}')">
-            <button type="button" class="remove-image-btn" onclick="removeImage(${imageIndex})" title="Hapus gambar">
+        <div class="image-preview-container" data-index="${imageIndex}" style="position: relative; margin: 8px;">
+            <div style="position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                <img src="${src}" alt="${name}" style="width: 75px; height: 75px; object-fit: cover; cursor: pointer; display: block;" onclick="FollowUpModule.showFullImage('${src}')">
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); padding: 4px 6px;">
+                    <small class="text-white d-block" style="font-size: 0.65rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${name.length > 12 ? name.substring(0, 12) + '...' : name}</small>
+                </div>
+            </div>
+            <button type="button" class="remove-image-btn" onclick="FollowUpModule.removeImage(${imageIndex})" title="Hapus" style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; font-size: 11px; cursor: pointer; z-index: 10; box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4); transition: all 0.2s ease;">
                 <i class="fas fa-times"></i>
             </button>
-            <div class="text-center mt-1">
-                <small class="text-muted">${name}</small>
-                <br>
-                <small class="text-muted">${formatFileSize(file.size)}</small>
-            </div>
         </div>
     `;
     
+    uploadPlaceholder.hide();
     previewContainer.append(imagePreview);
     previewArea.show();
+    
+    // Add hover effect to preview container
+    $(`.image-preview-container[data-index="${imageIndex}"] > div`).hover(
+        function() {
+            $(this).css({
+                'transform': 'scale(1.05)',
+                'box-shadow': '0 4px 12px rgba(0,0,0,0.2)'
+            });
+        },
+        function() {
+            $(this).css({
+                'transform': 'scale(1)',
+                'box-shadow': '0 2px 8px rgba(0,0,0,0.1)'
+            });
+        }
+    );
 }
 
 /**
@@ -1039,12 +1060,14 @@ function removeImage(index) {
     
     if (uploadedImages.length === 0) {
         $('#imagePreviewArea').hide();
+        $('#uploadPlaceholder').show();
+        $('#imageInput').val('');
     }
     
     // Re-index remaining images
     $('.image-preview-container').each(function(i) {
         $(this).attr('data-index', i);
-        $(this).find('.remove-image-btn').attr('onclick', `removeImage(${i})`);
+        $(this).find('.remove-image-btn').attr('onclick', `FollowUpModule.removeImage(${i})`);
     });
     
     updateSendButton();
@@ -1082,11 +1105,10 @@ function showCustomerDetail(customerIndex) {
         $('#modalCustomerNotes').text(customer.notes || '-');
         
         const customerTypeLabel = getCustomerTypeLabel(customer.customerType || 'keseluruhan');
-        const customerTypeBadge = getCustomerTypeBadge(customer.customerType || 'keseluruhan');
         
         const badges = `
-            <span class="badge ${customerTypeBadge} mb-1">${customerTypeLabel}</span><br>
-            <span class="badge badge-info">${customer.orderSource || 'unknown'}</span>
+            <span class="badge badge-secondary mb-1">${customerTypeLabel}</span>
+            <span class="badge badge-light border ml-1">${customer.orderSource || 'unknown'}</span>
         `;
         $('#modalCustomerBadges').html(badges);
         
@@ -1204,16 +1226,6 @@ function getCustomerTypeLabel(type) {
         'keseluruhan': 'Keseluruhan'
     };
     return labels[type] || 'Unknown';
-}
-
-function getCustomerTypeBadge(type) {
-    const badges = {
-        'pelangganLama': 'badge-primary',
-        'pelangganBaru': 'badge-success',
-        'pelangganTidakKembali': 'badge-warning',
-        'keseluruhan': 'badge-secondary'
-    };
-    return badges[type] || 'badge-secondary';
 }
 
 function getInitialFromName(name) {

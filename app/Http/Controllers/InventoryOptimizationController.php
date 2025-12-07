@@ -26,6 +26,10 @@ use Illuminate\Support\Facades\Schema;
 
 class InventoryOptimizationController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-analytics');
+    }
     /**
      * Display Inventory Optimization Analytics
      */
@@ -337,6 +341,30 @@ class InventoryOptimizationController extends Controller
     }
 
     /**
+     * Display Seasonal Settings Page
+     */
+    public function seasonalSettings()
+    {
+        try {
+            $breadcrumb = (object)[
+                'title' => 'Pengaturan Seasonal Inventory',
+                'list' => ['Home', 'Sistem Pengaturan', 'Seasonal Inventory']
+            ];
+
+            $seasonalData = $this->getSeasonalAdjustments();
+
+            return view('settings.seasonal-inventory', [
+                'breadcrumb' => $breadcrumb,
+                'seasonalData' => $seasonalData,
+                'activemenu' => 'inventory-optimization-settings'
+            ]);
+        } catch (Exception $e) {
+            Log::error('Seasonal settings view error: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat memuat pengaturan seasonal.');
+        }
+    }
+
+    /**
      * Get Seasonal Adjustments Configuration
      */
     public function getSeasonalAdjustments()
@@ -596,9 +624,9 @@ class InventoryOptimizationController extends Controller
                 ->whereHas('toko', function($q) {
                     $q->where('is_active', true);
                 })
-                ->whereHas('barang', function($q) {
-                    $q->where('is_deleted', 0);
-                })
+                // ->whereHas('barang', function($q) {
+                //     $q->where('is_deleted', 0);
+                // })
                 ->get();
 
             $recommendations = collect();

@@ -14,6 +14,10 @@ use Yajra\DataTables\Facades\DataTables;
 
 class TokoController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:manage-master-data');
+    }
     /**
      * Display a listing of the resource.
      *
@@ -42,8 +46,21 @@ class TokoController extends Controller
 
         $response = DataTables::of($data)
             ->addIndexColumn()
+            ->addColumn('quality_badge', function($row) {
+                $status = $row->geocoding_status;
+                $score = $row->{Toko::FIELD_GEOCODING_SCORE};
+                
+                $badgeHtml = '<span class="badge badge-' . $status['badge_class'] . '" 
+                    data-toggle="tooltip" 
+                    data-placement="top" 
+                    title="Quality Score: ' . ($score ?? 'N/A') . '">' . 
+                    $status['message'] . 
+                '</span>';
+                
+                return $badgeHtml;
+            })
             ->addColumn('action', fn($row) => '')
-            ->rawColumns(['action'])
+            ->rawColumns(['quality_badge', 'action'])
             ->make(true);
 
         return $this->withNoCacheHeaders($response);
@@ -363,7 +380,8 @@ class TokoController extends Controller
             return $this->jsonValidationError($validator, 'Alamat harus diisi');
         }
 
-        $result = TokoService::previewGeocode($request->{Toko::FIELD_ALAMAT});
+        $detectedKelurahan = $request->input('detected_kelurahan');
+        $result = TokoService::previewGeocode($request->{Toko::FIELD_ALAMAT}, $detectedKelurahan);
 
         if (!$result['success']) {
             return $this->jsonErrorWithNoCache($result['message'], $result['status_code']);
@@ -477,7 +495,7 @@ class TokoController extends Controller
             return $this->jsonErrorWithNoCache($result['message'], $result['status_code']);
         }
 
-        return response()->json([
+        return $this->jsonSuccessWithNoCache([
             'status' => 'success',
             'data' => $result['data']
         ]);
@@ -590,6 +608,49 @@ class TokoController extends Controller
     }
 
     /**
+     * Search jalan by keyword and optional kelurahan
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function searchJalan(Request $request): JsonResponse
+    {
+        try {
+            $keyword = $request->input('keyword', '');
+            $kelurahanId = $request->input('kelurahan_id');
+            $limit = $request->input('limit', 10);
+            
+            if (empty($keyword)) {
+                return $this->jsonErrorWithNoCache('Keyword tidak boleh kosong');
+            }
+            
+            // Use fuzzy search from Jalan model
+            $results = \App\Models\Jalan::fuzzySearch($keyword, $kelurahanId, $limit);
+            
+            // Format results for frontend
+            $formattedResults = $results->map(function($jalan) {
+                return [
+                    'id' => $jalan->id,
+                    'nama_jalan' => $jalan->nama_jalan,
+                    'kelurahan_nama' => $jalan->kelurahan ? $jalan->kelurahan->nama : null,
+                    'latitude' => $jalan->latitude,
+                    'longitude' => $jalan->longitude,
+                    'match_score' => $jalan->match_score,
+                    'full_location' => $jalan->full_location
+                ];
+            });
+            
+            return $this->jsonSuccessWithNoCache([
+                'results' => $formattedResults,
+                'total' => $formattedResults->count()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error searching jalan: ' . $e->getMessage());
+            return $this->jsonErrorWithNoCache('Gagal mencari jalan');
+        }
+    }
+
+    /**
      * Get kelurahan coordinates data for smart address parsing
      *
      * @return JsonResponse
@@ -604,6 +665,7 @@ class TokoController extends Controller
             foreach ($kelurahan as $item) {
                 $key = $item->nama_normalized;
                 $formattedData[$key] = [
+                    'id' => $item->id,
                     'coords' => [$item->latitude, $item->longitude],
                     'kecamatan' => $item->kecamatan,
                     'kota' => $item->kota,

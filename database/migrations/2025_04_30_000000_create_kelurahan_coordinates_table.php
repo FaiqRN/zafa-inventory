@@ -20,6 +20,8 @@ return new class extends Migration
             $table->decimal('latitude', 10, 8)->comment('Koordinat GPS Latitude');
             $table->decimal('longitude', 11, 8)->comment('Koordinat GPS Longitude');
             $table->boolean('is_active')->default(true)->comment('Status aktif');
+            $table->string('source', 50)->default('generated')->comment('Sumber data: manual, generated, api');
+            $table->string('accuracy', 20)->default('low')->comment('Tingkat akurasi: high, medium, low');
             $table->timestamps();
             
             // Indexes untuk performa pencarian

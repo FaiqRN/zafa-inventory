@@ -47,6 +47,14 @@
                                 <td>{{ $user->nama_lengkap }}</td>
                             </tr>
                             <tr>
+                                <th>Nama Depan</th>
+                                <td>{{ $user->firstname ?? '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Nama Belakang</th>
+                                <td>{{ $user->lastname ?? '-' }}</td>
+                            </tr>
+                            <tr>
                                 <th>Email</th>
                                 <td>{{ $user->email }}</td>
                             </tr>
@@ -60,7 +68,7 @@
                             </tr>
                             <tr>
                                 <th>Jenis Kelamin</th>
-                                <td>{{ $user->jenis_kelamin == 'L' ? 'Laki-laki' : ($user->jenis_kelamin == 'P' ? 'Perempuan' : '-') }}</td>
+                                <td>{{ $user->jenis_kelamin_text ?? '-' }}</td>
                             </tr>
                             <tr>
                                 <th>Tempat, Tanggal Lahir</th>

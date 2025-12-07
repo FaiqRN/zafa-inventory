@@ -7,14 +7,16 @@
     <div class="row">
         <!-- PANEL KIRI: DATA BARANG -->
         <div class="col-lg-5 col-md-12 mb-3">
-            <div class="card shadow-sm border-0 modern-card">
-                <div class="card-header modern-header-left d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 font-weight-bold">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title">
                         <i class="fas fa-boxes mr-2"></i> Data Barang
-                    </h5>
-                    <button type="button" class="btn btn-success btn-sm" id="btnTambah">
-                        <i class="fas fa-plus mr-1"></i> Tambah Barang
-                    </button>
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-success btn-sm" id="btnTambah">
+                            <i class="fas fa-plus mr-1"></i> Tambah Barang
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="card-body p-3">
@@ -77,14 +79,19 @@
         
         <!-- PANEL KANAN: DETAIL STOK BARANG -->
         <div class="col-lg-7 col-md-12 mb-3">
-            <div class="card shadow-sm border-0 modern-card">
-                <div class="card-header modern-header-right d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 font-weight-bold" id="detail-title">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title" id="detail-title">
                         <i class="fas fa-clipboard-list mr-2"></i> Detail Stok Barang
-                    </h5>
-                    <button type="button" class="btn btn-success btn-sm" id="btnTambahStok" style="display: none;">
-                        <i class="fas fa-plus mr-1"></i> Tambah Stok
-                    </button>
+                    </h3>
+                    <div class="card-tools" id="detail-action-buttons" style="display: none;">
+                        <button type="button" class="btn btn-success btn-sm" id="btnTambahStok">
+                            <i class="fas fa-plus mr-1"></i> Tambah Stok
+                        </button>
+                        <button type="button" class="btn btn-info btn-sm ml-1" id="btnRiwayatStok">
+                            <i class="fas fa-history mr-1"></i> Riwayat Stok
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="card-body p-3">
@@ -226,62 +233,6 @@
                         <i class="fas fa-times mr-1"></i> Batal
                     </button>
                     <button type="submit" class="btn btn-primary" id="btnSimpan">
-                        <i class="fas fa-save mr-1"></i> Simpan
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Tambah/Edit Stok -->
-<div class="modal fade" id="modalStok" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalStokLabel">
-                    <i class="fas fa-boxes mr-2"></i>Tambah Stok Barang
-                </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <form id="formStok">
-                @csrf
-                <div class="modal-body">
-                    <input type="hidden" id="stok_barang_id" name="barang_id">
-                    <input type="hidden" id="stok_id" name="stok_id">
-                    
-                    <div class="form-group">
-                        <label>Barang</label>
-                        <input type="text" class="form-control" id="stok_nama_barang" 
-                               readonly style="background-color: #f8f9fa;">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Tanggal Produksi <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="tanggal_stock_barang" 
-                               name="tanggal_stock_barang" required>
-                        <div class="invalid-feedback" id="error-tanggal_stock_barang"></div>
-                    </div>
-                    
-                    <div class="form-group mb-0">
-                        <label>Jumlah Stok <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" id="stok" 
-                                   name="stok" min="1" placeholder="0" required>
-                            <div class="input-group-append">
-                                <span class="input-group-text" id="stok_satuan">Pcs</span>
-                            </div>
-                        </div>
-                        <div class="invalid-feedback" id="error-stok"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times mr-1"></i> Batal
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="btnSimpanStok">
                         <i class="fas fa-save mr-1"></i> Simpan
                     </button>
                 </div>

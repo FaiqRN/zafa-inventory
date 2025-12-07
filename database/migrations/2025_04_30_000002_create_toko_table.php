@@ -20,6 +20,12 @@ class CreateTokoTable extends Migration
             $table->text('alamat');
             $table->string('wilayah_kecamatan', 100);
             $table->string('wilayah_kelurahan', 100);
+            
+            // Add jalan_id column
+            $table->unsignedBigInteger('jalan_id')->nullable()->comment('Foreign key ke jalans table - referensi jalan yang dipilih');
+            $table->foreign('jalan_id')->references('id')->on('jalans')->onDelete('set null');
+            $table->index('jalan_id', 'idx_toko_jalan_id');
+
             $table->string('wilayah_kota_kabupaten', 100);
             $table->string('nomer_telpon', 20);
             

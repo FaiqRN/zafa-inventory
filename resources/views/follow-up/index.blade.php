@@ -22,7 +22,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-paper-plane mr-2"></i>
+                        <i class=""></i>
                         Follow Up Pelanggan
                     </h3>
                 </div>
@@ -42,7 +42,7 @@
                     </button>
                     
                     <div class="badge badge-warning p-2" style="font-size: 1rem;">
-                        🥔 Zafa Potato CRM
+                        Zafa Potato App
                     </div>
                 </div>
             </div>
@@ -50,205 +50,186 @@
     </div>
 
     <div class="row">
-        <!-- Panel Kiri - Filter, Upload, Pesan, Riwayat -->
+        <!-- Panel Kiri - Filter dan Customer List -->
         <div class="col-lg-8">
             <!-- Filter Card -->
-            <div class="card card-outline card-info">
-                <div class="card-header filter-card">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-filter mr-2"></i>
-                        Filter Target Customer
-                    </h5>
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0 font-weight-bold">Pilih Target Customer</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body py-3">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6 class="font-weight-bold mb-3">
-                                <i class="fas fa-users mr-1"></i>
-                                Jenis Customer
-                            </h6>
+                            <p class="text-muted small mb-2">Jenis Customer</p>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="keseluruhan" value="keseluruhan">
-                                <label class="form-check-label" for="keseluruhan">
-                                    <span class="badge badge-secondary customer-badge mr-1">ALL</span>
-                                    Keseluruhan Customer
-                                </label>
+                                <label class="form-check-label" for="keseluruhan">Keseluruhan Customer</label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="pelangganLama" value="pelangganLama">
-                                <label class="form-check-label" for="pelangganLama">
-                                    <span class="badge badge-primary customer-badge mr-1">VIP</span>
-                                    Pelanggan Lama (≥3 transaksi)
-                                </label>
+                                <label class="form-check-label" for="pelangganLama">Pelanggan Lama (≥3 transaksi)</label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="pelangganBaru" value="pelangganBaru">
-                                <label class="form-check-label" for="pelangganBaru">
-                                    <span class="badge badge-success customer-badge mr-1">NEW</span>
-                                    Pelanggan Baru (1 bulan terakhir)
-                                </label>
+                                <label class="form-check-label" for="pelangganBaru">Pelanggan Baru (1 bulan terakhir)</label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="pelangganTidakKembali" value="pelangganTidakKembali">
-                                <label class="form-check-label" for="pelangganTidakKembali">
-                                    <span class="badge badge-warning customer-badge mr-1">⚠️</span>
-                                    Pelanggan Tidak Kembali (>2 bulan)
-                                </label>
+                                <label class="form-check-label" for="pelangganTidakKembali">Pelanggan Tidak Kembali (>2 bulan)</label>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="font-weight-bold mb-3">
-                                <i class="fas fa-share-alt mr-1"></i>
-                                Sumber Pesanan
-                            </h6>
+                            <p class="text-muted small mb-2">Sumber Pesanan</p>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="shopee" value="shopee">
-                                <label class="form-check-label" for="shopee">
-                                    <span class="badge badge-warning customer-badge mr-1">🛒</span>
-                                    Shopee
-                                </label>
+                                <label class="form-check-label" for="shopee">Shopee</label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="tokopedia" value="tokopedia">
-                                <label class="form-check-label" for="tokopedia">
-                                    <span class="badge badge-warning customer-badge mr-1">🛒</span>
-                                    Tokopedia
-                                </label>
+                                <label class="form-check-label" for="tokopedia">Tokopedia</label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="whatsapp" value="whatsapp">
-                                <label class="form-check-label" for="whatsapp">
-                                    <span class="badge badge-success customer-badge mr-1">📱</span>
-                                    WhatsApp
-                                </label>
+                                <label class="form-check-label" for="whatsapp">WhatsApp</label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="instagram" value="instagram">
-                                <label class="form-check-label" for="instagram">
-                                    <span class="badge badge-danger customer-badge mr-1">📷</span>
-                                    Instagram
-                                </label>
+                                <label class="form-check-label" for="instagram">Instagram</label>
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input filter-checkbox" type="checkbox" id="langsung" value="langsung">
-                                <label class="form-check-label" for="langsung">
-                                    <span class="badge badge-info customer-badge mr-1">🏪</span>
-                                    Langsung
-                                </label>
+                                <label class="form-check-label" for="langsung">Langsung</label>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Filter Summary -->
-                    <div id="filterSummary" class="filter-summary" style="display: none;">
+                    <div id="filterSummary" class="mt-3 p-2 bg-light rounded border" style="display: none;">
                         <div class="d-flex justify-content-between align-items-center">
-                            <div>
+                            <div class="small">
                                 <strong>Filter Aktif:</strong> <span id="filterList"></span>
                             </div>
-                            <div>
-                                Target: <span class="customer-count-badge" id="customerCount">0</span> customer
+                            <div class="small">
+                                <strong>Target:</strong> <span class="badge badge-primary" id="customerCount">0</span> customer
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Upload Gambar Card -->
-            <div class="card card-outline card-warning">
-                <div class="card-header">
-                    <h5 class="card-title">
-                        <i class="fas fa-image mr-2"></i>
-                        Upload Gambar WhatsApp (Opsional)
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="upload-area" id="uploadArea">
-                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">Drag & Drop gambar atau klik untuk pilih</h5>
-                        <p class="text-muted mb-3">Format: JPG, PNG, GIF - Maksimal 5MB per file</p>
-                        <input type="file" id="imageInput" multiple accept="image/*" style="display: none;">
-                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('imageInput').click()">
-                            <i class="fas fa-folder-open mr-1"></i>
-                            Pilih Gambar
-                        </button>
-                    </div>
-                    
-                    <!-- Image Preview Area -->
-                    <div id="imagePreviewArea" class="mt-3" style="display: none;">
-                        <h6 class="font-weight-bold mb-2">Preview Gambar:</h6>
-                        <div id="imagePreviewContainer" class="d-flex flex-wrap"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pesan Card -->
-            <div class="card card-outline card-success">
-                <div class="card-header">
-                    <h5 class="card-title">
-                        <i class="fas fa-comment-alt mr-2"></i>
-                        Tulis Pesan WhatsApp
-                    </h5>
+            <!-- Broadcast Message Card -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0 font-weight-bold">Buat Broadcast Pesan</h6>
                 </div>
                 <div class="card-body">
                     <form id="massFollowUpForm">
                         @csrf
-                        <div class="form-group">
-                            <label for="followUpMessage">
-                                <i class="fas fa-pen mr-1"></i>
-                                Pesan untuk Customer
-                            </label>
-                            <textarea class="form-control" id="followUpMessage" name="message" rows="5" 
-                                placeholder="Contoh: Halo! Terima kasih sudah menjadi pelanggan setia Zafa Potato. Ada promo spesial untuk Anda! 🥔
-
-Tips: Gunakan emoji untuk membuat pesan lebih menarik 😊"></textarea>
-                            <small class="form-text text-muted">
-                                <span id="charCount">0</span>/1000 karakter
-                            </small>
-                        </div>
-                        
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            <strong>Tips WhatsApp:</strong> Anda bisa mengirim pesan teks saja, gambar saja, atau kombinasi keduanya. Pesan akan dikirim langsung ke WhatsApp customer.
-                        </div>
-                        
-                        <div class="text-right">
-                            <button type="button" class="btn btn-secondary mr-2" id="previewBtn">
-                                <i class="fas fa-eye mr-1"></i>
-                                Preview
-                            </button>
-                            <button type="submit" class="btn btn-success" id="sendMassFollowUpBtn" disabled>
-                                <i class="fas fa-paper-plane mr-2"></i>
-                                Kirim ke <span id="targetCount">0</span> Customer
-                            </button>
+                        <div class="row">
+                            <!-- Kolom Kiri - Upload Gambar -->
+                            <div class="col-md-5">
+                                <label class="small text-muted mb-2">Upload Gambar (Opsional)</label>
+                                <div class="upload-box-simple rounded p-4 text-center" style="min-height: 240px; background-color: #fafafa; border: 2px dashed #667eea !important; transition: all 0.3s ease; cursor: pointer;" onclick="document.getElementById('imageInput').click()">
+                                    <input type="file" id="imageInput" multiple accept="image/*" class="d-none">
+                                    <div id="uploadPlaceholder">
+                                        <i class="fas fa-image fa-3x mb-3" style="color: #667eea;"></i>
+                                        <p class="text-dark mb-2">Klik untuk upload gambar</p>
+                                        <p class="text-muted small mb-3">atau drag & drop file di sini</p>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); document.getElementById('imageInput').click()">
+                                            <i class="fas fa-folder-open mr-1"></i> Pilih File
+                                        </button>
+                                        <p class="small text-muted mt-3 mb-0">JPG, PNG, GIF - Max 5MB</p>
+                                    </div>
+                                    
+                                    <!-- Image Preview Area -->
+                                    <div id="imagePreviewArea" style="display: none;">
+                                        <div id="imagePreviewContainer" class="d-flex flex-wrap justify-content-center"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Kolom Kanan - Pesan -->
+                            <div class="col-md-7">
+                                <label class="small text-muted mb-2">Pesan untuk Customer</label>
+                                <textarea class="form-control" id="followUpMessage" name="message" rows="7" 
+                                    placeholder="Contoh: Halo! Terima kasih sudah menjadi pelanggan setia Zafa Potato. Ada promo spesial untuk Anda!"></textarea>
+                                <small class="form-text text-muted">
+                                    <span id="charCount">0</span>/1000 karakter
+                                </small>
+                                
+                                <div class="mt-3 d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">Akan dikirim via WhatsApp</small>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mr-2" id="previewBtn">Preview</button>
+                                        <button type="submit" class="btn btn-sm btn-primary" id="sendMassFollowUpBtn" disabled>
+                                            Kirim ke <span id="targetCount">0</span> Customer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
+        </div>
 
-            <!-- Riwayat Card -->
-            <div class="card card-outline card-info">
-                <div class="card-header">
-                    <h5 class="card-title">
-                        <i class="fas fa-history mr-2"></i>
-                        Riwayat Follow Up WhatsApp
-                    </h5>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-tool" id="refreshRiwayatBtn" title="Refresh">
-                            <i class="fas fa-sync-alt"></i>
+        <!-- Panel Kanan - Daftar Customer -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 font-weight-bold">Daftar Customer</h6>
+                        <span class="badge badge-light border" id="customerListCount">0 customer</span>
+                    </div>
+                </div>
+                
+                <div class="card-body p-0 d-flex flex-column" style="height: 396px;">
+                    <!-- Search Bar -->
+                    <div class="p-3 border-bottom">
+                        <input type="text" class="form-control form-control-sm" id="searchCustomer" placeholder="Cari customer...">
+                    </div>
+                    
+                    <div id="customerList" class="flex-grow-1" style="overflow-y: auto;">
+                        <!-- Customer data akan dimuat via AJAX -->
+                    </div>
+                    
+                    <!-- Default State -->
+                    <div id="defaultCustomerState" class="text-center p-5">
+                        <p class="text-muted mb-0">Pilih filter untuk melihat customer</p>
+                    </div>
+                    
+                    <!-- No Data State -->
+                    <div id="noCustomerData" class="text-center p-5" style="display: none;">
+                        <p class="text-muted mb-0">Tidak ada customer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Riwayat Section - Full Width Center -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 font-weight-bold">Riwayat Broadcast</h6>
+                        <button type="button" class="btn btn-sm btn-link text-secondary" id="refreshRiwayatBtn">
+                            <i class="fas fa-sync-alt"></i> Refresh
                         </button>
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                        <table class="table table-striped table-sm riwayat-table">
-                            <thead class="bg-light sticky-top">
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="bg-light" style="position: sticky; top: 0; z-index: 10;">
                                 <tr>
-                                    <th style="width: 80px;">ID</th>
-                                    <th style="width: 120px;">Tanggal</th>
-                                    <th>Pesan</th>
-                                    <th style="width: 80px;">Gambar</th>
-                                    <th style="width: 150px;">Customer</th>
-                                    <th style="width: 100px;">Status</th>
+                                    <th class="border-0 small" style="width: 60px;">ID</th>
+                                    <th class="border-0 small" style="width: 140px;">Tanggal</th>
+                                    <th class="border-0 small">Pesan</th>
+                                    <th class="border-0 small" style="width: 80px;">Gambar</th>
+                                    <th class="border-0 small" style="width: 180px;">Customer</th>
+                                    <th class="border-0 small" style="width: 100px;">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="riwayatTableBody">
@@ -259,56 +240,7 @@ Tips: Gunakan emoji untuk membuat pesan lebih menarik 😊"></textarea>
                     
                     <!-- No Data Message -->
                     <div id="noRiwayatMessage" class="text-center p-4" style="display: none;">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">Belum Ada Riwayat</h5>
-                        <p class="text-muted">Riwayat follow up akan muncul setelah Anda mengirim pesan WhatsApp</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Panel Kanan - Daftar Customer -->
-        <div class="col-lg-4">
-            <div class="card card-outline card-primary">
-                <div class="card-header">
-                    <h5 class="card-title">
-                        <i class="fas fa-users mr-2"></i>
-                        Data Customer
-                    </h5>
-                    <div class="card-tools">
-                        <span class="badge badge-primary" id="customerListCount">0 customer</span>
-                    </div>
-                </div>
-                
-                <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
-                    <!-- Search Bar -->
-                    <div class="p-3 border-bottom">
-                        <div class="input-group input-group-sm">
-                            <input type="text" class="form-control" id="searchCustomer" placeholder="Cari nama, phone, email...">
-                            <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" type="button" onclick="if(typeof loadFilteredCustomers === 'function') loadFilteredCustomers()">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="customerList">
-                        <!-- Customer data akan dimuat via AJAX -->
-                    </div>
-                    
-                    <!-- Default State -->
-                    <div id="defaultCustomerState" class="text-center p-4">
-                        <i class="fas fa-filter fa-3x text-muted mb-3"></i>
-                        <h6 class="text-muted">Pilih Filter</h6>
-                        <p class="text-muted mb-0">Centang filter di sebelah kiri untuk melihat daftar customer</p>
-                    </div>
-                    
-                    <!-- No Data State -->
-                    <div id="noCustomerData" class="text-center p-4" style="display: none;">
-                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                        <h6 class="text-muted">Tidak Ada Data</h6>
-                        <p class="text-muted mb-0">Tidak ada customer yang sesuai dengan filter yang dipilih</p>
+                        <p class="text-muted mb-0">Belum ada riwayat broadcast</p>
                     </div>
                 </div>
             </div>

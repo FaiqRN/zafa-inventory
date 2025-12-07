@@ -76,6 +76,20 @@ class TokoHelper
     }
 
     /**
+     * Format distance for human-readable display
+     *
+     * @param float $meters Distance in meters
+     * @return string Formatted distance string
+     */
+    public static function formatDistance(float $meters): string
+    {
+        if ($meters < 1000) {
+            return round($meters) . ' meter';
+        }
+        return round($meters / 1000, 2) . ' km';
+    }
+
+    /**
      * Build full address string
      *
      * @param array $data

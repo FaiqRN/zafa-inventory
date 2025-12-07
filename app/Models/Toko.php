@@ -19,6 +19,7 @@ class Toko extends Model
     public const FIELD_WILAYAH_KELURAHAN = 'wilayah_kelurahan';
     public const FIELD_WILAYAH_KOTA_KABUPATEN = 'wilayah_kota_kabupaten';
     public const FIELD_NOMER_TELPON = 'nomer_telpon';
+    public const FIELD_JALAN_ID = 'jalan_id';
     public const FIELD_LATITUDE = 'latitude';
     public const FIELD_LONGITUDE = 'longitude';
     public const FIELD_IS_ACTIVE = 'is_active';
@@ -30,6 +31,7 @@ class Toko extends Model
     public const FIELD_GEOCODING_QUALITY = 'geocoding_quality';
     public const FIELD_GEOCODING_SCORE = 'geocoding_score';
     public const FIELD_GEOCODING_LAST_UPDATED = 'geocoding_last_updated';
+    public const FIELD_GEOCODING_TIMESTAMP = 'geocoding_last_updated'; // Alias for consistency
     public const FIELD_CREATED_AT = 'created_at';
     public const FIELD_UPDATED_AT = 'updated_at';
     public const FIELD_USER_CREATE = 'user_create';
@@ -49,6 +51,7 @@ class Toko extends Model
         self::FIELD_WILAYAH_KELURAHAN,
         self::FIELD_WILAYAH_KOTA_KABUPATEN,
         self::FIELD_NOMER_TELPON,
+        self::FIELD_JALAN_ID,
         self::FIELD_LATITUDE,
         self::FIELD_LONGITUDE,
         self::FIELD_IS_ACTIVE,
@@ -88,6 +91,11 @@ class Toko extends Model
                 $toko->{self::FIELD_GEOCODING_LAST_UPDATED} = now();
             }
         });
+    }
+
+    public function jalan()
+    {
+        return $this->belongsTo(Jalan::class, self::FIELD_JALAN_ID);
     }
 
     public function barangToko()
@@ -138,8 +146,25 @@ class Toko extends Model
             $q->whereNull(self::FIELD_LATITUDE)
               ->orWhereNull(self::FIELD_LONGITUDE)
               ->orWhereIn(self::FIELD_GEOCODING_QUALITY, ['poor', 'very poor', 'failed'])
-              ->orWhereNull(self::FIELD_GEOCODING_QUALITY);
+              ->orWhereNull(self::FIELD_GEOCODING_QUALITY)
+              ->orWhere(self::FIELD_GEOCODING_SCORE, '<', 70);
         });
+    }
+
+    public function scopeByQuality($query, $quality)
+    {
+        $qualityMap = [
+            'excellent' => ['quality' => 'excellent', 'min_score' => 90],
+            'good' => ['quality' => 'good', 'min_score' => 80],
+            'fair' => ['quality' => 'fair', 'min_score' => 70],
+            'poor' => ['quality' => 'poor', 'min_score' => 0],
+        ];
+
+        if (isset($qualityMap[$quality])) {
+            return $query->where(self::FIELD_GEOCODING_QUALITY, $qualityMap[$quality]['quality']);
+        }
+
+        return $query;
     }
 
     public function scopeByWilayah($query, $kota = null, $kecamatan = null, $kelurahan = null)
