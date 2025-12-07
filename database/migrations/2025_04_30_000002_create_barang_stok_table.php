@@ -18,6 +18,8 @@ class CreateBarangStokTable extends Migration
             $table->string('barang_id', 10);
             $table->date('tanggal_stock_barang');
             $table->integer('stok')->default(0)->comment('Jumlah stok yang ditambahkan');
+            $table->integer('sisa_stok')->default(0)->comment('Sisa stok dari batch ini (untuk FIFO)');
+            $table->integer('stok_awal')->default(0)->comment('Backup jumlah awal untuk history');
             $table->text('catatan')->nullable()->comment('Catatan untuk stok ini');
             
             $table->timestamp('created_at')->useCurrent();
@@ -30,6 +32,9 @@ class CreateBarangStokTable extends Migration
                   ->references('barang_id')
                   ->on('barang')
                   ->onDelete('cascade');
+            
+            // Index for FIFO query performance
+            $table->index(['barang_id', 'tanggal_stock_barang'], 'idx_barang_tanggal_fifo');
             
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_general_ci';
