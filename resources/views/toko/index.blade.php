@@ -212,13 +212,6 @@
                                         </button>
                                     </div>
                                 </div>
-                                <small class="form-text">
-                                    <i class="fas fa-route text-info"></i> 
-                                    <strong>Cara Mudah:</strong> 
-                                    <span class="badge badge-light">1. Ketik Alamat Format Indonesia</span> → 
-                                    <span class="badge badge-light">2. Auto-Detect Kelurahan</span> → 
-                                    <span class="badge badge-light">3. Klik Lokasi Presisi di Peta</span>
-                                </small>
                                 <div class="invalid-feedback" id="error-latitude"></div>
                                 <div class="invalid-feedback" id="error-longitude"></div>
                             </div>
@@ -238,71 +231,6 @@
                                             <div class="text-center">
                                                 <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
                                                 <div>Memuat peta...</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <!-- Enhanced Instructions -->
-                                    <div class="card border-info">
-                                        <div class="card-body p-3">
-                                            <h6 class="card-title text-info mb-2">
-                                                <i class="fas fa-lightbulb"></i> Cara Penggunaan Format Indonesia:
-                                            </h6>
-                                            <div class="row text-sm">
-                                                <div class="col-12">
-                                                    <div class="d-flex align-items-start mb-1">
-                                                        <span class="badge badge-primary mr-2">1</span>
-                                                        <small><strong>Ketik alamat:</strong> Gunakan format Jl. [nama] No. [nomor], [Kelurahan], Kec. [Kecamatan], Kota [Kota]</small>
-                                                    </div>
-                                                    <div class="d-flex align-items-start mb-1">
-                                                        <span class="badge badge-warning mr-2">2</span>
-                                                        <small><strong>Auto-deteksi:</strong> Sistem akan mendeteksi kelurahan dan zoom peta ke area tersebut secara otomatis</small>
-                                                    </div>
-                                                    <div class="d-flex align-items-start">
-                                                        <span class="badge badge-success mr-2">3</span>
-                                                        <small><strong>Klik presisi:</strong> Klik pada lokasi exact di peta untuk menentukan koordinat final (marker merah)</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="mt-2 p-2 bg-light rounded">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-check-circle text-success"></i> 
-                                                    <strong>Contoh Format:</strong> "Jl. Ahmad Yani No. 20, Polowijen, Kec. Blimbing, Kota Malang"
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Map Controls and Legend -->
-                                    <div class="mt-2">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnCenterMalang">
-                                                    <i class="fas fa-bullseye"></i> Pusat Malang
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Marker Legend -->
-                                        <div class="card border-secondary mt-2">
-                                            <div class="card-body p-2">
-                                                <div class="d-flex justify-content-around text-center">
-                                                    <div class="flex-fill">
-                                                        <i class="fas fa-map-marker-alt fa-2x text-warning"></i>
-                                                        <div class="small mt-1">
-                                                            <strong>Marker Kuning</strong><br>
-                                                            <span class="text-muted">Preview (Auto)</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex-fill border-left">
-                                                        <i class="fas fa-map-marker-alt fa-2x text-danger"></i>
-                                                        <div class="small mt-1">
-                                                            <strong>Marker Merah</strong><br>
-                                                            <span class="text-muted">Final (Dipilih)</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
