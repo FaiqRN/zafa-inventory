@@ -30,20 +30,30 @@ class AuthServiceProvider extends ServiceProvider
             return in_array($user->role->nama_role, ['admin', 'ketua', 'AP']);
         });
 
+        // FRN bisa akses Inventory Optimization
+        Gate::define('view-inventory-optimization', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'FRN']);
+        });
+
         Gate::define('view-market-map', function ($user) {
-            return in_array($user->role->nama_role, ['admin', 'ketua']);
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'FRN']);
         });
 
         Gate::define('manage-users', function ($user) {
             return $user->role->nama_role === 'admin';
         });
 
+        // FRN bisa akses Manajemen User dan Pengaturan Market Map
+        Gate::define('manage-users-and-market-map', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'FRN']);
+        });
+
         Gate::define('manage-master-data', function ($user) {
-            return in_array($user->role->nama_role, ['admin', 'ketua', 'AP']);
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'AP', 'FRN']);
         });
 
         Gate::define('view-barang', function ($user) {
-            return in_array($user->role->nama_role, ['admin', 'ketua', 'karyawan', 'AP']);
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'karyawan', 'AP', 'FRN']);
         });
 
         Gate::define('view-reports', function ($user) {
@@ -53,6 +63,11 @@ class AuthServiceProvider extends ServiceProvider
         // AP bisa akses pengaturan partner performance
         Gate::define('manage-partner-performance-settings', function ($user) {
             return in_array($user->role->nama_role, ['admin', 'AP']);
+        });
+
+        // FRN bisa akses pengaturan market map
+        Gate::define('manage-market-map-settings', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'FRN']);
         });
     }
 }

@@ -96,8 +96,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
             Route::post('/generate-report', [PartnerPerformanceController::class, 'generateReport'])->name('generate-report');
         });
         
-        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION (admin/ketua only) =====
-        Route::prefix('inventory-optimization')->name('inventory-optimization.')->middleware('can:view-analytics')->group(function () {
+        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION (admin/ketua/FRN) =====
+        Route::prefix('inventory-optimization')->name('inventory-optimization.')->middleware('can:view-inventory-optimization')->group(function () {
             Route::get('/', [InventoryOptimizationController::class, 'index'])->name('index');
 
             // Recommendation Actions
@@ -231,7 +231,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ===============================
     // USER MANAGEMENT ROUTES (Menu Sistem)
     // ===============================
-    Route::group(['prefix' => 'user'], function() {
+    Route::group(['prefix' => 'user', 'middleware' => 'can:manage-users-and-market-map'], function() {
         Route::get('/', [UserController::class, 'index'])->name('user.index');
         Route::get('/data', [UserController::class, 'getData'])->name('user.data');
         Route::post('/', [UserController::class, 'store'])->name('user.store');
@@ -243,7 +243,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ===============================
     // MARKET MAP SETTINGS ROUTES (Menu Sistem)
     // ===============================
-    Route::group(['prefix' => 'market-map-settings', 'middleware' => 'can:manage-users'], function() {
+    Route::group(['prefix' => 'market-map-settings', 'middleware' => 'can:manage-market-map-settings'], function() {
         Route::get('/', [\App\Http\Controllers\MarketMapSettingController::class, 'index'])->name('market-map-settings.index');
         Route::post('/update', [\App\Http\Controllers\MarketMapSettingController::class, 'update'])->name('market-map-settings.update');
         Route::post('/reset', [\App\Http\Controllers\MarketMapSettingController::class, 'reset'])->name('market-map-settings.reset');
