@@ -70,12 +70,14 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ANALYTICS ROUTES - CORE 4 MODULES ONLY
     // ===============================
     Route::prefix('analytics')->name('analytics.')->group(function () {
-        // Main Analytics Dashboard - Overview Only
-        Route::get('/', [AnalyticsController::class, 'index'])->name('index');
-        Route::get('/api/overview', [AnalyticsController::class, 'getOverviewData'])->name('api.overview');
+        // Main Analytics Dashboard - Overview Only (admin/ketua only)
+        Route::middleware('can:view-analytics')->group(function () {
+            Route::get('/', [AnalyticsController::class, 'index'])->name('index');
+            Route::get('/api/overview', [AnalyticsController::class, 'getOverviewData'])->name('api.overview');
+        });
 
-        // ===== ANALYTICS 1: PARTNER PERFORMANCE =====
-        Route::prefix('partner-performance')->name('partner-performance.')->group(function () {
+        // ===== ANALYTICS 1: PARTNER PERFORMANCE (admin/ketua/AP) =====
+        Route::prefix('partner-performance')->name('partner-performance.')->middleware('can:view-partner-performance')->group(function () {
             Route::get('/', [PartnerPerformanceController::class, 'index'])->name('index');
             
             // API Routes
@@ -94,8 +96,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
             Route::post('/generate-report', [PartnerPerformanceController::class, 'generateReport'])->name('generate-report');
         });
         
-        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION =====
-        Route::prefix('inventory-optimization')->name('inventory-optimization.')->group(function () {
+        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION (admin/ketua only) =====
+        Route::prefix('inventory-optimization')->name('inventory-optimization.')->middleware('can:view-analytics')->group(function () {
             Route::get('/', [InventoryOptimizationController::class, 'index'])->name('index');
 
             // Recommendation Actions
@@ -117,8 +119,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
             Route::get('/export', [InventoryOptimizationController::class, 'export'])->name('export');
         });
         
-        // ===== ANALYTICS 3: PRODUCT VELOCITY =====
-        Route::prefix('product-velocity')->name('product-velocity.')->group(function () {
+        // ===== ANALYTICS 3: PRODUCT VELOCITY (admin/ketua only) =====
+        Route::prefix('product-velocity')->name('product-velocity.')->middleware('can:view-analytics')->group(function () {
             Route::get('/', [ProductVelocityController::class, 'index'])->name('index');
             Route::get('/export', [ProductVelocityController::class, 'export'])->name('export');
             Route::post('/optimize-portfolio', [ProductVelocityController::class, 'optimizePortfolio'])->name('optimize-portfolio');
@@ -126,8 +128,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
             Route::post('/recommend-discontinue/{barangId}', [ProductVelocityController::class, 'recommendDiscontinue'])->name('recommend-discontinue');
         });
         
-        // ===== ANALYTICS 4: PROFITABILITY ANALYSIS =====
-        Route::prefix('profitability-analysis')->name('profitability-analysis.')->group(function () {
+        // ===== ANALYTICS 4: PROFITABILITY ANALYSIS (admin/ketua only) =====
+        Route::prefix('profitability-analysis')->name('profitability-analysis.')->middleware('can:view-analytics')->group(function () {
             Route::get('/', [ProfitabilityController::class, 'index'])->name('index');
             Route::get('/export', [ProfitabilityController::class, 'export'])->name('export');
             Route::get('/identify-loss-makers', [ProfitabilityController::class, 'identifyLossMakers'])->name('identify-loss-makers');
@@ -251,7 +253,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ===============================
     // PARTNER PERFORMANCE SETTINGS ROUTES (Menu Sistem)
     // ===============================
-    Route::group(['prefix' => 'partner-performance-settings', 'middleware' => 'can:manage-users'], function() {
+    Route::group(['prefix' => 'partner-performance-settings', 'middleware' => 'can:manage-partner-performance-settings'], function() {
         Route::get('/', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'index'])->name('partner-performance-settings.index');
         Route::post('/update', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'update'])->name('partner-performance-settings.update');
         Route::post('/reset', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'resetDefaults'])->name('partner-performance-settings.reset');

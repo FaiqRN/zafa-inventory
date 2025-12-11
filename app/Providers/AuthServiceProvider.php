@@ -25,6 +25,11 @@ class AuthServiceProvider extends ServiceProvider
             return in_array($user->role->nama_role, ['admin', 'ketua']);
         });
 
+        // AP hanya bisa akses Partner Performance
+        Gate::define('view-partner-performance', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'AP']);
+        });
+
         Gate::define('view-market-map', function ($user) {
             return in_array($user->role->nama_role, ['admin', 'ketua']);
         });
@@ -34,15 +39,20 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('manage-master-data', function ($user) {
-            return in_array($user->role->nama_role, ['admin', 'ketua']);
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'AP']);
         });
 
         Gate::define('view-barang', function ($user) {
-            return in_array($user->role->nama_role, ['admin', 'ketua', 'karyawan']);
+            return in_array($user->role->nama_role, ['admin', 'ketua', 'karyawan', 'AP']);
         });
 
         Gate::define('view-reports', function ($user) {
             return in_array($user->role->nama_role, ['admin', 'ketua']);
+        });
+
+        // AP bisa akses pengaturan partner performance
+        Gate::define('manage-partner-performance-settings', function ($user) {
+            return in_array($user->role->nama_role, ['admin', 'AP']);
         });
     }
 }

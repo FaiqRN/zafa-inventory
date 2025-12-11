@@ -96,7 +96,7 @@
                 </ul>
             </li>
 
-            <!-- Analytics -->
+            <!-- Analytics (Full Access for admin/ketua) -->
             @can('view-analytics')
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'active' : '' }}">
@@ -134,6 +134,29 @@
                 </ul>
             </li>
             @endcan
+
+            <!-- Report (Partner Performance Only for AP) -->
+            @cannot('view-analytics')
+                @can('view-partner-performance')
+                <li class="nav-item has-treeview {{ ($activemenu == 'analytics.partner-performance')? 'menu-open' : '' }}">
+                    <a href="#" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
+                        <i class="nav-icon fas fa-brain"></i>
+                        <p>
+                            Report
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{{ route('analytics.partner-performance.index') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Partner Performance</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                @endcan
+            @endcannot
             
             <!-- Market Map -->
             @can('view-market-map')
@@ -153,7 +176,7 @@
                 </a>
             </li>
 
-            <!-- Sistem Pengaturan -->
+            <!-- Sistem Pengaturan (Full Access for Admin) -->
             @can('manage-users')
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'market-map-settings', 'partner-performance-settings', 'seasonal-inventory-settings']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['user', 'market-map-settings', 'partner-performance-settings', 'seasonal-inventory-settings']))? 'active' : '' }}">
@@ -191,6 +214,29 @@
                 </ul>
             </li>
             @endcan
+
+            <!-- Sistem Pengaturan (Partner Performance Only for AP) -->
+            @cannot('manage-users')
+                @can('manage-partner-performance-settings')
+                <li class="nav-item has-treeview {{ ($activemenu == 'partner-performance-settings')? 'menu-open' : '' }}">
+                    <a href="#" class="nav-link {{ ($activemenu == 'partner-performance-settings')? 'active' : '' }}">
+                        <i class="nav-icon fas fa-users-cog"></i>
+                        <p>
+                            Sistem Pengaturan
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{{ route('partner-performance-settings.index') }}" class="nav-link {{ ($activemenu == 'partner-performance-settings')? 'active' : '' }}">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Pengaturan Partner Performance</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                @endcan
+            @endcannot
 
         </ul>
     </nav>
