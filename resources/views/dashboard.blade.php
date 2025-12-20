@@ -181,6 +181,66 @@
 
 /* ========== END STATS CARD STYLES ========== */
 
+/* ========== RESPONSIVE DASHBOARD ========== */
+@media (max-width: 991.98px) {
+    .col-md-8, .col-md-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .stats-card {
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+    
+    .stats-number {
+        font-size: 1.8rem;
+    }
+    
+    .stats-label {
+        font-size: 0.85rem;
+    }
+    
+    .stats-card .stats-icon {
+        font-size: 2.5rem;
+        right: 15px;
+    }
+    
+    .chart-container {
+        height: 220px;
+        padding: 10px;
+    }
+    
+    .dashboard-card .card-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px;
+    }
+    
+    .dashboard-card .card-header .card-tools {
+        width: 100%;
+    }
+    
+    .dashboard-card .card-header .card-tools select {
+        width: 100% !important;
+    }
+    
+    .table-responsive {
+        max-height: 300px !important;
+    }
+    
+    .empty-state {
+        padding: 25px 15px;
+    }
+    
+    .empty-state i {
+        font-size: 2rem;
+    }
+}
+/* ========== END RESPONSIVE DASHBOARD ========== */
+
 @keyframes fadeInUp {
     from {
         opacity: 0;

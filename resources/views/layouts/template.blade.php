@@ -30,6 +30,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   <!-- Theme style -->
   <link rel="stylesheet" href="{{asset('adminlte/dist/css/adminlte.min.css')}}">
+  <!-- ZafaSys Responsive Styles -->
+  <link rel="stylesheet" href="{{asset('css/responsive.css')}}">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -656,6 +658,56 @@
         $('body').addClass('sidebar-collapse');
       }
     });
+
+    // RESPONSIVE: Auto-collapse sidebar on mobile
+    function handleResponsive() {
+      if (window.innerWidth < 768) {
+        $('body').addClass('sidebar-collapse');
+        $('body').addClass('sidebar-closed');
+      }
+    }
+    
+    // Run on load
+    handleResponsive();
+    
+    // Run on resize
+    $(window).on('resize', function() {
+      handleResponsive();
+    });
+
+    // Close sidebar when clicking outside on mobile
+    $(document).on('click', function(e) {
+      if (window.innerWidth < 768) {
+        if (!$(e.target).closest('.main-sidebar').length && 
+            !$(e.target).closest('[data-widget="pushmenu"]').length) {
+          if (!$('body').hasClass('sidebar-collapse')) {
+            $('body').addClass('sidebar-collapse');
+          }
+        }
+      }
+    });
+
+    // Make DataTables responsive by default
+    if ($.fn.DataTable) {
+      $.extend(true, $.fn.dataTable.defaults, {
+        responsive: true,
+        autoWidth: false,
+        language: {
+          search: "Cari:",
+          lengthMenu: "Tampilkan _MENU_ data",
+          info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+          infoEmpty: "Tidak ada data",
+          infoFiltered: "(difilter dari _MAX_ total data)",
+          zeroRecords: "Tidak ada data yang cocok",
+          paginate: {
+            first: "Pertama",
+            last: "Terakhir",
+            next: "Selanjutnya",
+            previous: "Sebelumnya"
+          }
+        }
+      });
+    }
   });
 </script>
 

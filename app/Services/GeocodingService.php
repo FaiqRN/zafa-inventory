@@ -107,6 +107,8 @@ class GeocodingService
 
     /**
      * Try internal street database for lookup coordinates dengan NLP enhanced + OSM segments
+     * Urutan pencarian: Kota → Kecamatan → Kelurahan → Jalan
+     * Ini penting karena ada nama jalan yang sama di Kota Malang dan Kabupaten Malang
      */
     private static function tryInternalStreetDatabase($address, $detectedKelurahan = null)
     {
@@ -122,39 +124,96 @@ class GeocodingService
                 return $poiResult;
             }
 
-            // Cari kelurahan ID jika ada detected kelurahan
+            // ============================================================
+            // URUTAN PENCARIAN: Kota → Kecamatan → Kelurahan → Jalan
+            // Ini memastikan jalan dengan nama sama di lokasi berbeda
+            // dapat dibedakan (misal: Jl. Veteran di Kota vs Kabupaten Malang)
+            // ============================================================
+
             $kelurahanId = null;
+            $kelurahanContext = null;
+            $searchContext = [];
+
+            // STEP 1: Identifikasi Kota/Kabupaten
+            $kotaName = null;
+            if (!empty($parsedAddress['kota'])) {
+                $kotaName = strtolower(trim($parsedAddress['kota']));
+                $searchContext['kota'] = $kotaName;
+                Log::info("Internal Street Database: Kota context - {$kotaName}");
+            }
+
+            // STEP 2: Identifikasi Kecamatan
+            $kecamatanName = null;
+            if (!empty($parsedAddress['kecamatan'])) {
+                $kecamatanName = strtolower(trim($parsedAddress['kecamatan']));
+                $searchContext['kecamatan'] = $kecamatanName;
+                Log::info("Internal Street Database: Kecamatan context - {$kecamatanName}");
+            }
+
+            // STEP 3: Identifikasi Kelurahan dengan konteks Kota & Kecamatan
+            $kelurahanName = null;
+            
+            // Prioritas 1: Dari detected kelurahan (parameter)
             if ($detectedKelurahan && !empty($detectedKelurahan['kelurahan'])) {
-                $kelurahan = \App\Models\KelurahanCoordinate::active()
-                    ->where(function($q) use ($detectedKelurahan) {
-                        $kelName = strtolower($detectedKelurahan['kelurahan']);
-                        $q->whereRaw('LOWER(nama) = ?', [$kelName])
-                          ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelName]);
-                    })
-                    ->first();
-                if ($kelurahan) {
-                    $kelurahanId = $kelurahan->id;
-                    Log::info('Internal Street Database: Found kelurahan context - ' . $kelurahan->nama);
+                $kelurahanName = strtolower(trim($detectedKelurahan['kelurahan']));
+            }
+            // Prioritas 2: Dari parsed address
+            elseif (!empty($parsedAddress['kelurahan'])) {
+                $kelurahanName = strtolower(trim($parsedAddress['kelurahan']));
+            }
+
+            if ($kelurahanName) {
+                $searchContext['kelurahan'] = $kelurahanName;
+                
+                // Build query dengan konteks hierarki: Kota → Kecamatan → Kelurahan
+                $kelurahanQuery = \App\Models\KelurahanCoordinate::active()
+                    ->where(function($q) use ($kelurahanName) {
+                        $q->whereRaw('LOWER(nama) = ?', [$kelurahanName])
+                          ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelurahanName])
+                          ->orWhereRaw('LOWER(nama) LIKE ?', ["%{$kelurahanName}%"]);
+                    });
+
+                // Filter by Kota jika ada
+                if ($kotaName) {
+                    $kelurahanQuery->where(function($q) use ($kotaName) {
+                        $q->whereRaw('LOWER(kota) LIKE ?', ["%{$kotaName}%"]);
+                    });
+                }
+
+                // Filter by Kecamatan jika ada
+                if ($kecamatanName) {
+                    $kelurahanQuery->where(function($q) use ($kecamatanName) {
+                        $q->whereRaw('LOWER(kecamatan) LIKE ?', ["%{$kecamatanName}%"]);
+                    });
+                }
+
+                $kelurahanContext = $kelurahanQuery->first();
+
+                // Jika tidak ditemukan dengan filter ketat, coba tanpa filter kota/kecamatan
+                if (!$kelurahanContext && ($kotaName || $kecamatanName)) {
+                    Log::info('Internal Street Database: Relaxing kota/kecamatan filter for kelurahan search');
+                    $kelurahanContext = \App\Models\KelurahanCoordinate::active()
+                        ->where(function($q) use ($kelurahanName) {
+                            $q->whereRaw('LOWER(nama) = ?', [$kelurahanName])
+                              ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelurahanName]);
+                        })
+                        ->first();
+                }
+
+                if ($kelurahanContext) {
+                    $kelurahanId = $kelurahanContext->id;
+                    Log::info("Internal Street Database: Found kelurahan - {$kelurahanContext->nama}, {$kelurahanContext->kecamatan}, {$kelurahanContext->kota}");
                 }
             }
 
-            // Jika tidak ada detected kelurahan, coba extract dari alamat
-            if (!$kelurahanId && !empty($parsedAddress['kelurahan'])) {
-                $kelurahan = \App\Models\KelurahanCoordinate::active()
-                    ->where(function($q) use ($parsedAddress) {
-                        $kelName = strtolower($parsedAddress['kelurahan']);
-                        $q->whereRaw('LOWER(nama) LIKE ?', ["%{$kelName}%"])
-                          ->orWhereRaw('LOWER(nama_normalized) LIKE ?', ["%{$kelName}%"]);
-                    })
-                    ->first();
-                if ($kelurahan) {
-                    $kelurahanId = $kelurahan->id;
-                }
-            }
+            // STEP 4: Cari Jalan dengan konteks wilayah
+            Log::info('Internal Street Database: Search context', $searchContext);
 
             // Fuzzy search dengan konteks kelurahan - threshold lebih rendah untuk alamat panjang
             $minScore = strlen($address) > 50 ? 65 : 70;
-            $streets = \App\Models\Jalan::fuzzySearch($address, $kelurahanId, 3, $minScore);
+            
+            // Gunakan fuzzy search dengan konteks wilayah yang sudah diidentifikasi
+            $streets = self::searchStreetsWithContext($address, $parsedAddress, $kelurahanId, $kotaName, $kecamatanName, $minScore);
 
             if ($streets->isNotEmpty()) {
                 $jalan = $streets->first();
@@ -220,6 +279,165 @@ class GeocodingService
             Log::warning('Internal Street Database lookup failed: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Search streets dengan konteks wilayah (Kota → Kecamatan → Kelurahan)
+     * Memastikan jalan dengan nama sama di lokasi berbeda dapat dibedakan
+     */
+    private static function searchStreetsWithContext($address, $parsedAddress, $kelurahanId, $kotaName, $kecamatanName, $minScore = 70)
+    {
+        // Extract nama jalan dari alamat
+        $streetName = !empty($parsedAddress['street']) ? $parsedAddress['street'] : \App\Models\Jalan::extractStreetNameFromAddress($address);
+        
+        if (empty($streetName)) {
+            // Fallback ke fuzzy search biasa jika tidak ada nama jalan
+            return \App\Models\Jalan::fuzzySearch($address, $kelurahanId, 5, $minScore);
+        }
+
+        // Ambil kota_type untuk membedakan Kota vs Kabupaten
+        $kotaType = $parsedAddress['kota_type'] ?? null;
+
+        Log::info("searchStreetsWithContext: Looking for street '{$streetName}' with context - kota: {$kotaName} (type: {$kotaType}), kecamatan: {$kecamatanName}, kelurahan_id: {$kelurahanId}");
+
+        // Build query dengan prioritas konteks wilayah
+        $query = \App\Models\Jalan::active()
+            ->with('kelurahan')
+            ->searchByName($streetName);
+
+        // Ambil semua kandidat
+        $candidates = $query->limit(50)->get();
+
+        if ($candidates->isEmpty()) {
+            // Coba dengan searchByAddress jika searchByName tidak menemukan
+            $candidates = \App\Models\Jalan::active()
+                ->with('kelurahan')
+                ->searchByAddress($address)
+                ->limit(50)
+                ->get();
+        }
+
+        if ($candidates->isEmpty()) {
+            Log::info('searchStreetsWithContext: No candidates found');
+            return collect();
+        }
+
+        // Score setiap kandidat dengan mempertimbangkan konteks wilayah
+        $scoredCandidates = $candidates->map(function($jalan) use ($address, $kelurahanId, $kotaName, $kotaType, $kecamatanName) {
+            // Base score dari fuzzy matching nama jalan
+            $baseScore = $jalan->advancedFuzzyMatchScore($address, $kelurahanId);
+            
+            // Bonus untuk konteks wilayah yang cocok
+            $contextBonus = 0;
+            $contextMatches = [];
+
+            // Cek apakah jalan punya relasi kelurahan
+            $hasKelurahan = $jalan->kelurahan !== null;
+            $jalanKota = $hasKelurahan ? strtolower($jalan->kelurahan->kota ?? '') : '';
+
+            // PENTING: Cek apakah Kota vs Kabupaten cocok
+            if ($kotaName && $kotaType) {
+                // Deteksi tipe kota dari data jalan
+                $isKotaMalang = str_contains($jalanKota, 'kota') && str_contains($jalanKota, 'malang');
+                $isKabMalang = str_contains($jalanKota, 'kabupaten') && str_contains($jalanKota, 'malang');
+                
+                // Jika user mencari di "Kota Malang"
+                if ($kotaType === 'kota' && str_contains(strtolower($kotaName), 'malang')) {
+                    if ($isKotaMalang) {
+                        $contextBonus += 25; // Bonus besar untuk Kota Malang
+                        $contextMatches[] = 'kota_exact';
+                    } elseif ($isKabMalang) {
+                        $contextBonus -= 30; // Penalty besar untuk Kabupaten Malang
+                        $contextMatches[] = 'kota_mismatch';
+                    } elseif (!$hasKelurahan) {
+                        // Jalan tanpa kelurahan - beri penalty sedang
+                        $contextBonus -= 15;
+                        $contextMatches[] = 'no_kelurahan';
+                    }
+                }
+                // Jika user mencari di "Kabupaten Malang"
+                elseif ($kotaType === 'kabupaten' && str_contains(strtolower($kotaName), 'malang')) {
+                    if ($isKabMalang) {
+                        $contextBonus += 25;
+                        $contextMatches[] = 'kota_exact';
+                    } elseif ($isKotaMalang) {
+                        $contextBonus -= 30;
+                        $contextMatches[] = 'kota_mismatch';
+                    } elseif (!$hasKelurahan) {
+                        $contextBonus -= 15;
+                        $contextMatches[] = 'no_kelurahan';
+                    }
+                }
+                // Untuk kota lain (bukan Malang)
+                elseif ($kotaName) {
+                    if (str_contains($jalanKota, $kotaName) || str_contains($kotaName, $jalanKota)) {
+                        $contextBonus += 15;
+                        $contextMatches[] = 'kota';
+                    } elseif ($hasKelurahan) {
+                        $contextBonus -= 10;
+                    }
+                }
+            }
+            // Fallback jika tidak ada kota_type tapi ada kotaName
+            elseif ($kotaName && $hasKelurahan) {
+                if (str_contains($jalanKota, $kotaName) || str_contains($kotaName, $jalanKota)) {
+                    $contextBonus += 15;
+                    $contextMatches[] = 'kota';
+                } else {
+                    $contextBonus -= 10;
+                }
+            }
+
+            // Bonus untuk Kecamatan yang cocok
+            if ($kecamatanName && $hasKelurahan) {
+                $jalanKecamatan = strtolower($jalan->kelurahan->kecamatan ?? '');
+                if (str_contains($jalanKecamatan, $kecamatanName) || str_contains($kecamatanName, $jalanKecamatan)) {
+                    $contextBonus += 12;
+                    $contextMatches[] = 'kecamatan';
+                }
+            }
+
+            // Bonus untuk Kelurahan yang cocok
+            if ($kelurahanId && $jalan->kelurahan_id == $kelurahanId) {
+                $contextBonus += 10;
+                $contextMatches[] = 'kelurahan';
+            }
+
+            // Final score
+            $finalScore = min(100, max(0, $baseScore + $contextBonus));
+            
+            $jalan->match_score = $finalScore;
+            $jalan->base_score = $baseScore;
+            $jalan->context_bonus = $contextBonus;
+            $jalan->context_matches = $contextMatches;
+            $jalan->debug_kota = $jalanKota;
+
+            return $jalan;
+        });
+
+        // Filter dan sort berdasarkan score
+        $results = $scoredCandidates
+            ->filter(fn($jalan) => $jalan->match_score >= $minScore)
+            ->sortByDesc('match_score')
+            ->take(5);
+
+        // Log semua kandidat untuk debugging
+        if ($scoredCandidates->isNotEmpty()) {
+            Log::info("searchStreetsWithContext: All candidates scored:");
+            foreach ($scoredCandidates->sortByDesc('match_score')->take(10) as $candidate) {
+                $kelInfo = $candidate->kelurahan ? "{$candidate->kelurahan->kecamatan}, {$candidate->kelurahan->kota}" : 'NO_KELURAHAN';
+                Log::info("  - {$candidate->nama_jalan} | score:{$candidate->match_score} base:{$candidate->base_score} bonus:{$candidate->context_bonus} | {$kelInfo} | ctx:" . implode(',', $candidate->context_matches ?: []));
+            }
+        }
+
+        if ($results->isNotEmpty()) {
+            $best = $results->first();
+            Log::info("searchStreetsWithContext: SELECTED - {$best->nama_jalan} (score: {$best->match_score}, base: {$best->base_score}, bonus: {$best->context_bonus}, context: " . implode(',', $best->context_matches) . ")");
+        } else {
+            Log::info("searchStreetsWithContext: No results passed minScore filter ({$minScore})");
+        }
+
+        return $results->values();
     }
 
     /**
@@ -359,6 +577,7 @@ class GeocodingService
             'kelurahan' => '',
             'kecamatan' => '',
             'kota' => '',
+            'kota_type' => '', // 'kota' atau 'kabupaten' - penting untuk membedakan Kota vs Kabupaten Malang
             'provinsi' => '',
             'postal_code' => '',
             'raw' => $address
@@ -398,10 +617,17 @@ class GeocodingService
             }
         }
 
-        // Extract Kota/Kabupaten
-        if (preg_match('/(?:kota|kabupaten|kab\.?)\s+([^,]+)/i', $normalized, $matches)) {
+        // Extract Kota/Kabupaten - perbaikan regex untuk handle koma dan spasi
+        // Pattern: "Kota Malang" atau "Kabupaten Malang" atau "Kab. Malang"
+        if (preg_match('/(?:kota|kabupaten|kab\.?)\s+([a-zA-Z\s]+?)(?:,|$|\s+(?:jawa|provinsi|prov\.))/i', $normalized, $matches)) {
             $result['kota'] = trim($matches[1]);
-            $normalized = preg_replace('/(?:kota|kabupaten|kab\.?)\s+[^,]+/i', '', $normalized);
+            // Simpan juga tipe (kota/kabupaten) untuk membedakan
+            if (preg_match('/^kota\s/i', $matches[0])) {
+                $result['kota_type'] = 'kota';
+            } else {
+                $result['kota_type'] = 'kabupaten';
+            }
+            $normalized = preg_replace('/(?:kota|kabupaten|kab\.?)\s+[a-zA-Z\s]+?(?=,|$|\s+(?:jawa|provinsi|prov\.))/i', '', $normalized);
         }
 
         // Extract Kecamatan
@@ -466,6 +692,7 @@ class GeocodingService
 
     /**
      * Try internal kelurahan database for lookup coordinates dengan fuzzy matching
+     * Urutan pencarian: Kota → Kecamatan → Kelurahan
      */
     private static function tryInternalKelurahanDatabase($address, $detectedKelurahan = null)
     {
@@ -473,56 +700,110 @@ class GeocodingService
             $kelurahan = null;
             $matchScore = 0;
 
-            // 1. If detected kelurahan is provided, try exact match first
+            // Parse alamat untuk extract konteks wilayah
+            $parsedAddress = self::parseIndonesianAddressNLP($address);
+            
+            $kotaName = !empty($parsedAddress['kota']) ? strtolower(trim($parsedAddress['kota'])) : null;
+            $kecamatanName = !empty($parsedAddress['kecamatan']) ? strtolower(trim($parsedAddress['kecamatan'])) : null;
+            $kelurahanName = null;
+
+            // Prioritas 1: Dari detected kelurahan (parameter)
             if ($detectedKelurahan && !empty($detectedKelurahan['kelurahan'])) {
                 $kelurahanName = strtolower(trim($detectedKelurahan['kelurahan']));
+            }
+            // Prioritas 2: Dari parsed address
+            elseif (!empty($parsedAddress['kelurahan'])) {
+                $kelurahanName = strtolower(trim($parsedAddress['kelurahan']));
+            }
+
+            Log::info("Internal Kelurahan Database: Search context - kota: {$kotaName}, kecamatan: {$kecamatanName}, kelurahan: {$kelurahanName}");
+
+            // 1. Cari dengan konteks hierarki: Kota → Kecamatan → Kelurahan
+            if ($kelurahanName) {
+                $query = \App\Models\KelurahanCoordinate::active()
+                    ->where(function($q) use ($kelurahanName) {
+                        $q->whereRaw('LOWER(nama) = ?', [$kelurahanName])
+                          ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelurahanName])
+                          ->orWhereRaw('LOWER(nama) LIKE ?', ["%{$kelurahanName}%"]);
+                    });
+
+                // Filter by Kota jika ada (penting untuk membedakan Kota vs Kabupaten Malang)
+                if ($kotaName) {
+                    $query->where(function($q) use ($kotaName) {
+                        $q->whereRaw('LOWER(kota) LIKE ?', ["%{$kotaName}%"]);
+                    });
+                }
+
+                // Filter by Kecamatan jika ada
+                if ($kecamatanName) {
+                    $query->where(function($q) use ($kecamatanName) {
+                        $q->whereRaw('LOWER(kecamatan) LIKE ?', ["%{$kecamatanName}%"]);
+                    });
+                }
+
+                $kelurahan = $query->first();
+
+                if ($kelurahan) {
+                    $matchScore = 100;
+                    Log::info("Internal Database: Found kelurahan with context - {$kelurahan->nama}, {$kelurahan->kecamatan}, {$kelurahan->kota}");
+                }
+            }
+
+            // 2. Jika tidak ditemukan dengan filter ketat, coba tanpa filter kota/kecamatan
+            if (!$kelurahan && $kelurahanName && ($kotaName || $kecamatanName)) {
+                Log::info('Internal Database: Relaxing kota/kecamatan filter');
                 $kelurahan = \App\Models\KelurahanCoordinate::active()
-                    ->where(function($query) use ($kelurahanName) {
-                        $query->whereRaw('LOWER(nama) = ?', [$kelurahanName])
-                              ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelurahanName]);
+                    ->where(function($q) use ($kelurahanName) {
+                        $q->whereRaw('LOWER(nama) = ?', [$kelurahanName])
+                          ->orWhereRaw('LOWER(nama_normalized) = ?', [$kelurahanName]);
                     })
                     ->first();
 
                 if ($kelurahan) {
-                    $matchScore = 100;
-                    Log::info('Internal Database: Found exact kelurahan match - ' . $kelurahan->nama);
+                    $matchScore = 85; // Lower score karena tidak ada konteks wilayah
+                    Log::info("Internal Database: Found kelurahan without context - {$kelurahan->nama}");
                 }
             }
 
-            // 2. If not found, try fuzzy matching with NLP parsed kelurahan
-            if (!$kelurahan) {
-                $parsedAddress = self::parseIndonesianAddressNLP($address);
-                $kelurahanFromParsed = !empty($parsedAddress['kelurahan']) ? strtolower($parsedAddress['kelurahan']) : null;
+            // 3. Fuzzy matching jika masih tidak ditemukan
+            if (!$kelurahan && $kelurahanName) {
+                $allKelurahan = \App\Models\KelurahanCoordinate::active()->get();
 
-                if ($kelurahanFromParsed) {
-                    // Get all active kelurahan for fuzzy matching
-                    $allKelurahan = \App\Models\KelurahanCoordinate::active()->get();
+                $bestMatch = null;
+                $bestScore = 0;
 
-                    $bestMatch = null;
-                    $bestScore = 0;
+                foreach ($allKelurahan as $kel) {
+                    $kelNama = strtolower($kel->nama);
+                    $kelNormalized = strtolower($kel->nama_normalized ?? $kel->nama);
 
-                    foreach ($allKelurahan as $kel) {
-                        $kelNama = strtolower($kel->nama);
-                        $kelNormalized = strtolower($kel->nama_normalized ?? $kel->nama);
+                    // Calculate fuzzy score
+                    $score = self::calculateKelurahanFuzzyScore($kelurahanName, $kelNama, $kelNormalized);
 
-                        // Calculate fuzzy score
-                        $score = self::calculateKelurahanFuzzyScore($kelurahanFromParsed, $kelNama, $kelNormalized);
-
-                        if ($score > $bestScore && $score >= 70) {
-                            $bestScore = $score;
-                            $bestMatch = $kel;
-                        }
+                    // Bonus untuk konteks wilayah yang cocok
+                    if ($kotaName && str_contains(strtolower($kel->kota ?? ''), $kotaName)) {
+                        $score += 10;
+                    } elseif ($kotaName) {
+                        $score -= 5; // Penalty jika kota tidak cocok
                     }
 
-                    if ($bestMatch) {
-                        $kelurahan = $bestMatch;
-                        $matchScore = $bestScore;
-                        Log::info("Internal Database: Found fuzzy kelurahan match - {$kelurahan->nama} (score: {$matchScore})");
+                    if ($kecamatanName && str_contains(strtolower($kel->kecamatan ?? ''), $kecamatanName)) {
+                        $score += 5;
                     }
+
+                    if ($score > $bestScore && $score >= 70) {
+                        $bestScore = $score;
+                        $bestMatch = $kel;
+                    }
+                }
+
+                if ($bestMatch) {
+                    $kelurahan = $bestMatch;
+                    $matchScore = min(100, $bestScore);
+                    Log::info("Internal Database: Found fuzzy kelurahan match - {$kelurahan->nama} (score: {$matchScore})");
                 }
             }
 
-            // 3. Last resort - search kelurahan name in full address
+            // 4. Last resort - search kelurahan name in full address
             if (!$kelurahan) {
                 $addressLower = strtolower($address);
                 $addressNormalized = preg_replace('/[^a-z0-9]/', '', $addressLower);
@@ -532,11 +813,16 @@ class GeocodingService
                 foreach ($allKelurahan as $kel) {
                     $kelNormalized = preg_replace('/[^a-z0-9]/', '', strtolower($kel->nama));
 
-                    // Check if kelurahan name is contained in address
                     if (strlen($kelNormalized) >= 4 && str_contains($addressNormalized, $kelNormalized)) {
-                        // Calculate position score - earlier position = better
                         $pos = strpos($addressNormalized, $kelNormalized);
                         $posScore = max(0, 80 - ($pos / strlen($addressNormalized) * 20));
+
+                        // Bonus/penalty untuk konteks wilayah
+                        if ($kotaName && str_contains(strtolower($kel->kota ?? ''), $kotaName)) {
+                            $posScore += 10;
+                        } elseif ($kotaName) {
+                            $posScore -= 5;
+                        }
 
                         if ($posScore > $matchScore) {
                             $kelurahan = $kel;
