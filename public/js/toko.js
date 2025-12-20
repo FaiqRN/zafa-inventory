@@ -1713,49 +1713,9 @@ $(document).ready(function () {
      * @param {string} message - Message to display
      */
     function showSearchStatus(type, message) {
-        const statusDiv = $('#addressSearchStatus');
-
-        // Support multiple status types with appropriate styling
-        const typeClasses = {
-            'searching': 'alert-info',
-            'success': 'alert-success',
-            'warning': 'alert-warning',
-            'info': 'alert-primary',
-            'error': 'alert-danger'
-        };
-
-        // Show appropriate icon for each status
-        const typeIcons = {
-            'searching': 'fas fa-spinner fa-spin',
-            'success': 'fas fa-check-circle',
-            'warning': 'fas fa-exclamation-triangle',
-            'info': 'fas fa-info-circle',
-            'error': 'fas fa-times-circle'
-        };
-
-        // Display message with formatting
-        statusDiv.removeClass('alert-info alert-success alert-warning alert-primary alert-danger')
-            .addClass(`alert ${typeClasses[type]} alert-dismissible`)
-            .html(`
-                   <i class="${typeIcons[type]}"></i> ${message}
-                   <button type="button" class="close" data-dismiss="alert">
-                       <span>&times;</span>
-                   </button>
-               `).show();
-
-        // Auto-hide for success messages (after 10s)
-        // Keep visible for warnings and errors
-        if (type === 'success') {
-            setTimeout(() => {
-                statusDiv.fadeOut();
-            }, 10000);
-        } else if (type === 'info') {
-            // Info messages also auto-hide but after longer duration
-            setTimeout(() => {
-                statusDiv.fadeOut();
-            }, 12000);
-        }
-        // Note: 'searching', 'warning', and 'error' types stay visible until dismissed
+        // Disabled - tidak menampilkan status apapun
+        console.log(`📢 Search status (hidden): ${type} - ${message}`);
+        return;
     }
 
     // ========================================
@@ -1882,12 +1842,14 @@ $(document).ready(function () {
      * @param {object} kelurahan - Kelurahan object with name, kecamatan, kota, score
      */
     function updateDetectedKelurahanInfo(kelurahan) {
+        // DISABLED: Hide info box display - only keep auto-fill functionality
+        $('#detectedKelurahanInfo').hide();
+        
         if (!kelurahan) {
-            $('#detectedKelurahanInfo').hide();
             return;
         }
 
-        console.log('📋 Updating detected kelurahan info display');
+        console.log('📋 Processing detected kelurahan (display disabled)');
 
         // Parse alamat untuk mengekstrak informasi wilayah menggunakan parseIndonesianAddress()
         const alamat = $('#alamat').val();
@@ -1902,51 +1864,10 @@ $(document).ready(function () {
 
         console.log('Using - Kota:', kota, 'Kecamatan:', kecamatan, 'Kelurahan:', kelurahanName);
 
-        // Determine confidence badge class
-        let badgeClass = 'badge-success';
-        let confidenceText = 'Tinggi';
-
-        if (kelurahan.score >= 75) {
-            badgeClass = 'badge-success';
-            confidenceText = 'Tinggi';
-        } else if (kelurahan.score >= 65) {
-            badgeClass = 'badge-warning';
-            confidenceText = 'Sedang';
-        } else {
-            badgeClass = 'badge-danger';
-            confidenceText = 'Rendah';
-        }
-
-        const infoHtml = `
-            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <h6 class="alert-heading">
-                    <i class="fas fa-map-marked-alt"></i> Kelurahan Terdeteksi
-                </h6>
-                <hr>
-                <p class="mb-2">
-                    <strong>Kelurahan:</strong> 
-                    <span class="badge badge-primary">${kelurahan.name}</span>
-                </p>
-                <p class="mb-2">
-                    <strong>Kecamatan:</strong> ${kelurahan.data.kecamatan}<br>
-                    <strong>Kota:</strong> ${kelurahan.data.kota}
-                </p>
-                <p class="mb-0">
-                    <strong>Confidence:</strong> 
-                    <span class="badge ${badgeClass}">${confidenceText} (${kelurahan.score}%)</span>
-                </p>
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
-
-        $('#detectedKelurahanInfo').html(infoHtml).show();
-
-        // Auto-set dropdown wilayah dengan improved matching
+        // Auto-set dropdown wilayah dengan improved matching (keep this functionality)
         setWilayahFromDetection(kota, kecamatan, kelurahanName);
 
-        console.log('✅ Detected kelurahan info updated');
+        console.log('✅ Detected kelurahan processed (display disabled)');
     }
 
     // ========================================
@@ -2331,40 +2252,9 @@ $(document).ready(function () {
      * @param {string} message - Notification message
      */
     function showWilayahNotification(type, message) {
-        const typeClasses = {
-            'success': 'alert-success',
-            'warning': 'alert-warning',
-            'info': 'alert-info'
-        };
-
-        const typeIcons = {
-            'success': 'fas fa-check-circle',
-            'warning': 'fas fa-exclamation-triangle',
-            'info': 'fas fa-info-circle'
-        };
-
-        const notificationHtml = `
-            <div class="alert ${typeClasses[type]} alert-dismissible fade show" role="alert">
-                <i class="${typeIcons[type]}"></i> ${message}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
-
-        // Show notification below detected kelurahan info
-        $('#detectedKelurahanInfo').after(notificationHtml);
-
-        // Auto-hide after 5 seconds for success notifications
-        if (type === 'success') {
-            setTimeout(function () {
-                $('#detectedKelurahanInfo').next('.alert').fadeOut(function () {
-                    $(this).remove();
-                });
-            }, 5000);
-        }
-
-        console.log(`📢 Wilayah notification shown: ${type} - ${message}`);
+        // Disabled - hanya log ke console tanpa menampilkan alert
+        console.log(`📢 Wilayah notification (hidden): ${type} - ${message}`);
+        return; // Early return - tidak menampilkan alert
     }
 
     // ========================================
@@ -3675,19 +3565,42 @@ $(document).ready(function () {
     }
 
     function showAlert(type, message) {
-        const alert = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            </div>
-        `;
+        // Mapping type ke SweetAlert2 icon
+        const iconMap = {
+            'danger': 'error',
+            'warning': 'warning',
+            'success': 'success',
+            'info': 'info'
+        };
 
-        $('#alert-container').html(alert);
+        const titleMap = {
+            'danger': 'Error',
+            'warning': 'Perhatian',
+            'success': 'Berhasil',
+            'info': 'Informasi'
+        };
 
-        setTimeout(() => {
-            $('.alert').alert('close');
-        }, 15000);
+        console.log(`📢 showAlert called: [${type}] ${message}`);
+
+        // Gunakan SweetAlert2 untuk validasi (danger, warning) dan success
+        if (type === 'danger' || type === 'warning' || type === 'success') {
+            // Cek apakah Swal tersedia
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: iconMap[type] || 'info',
+                    title: titleMap[type] || 'Notifikasi',
+                    html: message,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: type === 'danger' ? '#dc3545' : (type === 'warning' ? '#ffc107' : '#28a745')
+                });
+            } else {
+                // Fallback jika Swal tidak tersedia
+                console.warn('SweetAlert2 not available, using native alert');
+                alert(`${titleMap[type]}: ${message.replace(/<[^>]*>/g, '')}`);
+            }
+        } else {
+            // Untuk info, hanya log ke console
+            console.log(`📢 Alert (hidden): [${type}] ${message}`);
+        }
     }
 });

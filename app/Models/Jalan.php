@@ -481,68 +481,122 @@ class Jalan extends Model
             return 100;
         }
 
-        // 2. Contains match - street name found in address
-        if (strlen($thisNormalized) >= 3) {
-            if (str_contains($inputNormalized, $thisNormalized)) {
-                $ratio = strlen($thisNormalized) / max(strlen($inputNormalized), 1);
-                // Bonus for longer street name matches
-                $containsScore = 85 + ($ratio * 10);
-                $scores[] = min(95, $containsScore);
-            }
-        }
-
-        // 3. Extract street name from address and compare
+        // Extract street name from input address for better comparison
         $extractedStreet = self::extractStreetNameFromAddress($input);
-        if (!empty($extractedStreet)) {
-            $extractedNormalized = self::normalizeNamaJalan($extractedStreet);
+        $extractedNormalized = !empty($extractedStreet) ? self::normalizeNamaJalan($extractedStreet) : '';
 
-            // Exact match with extracted street
-            if ($extractedNormalized === $thisNormalized) {
-                $scores[] = 98;
-            } else {
-                // Jaro-Winkler on extracted street name
-                $jwScore = self::jaroWinklerSimilarity($extractedNormalized, $thisNormalized);
-                if ($jwScore >= 70) {
-                    $scores[] = $jwScore;
+        // 2. PENTING: Cek apakah SEMUA kata penting dari nama jalan di DB ada di input
+        // Ini mencegah "Bendungan Batu Jahe" match dengan "Bendungan Sutami"
+        $thisTokens = self::extractStreetTokens($this->{self::FIELD_NAMA_JALAN});
+        $inputTokens = self::extractStreetTokens($input);
+        
+        // Hitung berapa token dari nama jalan DB yang ada di input
+        $matchedTokens = 0;
+        $totalImportantTokens = 0;
+        
+        foreach ($thisTokens as $token) {
+            if (strlen($token) >= 3) { // Hanya token penting (>= 3 karakter)
+                $totalImportantTokens++;
+                foreach ($inputTokens as $inputToken) {
+                    if ($token === $inputToken || str_contains($inputToken, $token) || str_contains($token, $inputToken)) {
+                        $matchedTokens++;
+                        break;
+                    }
                 }
             }
         }
+        
+        // Jika tidak semua token penting match, beri penalty besar
+        $tokenMatchRatio = $totalImportantTokens > 0 ? $matchedTokens / $totalImportantTokens : 0;
+        $tokenPenalty = 0;
+        if ($tokenMatchRatio < 0.8) {
+            // Penalty jika kurang dari 80% token match
+            $tokenPenalty = (1 - $tokenMatchRatio) * 40; // Max penalty 40 points
+        }
 
-        // 4. Token-based matching
+        // 3. Exact match with extracted street name - highest priority
+        if (!empty($extractedNormalized)) {
+            if ($extractedNormalized === $thisNormalized) {
+                return max(0, 98 - $tokenPenalty);
+            }
+            
+            // Check if extracted street contains all important tokens from DB street name
+            $extractedTokens = self::extractStreetTokens($extractedStreet);
+            $allTokensMatch = true;
+            foreach ($thisTokens as $token) {
+                if (strlen($token) >= 3) {
+                    $found = false;
+                    foreach ($extractedTokens as $extToken) {
+                        if ($token === $extToken || str_contains($extToken, $token) || str_contains($token, $extToken)) {
+                            $found = true;
+                            break;
+                        }
+                    }
+                    if (!$found) {
+                        $allTokensMatch = false;
+                        break;
+                    }
+                }
+            }
+            
+            if ($allTokensMatch && count($thisTokens) > 0) {
+                $scores[] = 95; // High score for all tokens match
+            }
+        }
+
+        // 4. Contains match - street name found in address (with token validation)
+        if (strlen($thisNormalized) >= 3) {
+            if (str_contains($inputNormalized, $thisNormalized)) {
+                $ratio = strlen($thisNormalized) / max(strlen($inputNormalized), 1);
+                $containsScore = 85 + ($ratio * 10);
+                // Apply token penalty
+                $scores[] = max(0, min(95, $containsScore) - $tokenPenalty);
+            }
+        }
+
+        // 5. Token-based matching
         $tokenScore = self::tokenBasedSimilarity($input, $this->{self::FIELD_NAMA_JALAN});
         if ($tokenScore >= 60) {
-            $scores[] = $tokenScore;
+            $scores[] = max(0, $tokenScore - $tokenPenalty);
         }
 
-        // 5. Jaro-Winkler similarity (original)
+        // 6. Jaro-Winkler similarity on extracted street name
+        if (!empty($extractedNormalized)) {
+            $jwScore = self::jaroWinklerSimilarity($extractedNormalized, $thisNormalized);
+            if ($jwScore >= 70) {
+                $scores[] = max(0, $jwScore - $tokenPenalty);
+            }
+        }
+
+        // 7. Jaro-Winkler similarity (original)
         $jwOriginal = self::jaroWinklerSimilarity($inputNormalized, $thisNormalized);
         if ($jwOriginal >= 60) {
-            $scores[] = $jwOriginal;
+            $scores[] = max(0, $jwOriginal - $tokenPenalty);
         }
 
-        // 6. Levenshtein similarity as fallback
+        // 8. Levenshtein similarity as fallback
         $maxLen = max(strlen($inputNormalized), strlen($thisNormalized));
         if ($maxLen > 0) {
             $distance = levenshtein($inputNormalized, $thisNormalized);
             $levenshteinScore = round((($maxLen - $distance) / $maxLen) * 100);
             if ($levenshteinScore >= 50) {
-                $scores[] = $levenshteinScore;
+                $scores[] = max(0, $levenshteinScore - $tokenPenalty);
             }
         }
 
-        // Calculate final score - weighted combination
+        // Calculate final score
         if (empty($scores)) {
             return 0;
         }
 
-        // Use highest score as base, add bonus for multiple high scores
+        // Use highest score as base
         rsort($scores);
         $baseScore = $scores[0];
 
         // Kelurahan context bonus (if kelurahan matches)
         $kelurahanBonus = 0;
         if ($inputKelurahanId !== null && $this->{self::FIELD_KELURAHAN_ID} == $inputKelurahanId) {
-            $kelurahanBonus = 5; // Bonus for matching kelurahan context
+            $kelurahanBonus = 5;
         }
 
         return min(100, $baseScore + $kelurahanBonus);
