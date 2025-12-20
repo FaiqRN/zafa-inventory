@@ -12,7 +12,7 @@ class PartnerPerformanceSettingController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('can:manage-users');
+        $this->middleware('can:manage-partner-performance-settings');
     }
 
     /**
