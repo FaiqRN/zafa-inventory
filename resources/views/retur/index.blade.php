@@ -17,7 +17,7 @@
     </div>
     <div class="card-body">
         <div class="row mb-3">
-            <div class="col-md-3">
+            <div class="col-12 col-sm-6 col-md-3 mb-2">
                 <label>Toko</label>
                 <select id="filter_toko" class="form-control">
                     <option value="">Semua Toko</option>
@@ -26,18 +26,19 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-12 col-sm-6 col-md-3 mb-2">
                 <label>Tanggal</label>
                 <input type="date" id="filter_date" class="form-control">
             </div>
-            <div class="col-md-3">
-                <label>&nbsp;</label>
+            <div class="col-12 col-sm-6 col-md-3 mb-2">
+                <label class="d-none d-md-block">&nbsp;</label>
                 <button type="button" class="btn btn-info btn-block" onclick="filterData()">
                     <i class="fas fa-filter"></i> Filter
                 </button>
             </div>
         </div>
 
+        <div class="table-responsive">
         <table class="table table-bordered table-striped table-hover table-sm" id="table_retur">
             <thead>
                 <tr>
@@ -50,6 +51,7 @@
                 </tr>
             </thead>
         </table>
+        </div>
     </div>
 </div>
 
