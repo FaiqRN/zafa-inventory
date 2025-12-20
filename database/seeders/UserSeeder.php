@@ -15,16 +15,14 @@ class UserSeeder extends Seeder
     public function run(): void
     {
 
-        // Seed users
-        // IMPORTANT: Gunakan Hash::make() karena DB::table() bypass model events
-        // Password requirements: min 8 chars, uppercase, lowercase, numbers
+
         DB::table('user')->insert([
             [
                 'role_id' => 1, // admin
                 'username' => 'admin',
                 'firstname' => 'Admin',
                 'lastname' => 'System',
-                'password' => Hash::make('Admin123'), // Strong password
+                'password' => Hash::make('Admin123'),
                 'foto' => null,
                 'jenis_kelamin' => 'L',
                 'tempat_lahir' => 'Jakarta',
@@ -37,42 +35,70 @@ class UserSeeder extends Seeder
             ],
             [
                 'role_id' => 2, // ketua
-                'username' => 'ketua',
-                'firstname' => 'Budi',
-                'lastname' => 'Santoso',
-                'password' => Hash::make('Ketua123'), // Strong password
+                'username' => 'Rinawati',
+                'firstname' => 'Rinawati',
+                'lastname' => 'Wulandari',
+                'password' => Hash::make('Rinawati123'), 
                 'foto' => null,
-                'jenis_kelamin' => 'L',
-                'tempat_lahir' => 'Bandung',
+                'jenis_kelamin' => 'P',
+                'tempat_lahir' => 'Malang',
                 'tanggal_lahir' => '1985-05-15',
-                'alamat' => 'Jl. Ketua No. 2, Bandung',
-                'email' => 'budi.santoso@zafa.com',
-                'telp' => '081234567891',
+                'alamat' => 'Jl. Cumi-Cumi No. 1, Malang',
+                'email' => 'Rinawati@gmail.com',
+                'telp' => '0821-2144-1930',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'role_id' => 3, // karyawan
                 'username' => 'karyawan',
-                'firstname' => 'Siti',
-                'lastname' => 'Nurhaliza',
-                'password' => Hash::make('Karyawan123'), // Strong password
+                'firstname' => 'A',
+                'lastname' => 'AAA',
+                'password' => Hash::make('Karyawan123'), 
                 'foto' => null,
                 'jenis_kelamin' => 'P',
-                'tempat_lahir' => 'Surabaya',
+                'tempat_lahir' => 'Malang',
                 'tanggal_lahir' => '1995-08-20',
-                'alamat' => 'Jl. Karyawan No. 3, Surabaya',
-                'email' => 'siti.nurhaliza@zafa.com',
+                'alamat' => 'Jl. Karyawan No. 3, Malang',
+                'email' => 'AAAA@zafa.com',
                 'telp' => '081234567892',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'role_id' => 4, // FRN
+                'username' => 'faiqrn',
+                'firstname' => 'Faiq',
+                'lastname' => 'Ramzy Nabighah',
+                'password' => Hash::make('Luasbidang33'), 
+                'foto' => null,
+                'jenis_kelamin' => 'L',
+                'tempat_lahir' => 'Malang',
+                'tanggal_lahir' => '2004-01-30',
+                'alamat' => 'Jl. Candi Mendut Selatan No. 21, Malang',
+                'email' => 'Uripkoyoktaek@gmail.com',
+                'telp' => '08123266006',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'role_id' => 5, // AP
+                'username' => 'annisaP',
+                'firstname' => 'Annisa',
+                'lastname' => 'Prissilya',
+                'password' => Hash::make('Arabcantik2264'), 
+                'foto' => null,
+                'jenis_kelamin' => 'P',
+                'tempat_lahir' => 'Malang',
+                'tanggal_lahir' => '2004-06-22',
+                'alamat' => 'Jl. cumi-cumi No. 1, Malang',
+                'email' => 'Uripngenengeneae@gmail.com',
+                'telp' => '08123266006',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            
         ]);
-
-        echo "\nRoles and Users seeded successfully!\n";
-        echo "\nLogin credentials (Strong passwords - min 8 chars, uppercase, lowercase, numbers):\n";
-        echo "1. Admin    - username: admin     password: Admin123\n";
-        echo "2. Ketua    - username: ketua     password: Ketua123\n";
-        echo "3. Karyawan - username: karyawan  password: Karyawan123\n\n";
+        echo "\nUsers seeded successfully!\n";
     }
 }

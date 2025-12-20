@@ -28,6 +28,7 @@ class CreateReturTable extends Migration
             $table->decimal('hasil', 10, 2);
             $table->string('kondisi', 50)->nullable();
             $table->text('keterangan')->nullable();
+            $table->boolean('is_locked')->default(false);
             
             $table->foreign('pengiriman_id')
                   ->references('pengiriman_id')

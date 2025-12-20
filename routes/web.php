@@ -15,8 +15,6 @@ use App\Http\Controllers\MarketMapController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
-use App\Http\Controllers\LaporanTokoController;
-use App\Http\Controllers\LaporanPemesananController;
 use App\Http\Controllers\FollowUpPelangganController;
 
 // Analytics Controllers - FIXED NAMESPACE (Tanpa Analytics\)
@@ -72,12 +70,14 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ANALYTICS ROUTES - CORE 4 MODULES ONLY
     // ===============================
     Route::prefix('analytics')->name('analytics.')->group(function () {
-        // Main Analytics Dashboard - Overview Only
-        Route::get('/', [AnalyticsController::class, 'index'])->name('index');
-        Route::get('/api/overview', [AnalyticsController::class, 'getOverviewData'])->name('api.overview');
+        // Main Analytics Dashboard - Overview Only (admin/ketua only)
+        Route::middleware('can:view-analytics')->group(function () {
+            Route::get('/', [AnalyticsController::class, 'index'])->name('index');
+            Route::get('/api/overview', [AnalyticsController::class, 'getOverviewData'])->name('api.overview');
+        });
 
-        // ===== ANALYTICS 1: PARTNER PERFORMANCE =====
-        Route::prefix('partner-performance')->name('partner-performance.')->group(function () {
+        // ===== ANALYTICS 1: PARTNER PERFORMANCE (admin/ketua/AP) =====
+        Route::prefix('partner-performance')->name('partner-performance.')->middleware('can:view-partner-performance')->group(function () {
             Route::get('/', [PartnerPerformanceController::class, 'index'])->name('index');
             
             // API Routes
@@ -96,8 +96,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
             Route::post('/generate-report', [PartnerPerformanceController::class, 'generateReport'])->name('generate-report');
         });
         
-        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION =====
-        Route::prefix('inventory-optimization')->name('inventory-optimization.')->group(function () {
+        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION (admin/ketua/FRN) =====
+        Route::prefix('inventory-optimization')->name('inventory-optimization.')->middleware('can:view-inventory-optimization')->group(function () {
             Route::get('/', [InventoryOptimizationController::class, 'index'])->name('index');
 
             // Recommendation Actions
@@ -119,8 +119,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
             Route::get('/export', [InventoryOptimizationController::class, 'export'])->name('export');
         });
         
-        // ===== ANALYTICS 3: PRODUCT VELOCITY =====
-        Route::prefix('product-velocity')->name('product-velocity.')->group(function () {
+        // ===== ANALYTICS 3: PRODUCT VELOCITY (admin/ketua only) =====
+        Route::prefix('product-velocity')->name('product-velocity.')->middleware('can:view-analytics')->group(function () {
             Route::get('/', [ProductVelocityController::class, 'index'])->name('index');
             Route::get('/export', [ProductVelocityController::class, 'export'])->name('export');
             Route::post('/optimize-portfolio', [ProductVelocityController::class, 'optimizePortfolio'])->name('optimize-portfolio');
@@ -128,8 +128,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
             Route::post('/recommend-discontinue/{barangId}', [ProductVelocityController::class, 'recommendDiscontinue'])->name('recommend-discontinue');
         });
         
-        // ===== ANALYTICS 4: PROFITABILITY ANALYSIS =====
-        Route::prefix('profitability-analysis')->name('profitability-analysis.')->group(function () {
+        // ===== ANALYTICS 4: PROFITABILITY ANALYSIS (admin/ketua only) =====
+        Route::prefix('profitability-analysis')->name('profitability-analysis.')->middleware('can:view-analytics')->group(function () {
             Route::get('/', [ProfitabilityController::class, 'index'])->name('index');
             Route::get('/export', [ProfitabilityController::class, 'export'])->name('export');
             Route::get('/identify-loss-makers', [ProfitabilityController::class, 'identifyLossMakers'])->name('identify-loss-makers');
@@ -231,7 +231,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ===============================
     // USER MANAGEMENT ROUTES (Menu Sistem)
     // ===============================
-    Route::group(['prefix' => 'user'], function() {
+    Route::group(['prefix' => 'user', 'middleware' => 'can:manage-users-and-market-map'], function() {
         Route::get('/', [UserController::class, 'index'])->name('user.index');
         Route::get('/data', [UserController::class, 'getData'])->name('user.data');
         Route::post('/', [UserController::class, 'store'])->name('user.store');
@@ -243,7 +243,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ===============================
     // MARKET MAP SETTINGS ROUTES (Menu Sistem)
     // ===============================
-    Route::group(['prefix' => 'market-map-settings', 'middleware' => 'can:manage-users'], function() {
+    Route::group(['prefix' => 'market-map-settings', 'middleware' => 'can:manage-market-map-settings'], function() {
         Route::get('/', [\App\Http\Controllers\MarketMapSettingController::class, 'index'])->name('market-map-settings.index');
         Route::post('/update', [\App\Http\Controllers\MarketMapSettingController::class, 'update'])->name('market-map-settings.update');
         Route::post('/reset', [\App\Http\Controllers\MarketMapSettingController::class, 'reset'])->name('market-map-settings.reset');
@@ -253,7 +253,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
     // ===============================
     // PARTNER PERFORMANCE SETTINGS ROUTES (Menu Sistem)
     // ===============================
-    Route::group(['prefix' => 'partner-performance-settings', 'middleware' => 'can:manage-users'], function() {
+    Route::group(['prefix' => 'partner-performance-settings', 'middleware' => 'can:manage-partner-performance-settings'], function() {
         Route::get('/', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'index'])->name('partner-performance-settings.index');
         Route::post('/update', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'update'])->name('partner-performance-settings.update');
         Route::post('/reset', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'resetDefaults'])->name('partner-performance-settings.reset');
@@ -307,16 +307,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])-
         Route::put('/{id}', [PemesananController::class, 'update'])->name('pemesanan.update');
         Route::delete('/{id}', [PemesananController::class, 'destroy'])->name('pemesanan.destroy');
     });
-        
-    Route::group(['middleware' => ['can:view-reports']], function() {
-        Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
-        Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
-        Route::post('/laporan-toko/update-catatan', [LaporanTokoController::class, 'updateCatatan'])->name('laporan.toko.updateCatatan');
-        Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData'])->name('laporan.toko.detail');
-        Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
-        Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
-    });
-    
+            
     // Route Follow Up Pelanggan (Complete with WhatsApp Integration)
     Route::group(['prefix' => 'follow-up-pelanggan'], function() {
         Route::get('/', [FollowUpPelangganController::class, 'index'])->name('follow-up-pelanggan.index');

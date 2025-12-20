@@ -21,6 +21,14 @@ class Jalan extends Model
     public const FIELD_ACCURACY = 'accuracy';
     public const FIELD_CREATED_AT = 'created_at';
     public const FIELD_UPDATED_AT = 'updated_at';
+    
+    // New fields for OSM data
+    public const FIELD_OSM_ID = 'osm_id';
+    public const FIELD_HIGHWAY_TYPE = 'highway_type';
+    public const FIELD_SURFACE = 'surface';
+    public const FIELD_TOTAL_LENGTH_METERS = 'total_length_meters';
+    public const FIELD_CENTER_LAT = 'center_lat';
+    public const FIELD_CENTER_LNG = 'center_lng';
 
     // Common Indonesian street name variations untuk fuzzy matching
     private static $streetNameVariations = [
@@ -53,12 +61,21 @@ class Jalan extends Model
         self::FIELD_IS_ACTIVE,
         self::FIELD_SOURCE,
         self::FIELD_ACCURACY,
+        self::FIELD_OSM_ID,
+        self::FIELD_HIGHWAY_TYPE,
+        self::FIELD_SURFACE,
+        self::FIELD_TOTAL_LENGTH_METERS,
+        self::FIELD_CENTER_LAT,
+        self::FIELD_CENTER_LNG,
     ];
 
     protected $casts = [
         self::FIELD_LATITUDE => 'decimal:8',
         self::FIELD_LONGITUDE => 'decimal:8',
         self::FIELD_IS_ACTIVE => 'boolean',
+        self::FIELD_TOTAL_LENGTH_METERS => 'decimal:2',
+        self::FIELD_CENTER_LAT => 'decimal:8',
+        self::FIELD_CENTER_LNG => 'decimal:8',
     ];
 
     /**
@@ -70,11 +87,89 @@ class Jalan extends Model
     }
 
     /**
+     * Relasi ke JalanSegment (polyline coordinates)
+     */
+    public function segments()
+    {
+        return $this->hasMany(JalanSegment::class, JalanSegment::FIELD_JALAN_ID)
+                    ->orderBy(JalanSegment::FIELD_SEQUENCE);
+    }
+
+    /**
      * Relasi ke Toko
      */
     public function tokos()
     {
         return $this->hasMany(Toko::class, Toko::FIELD_JALAN_ID, self::FIELD_ID);
+    }
+
+    /**
+     * Interpolate coordinate based on estimated position along the street
+     * 
+     * @param float $positionRatio Position along street (0.0 = start, 1.0 = end)
+     * @return array|null ['lat' => float, 'lng' => float]
+     */
+    public function interpolatePosition(float $positionRatio): ?array
+    {
+        $segments = $this->segments;
+        
+        if ($segments->isEmpty()) {
+            // Fallback to single coordinate
+            return [
+                'lat' => (float) $this->{self::FIELD_LATITUDE},
+                'lng' => (float) $this->{self::FIELD_LONGITUDE},
+            ];
+        }
+
+        $totalLength = $this->{self::FIELD_TOTAL_LENGTH_METERS} ?? $segments->last()->{JalanSegment::FIELD_DISTANCE_FROM_START};
+        
+        if ($totalLength <= 0) {
+            return $segments->first()->coordinates;
+        }
+
+        $targetDistance = $totalLength * max(0, min(1, $positionRatio));
+
+        // Find the two segments that bracket the target distance
+        $prevSegment = null;
+        foreach ($segments as $segment) {
+            if ($segment->{JalanSegment::FIELD_DISTANCE_FROM_START} >= $targetDistance) {
+                if ($prevSegment) {
+                    return $prevSegment->interpolateTo($segment, $targetDistance);
+                }
+                return $segment->coordinates;
+            }
+            $prevSegment = $segment;
+        }
+
+        // Return last segment if target is beyond end
+        return $segments->last()->coordinates;
+    }
+
+    /**
+     * Estimate position ratio based on house number
+     * Assumes odd numbers on one side, even on other, roughly linear distribution
+     * 
+     * @param int|null $houseNumber
+     * @param int $maxHouseNumber Estimated max house number on this street
+     * @return float Position ratio (0.0 to 1.0)
+     */
+    public function estimatePositionFromHouseNumber(?int $houseNumber, int $maxHouseNumber = 200): float
+    {
+        if (!$houseNumber || $houseNumber <= 0) {
+            return 0.5; // Default to middle
+        }
+
+        // Simple linear estimation
+        return min(1.0, max(0.0, $houseNumber / $maxHouseNumber));
+    }
+
+    /**
+     * Get interpolated coordinate for a house number
+     */
+    public function getCoordinateForHouseNumber(?int $houseNumber): array
+    {
+        $ratio = $this->estimatePositionFromHouseNumber($houseNumber);
+        return $this->interpolatePosition($ratio) ?? $this->coordinates;
     }
 
     /**
@@ -212,7 +307,8 @@ class Jalan extends Model
         if ($this->kelurahan) {
             return "{$this->{self::FIELD_NAMA_JALAN}}, {$this->kelurahan->nama}, {$this->kelurahan->kecamatan}, {$this->kelurahan->kota}";
         }
-        return $this->{self::FIELD_NAMA_JALAN};
+        // Default to Malang region for OSM data without kelurahan
+        return "{$this->{self::FIELD_NAMA_JALAN}}, Malang, Jawa Timur";
     }
 
     /**
