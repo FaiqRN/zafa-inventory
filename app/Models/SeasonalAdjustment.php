@@ -9,47 +9,53 @@ class SeasonalAdjustment extends Model
 {
     use HasFactory;
 
-    protected $table = 'seasonal_adjustments';
+    public const TABLE = 'penyesuaian_musiman';
+    public const FIELD_ID = 'id';
+    public const FIELD_MONTH = 'month';
+    public const FIELD_MULTIPLIER = 'multiplier';
+    public const FIELD_DESCRIPTION = 'description';
+    public const FIELD_IS_ACTIVE = 'is_active';
+    public const FIELD_CREATED_BY = 'created_by';
+    public const FIELD_UPDATED_BY = 'updated_by';
+
+    protected $table = self::TABLE;
 
     protected $fillable = [
-        'month',
-        'multiplier',
-        'description',
-        'is_active',
-        'created_by',
-        'updated_by'
+        self::FIELD_MONTH,
+        self::FIELD_MULTIPLIER,
+        self::FIELD_DESCRIPTION,
+        self::FIELD_IS_ACTIVE,
+        self::FIELD_CREATED_BY,
+        self::FIELD_UPDATED_BY,
     ];
 
     protected $casts = [
-        'month' => 'integer',
-        'multiplier' => 'decimal:2',
-        'is_active' => 'boolean'
+        self::FIELD_MONTH => 'integer',
+        self::FIELD_MULTIPLIER => 'decimal:2',
+        self::FIELD_IS_ACTIVE => 'boolean',
     ];
 
     protected $attributes = [
-        'multiplier' => 1.00,
-        'is_active' => true
+        self::FIELD_MULTIPLIER => 1.00,
+        self::FIELD_IS_ACTIVE => true,
     ];
 
-    // Scope untuk bulan aktif
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where(self::FIELD_IS_ACTIVE, true);
     }
 
-    // Scope untuk bulan tertentu
     public function scopeForMonth($query, $month)
     {
-        return $query->where('month', $month);
+        return $query->where(self::FIELD_MONTH, $month);
     }
 
-    // Get multiplier untuk bulan tertentu
     public static function getMultiplierForMonth($month)
     {
-        $adjustment = static::where('month', $month)
-            ->where('is_active', true)
+        $adjustment = static::where(self::FIELD_MONTH, $month)
+            ->where(self::FIELD_IS_ACTIVE, true)
             ->first();
         
-        return $adjustment ? $adjustment->multiplier : 1.00;
+        return $adjustment ? $adjustment->{self::FIELD_MULTIPLIER} : 1.00;
     }
 }

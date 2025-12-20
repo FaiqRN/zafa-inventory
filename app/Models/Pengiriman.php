@@ -9,116 +9,79 @@ class Pengiriman extends Model
 {
     use HasFactory;
 
-    /**
-     * Nama tabel yang terkait dengan model.
-     *
-     * @var string
-     */
-    protected $table = 'pengiriman';
+    public const TABLE = 'pengiriman';
+    public const FIELD_PENGIRIMAN_ID = 'pengiriman_id';
+    public const FIELD_TOKO_ID = 'toko_id';
+    public const FIELD_BARANG_ID = 'barang_id';
+    public const FIELD_NOMER_PENGIRIMAN = 'nomer_pengiriman';
+    public const FIELD_TANGGAL_PENGIRIMAN = 'tanggal_pengiriman';
+    public const FIELD_JUMLAH_KIRIM = 'jumlah_kirim';
+    public const FIELD_STATUS = 'status';
+    public const FIELD_CREATED_AT = 'created_at';
+    public const FIELD_UPDATED_AT = 'updated_at';
+    public const FIELD_USER_CREATE = 'user_create';
+    public const FIELD_USER_UPDATE = 'user_update';
 
-    /**
-     * Primary key tabel.
-     *
-     * @var string
-     */
-    protected $primaryKey = 'pengiriman_id';
-
-    /**
-     * Tipe primary key.
-     *
-     * @var string
-     */
+    protected $table = self::TABLE;
+    protected $primaryKey = self::FIELD_PENGIRIMAN_ID;
     protected $keyType = 'string';
+    public $timestamps = true;
 
-    /**
-     * Menentukan apakah model menggunakan timestamps.
-     *
-     * @var bool
-     */
-    public $timestamps = false;
-
-    /**
-     * Atribut yang dapat diisi (mass assignable).
-     *
-     * @var array
-     */
     protected $fillable = [
-        'pengiriman_id',
-        'toko_id',
-        'barang_id',
-        'nomer_pengiriman',
-        'tanggal_pengiriman',
-        'jumlah_kirim',
-        'status'
+        self::FIELD_PENGIRIMAN_ID,
+        self::FIELD_TOKO_ID,
+        self::FIELD_BARANG_ID,
+        self::FIELD_NOMER_PENGIRIMAN,
+        self::FIELD_TANGGAL_PENGIRIMAN,
+        self::FIELD_JUMLAH_KIRIM,
+        self::FIELD_STATUS,
+        self::FIELD_USER_CREATE,
+        self::FIELD_USER_UPDATE,
     ];
 
-    /**
-     * Atribut yang harus dikonversi ke tipe data tertentu.
-     *
-     * @var array
-     */
     protected $casts = [
-        'tanggal_pengiriman' => 'date',
-        'jumlah_kirim' => 'integer'
+        self::FIELD_TANGGAL_PENGIRIMAN => 'date',
+        self::FIELD_JUMLAH_KIRIM => 'integer',
+        self::FIELD_CREATED_AT => 'datetime',
+        self::FIELD_UPDATED_AT => 'datetime',
     ];
 
-    /**
-     * Relasi ke tabel barang.
-     */
     public function barang()
     {
-        return $this->belongsTo(Barang::class, 'barang_id', 'barang_id');
+        return $this->belongsTo(Barang::class, self::FIELD_BARANG_ID, Barang::FIELD_BARANG_ID);
     }
 
-    /**
-     * Relasi ke tabel toko.
-     */
     public function toko()
     {
-        return $this->belongsTo(Toko::class, 'toko_id', 'toko_id');
+        return $this->belongsTo(Toko::class, self::FIELD_TOKO_ID, Toko::FIELD_TOKO_ID);
     }
 
-    /**
-     * Relasi ke tabel retur.
-     */
     public function retur()
     {
-        return $this->hasMany(Retur::class, 'pengiriman_id', 'pengiriman_id');
+        return $this->hasMany(Retur::class, Retur::FIELD_PENGIRIMAN_ID, self::FIELD_PENGIRIMAN_ID);
     }
 
-    /**
-     * Mendapatkan harga barang di toko untuk pengiriman ini.
-     */
     public function getHargaBarangTokoAttribute()
     {
-        $barangToko = BarangToko::where('toko_id', $this->toko_id)
-                                ->where('barang_id', $this->barang_id)
+        $barangToko = BarangToko::where(BarangToko::FIELD_TOKO_ID, $this->{self::FIELD_TOKO_ID})
+                                ->where(BarangToko::FIELD_BARANG_ID, $this->{self::FIELD_BARANG_ID})
                                 ->first();
         
-        return $barangToko ? $barangToko->harga_barang_toko : 0;
+        return $barangToko ? $barangToko->{BarangToko::FIELD_HARGA_BARANG_TOKO} : 0;
     }
 
-    /**
-     * Menghitung total nilai pengiriman.
-     */
     public function getTotalNilaiAttribute()
     {
-        return $this->jumlah_kirim * $this->harga_barang_toko;
+        return $this->{self::FIELD_JUMLAH_KIRIM} * $this->harga_barang_toko;
     }
 
-    /**
-     * Mendapatkan total jumlah retur untuk pengiriman ini.
-     */
     public function getTotalReturAttribute()
     {
-        return $this->retur()->sum('jumlah_retur');
+        return $this->retur()->sum(Retur::FIELD_JUMLAH_RETUR);
     }
 
-    /**
-     * Mendapatkan jumlah barang terjual (jumlah kirim - jumlah retur).
-     */
     public function getJumlahTerjualAttribute()
     {
-        return $this->jumlah_kirim - $this->total_retur;
+        return $this->{self::FIELD_JUMLAH_KIRIM} - $this->total_retur;
     }
 }

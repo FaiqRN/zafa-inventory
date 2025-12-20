@@ -9,121 +9,154 @@ class Barang extends Model
 {
     use HasFactory;
 
-    /**
-     * Nama tabel yang terkait dengan model.
-     *
-     * @var string
-     */
-    protected $table = 'barang';
+    public const TABLE = 'barang';
+    public const FIELD_BARANG_ID = 'barang_id';
+    public const FIELD_BARANG_KODE = 'barang_kode';
+    public const FIELD_NAMA_BARANG = 'nama_barang';
+    public const FIELD_HARGA_AWAL_BARANG = 'harga_awal_barang';
+    public const FIELD_STOK = 'stok';
+    public const FIELD_SATUAN = 'satuan';
+    public const FIELD_KETERANGAN = 'keterangan';
+    public const FIELD_CREATED_AT = 'created_at';
+    public const FIELD_UPDATED_AT = 'updated_at';
+    public const FIELD_USER_CREATE = 'user_create';
+    public const FIELD_USER_UPDATE = 'user_update';
 
-    /**
-     * Primary key tabel.
-     *
-     * @var string
-     */
-    protected $primaryKey = 'barang_id';
-
-    /**
-     * Tipe primary key.
-     *
-     * @var string
-     */
+    protected $table = self::TABLE;
+    protected $primaryKey = self::FIELD_BARANG_ID;
     protected $keyType = 'string';
+    public $timestamps = true;
 
-    /**
-     * Menentukan apakah model menggunakan timestamps.
-     *
-     * @var bool
-     */
-    public $timestamps = false;
-
-    /**
-     * Atribut yang dapat diisi (mass assignable).
-     *
-     * @var array
-     */
     protected $fillable = [
-        'barang_id',
-        'barang_kode',
-        'nama_barang',
-        'harga_awal_barang',
-        'satuan',
-        'keterangan',
-        'is_deleted'
+        self::FIELD_BARANG_ID,
+        self::FIELD_BARANG_KODE,
+        self::FIELD_NAMA_BARANG,
+        self::FIELD_HARGA_AWAL_BARANG,
+        self::FIELD_STOK,
+        self::FIELD_SATUAN,
+        self::FIELD_KETERANGAN,
+        self::FIELD_USER_CREATE,
+        self::FIELD_USER_UPDATE,
     ];
 
-    /**
-     * Scope untuk mengambil barang yang belum dihapus
-     */
-    public function scopeNotDeleted($query)
-    {
-        return $query->where('is_deleted', 0);
-    }
+    protected $casts = [
+        self::FIELD_STOK => 'integer',
+        self::FIELD_HARGA_AWAL_BARANG => 'decimal:2',
+        self::FIELD_CREATED_AT => 'datetime',
+        self::FIELD_UPDATED_AT => 'datetime',
+    ];
 
-    /**
-     * Relasi ke tabel barang_toko.
-     */
     public function barangToko()
     {
-        return $this->hasMany(BarangToko::class, 'barang_id', 'barang_id');
+        return $this->hasMany(BarangToko::class, BarangToko::FIELD_BARANG_ID, self::FIELD_BARANG_ID);
     }
 
-    /**
-     * Relasi ke tabel pengiriman.
-     */
     public function pengiriman()
     {
-        return $this->hasMany(Pengiriman::class, 'barang_id', 'barang_id');
+        return $this->hasMany(Pengiriman::class, Pengiriman::FIELD_BARANG_ID, self::FIELD_BARANG_ID);
     }
 
-    /**
-     * Relasi ke tabel retur.
-     */
     public function retur()
     {
-        return $this->hasMany(Retur::class, 'barang_id', 'barang_id');
+        return $this->hasMany(Retur::class, Retur::FIELD_BARANG_ID, self::FIELD_BARANG_ID);
     }
 
-    /**
-     * Relasi ke tabel pemesanan.
-     */
     public function pemesanan()
     {
-        return $this->hasMany(Pemesanan::class, 'barang_id', 'barang_id');
+        return $this->hasMany(Pemesanan::class, Pemesanan::FIELD_BARANG_ID, self::FIELD_BARANG_ID);
     }
 
-    /**
-     * Relasi ke tabel toko melalui barang_toko.
-     */
+    public function barangStok()
+    {
+        return $this->hasMany(BarangStok::class, BarangStok::FIELD_BARANG_ID, self::FIELD_BARANG_ID);
+    }
+
     public function toko()
     {
-        return $this->belongsToMany(Toko::class, 'barang_toko', 'barang_id', 'toko_id')
-                    ->withPivot('barang_toko_id', 'harga_barang_toko');
+        return $this->belongsToMany(Toko::class, BarangToko::TABLE, self::FIELD_BARANG_ID, Toko::FIELD_TOKO_ID)
+                    ->withPivot(BarangToko::FIELD_BARANG_TOKO_ID, BarangToko::FIELD_HARGA_BARANG_TOKO);
     }
     
-    /**
-     * Generate kode barang baru berdasarkan kode terakhir di database
-     */
     public static function generateBarangKode()
     {
-        $lastBarang = self::orderBy('barang_kode', 'desc')->first();
+        // Get last barang ordered by kode
+        $lastBarang = self::orderBy(self::FIELD_BARANG_KODE, 'desc')
+                          ->first();
         
         if (!$lastBarang) {
-            return 'BRG001';
+            return 'BRG1';
         }
         
-        $lastKode = $lastBarang->barang_kode;
+        $lastKode = $lastBarang->{self::FIELD_BARANG_KODE};
         $prefix = 'BRG';
         
-        // Jika kode tidak sesuai dengan format yang diharapkan, mulai dari BRG001
         if (!preg_match('/^BRG\d+$/', $lastKode)) {
-            return 'BRG001';
+            return 'BRG1';
         }
         
         $numPart = substr($lastKode, strlen($prefix));
         $nextNum = intval($numPart) + 1;
         
-        // Padding dengan nol di depan sampai 3 digit
-        return $prefix . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+        return $prefix . $nextNum;
+    }
+
+    /**
+     * Get available stock dynamically
+     * This uses BarangHelper to calculate real-time stock
+     *
+     * @return int
+     */
+    public function getAvailableStockAttribute()
+    {
+        // Avoid circular dependency by checking if helper exists
+        if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
+            return \App\Helpers\MasterData\barang\BarangHelper::calculateAvailableStock($this->barang_id);
+        }
+        
+        return $this->stok ?? 0;
+    }
+
+    /**
+     * Get stock status (sufficient, low_stock, out_of_stock)
+     *
+     * @return string
+     */
+    public function getStockStatusAttribute()
+    {
+        $availableStock = $this->available_stock;
+        $baseStock = $this->stok ?? 0;
+        
+        if ($availableStock <= 0) {
+            return 'out_of_stock';
+        }
+        
+        $lowStockThreshold = max(10, $baseStock * 0.2);
+        
+        if ($availableStock <= $lowStockThreshold) {
+            return 'low_stock';
+        }
+        
+        return 'sufficient';
+    }
+
+    /**
+     * Get detailed stock breakdown
+     *
+     * @return array
+     */
+    public function getStockDetailsAttribute()
+    {
+        if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
+            return \App\Helpers\MasterData\barang\BarangHelper::getStockDetails($this->barang_id);
+        }
+        
+        return [
+            'base_stock' => $this->stok ?? 0,
+            'pemesanan_out' => 0,
+            'pengiriman_out' => 0,
+            'retur_in' => 0,
+            'available_stock' => $this->stok ?? 0,
+            'stock_status' => 'sufficient'
+        ];
     }
 }

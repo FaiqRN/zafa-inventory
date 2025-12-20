@@ -21,7 +21,11 @@ return new class extends Migration
             $table->string('email', 100)->nullable()->unique();
             $table->string('no_tlp', 20)->nullable()->unique();
             $table->string('pemesanan_id', 10)->nullable();
-            $table->timestamps();
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
             $table->softDeletes();
             
             $table->foreign('pemesanan_id')

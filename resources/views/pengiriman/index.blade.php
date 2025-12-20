@@ -1,368 +1,249 @@
 @extends('layouts.template')
 
+@section('page_title', 'Pengiriman Barang')
+
+@php
+    $activemenu = 'pengiriman';
+    $breadcrumb = (object) [
+        'title' => 'Pengiriman Barang',
+        'list' => ['Home', 'Transaksi', 'Pengiriman Barang']
+    ];
+@endphp
+
 @section('content')
-<div class="container-fluid">
-    <!-- Filter Card -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Filter Data</h3>
-            <div class="card-tools">
-                <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                    <i class="fas fa-minus"></i>
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <form id="filterForm">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label>Toko</label>
-                            <select class="form-control" id="filter_toko_id" name="filter_toko_id">
-                                <option value="">Semua Toko</option>
-                                @foreach($toko as $t)
-                                    <option value="{{ $t->toko_id }}">{{ $t->nama_toko }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select class="form-control" id="filter_status" name="filter_status">
-                                <option value="">Semua Status</option>
-                                <option value="proses">Proses</option>
-                                <option value="terkirim">Terkirim</option>
-                                <option value="batal">Batal</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label>Tanggal Mulai</label>
-                            <input type="date" class="form-control" id="filter_start_date" name="filter_start_date">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label>Tanggal Akhir</label>
-                            <input type="date" class="form-control" id="filter_end_date" name="filter_end_date">
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <button type="button" id="btnFilter" class="btn btn-primary">Filter</button>
-                        <button type="button" id="resetFilter" class="btn btn-secondary">Reset</button>
-                        <div class="btn-group">
-                            <button type="button" id="exportData" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-file-export"></i> Export
-                            </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item" href="javascript:void(0)" id="export-excel">
-                                    <i class="fas fa-file-excel"></i> Export Excel
-                                </a>
-                                <a class="dropdown-item" href="javascript:void(0)" id="export-csv">
-                                    <i class="fas fa-file-csv"></i> Export CSV
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Daftar Pengiriman</h3>
+        <div class="card-tools">
+            <button type="button" class="btn btn-primary btn-sm" onclick="modalAction('{{ url('/pengiriman/create_ajax') }}')">
+                <i class="fas fa-plus"></i> Tambah Pengiriman
+            </button>
         </div>
     </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label>Toko</label>
+                <select id="filter_toko" class="form-control">
+                    <option value="">Semua Toko</option>
+                    @foreach($toko as $t)
+                        <option value="{{ $t->toko_id }}">{{ $t->nama_toko }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Status</label>
+                <select id="filter_status" class="form-control">
+                    <option value="">Semua Status</option>
+                    <option value="proses">Proses</option>
+                    <option value="terkirim">Terkirim</option>
+                    <option value="batal">Batal</option>
+                </select>
+            </div>
 
-    <!-- Daftar Pengiriman Card -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Daftar Pengiriman Barang</h3>
-            <div class="card-tools">
-                <button type="button" class="btn btn-primary" id="btnTambahPengiriman">
-                    <i class="fas fa-plus"></i> Tambah Pengiriman
+            <div class="col-md-2">
+                <label>Tanggal</label>
+                <input type="date" id="filter_tanggal" class="form-control">
+            </div>
+            <div class="col-md-2 offset-md-2">
+                <label>&nbsp;</label>
+                <button type="button" class="btn btn-info btn-block" onclick="filterData()">
+                    <i class="fas fa-filter"></i> Filter
                 </button>
             </div>
         </div>
-        <div class="card-body">
-            <div id="alert-container"></div>
-            
-            <div class="table-responsive">
-                <table id="table-pengiriman" class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th width="5%">No</th>
-                            <th class="sortable" data-column="nomer_pengiriman">No. Pengiriman</th>
-                            <th class="sortable" data-column="tanggal_pengiriman">Tanggal</th>
-                            <th class="sortable" data-column="toko_id">Toko</th>
-                            <th class="sortable" data-column="barang_id">Barang</th>
-                            <th class="sortable" data-column="jumlah_kirim">Jumlah</th>
-                            <th class="sortable" data-column="status">Status</th>
-                            <th width="15%">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data akan dimuat oleh AJAX -->
-                    </tbody>
-                </table>
-            </div>
-            <!-- Container untuk pagination -->
-            <div id="pagination-container" class="mt-3"></div>
 
-            <!-- Input hidden untuk current page -->
-            <input type="hidden" id="current_page" value="1">
-        </div>
+        <table class="table table-bordered table-striped table-hover table-sm" id="table_pengiriman">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>No. Pengiriman</th>
+                    <th>Tanggal</th>
+                    <th>Toko</th>
+                    <th>Jumlah Kirim</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+        </table>
     </div>
 </div>
 
-<!-- Modal Tambah Pengiriman -->
-<div class="modal fade" id="modalTambahPengiriman" tabindex="-1" role="dialog" aria-labelledby="modalTambahPengirimanLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTambahPengirimanLabel">Tambah Pengiriman Barang</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="formTambahPengiriman">
-                <div class="modal-body">
-                    @csrf
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="nomer_pengiriman">Nomor Pengiriman</label>
-                                <input type="text" class="form-control" id="nomer_pengiriman" name="nomer_pengiriman" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="tanggal_pengiriman">Tanggal Pengiriman</label>
-                                <input type="date" class="form-control" id="tanggal_pengiriman" name="tanggal_pengiriman" required>
-                                <div class="invalid-feedback" id="error-tanggal_pengiriman"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="toko_id">Toko</label>
-                                <select class="form-control" id="toko_id" name="toko_id" required>
-                                    <option value="">-- Pilih Toko --</option>
-                                    @foreach($toko as $t)
-                                        <option value="{{ $t->toko_id }}">{{ $t->nama_toko }}</option>
-                                    @endforeach
-                                </select>
-                                <div class="invalid-feedback" id="error-toko_id"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="barang_id">Barang</label>
-                                <select class="form-control" id="barang_id" name="barang_id" required disabled>
-                                    <option value="">-- Pilih Barang --</option>
-                                    <!-- Diisi melalui AJAX saat toko dipilih -->
-                                </select>
-                                <div class="invalid-feedback" id="error-barang_id"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="jumlah_kirim">Jumlah</label>
-                                <input type="number" class="form-control" id="jumlah_kirim" name="jumlah_kirim" min="1" required>
-                                <div class="invalid-feedback" id="error-jumlah_kirim"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="satuan">Satuan</label>
-                                <input type="text" class="form-control" id="satuan" disabled>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label>Status</label>
-                                <input type="text" class="form-control" value="Proses" disabled>
-                                <small class="text-muted">Status awal pengiriman otomatis diset ke 'Proses'</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary" id="btnSimpanPengiriman">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Edit Pengiriman -->
-<div class="modal fade" id="modalEditPengiriman" tabindex="-1" role="dialog" aria-labelledby="modalEditPengirimanLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEditPengirimanLabel">Edit Pengiriman Barang</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="formEditPengiriman">
-                <div class="modal-body">
-                    @csrf
-                    <input type="hidden" id="edit_pengiriman_id" name="pengiriman_id">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="edit_nomer_pengiriman">Nomor Pengiriman</label>
-                                <input type="text" class="form-control" id="edit_nomer_pengiriman" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="edit_tanggal_pengiriman">Tanggal Pengiriman</label>
-                                <input type="date" class="form-control" id="edit_tanggal_pengiriman" name="tanggal_pengiriman" required>
-                                <div class="invalid-feedback" id="error-edit_tanggal_pengiriman"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="edit_toko_nama">Toko</label>
-                                <input type="text" class="form-control" id="edit_toko_nama" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="edit_barang_nama">Barang</label>
-                                <input type="text" class="form-control" id="edit_barang_nama" readonly>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="edit_jumlah_kirim">Jumlah</label>
-                                <input type="number" class="form-control" id="edit_jumlah_kirim" name="jumlah_kirim" min="1" required>
-                                <div class="invalid-feedback" id="error-edit_jumlah_kirim"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="edit_status">Status</label>
-                                <select class="form-control" id="edit_status" name="status" required>
-                                    <option value="proses">Proses</option>
-                                    <option value="terkirim">Terkirim</option>
-                                    <option value="batal">Batal</option>
-                                </select>
-                                <div class="invalid-feedback" id="error-edit_status"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary" id="btnUpdatePengiriman">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Update Status -->
-<div class="modal fade" id="modalUpdateStatus" tabindex="-1" role="dialog" aria-labelledby="modalUpdateStatusLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalUpdateStatusLabel">Update Status Pengiriman</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="formUpdateStatus">
-                <div class="modal-body">
-                    <input type="hidden" id="status_pengiriman_id" name="pengiriman_id">
-                    <div class="form-group">
-                        <label for="status_nomer_pengiriman">Nomor Pengiriman</label>
-                        <input type="text" class="form-control" id="status_nomer_pengiriman" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="status_value">Status</label>
-                        <select class="form-control" id="status_value" name="status" required>
-                            <option value="proses">Proses</option>
-                            <option value="terkirim">Terkirim</option>
-                            <option value="batal">Batal</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Konfirmasi Hapus -->
-<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Konfirmasi Hapus</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Apakah Anda yakin ingin menghapus data pengiriman ini?</p>
-                <p id="delete-item-name" class="font-weight-bold"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-danger" id="btnDelete">Hapus</button>
-            </div>
-        </div>
-    </div>
-</div>
+<div id="myModal" class="modal fade animate shake" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" data-width="75%" aria-hidden="true"></div>
 @endsection
 
 @push('css')
-<link rel="stylesheet" href="{{asset('adminlte/plugins/select2/css/select2.min.css')}}">
-<link rel="stylesheet" href="{{asset('adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css')}}">
-<style>
-    /* CSS untuk styling tabel sortable */
-    .sortable {
-        cursor: pointer;
-        position: relative;
-    }
-    .sortable:after {
-        content: "↕";
-        font-size: 12px;
-        color: #999;
-        margin-left: 5px;
-    }
-    .sorting-asc:after {
-        content: "↑";
-        color: #333;
-    }
-    .sorting-desc:after {
-        content: "↓";
-        color: #333;
-    }
-
-    /* Pagination styles */
-    #pagination-container .pagination {
-        margin-bottom: 0;
-    }
-</style>
 @endpush
 
 @push('js')
-<script src="{{asset('adminlte/plugins/select2/js/select2.full.min.js')}}"></script>
-<script src="{{ asset('js/pengiriman.js') }}?v={{ time() }}"></script>
+<script>
+let dataTable;
+
+function modalAction(url = '') {
+    $('#myModal').load(url, function() {
+        $('#myModal').modal('show');
+    });
+}
+
+function filterData() {
+    dataTable.ajax.reload();
+}
+
+$(document).ready(function() {
+    dataTable = $('#table_pengiriman').DataTable({
+        serverSide: true,
+        processing: true,
+        ajax: {
+            url: "{{ url('pengiriman/list') }}",
+            type: "POST",
+            data: function(d) {
+                d.toko_id = $('#filter_toko').val();
+                d.status = $('#filter_status').val();
+                d.start_date = $('#filter_start_date').val();
+                d.end_date = $('#filter_end_date').val();
+            },
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        },
+        columns: [
+            {
+                data: 'DT_RowIndex',
+                className: 'text-center',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'nomer_pengiriman',
+                orderable: true
+            },
+            {
+                data: 'formatted_tanggal',
+                orderable: true
+            },
+            {
+                data: 'toko_nama',
+                orderable: false
+            },
+            {
+                data: 'total_jumlah',
+                className: 'text-center',
+                orderable: false
+            },
+            {
+                data: 'status_label',
+                className: 'text-center',
+                orderable: false
+            },
+            {
+                data: 'nomer_pengiriman',
+                className: 'text-center',
+                orderable: false,
+                render: function(data, type, row) {
+                    let btnStatus = '';
+                    if (row.status === 'proses') {
+                        btnStatus = `
+                            <button type="button" class="btn btn-success btn-sm" onclick="updateStatus('${data}', 'terkirim')" title="Ubah ke Terkirim">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="updateStatus('${data}', 'batal')" title="Batalkan">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
+                    }
+                    
+                    return `
+                        ${btnStatus}
+                        <button type="button" class="btn btn-info btn-sm" onclick="showDetail('${data}')" title="Detail">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <a href="{{ url('pengiriman') }}/${data}/print" target="_blank" class="btn btn-secondary btn-sm" title="Print">
+                            <i class="fas fa-print"></i>
+                        </a>
+                    `;
+                }
+            }
+        ],
+        order: [[2, 'desc']]
+    });
+});
+
+function updateStatus(nomer, status) {
+    let title = '';
+    let text = '';
+    let icon = 'warning';
+    
+    if (status === 'terkirim') {
+        title = 'Ubah Status ke Terkirim?';
+        text = 'Stok barang akan berkurang sesuai jumlah pengiriman';
+        icon = 'question';
+    } else if (status === 'batal') {
+        title = 'Batalkan Pengiriman?';
+        text = 'Jika pengiriman sudah terkirim, stok akan dikembalikan';
+        icon = 'warning';
+    }
+    
+    Swal.fire({
+        title: title,
+        text: text,
+        icon: icon,
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Lanjutkan',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: "{{ url('pengiriman') }}/" + nomer + "/update_status",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    status: status
+                },
+                beforeSend: function() {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Mohon tunggu sebentar',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        dataTable.ajax.reload();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: response.message
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: xhr.responseJSON?.message || 'Terjadi kesalahan pada server'
+                    });
+                }
+            });
+        }
+    });
+}
+
+function showDetail(nomer) {
+    modalAction("{{ url('pengiriman') }}/" + nomer + "/show_ajax");
+}
+</script>
 @endpush

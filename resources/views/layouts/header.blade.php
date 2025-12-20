@@ -2,13 +2,10 @@
 <nav class="main-header navbar navbar-expand navbar-white navbar-light">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
-        <li class="nav-item">
-            <a class="nav-link" data-widget="pushmenu" href="#" role="button">
+        <li class="nav-item" style="z-index: 10000; position: relative;">
+            <a class="nav-link" data-widget="pushmenu" href="#" role="button" style="pointer-events: auto !important; z-index: 99999 !important;">
                 <i class="fas fa-bars"></i>
             </a>
-        </li>
-        <li class="nav-item d-none d-sm-inline-block">
-            <a href="{{ url('/') }}" class="nav-link">Dashboard</a>
         </li>
     </ul>
 
@@ -32,6 +29,13 @@
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
                     <a href="{{ route('profile') }}" class="dropdown-item">
                         <i class="fas fa-user mr-2"></i> Profile
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="{{ route('profile.edit') }}" class="dropdown-item">
+                        <i class="fas fa-pencil-alt mr-2"></i> Edit Profil
+                    </a>
+                    <a href="{{ route('profile.change-password') }}" class="dropdown-item">
+                        <i class="fas fa-sync-alt mr-2"></i> Ubah Password
                     </a>
                     <div class="dropdown-divider"></div>
                     <a href="{{ route('logout') }}" class="dropdown-item" 

@@ -28,6 +28,7 @@ class CreateReturTable extends Migration
             $table->decimal('hasil', 10, 2);
             $table->string('kondisi', 50)->nullable();
             $table->text('keterangan')->nullable();
+            $table->boolean('is_locked')->default(false);
             
             $table->foreign('pengiriman_id')
                   ->references('pengiriman_id')
@@ -46,6 +47,11 @@ class CreateReturTable extends Migration
                   ->on('barang')
                   ->onDelete('cascade')
                   ->onUpdate('cascade');
+            
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->string('user_create')->nullable();
+            $table->string('user_update')->nullable();
                   
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_general_ci';

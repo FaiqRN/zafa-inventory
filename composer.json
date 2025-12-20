@@ -29,7 +29,8 @@
     },
     "autoload": {
         "files": [
-            "app/Helpers/FormatHelper.php"
+            "app/Helpers/FormatHelper.php",
+            "app/Helpers/LoginHelper.php"
         ],
         "psr-4": {
             "App\\": "app/",

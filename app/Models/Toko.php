@@ -10,245 +10,214 @@ class Toko extends Model
 {
     use HasFactory;
 
-    /**
-     * Nama tabel yang terkait dengan model.
-     *
-     * @var string
-     */
-    protected $table = 'toko';
+    public const TABLE = 'toko';
+    public const FIELD_TOKO_ID = 'toko_id';
+    public const FIELD_NAMA_TOKO = 'nama_toko';
+    public const FIELD_PEMILIK = 'pemilik';
+    public const FIELD_ALAMAT = 'alamat';
+    public const FIELD_WILAYAH_KECAMATAN = 'wilayah_kecamatan';
+    public const FIELD_WILAYAH_KELURAHAN = 'wilayah_kelurahan';
+    public const FIELD_WILAYAH_KOTA_KABUPATEN = 'wilayah_kota_kabupaten';
+    public const FIELD_NOMER_TELPON = 'nomer_telpon';
+    public const FIELD_JALAN_ID = 'jalan_id';
+    public const FIELD_LATITUDE = 'latitude';
+    public const FIELD_LONGITUDE = 'longitude';
+    public const FIELD_IS_ACTIVE = 'is_active';
+    public const FIELD_CATATAN_LOKASI = 'catatan_lokasi';
+    public const FIELD_ALAMAT_LENGKAP_GEOCODING = 'alamat_lengkap_geocoding';
+    public const FIELD_GEOCODING_PROVIDER = 'geocoding_provider';
+    public const FIELD_GEOCODING_ACCURACY = 'geocoding_accuracy';
+    public const FIELD_GEOCODING_CONFIDENCE = 'geocoding_confidence';
+    public const FIELD_GEOCODING_QUALITY = 'geocoding_quality';
+    public const FIELD_GEOCODING_SCORE = 'geocoding_score';
+    public const FIELD_GEOCODING_LAST_UPDATED = 'geocoding_last_updated';
+    public const FIELD_GEOCODING_TIMESTAMP = 'geocoding_last_updated'; // Alias for consistency
+    public const FIELD_CREATED_AT = 'created_at';
+    public const FIELD_UPDATED_AT = 'updated_at';
+    public const FIELD_USER_CREATE = 'user_create';
+    public const FIELD_USER_UPDATE = 'user_update';
 
-    /**
-     * Primary key tabel.
-     *
-     * @var string
-     */
-    protected $primaryKey = 'toko_id';
-
-    /**
-     * Tipe primary key.
-     *
-     * @var string
-     */
+    protected $table = self::TABLE;
+    protected $primaryKey = self::FIELD_TOKO_ID;
     protected $keyType = 'string';
-
-    /**
-     * Menentukan apakah model menggunakan timestamps.
-     *
-     * @var bool
-     */
     public $timestamps = true;
 
-    /**
-     * Atribut yang dapat diisi (mass assignable).
-     *
-     * @var array
-     */
     protected $fillable = [
-        'toko_id',
-        'nama_toko',
-        'pemilik',
-        'alamat',
-        'wilayah_kecamatan',
-        'wilayah_kelurahan',
-        'wilayah_kota_kabupaten',
-        'nomer_telpon',
-        // Enhanced geocoding fields
-        'latitude',
-        'longitude',
-        'is_active',
-        'catatan_lokasi',
-        'alamat_lengkap_geocoding',
-        // Geocoding metadata
-        'geocoding_provider',
-        'geocoding_accuracy',
-        'geocoding_confidence',
-        'geocoding_quality',
-        'geocoding_score',
-        'geocoding_last_updated'
+        self::FIELD_TOKO_ID,
+        self::FIELD_NAMA_TOKO,
+        self::FIELD_PEMILIK,
+        self::FIELD_ALAMAT,
+        self::FIELD_WILAYAH_KECAMATAN,
+        self::FIELD_WILAYAH_KELURAHAN,
+        self::FIELD_WILAYAH_KOTA_KABUPATEN,
+        self::FIELD_NOMER_TELPON,
+        self::FIELD_JALAN_ID,
+        self::FIELD_LATITUDE,
+        self::FIELD_LONGITUDE,
+        self::FIELD_IS_ACTIVE,
+        self::FIELD_CATATAN_LOKASI,
+        self::FIELD_ALAMAT_LENGKAP_GEOCODING,
+        self::FIELD_GEOCODING_PROVIDER,
+        self::FIELD_GEOCODING_ACCURACY,
+        self::FIELD_GEOCODING_CONFIDENCE,
+        self::FIELD_GEOCODING_QUALITY,
+        self::FIELD_GEOCODING_SCORE,
+        self::FIELD_GEOCODING_LAST_UPDATED,
+        self::FIELD_USER_CREATE,
+        self::FIELD_USER_UPDATE,
     ];
 
-    /**
-     * Tipe casting untuk kolom
-     *
-     * @var array
-     */
     protected $casts = [
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
-        'is_active' => 'boolean',
-        'geocoding_confidence' => 'decimal:3',
-        'geocoding_score' => 'decimal:2',
-        'geocoding_last_updated' => 'datetime'
+        self::FIELD_LATITUDE => 'decimal:8',
+        self::FIELD_LONGITUDE => 'decimal:8',
+        self::FIELD_IS_ACTIVE => 'boolean',
+        self::FIELD_GEOCODING_CONFIDENCE => 'decimal:3',
+        self::FIELD_GEOCODING_SCORE => 'decimal:2',
+        self::FIELD_GEOCODING_LAST_UPDATED => 'datetime',
     ];
 
-    /**
-     * Boot method untuk auto-update geocoding timestamp
-     */
     protected static function boot()
     {
         parent::boot();
 
         static::updating(function ($toko) {
-            // Update geocoding timestamp jika koordinat berubah
-            if ($toko->isDirty(['latitude', 'longitude', 'geocoding_provider'])) {
-                $toko->geocoding_last_updated = now();
+            if ($toko->isDirty([self::FIELD_LATITUDE, self::FIELD_LONGITUDE, self::FIELD_GEOCODING_PROVIDER])) {
+                $toko->{self::FIELD_GEOCODING_LAST_UPDATED} = now();
             }
         });
 
         static::creating(function ($toko) {
-            // Set geocoding timestamp untuk data baru
-            if ($toko->latitude && $toko->longitude) {
-                $toko->geocoding_last_updated = now();
+            if ($toko->{self::FIELD_LATITUDE} && $toko->{self::FIELD_LONGITUDE}) {
+                $toko->{self::FIELD_GEOCODING_LAST_UPDATED} = now();
             }
         });
     }
 
-    /**
-     * Relasi ke tabel barang_toko.
-     */
+    public function jalan()
+    {
+        return $this->belongsTo(Jalan::class, self::FIELD_JALAN_ID);
+    }
+
     public function barangToko()
     {
-        return $this->hasMany(BarangToko::class, 'toko_id', 'toko_id');
+        return $this->hasMany(BarangToko::class, BarangToko::FIELD_TOKO_ID, self::FIELD_TOKO_ID);
     }
 
-    /**
-     * Relasi ke tabel pengiriman.
-     */
     public function pengiriman()
     {
-        return $this->hasMany(Pengiriman::class, 'toko_id', 'toko_id');
+        return $this->hasMany(Pengiriman::class, Pengiriman::FIELD_TOKO_ID, self::FIELD_TOKO_ID);
     }
 
-    /**
-     * Relasi ke tabel retur.
-     */
     public function retur()
     {
-        return $this->hasMany(Retur::class, 'toko_id', 'toko_id');
+        return $this->hasMany(Retur::class, Retur::FIELD_TOKO_ID, self::FIELD_TOKO_ID);
     }
     
-    /**
-     * Relasi ke tabel barang melalui barang_toko.
-     */
     public function barang()
     {
-        return $this->belongsToMany(Barang::class, 'barang_toko', 'toko_id', 'barang_id')
-                    ->withPivot('barang_toko_id', 'harga_barang_toko');
+        return $this->belongsToMany(Barang::class, BarangToko::TABLE, self::FIELD_TOKO_ID, Barang::FIELD_BARANG_ID)
+                    ->withPivot(BarangToko::FIELD_BARANG_TOKO_ID, BarangToko::FIELD_HARGA_BARANG_TOKO);
     }
 
-    /**
-     * Scope untuk toko aktif
-     */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where(self::FIELD_IS_ACTIVE, true);
     }
 
-    /**
-     * Scope untuk toko dengan koordinat
-     */
     public function scopeWithCoordinates($query)
     {
-        return $query->whereNotNull('latitude')
-                    ->whereNotNull('longitude');
+        return $query->whereNotNull(self::FIELD_LATITUDE)
+                    ->whereNotNull(self::FIELD_LONGITUDE);
     }
 
-    /**
-     * Scope untuk toko dengan kualitas geocoding tertentu
-     */
     public function scopeByGeocodeQuality($query, $quality)
     {
-        return $query->where('geocoding_quality', $quality);
+        return $query->where(self::FIELD_GEOCODING_QUALITY, $quality);
     }
 
-    /**
-     * Scope untuk toko dengan geocoding berkualitas baik
-     */
     public function scopeHighQualityGeocode($query)
     {
-        return $query->whereIn('geocoding_quality', ['excellent', 'good']);
+        return $query->whereIn(self::FIELD_GEOCODING_QUALITY, ['excellent', 'good']);
     }
 
-    /**
-     * Scope untuk toko yang perlu geocoding ulang
-     */
     public function scopeNeedsRegeocoding($query)
     {
         return $query->where(function($q) {
-            $q->whereNull('latitude')
-              ->orWhereNull('longitude')
-              ->orWhereIn('geocoding_quality', ['poor', 'very poor', 'failed'])
-              ->orWhereNull('geocoding_quality');
+            $q->whereNull(self::FIELD_LATITUDE)
+              ->orWhereNull(self::FIELD_LONGITUDE)
+              ->orWhereIn(self::FIELD_GEOCODING_QUALITY, ['poor', 'very poor', 'failed'])
+              ->orWhereNull(self::FIELD_GEOCODING_QUALITY)
+              ->orWhere(self::FIELD_GEOCODING_SCORE, '<', 70);
         });
     }
 
-    /**
-     * Scope berdasarkan wilayah
-     */
+    public function scopeByQuality($query, $quality)
+    {
+        $qualityMap = [
+            'excellent' => ['quality' => 'excellent', 'min_score' => 90],
+            'good' => ['quality' => 'good', 'min_score' => 80],
+            'fair' => ['quality' => 'fair', 'min_score' => 70],
+            'poor' => ['quality' => 'poor', 'min_score' => 0],
+        ];
+
+        if (isset($qualityMap[$quality])) {
+            return $query->where(self::FIELD_GEOCODING_QUALITY, $qualityMap[$quality]['quality']);
+        }
+
+        return $query;
+    }
+
     public function scopeByWilayah($query, $kota = null, $kecamatan = null, $kelurahan = null)
     {
         if ($kota) {
-            $query->where('wilayah_kota_kabupaten', $kota);
+            $query->where(self::FIELD_WILAYAH_KOTA_KABUPATEN, $kota);
         }
         
         if ($kecamatan) {
-            $query->where('wilayah_kecamatan', $kecamatan);
+            $query->where(self::FIELD_WILAYAH_KECAMATAN, $kecamatan);
         }
         
         if ($kelurahan) {
-            $query->where('wilayah_kelurahan', $kelurahan);
+            $query->where(self::FIELD_WILAYAH_KELURAHAN, $kelurahan);
         }
         
         return $query;
     }
 
-    /**
-     * Scope untuk toko dalam wilayah Malang
-     */
     public function scopeInMalangRegion($query)
     {
-        return $query->whereNotNull('latitude')
-                    ->whereNotNull('longitude')
+        return $query->whereNotNull(self::FIELD_LATITUDE)
+                    ->whereNotNull(self::FIELD_LONGITUDE)
                     ->where(function($q) {
-                        // Batas koordinat wilayah Malang Raya
-                        $q->whereBetween('latitude', [-8.6, -7.4])
-                          ->whereBetween('longitude', [111.8, 113.2]);
+                        $q->whereBetween(self::FIELD_LATITUDE, [-8.6, -7.4])
+                          ->whereBetween(self::FIELD_LONGITUDE, [111.8, 113.2]);
                     });
     }
 
-    /**
-     * Accessor untuk full address
-     */
     public function getFullAddressAttribute()
     {
-        return $this->alamat . ', ' . $this->wilayah_kelurahan . ', ' . $this->wilayah_kecamatan . ', ' . $this->wilayah_kota_kabupaten;
+        return $this->{self::FIELD_ALAMAT} . ', ' . $this->{self::FIELD_WILAYAH_KELURAHAN} . ', ' . 
+               $this->{self::FIELD_WILAYAH_KECAMATAN} . ', ' . $this->{self::FIELD_WILAYAH_KOTA_KABUPATEN};
     }
 
-    /**
-     * Accessor untuk koordinat dalam format string
-     */
     public function getCoordinatesAttribute()
     {
-        if ($this->latitude && $this->longitude) {
-            return $this->latitude . ',' . $this->longitude;
+        if ($this->{self::FIELD_LATITUDE} && $this->{self::FIELD_LONGITUDE}) {
+            return $this->{self::FIELD_LATITUDE} . ',' . $this->{self::FIELD_LONGITUDE};
         }
         return null;
     }
 
-    /**
-     * Accessor untuk alamat lengkap geocoding dengan fallback
-     */
     public function getGeocodingAddressAttribute()
     {
-        return trim($this->alamat . ', ' . $this->wilayah_kelurahan . ', ' . $this->wilayah_kecamatan . ', ' . $this->wilayah_kota_kabupaten . ', Jawa Timur, Indonesia');
+        return trim($this->{self::FIELD_ALAMAT} . ', ' . $this->{self::FIELD_WILAYAH_KELURAHAN} . ', ' . 
+                   $this->{self::FIELD_WILAYAH_KECAMATAN} . ', ' . $this->{self::FIELD_WILAYAH_KOTA_KABUPATEN} . 
+                   ', Jawa Timur, Indonesia');
     }
 
-    /**
-     * Accessor untuk status geocoding
-     */
     public function getGeocodingStatusAttribute()
     {
-        if (!$this->latitude || !$this->longitude) {
+        if (!$this->{self::FIELD_LATITUDE} || !$this->{self::FIELD_LONGITUDE}) {
             return [
                 'status' => 'missing',
                 'message' => 'Belum ada koordinat GPS',
@@ -256,7 +225,7 @@ class Toko extends Model
             ];
         }
 
-        $quality = $this->geocoding_quality ?? 'unknown';
+        $quality = $this->{self::FIELD_GEOCODING_QUALITY} ?? 'unknown';
         
         $statusMap = [
             'excellent' => ['status' => 'excellent', 'message' => 'Sangat Akurat', 'badge_class' => 'success'],
@@ -271,55 +240,43 @@ class Toko extends Model
         return $statusMap[$quality] ?? $statusMap['unknown'];
     }
 
-    /**
-     * Check if coordinates are valid
-     */
     public function hasValidCoordinates()
     {
-        return $this->latitude && $this->longitude && 
-               abs($this->latitude) <= 90 && abs($this->longitude) <= 180;
+        return $this->{self::FIELD_LATITUDE} && $this->{self::FIELD_LONGITUDE} && 
+               abs($this->{self::FIELD_LATITUDE}) <= 90 && abs($this->{self::FIELD_LONGITUDE}) <= 180;
     }
 
-    /**
-     * Check if toko is in Malang region
-     */
     public function isInMalangRegion()
     {
         if (!$this->hasValidCoordinates()) {
             return false;
         }
         
-        return GeocodingService::isInMalangRegion($this->latitude, $this->longitude);
+        return GeocodingService::isInMalangRegion($this->{self::FIELD_LATITUDE}, $this->{self::FIELD_LONGITUDE});
     }
 
-    /**
-     * Check if toko is in Indonesia
-     */
     public function isInIndonesia()
     {
         if (!$this->hasValidCoordinates()) {
             return false;
         }
         
-        return GeocodingService::isInIndonesia($this->latitude, $this->longitude);
+        return GeocodingService::isInIndonesia($this->{self::FIELD_LATITUDE}, $this->{self::FIELD_LONGITUDE});
     }
 
-    /**
-     * Method untuk menghitung jarak dari koordinat lain (dalam km)
-     */
     public function getDistanceFrom($lat, $lng)
     {
         if (!$this->hasValidCoordinates()) {
             return null;
         }
 
-        $earthRadius = 6371; // Radius bumi dalam km
+        $earthRadius = 6371;
 
-        $dLat = deg2rad($lat - $this->latitude);
-        $dLng = deg2rad($lng - $this->longitude);
+        $dLat = deg2rad($lat - $this->{self::FIELD_LATITUDE});
+        $dLng = deg2rad($lng - $this->{self::FIELD_LONGITUDE});
 
         $a = sin($dLat/2) * sin($dLat/2) +
-             cos(deg2rad($this->latitude)) * cos(deg2rad($lat)) *
+             cos(deg2rad($this->{self::FIELD_LATITUDE})) * cos(deg2rad($lat)) *
              sin($dLng/2) * sin($dLng/2);
 
         $c = 2 * atan2(sqrt($a), sqrt(1-$a));
@@ -328,26 +285,20 @@ class Toko extends Model
         return round($distance, 2);
     }
 
-    /**
-     * Get distance from Malang city center
-     */
     public function getDistanceFromMalangCenter()
     {
         return $this->getDistanceFrom(-7.9666, 112.6326);
     }
 
-    /**
-     * Method untuk mendapatkan statistik toko
-     */
     public function getStatistics()
     {
-        $totalPengiriman = $this->pengiriman()->where('status', 'terkirim')->count();
+        $totalPengiriman = $this->pengiriman()->where(Pengiriman::FIELD_STATUS, 'terkirim')->count();
         $totalRetur = $this->retur()->count();
         $jenisBarang = $this->barangToko()->count();
         $pengirimanBulanIni = $this->pengiriman()
-            ->where('status', 'terkirim')
-            ->whereMonth('tanggal_pengiriman', date('m'))
-            ->whereYear('tanggal_pengiriman', date('Y'))
+            ->where(Pengiriman::FIELD_STATUS, 'terkirim')
+            ->whereMonth(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, date('m'))
+            ->whereYear(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, date('Y'))
             ->count();
 
         $successRate = $totalPengiriman > 0 ? 
@@ -360,22 +311,19 @@ class Toko extends Model
             'pengiriman_bulan_ini' => $pengirimanBulanIni,
             'success_rate' => $successRate,
             'has_coordinates' => $this->hasValidCoordinates(),
-            'geocoding_quality' => $this->geocoding_quality ?? 'unknown',
+            'geocoding_quality' => $this->{self::FIELD_GEOCODING_QUALITY} ?? 'unknown',
             'in_malang_region' => $this->isInMalangRegion(),
             'distance_from_malang' => $this->getDistanceFromMalangCenter()
         ];
     }
 
-    /**
-     * Method untuk mendapatkan toko terdekat
-     */
     public static function getNearbyTokos($lat, $lng, $radiusKm = 5, $limit = 10)
     {
         return self::withCoordinates()
             ->active()
             ->selectRaw("
                 *,
-                (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance
+                (6371 * acos(cos(radians(?)) * cos(radians(" . self::FIELD_LATITUDE . ")) * cos(radians(" . self::FIELD_LONGITUDE . ") - radians(?)) + sin(radians(?)) * sin(radians(" . self::FIELD_LATITUDE . ")))) AS distance
             ", [$lat, $lng, $lat])
             ->having('distance', '<=', $radiusKm)
             ->orderBy('distance')
@@ -383,9 +331,6 @@ class Toko extends Model
             ->get();
     }
 
-    /**
-     * Method untuk mendapatkan toko dengan kualitas geocoding terbaik di area tertentu
-     */
     public static function getHighQualityTokosInArea($lat, $lng, $radiusKm = 10, $limit = 20)
     {
         return self::withCoordinates()
@@ -393,18 +338,15 @@ class Toko extends Model
             ->highQualityGeocode()
             ->selectRaw("
                 *,
-                (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance
+                (6371 * acos(cos(radians(?)) * cos(radians(" . self::FIELD_LATITUDE . ")) * cos(radians(" . self::FIELD_LONGITUDE . ") - radians(?)) + sin(radians(?)) * sin(radians(" . self::FIELD_LATITUDE . ")))) AS distance
             ", [$lat, $lng, $lat])
             ->having('distance', '<=', $radiusKm)
-            ->orderBy('geocoding_score', 'desc')
+            ->orderBy(self::FIELD_GEOCODING_SCORE, 'desc')
             ->orderBy('distance')
             ->limit($limit)
             ->get();
     }
 
-    /**
-     * Force refresh geocoding untuk toko ini
-     */
     public function refreshGeocode()
     {
         try {
@@ -414,15 +356,15 @@ class Toko extends Model
             if ($geocodeResult) {
                 $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
                 
-                $this->latitude = $geocodeResult['latitude'];
-                $this->longitude = $geocodeResult['longitude'];
-                $this->alamat_lengkap_geocoding = $geocodeResult['formatted_address'];
-                $this->geocoding_provider = $geocodeResult['provider'];
-                $this->geocoding_accuracy = $geocodeResult['accuracy'];
-                $this->geocoding_confidence = $geocodeResult['confidence'] ?? null;
-                $this->geocoding_quality = $qualityCheck['quality'];
-                $this->geocoding_score = $qualityCheck['score'];
-                $this->geocoding_last_updated = now();
+                $this->{self::FIELD_LATITUDE} = $geocodeResult['latitude'];
+                $this->{self::FIELD_LONGITUDE} = $geocodeResult['longitude'];
+                $this->{self::FIELD_ALAMAT_LENGKAP_GEOCODING} = $geocodeResult['formatted_address'];
+                $this->{self::FIELD_GEOCODING_PROVIDER} = $geocodeResult['provider'];
+                $this->{self::FIELD_GEOCODING_ACCURACY} = $geocodeResult['accuracy'];
+                $this->{self::FIELD_GEOCODING_CONFIDENCE} = $geocodeResult['confidence'] ?? null;
+                $this->{self::FIELD_GEOCODING_QUALITY} = $qualityCheck['quality'];
+                $this->{self::FIELD_GEOCODING_SCORE} = $qualityCheck['score'];
+                $this->{self::FIELD_GEOCODING_LAST_UPDATED} = now();
                 $this->save();
                 
                 return [
@@ -439,23 +381,16 @@ class Toko extends Model
         }
     }
 
-    /**
-     * Get Google Maps URL for this toko
-     */
     public function getGoogleMapsUrlAttribute()
     {
         if ($this->hasValidCoordinates()) {
-            return "https://www.google.com/maps?q={$this->latitude},{$this->longitude}";
+            return "https://www.google.com/maps?q={$this->{self::FIELD_LATITUDE}},{$this->{self::FIELD_LONGITUDE}}";
         }
         
-        // Fallback to address search
         $address = urlencode($this->full_address);
         return "https://www.google.com/maps/search/{$address}";
     }
 
-    /**
-     * Get comprehensive location info
-     */
     public function getLocationInfoAttribute()
     {
         return [
@@ -463,12 +398,12 @@ class Toko extends Model
             'coordinates' => $this->coordinates,
             'has_coordinates' => $this->hasValidCoordinates(),
             'geocoding_info' => [
-                'provider' => $this->geocoding_provider,
-                'accuracy' => $this->geocoding_accuracy,
-                'quality' => $this->geocoding_quality,
-                'score' => $this->geocoding_score,
-                'confidence' => $this->geocoding_confidence,
-                'last_updated' => $this->geocoding_last_updated?->format('Y-m-d H:i:s')
+                'provider' => $this->{self::FIELD_GEOCODING_PROVIDER},
+                'accuracy' => $this->{self::FIELD_GEOCODING_ACCURACY},
+                'quality' => $this->{self::FIELD_GEOCODING_QUALITY},
+                'score' => $this->{self::FIELD_GEOCODING_SCORE},
+                'confidence' => $this->{self::FIELD_GEOCODING_CONFIDENCE},
+                'last_updated' => $this->{self::FIELD_GEOCODING_LAST_UPDATED}?->format('Y-m-d H:i:s')
             ],
             'validation' => [
                 'coordinates_valid' => $this->hasValidCoordinates(),
@@ -481,47 +416,37 @@ class Toko extends Model
         ];
     }
 
-    /**
-     * Scope untuk toko yang memerlukan verifikasi lokasi
-     */
     public function scopeNeedsLocationVerification($query)
     {
         return $query->where(function($q) {
-            $q->whereIn('geocoding_quality', ['fair', 'poor', 'very poor'])
+            $q->whereIn(self::FIELD_GEOCODING_QUALITY, ['fair', 'poor', 'very poor'])
               ->orWhere(function($subq) {
-                  // Toko dengan koordinat di luar wilayah Malang
-                  $subq->whereNotNull('latitude')
-                       ->whereNotNull('longitude')
+                  $subq->whereNotNull(self::FIELD_LATITUDE)
+                       ->whereNotNull(self::FIELD_LONGITUDE)
                        ->where(function($coordq) {
-                           $coordq->where('latitude', '<', -8.6)
-                                  ->orWhere('latitude', '>', -7.4)
-                                  ->orWhere('longitude', '<', 111.8)
-                                  ->orWhere('longitude', '>', 113.2);
+                           $coordq->where(self::FIELD_LATITUDE, '<', -8.6)
+                                  ->orWhere(self::FIELD_LATITUDE, '>', -7.4)
+                                  ->orWhere(self::FIELD_LONGITUDE, '<', 111.8)
+                                  ->orWhere(self::FIELD_LONGITUDE, '>', 113.2);
                        });
               });
         });
     }
 
-    /**
-     * Get toko yang siap untuk Market Map
-     */
     public static function getMarketMapReady()
     {
         return self::withCoordinates()
                    ->active()
-                   ->whereIn('geocoding_quality', ['excellent', 'good', 'fair'])
-                   ->orderBy('geocoding_score', 'desc')
+                   ->whereIn(self::FIELD_GEOCODING_QUALITY, ['excellent', 'good', 'fair'])
+                   ->orderBy(self::FIELD_GEOCODING_SCORE, 'desc')
                    ->get();
     }
 
-    /**
-     * Get summary statistics for geocoding
-     */
     public static function getGeocodingSummary()
     {
         $total = self::count();
         $withCoords = self::withCoordinates()->count();
-        $highQuality = self::whereIn('geocoding_quality', ['excellent', 'good'])->count();
+        $highQuality = self::whereIn(self::FIELD_GEOCODING_QUALITY, ['excellent', 'good'])->count();
         $inMalangRegion = self::inMalangRegion()->count();
         
         return [
@@ -536,20 +461,16 @@ class Toko extends Model
         ];
     }
 
-    /**
-     * Batch update geocoding quality untuk semua toko
-     */
     public static function batchUpdateGeocodeQuality()
     {
         $tokos = self::withCoordinates()->get();
         $updated = 0;
         
         foreach ($tokos as $toko) {
-            if (!$toko->geocoding_quality || $toko->geocoding_quality === 'unknown') {
-                // Set default quality berdasarkan provider
-                $quality = 'fair'; // default
+            if (!$toko->{self::FIELD_GEOCODING_QUALITY} || $toko->{self::FIELD_GEOCODING_QUALITY} === 'unknown') {
+                $quality = 'fair';
                 
-                switch ($toko->geocoding_provider) {
+                switch ($toko->{self::FIELD_GEOCODING_PROVIDER}) {
                     case 'internal_database':
                         $quality = 'excellent';
                         break;
@@ -569,7 +490,7 @@ class Toko extends Model
                         $quality = 'poor';
                 }
                 
-                $toko->geocoding_quality = $quality;
+                $toko->{self::FIELD_GEOCODING_QUALITY} = $quality;
                 $toko->save();
                 $updated++;
             }
@@ -578,34 +499,31 @@ class Toko extends Model
         return $updated;
     }
 
-    /**
-     * Get clustering data untuk Market Map
-     */
     public static function getClusteringData()
     {
         return self::withCoordinates()
                    ->active()
                    ->select([
-                       'toko_id',
-                       'nama_toko',
-                       'latitude',
-                       'longitude',
-                       'wilayah_kecamatan',
-                       'wilayah_kelurahan',
-                       'geocoding_quality',
-                       'geocoding_score'
+                       self::FIELD_TOKO_ID,
+                       self::FIELD_NAMA_TOKO,
+                       self::FIELD_LATITUDE,
+                       self::FIELD_LONGITUDE,
+                       self::FIELD_WILAYAH_KECAMATAN,
+                       self::FIELD_WILAYAH_KELURAHAN,
+                       self::FIELD_GEOCODING_QUALITY,
+                       self::FIELD_GEOCODING_SCORE
                    ])
                    ->get()
                    ->map(function($toko) {
                        return [
-                           'id' => $toko->toko_id,
-                           'name' => $toko->nama_toko,
-                           'lat' => (float) $toko->latitude,
-                           'lng' => (float) $toko->longitude,
-                           'kecamatan' => $toko->wilayah_kecamatan,
-                           'kelurahan' => $toko->wilayah_kelurahan,
-                           'quality' => $toko->geocoding_quality,
-                           'score' => (float) $toko->geocoding_score
+                           'id' => $toko->{self::FIELD_TOKO_ID},
+                           'name' => $toko->{self::FIELD_NAMA_TOKO},
+                           'lat' => (float) $toko->{self::FIELD_LATITUDE},
+                           'lng' => (float) $toko->{self::FIELD_LONGITUDE},
+                           'kecamatan' => $toko->{self::FIELD_WILAYAH_KECAMATAN},
+                           'kelurahan' => $toko->{self::FIELD_WILAYAH_KELURAHAN},
+                           'quality' => $toko->{self::FIELD_GEOCODING_QUALITY},
+                           'score' => (float) $toko->{self::FIELD_GEOCODING_SCORE}
                        ];
                    });
     }

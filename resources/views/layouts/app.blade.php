@@ -4,7 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>{{ config('app.name', 'ZafaSys') }}</title>
+    
+    <!-- Favicon ZafaSys - Multiple Sizes -->
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('adminlte/dist/img/zafalogo.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('adminlte/dist/img/zafalogo.png') }}">
+    <link rel="icon" type="image/png" sizes="48x48" href="{{ asset('adminlte/dist/img/zafalogo.png') }}">
+    <link rel="shortcut icon" href="{{ asset('adminlte/dist/img/zafalogo.png') }}">
+    
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
     <link rel="stylesheet" href="{{ asset('adminlte/plugins/fontawesome-free/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ asset('adminlte/dist/css/adminlte.min.css') }}">

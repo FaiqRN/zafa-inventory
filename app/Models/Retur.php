@@ -9,111 +9,90 @@ class Retur extends Model
 {
     use HasFactory;
 
-    /**
-     * Nama tabel yang terkait dengan model.
-     *
-     * @var string
-     */
-    protected $table = 'retur';
+    public const TABLE = 'retur';
+    public const FIELD_RETUR_ID = 'retur_id';
+    public const FIELD_PENGIRIMAN_ID = 'pengiriman_id';
+    public const FIELD_TOKO_ID = 'toko_id';
+    public const FIELD_BARANG_ID = 'barang_id';
+    public const FIELD_NOMER_PENGIRIMAN = 'nomer_pengiriman';
+    public const FIELD_TANGGAL_PENGIRIMAN = 'tanggal_pengiriman';
+    public const FIELD_TANGGAL_RETUR = 'tanggal_retur';
+    public const FIELD_HARGA_AWAL_BARANG = 'harga_awal_barang';
+    public const FIELD_JUMLAH_KIRIM = 'jumlah_kirim';
+    public const FIELD_JUMLAH_RETUR = 'jumlah_retur';
+    public const FIELD_TOTAL_TERJUAL = 'total_terjual';
+    public const FIELD_HASIL = 'hasil';
+    public const FIELD_KONDISI = 'kondisi';
+    public const FIELD_KETERANGAN = 'keterangan';
+    public const FIELD_IS_LOCKED = 'is_locked';
+    public const FIELD_CREATED_AT = 'created_at';
+    public const FIELD_UPDATED_AT = 'updated_at';
+    public const FIELD_USER_CREATE = 'user_create';
+    public const FIELD_USER_UPDATE = 'user_update';
 
-    /**
-     * Primary key tabel.
-     *
-     * @var string
-     */
-    protected $primaryKey = 'retur_id';
-
-    /**
-     * Menentukan apakah primary key auto-increment.
-     *
-     * @var bool
-     */
+    protected $table = self::TABLE;
+    protected $primaryKey = self::FIELD_RETUR_ID;
     public $incrementing = true;
+    public $timestamps = true;
 
-    /**
-     * Menentukan apakah model menggunakan timestamps.
-     *
-     * @var bool
-     */
-    public $timestamps = false;
-
-    /**
-     * Atribut yang dapat diisi (mass assignable).
-     *
-     * @var array
-     */
     protected $fillable = [
-        'pengiriman_id',
-        'toko_id',
-        'barang_id',
-        'nomer_pengiriman',
-        'tanggal_pengiriman',
-        'tanggal_retur',
-        'harga_awal_barang',
-        'jumlah_kirim',
-        'jumlah_retur',
-        'total_terjual',
-        'hasil',
-        'kondisi',
-        'keterangan'
+        self::FIELD_PENGIRIMAN_ID,
+        self::FIELD_TOKO_ID,
+        self::FIELD_BARANG_ID,
+        self::FIELD_NOMER_PENGIRIMAN,
+        self::FIELD_TANGGAL_PENGIRIMAN,
+        self::FIELD_TANGGAL_RETUR,
+        self::FIELD_HARGA_AWAL_BARANG,
+        self::FIELD_JUMLAH_KIRIM,
+        self::FIELD_JUMLAH_RETUR,
+        self::FIELD_TOTAL_TERJUAL,
+        self::FIELD_HASIL,
+        self::FIELD_KONDISI,
+        self::FIELD_KETERANGAN,
+        self::FIELD_IS_LOCKED,
+        self::FIELD_USER_CREATE,
+        self::FIELD_USER_UPDATE,
     ];
 
-    /**
-     * Atribut yang harus dikonversi ke tipe data tertentu.
-     *
-     * @var array
-     */
     protected $casts = [
-        'tanggal_pengiriman' => 'date',
-        'tanggal_retur' => 'date',
-        'harga_awal_barang' => 'decimal:2',
-        'jumlah_kirim' => 'integer',
-        'jumlah_retur' => 'integer',
-        'total_terjual' => 'integer',
-        'hasil' => 'decimal:2'
+        self::FIELD_TANGGAL_PENGIRIMAN => 'date',
+        self::FIELD_TANGGAL_RETUR => 'date',
+        self::FIELD_HARGA_AWAL_BARANG => 'decimal:2',
+        self::FIELD_JUMLAH_KIRIM => 'integer',
+        self::FIELD_JUMLAH_RETUR => 'integer',
+        self::FIELD_TOTAL_TERJUAL => 'integer',
+        self::FIELD_HASIL => 'decimal:2',
+        self::FIELD_IS_LOCKED => 'boolean',
+        self::FIELD_CREATED_AT => 'datetime',
+        self::FIELD_UPDATED_AT => 'datetime',
     ];
 
-    /**
-     * Relasi ke tabel pengiriman.
-     */
     public function pengiriman()
     {
-        return $this->belongsTo(Pengiriman::class, 'pengiriman_id', 'pengiriman_id');
+        return $this->belongsTo(Pengiriman::class, self::FIELD_PENGIRIMAN_ID, Pengiriman::FIELD_PENGIRIMAN_ID);
     }
 
-    /**
-     * Relasi ke tabel barang.
-     */
     public function barang()
     {
-        return $this->belongsTo(Barang::class, 'barang_id', 'barang_id');
+        return $this->belongsTo(Barang::class, self::FIELD_BARANG_ID, Barang::FIELD_BARANG_ID);
     }
 
-    /**
-     * Relasi ke tabel toko.
-     */
     public function toko()
     {
-        return $this->belongsTo(Toko::class, 'toko_id', 'toko_id');
+        return $this->belongsTo(Toko::class, self::FIELD_TOKO_ID, Toko::FIELD_TOKO_ID);
     }
 
-    /**
-     * Mendapatkan nilai retur (jumlah_retur * harga_awal_barang).
-     */
     public function getNilaiReturAttribute()
     {
-        return $this->jumlah_retur * $this->harga_awal_barang;
+        return $this->{self::FIELD_JUMLAH_RETUR} * $this->{self::FIELD_HARGA_AWAL_BARANG};
     }
 
-    /**
-     * Mendapatkan persentase barang retur dari total pengiriman.
-     */
     public function getPersentaseReturAttribute()
     {
-        if ($this->jumlah_kirim == 0) {
+        if ($this->{self::FIELD_JUMLAH_KIRIM} == 0) {
             return 0;
         }
         
-        return round(($this->jumlah_retur / $this->jumlah_kirim) * 100, 2);
+        return round(($this->{self::FIELD_JUMLAH_RETUR} / $this->{self::FIELD_JUMLAH_KIRIM}) * 100, 2);
     }
 }

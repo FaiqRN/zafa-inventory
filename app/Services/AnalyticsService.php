@@ -355,9 +355,7 @@ class AnalyticsService
                 ->whereHas('toko', function($q) {
                     $q->where('is_active', true);
                 })
-                ->whereHas('barang', function($q) {
-                    $q->where('is_deleted', 0);
-                })
+
                 ->get()
                 ->map(function ($barangToko) {
                     return $this->calculateInventoryRecommendation($barangToko);
@@ -474,7 +472,7 @@ class AnalyticsService
         $cacheKey = "analytics.product_velocity";
         
         return Cache::remember($cacheKey, self::CACHE_DURATION, function () {
-            $products = Barang::where('is_deleted', 0)->get()->map(function ($barang) {
+            $products = Barang::get()->map(function ($barang) {
                 return $this->analyzeProductVelocity($barang);
             });
             

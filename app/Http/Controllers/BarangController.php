@@ -3,13 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Barang;
+use App\Helpers\MasterData\barang\BarangHelper;
+use App\Helpers\MasterData\barang\BarangStokHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Str;
 
 class BarangController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-barang');
+    }
     /**
      * Display a listing of the resource.
      *
@@ -34,22 +40,25 @@ class BarangController extends Controller
      */
     public function getData(Request $request)
     {
-        // Ambil HANYA data yang tidak terhapus (is_deleted = 0) dan urutkan berdasarkan kode barang
-        $data = Barang::where('is_deleted', 0)->orderBy('barang_kode', 'asc')->get();
+        // Get active barang with stock information
+        $data = BarangHelper::getActiveBarang();
         
         $response = DataTables::of($data)
             ->addIndexColumn()
             ->addColumn('action', function($row) {
                 return ''; // This will be handled by JavaScript
             })
+            ->addColumn('available_stock', function($row) {
+                return $row->available_stock;
+            })
+            ->addColumn('stock_status', function($row) {
+                return $row->stock_status;
+            })
             ->rawColumns(['action'])
             ->make(true);
             
-        // Tambahkan header untuk mencegah caching
-        return $response
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+        // Add no-cache headers
+        return $response->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -62,12 +71,9 @@ class BarangController extends Controller
         $kode = Barang::generateBarangKode();
         
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'kode' => $kode
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -80,7 +86,7 @@ class BarangController extends Controller
     {
         // Validasi input
         $validator = Validator::make($request->all(), [
-            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode,NULL,barang_id,is_deleted,0',
+            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode',
             'nama_barang' => 'required|string|max:100',
             'harga_awal_barang' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:20',
@@ -89,39 +95,34 @@ class BarangController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
         }
 
-        // Generate barang_id unik
-        $barangId = 'BRG' . strtoupper(Str::random(7));
-        
-        // Check if ID already exists and regenerate if needed
-        while (Barang::find($barangId)) {
-            $barangId = 'BRG' . strtoupper(Str::random(7));
-        }
+        // Generate unique barang_id using helper
+        $barangId = BarangHelper::generateUniqueBarangId();
 
-        // Tambah data barang baru
+        // Create new barang with explicit values
         $barang = new Barang();
         $barang->barang_id = $barangId;
         $barang->barang_kode = $request->barang_kode;
         $barang->nama_barang = $request->nama_barang;
         $barang->harga_awal_barang = $request->harga_awal_barang;
+        $barang->stok = 0;  // Default stok 0
         $barang->satuan = $request->satuan;
         $barang->keterangan = $request->keterangan;
-        $barang->is_deleted = 0;
         $barang->save();
 
+        // Get barang with stock details
+        $barangWithStock = BarangHelper::getBarangById($barangId);
+
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Data barang berhasil ditambahkan',
-            'data' => $barang
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+            'data' => $barangWithStock
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -132,22 +133,19 @@ class BarangController extends Controller
      */
     public function edit($id)
     {
-        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        $barang = BarangHelper::getBarangById($id);
         
         if (!$barang) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Data barang tidak ditemukan'
             ], 404);
         }
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'data' => $barang
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
@@ -159,18 +157,18 @@ class BarangController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        $barang = Barang::where('barang_id', $id)->first();
         
         if (!$barang) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Data barang tidak ditemukan'
             ], 404);
         }
 
         // Validasi input
         $validator = Validator::make($request->all(), [
-            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode,' . $id . ',barang_id,is_deleted,0',
+            'barang_kode' => 'required|string|max:20|unique:barang,barang_kode,' . $id . ',barang_id',
             'nama_barang' => 'required|string|max:100',
             'harga_awal_barang' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:20',
@@ -179,7 +177,7 @@ class BarangController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
             ], 422);
@@ -193,25 +191,69 @@ class BarangController extends Controller
         $barang->keterangan = $request->keterangan;
         $barang->save();
 
+        // Get updated barang with stock details
+        $barangWithStock = BarangHelper::getBarangById($id);
+
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Data barang berhasil diperbarui',
-            'data' => $barang
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+            'data' => $barangWithStock
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
     /**
-     * Soft delete the specified resource from storage.
+     * Delete the specified resource from storage.
      *
      * @param  string  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
-        $barang = Barang::where('barang_id', $id)->where('is_deleted', 0)->first();
+        $barang = Barang::where('barang_id', $id)->first();
+        
+        if (!$barang) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data barang tidak ditemukan'
+            ], 404);
+        }
+
+        // Delete barang
+        $barang->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data barang berhasil dihapus'
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Get list of all barang with stock information for transaction modules
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getList(Request $request)
+    {
+        // Get all barang
+        $barangList = Barang::orderBy('barang_kode', 'asc')
+            ->get(['barang_id', 'barang_kode', 'nama_barang', 'harga_awal_barang', 'satuan', 'keterangan', 'stok']);
+        
+        return response()->json([
+            'status' => 'success',
+            'data' => $barangList
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Get detailed stock information for a specific barang
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStockInfo($id)
+    {
+        $barang = BarangHelper::getBarangById($id);
         
         if (!$barang) {
             return response()->json([
@@ -220,30 +262,332 @@ class BarangController extends Controller
             ], 404);
         }
 
-        // Soft delete - update is_deleted flag
-        $barang->is_deleted = 1;
-        $barang->save();
-
         return response()->json([
             'status' => 'success',
-            'message' => 'Data barang berhasil dihapus'
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+            'data' => [
+                'barang_id' => $barang->barang_id,
+                'barang_kode' => $barang->barang_kode,
+                'nama_barang' => $barang->nama_barang,
+                'satuan' => $barang->satuan,
+                'stock_details' => $barang->stock_details
+            ]
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
     }
 
-    public function getList(Request $request)
+    /**
+     * Validate stock availability for transaction
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateStock(Request $request)
     {
-        // Ambil HANYA data yang tidak terhapus (is_deleted = 0) dan urutkan berdasarkan kode barang
-        $data = Barang::where('is_deleted', 0)->orderBy('barang_kode', 'asc')->get();
-        
+        $validator = Validator::make($request->all(), [
+            'barang_id' => 'required|string|exists:barang,barang_id',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validation = BarangHelper::validateStockAvailability(
+            $request->barang_id,
+            $request->quantity
+        );
+
         return response()->json([
             'status' => 'success',
-            'data' => $data
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
+            'data' => $validation
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Get stock history for a specific barang
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStokBarang($id)
+    {
+        $barang = Barang::where('barang_id', $id)->first();
+        
+        if (!$barang) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data barang tidak ditemukan'
+            ], 404);
+        }
+
+        // Get stok records for this barang
+        $stokData = DB::table('barang_stok')
+            ->where('barang_id', $id)
+            ->orderBy('tanggal_stock_barang', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $stokData
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Store new stock entry for barang
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeStok(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'barang_id' => 'required|string|exists:barang,barang_id',
+            'tanggal_stock_barang' => 'required|date',
+            'stok' => 'required|integer|min:1',
+            'catatan' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Insert stok data
+        $stokId = DB::table('barang_stok')->insertGetId([
+            'barang_id' => $request->barang_id,
+            'tanggal_stock_barang' => $request->tanggal_stock_barang,
+            'stok' => $request->stok,
+            'catatan' => $request->catatan,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Update total stok di tabel barang
+        $totalStok = DB::table('barang_stok')
+            ->where('barang_id', $request->barang_id)
+            ->sum('stok');
+
+        Barang::where('barang_id', $request->barang_id)->update([
+            'stok' => $totalStok,
+            'tanggal_stock_barang' => $request->tanggal_stock_barang,
+        ]);
+
+        // Get updated stok data
+        $stokData = DB::table('barang_stok')
+            ->where('barang_id', $request->barang_id)
+            ->orderBy('tanggal_stock_barang', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Stok barang berhasil ditambahkan',
+            'data' => $stokData
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Get specific stock entry for editing
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function editStok($id)
+    {
+        $stok = DB::table('barang_stok')
+            ->where('id', $id)
+            ->first();
+        
+        if (!$stok) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data stok tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $stok
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Update stock entry
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateStok(Request $request, $id)
+    {
+        $stok = DB::table('barang_stok')
+            ->where('id', $id)
+            ->first();
+        
+        if (!$stok) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data stok tidak ditemukan'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'barang_id' => 'required|string|exists:barang,barang_id',
+            'tanggal_stock_barang' => 'required|date',
+            'stok' => 'required|integer|min:1',
+            'catatan' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Update stok data
+        DB::table('barang_stok')
+            ->where('id', $id)
+            ->update([
+                'tanggal_stock_barang' => $request->tanggal_stock_barang,
+                'stok' => $request->stok,
+                'catatan' => $request->catatan,
+                'updated_at' => now(),
+            ]);
+
+        // Recalculate total stok
+        $totalStok = DB::table('barang_stok')
+            ->where('barang_id', $request->barang_id)
+            ->sum('stok');
+
+        Barang::where('barang_id', $request->barang_id)->update([
+            'stok' => $totalStok,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Stok barang berhasil diperbarui'
+        ])->withHeaders(BarangHelper::getNoCacheHeaders());
+    }
+
+    /**
+     * Show form tambah stok (FIFO)
+     *
+     * @param string $id
+     * @return \Illuminate\Http\Response
+     */
+    public function tambahStok($id)
+    {
+        $barang = Barang::find($id);
+        
+        if (!$barang) {
+            return redirect()->route('barang.index')->with('error', 'Data barang tidak ditemukan');
+        }
+
+        return view('barang.tambah-stok', [
+            'activemenu' => 'barang',
+            'barang' => $barang,
+            'breadcrumb' => (object) [
+                'title' => 'Tambah Stok',
+                'list' => ['Home', 'Master Data', 'Data Barang', 'Tambah Stok']
+            ]
+        ]);
+    }
+
+    /**
+     * Store tambah stok (FIFO)
+     *
+     * @param Request $request
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function storeTambahStok(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'jumlah' => 'required|integer|min:1',
+            'tanggal' => 'required|date|before_or_equal:today',
+            'catatan' => 'nullable|string|max:255',
+        ], [
+            'jumlah.required' => 'Jumlah stok harus diisi',
+            'jumlah.min' => 'Jumlah stok minimal 1',
+            'tanggal.required' => 'Tanggal stok harus diisi',
+            'tanggal.before_or_equal' => 'Tanggal stok tidak boleh melebihi hari ini',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $result = BarangStokHelper::tambahStok(
+            $id,
+            $request->jumlah,
+            $request->tanggal,
+            $request->catatan
+        );
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result['data']
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
+        }
+    }
+
+    /**
+     * Show riwayat stok (FIFO)
+     *
+     * @param string $id
+     * @return \Illuminate\Http\Response
+     */
+    public function riwayatStok($id)
+    {
+        $barang = Barang::find($id);
+        
+        if (!$barang) {
+            return redirect()->route('barang.index')->with('error', 'Data barang tidak ditemukan');
+        }
+
+        $summary = BarangStokHelper::getStokSummary($id);
+
+        return view('barang.riwayat-stok', [
+            'activemenu' => 'barang',
+            'barang' => $barang,
+            'summary' => $summary,
+            'breadcrumb' => (object) [
+                'title' => 'Riwayat Stok',
+                'list' => ['Home', 'Master Data', 'Data Barang', 'Riwayat Stok']
+            ]
+        ]);
+    }
+
+    /**
+     * Get detail batch for DataTables
+     *
+     * @param string $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function detailBatchDatatable($id)
+    {
+        $batches = BarangStokHelper::getDetailBatch($id);
+        
+        return DataTables::of($batches)
+            ->addIndexColumn()
+            ->make(true);
     }
 }

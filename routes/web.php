@@ -1,20 +1,20 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\ReturController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MarketMapController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
-use App\Http\Controllers\LaporanTokoController;
-use App\Http\Controllers\LaporanPemesananController;
 use App\Http\Controllers\FollowUpPelangganController;
 
 // Analytics Controllers - FIXED NAMESPACE (Tanpa Analytics\)
@@ -34,16 +34,21 @@ use App\Http\Controllers\ProfitabilityController;
 |
 */
 
-// Route tamu/belum login
-Route::middleware(['guest', 'nocache'])->group(function () {
-    Route::get('/', [AuthController::class, 'showLoginForm']);
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+// Route tamu/belum login dengan rate limiting
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
+    Route::get('/', [LoginController::class, 'showLoginForm']);
+    Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [LoginController::class, 'login'])->name('login.process');
 });
 
-// Route yang memerlukan autentikasi
-Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// Token authentication route dengan rate limiting
+Route::middleware(['throttle:10,1'])->group(function () {
+    Route::get('/auth/{token}', [LoginController::class, 'loginViaToken'])->name('auth.token');
+});
+
+// Route yang memerlukan autentikasi dengan prevent.back middleware
+Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout'])->group(function () {
+    Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
     
     // ===============================
     // DASHBOARD ROUTES 
@@ -65,12 +70,14 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
     // ANALYTICS ROUTES - CORE 4 MODULES ONLY
     // ===============================
     Route::prefix('analytics')->name('analytics.')->group(function () {
-        // Main Analytics Dashboard - Overview Only
-        Route::get('/', [AnalyticsController::class, 'index'])->name('index');
-        Route::get('/api/overview', [AnalyticsController::class, 'getOverviewData'])->name('api.overview');
+        // Main Analytics Dashboard - Overview Only (admin/ketua only)
+        Route::middleware('can:view-analytics')->group(function () {
+            Route::get('/', [AnalyticsController::class, 'index'])->name('index');
+            Route::get('/api/overview', [AnalyticsController::class, 'getOverviewData'])->name('api.overview');
+        });
 
-        // ===== ANALYTICS 1: PARTNER PERFORMANCE =====
-        Route::prefix('partner-performance')->name('partner-performance.')->group(function () {
+        // ===== ANALYTICS 1: PARTNER PERFORMANCE (admin/ketua/AP) =====
+        Route::prefix('partner-performance')->name('partner-performance.')->middleware('can:view-partner-performance')->group(function () {
             Route::get('/', [PartnerPerformanceController::class, 'index'])->name('index');
             
             // API Routes
@@ -89,30 +96,31 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
             Route::post('/generate-report', [PartnerPerformanceController::class, 'generateReport'])->name('generate-report');
         });
         
-        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION =====
-        Route::prefix('inventory-optimization')->name('inventory-optimization.')->group(function () {
+        // ===== ANALYTICS 2: INVENTORY OPTIMIZATION (admin/ketua/FRN) =====
+        Route::prefix('inventory-optimization')->name('inventory-optimization.')->middleware('can:view-inventory-optimization')->group(function () {
             Route::get('/', [InventoryOptimizationController::class, 'index'])->name('index');
-            
+
             // Recommendation Actions
             Route::post('/apply', [InventoryOptimizationController::class, 'applyRecommendation'])->name('apply');
             Route::post('/apply-all', [InventoryOptimizationController::class, 'applyAllRecommendations'])->name('apply-all');
             Route::post('/customize', [InventoryOptimizationController::class, 'customizeRecommendation'])->name('customize');
             Route::post('/generate', [InventoryOptimizationController::class, 'refreshRecommendations'])->name('generate');
-            
+
             // Seasonal Configuration
             Route::get('/seasonal-config', [InventoryOptimizationController::class, 'getSeasonalAdjustments'])->name('seasonal-config');
+            Route::get('/seasonal-settings', [InventoryOptimizationController::class, 'seasonalSettings'])->name('seasonal-settings');
             Route::post('/update-seasonal', [InventoryOptimizationController::class, 'updateSeasonalConfiguration'])->name('update-seasonal');
-            
+
             // API Routes
             Route::get('/api/data', [InventoryOptimizationController::class, 'getOptimizationData'])->name('api.data');
             Route::get('/details/{recommendationId}', [InventoryOptimizationController::class, 'getRecommendationDetails'])->name('details');
-            
+
             // Export
             Route::get('/export', [InventoryOptimizationController::class, 'export'])->name('export');
         });
         
-        // ===== ANALYTICS 3: PRODUCT VELOCITY =====
-        Route::prefix('product-velocity')->name('product-velocity.')->group(function () {
+        // ===== ANALYTICS 3: PRODUCT VELOCITY (admin/ketua only) =====
+        Route::prefix('product-velocity')->name('product-velocity.')->middleware('can:view-analytics')->group(function () {
             Route::get('/', [ProductVelocityController::class, 'index'])->name('index');
             Route::get('/export', [ProductVelocityController::class, 'export'])->name('export');
             Route::post('/optimize-portfolio', [ProductVelocityController::class, 'optimizePortfolio'])->name('optimize-portfolio');
@@ -120,8 +128,8 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
             Route::post('/recommend-discontinue/{barangId}', [ProductVelocityController::class, 'recommendDiscontinue'])->name('recommend-discontinue');
         });
         
-        // ===== ANALYTICS 4: PROFITABILITY ANALYSIS =====
-        Route::prefix('profitability-analysis')->name('profitability-analysis.')->group(function () {
+        // ===== ANALYTICS 4: PROFITABILITY ANALYSIS (admin/ketua only) =====
+        Route::prefix('profitability-analysis')->name('profitability-analysis.')->middleware('can:view-analytics')->group(function () {
             Route::get('/', [ProfitabilityController::class, 'index'])->name('index');
             Route::get('/export', [ProfitabilityController::class, 'export'])->name('export');
             Route::get('/identify-loss-makers', [ProfitabilityController::class, 'identifyLossMakers'])->name('identify-loss-makers');
@@ -153,30 +161,56 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
         Route::put('/update/{id}', [BarangController::class, 'update'])->name('barang.update');
         Route::delete('/destroy/{id}', [BarangController::class, 'destroy'])->name('barang.destroy');
         Route::get('/list', [BarangController::class, 'getList'])->name('barang.list');
+        
+        // Stok Barang endpoints
+        Route::get('/{id}/stok', [BarangController::class, 'getStokBarang'])->name('barang.stok');
+        Route::post('/stok/store', [BarangController::class, 'storeStok'])->name('barang.stok.store');
+        Route::get('/stok/{id}/edit', [BarangController::class, 'editStok'])->name('barang.stok.edit');
+        Route::post('/stok/update/{id}', [BarangController::class, 'updateStok'])->name('barang.stok.update');
+        
+        // Stock management endpoints
+        Route::get('/{id}/stock-info', [BarangController::class, 'getStockInfo'])->name('barang.stockInfo');
+        Route::post('/validate-stock', [BarangController::class, 'validateStock'])->name('barang.validateStock');
+        
+        // FIFO Stock Management endpoints
+        Route::get('/{id}/tambah-stok', [BarangController::class, 'tambahStok'])->name('barang.tambah-stok');
+        Route::post('/{id}/tambah-stok', [BarangController::class, 'storeTambahStok'])->name('barang.store-tambah-stok');
+        Route::get('/{id}/riwayat-stok', [BarangController::class, 'riwayatStok'])->name('barang.riwayat-stok');
+        Route::get('/{id}/detail-batch-datatable', [BarangController::class, 'detailBatchDatatable'])->name('barang.detail-batch-datatable');
     });
+
     
     Route::prefix('toko')->group(function() {
-        // Basic CRUD routes
+        // Basic CRUD routes (non-parameterized first)
         Route::get('/', [TokoController::class, 'index'])->name('toko.index');
         Route::get('/list', [TokoController::class, 'getList'])->name('toko.list');
         Route::get('/data', [TokoController::class, 'getData'])->name('toko.data');
         Route::get('/generate-kode', [TokoController::class, 'generateKode'])->name('toko.generateKode');
         Route::post('/', [TokoController::class, 'store'])->name('toko.store');
-        Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
-        Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
-        Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
-        Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
         
         // Wilayah routes
         Route::get('/wilayah/kota', [TokoController::class, 'getWilayahKota'])->name('toko.wilayah.kota');
         Route::get('/wilayah/kecamatan', [TokoController::class, 'getKecamatanByKota'])->name('toko.wilayah.kecamatan');
         Route::get('/wilayah/kelurahan', [TokoController::class, 'getKelurahanByKecamatan'])->name('toko.wilayah.kelurahan');
         
+        // Kelurahan coordinates API routes (MUST be before /{id})
+        Route::get('/kelurahan-coordinates', [TokoController::class, 'getKelurahanCoordinates'])->name('toko.kelurahanCoordinates');
+        Route::get('/kelurahan/search', [TokoController::class, 'searchKelurahan'])->name('toko.searchKelurahan');
+        Route::get('/kelurahan/by-name', [TokoController::class, 'getKelurahanByName'])->name('toko.kelurahanByName');
+        Route::get('/search-jalan', [TokoController::class, 'searchJalan'])->name('toko.searchJalan');
+        
         // Enhanced geocoding routes
         Route::post('/preview-geocode', [TokoController::class, 'previewGeocode'])->name('toko.previewGeocode');
         Route::post('/geocode', [TokoController::class, 'geocodeToko'])->name('toko.geocodeToko');
         Route::post('/batch-geocode', [TokoController::class, 'batchGeocodeToko'])->name('toko.batchGeocodeToko');
         Route::post('/validate-coordinates', [TokoController::class, 'validateMapCoordinates'])->name('toko.validateCoordinates');
+        
+        // Parameterized routes (MUST be last to avoid catching specific routes)
+        Route::get('/{id}', [TokoController::class, 'show'])->name('toko.show');
+        Route::get('/{id}/edit', [TokoController::class, 'edit'])->name('toko.edit');
+        Route::get('/{id}/coordinate-details', [TokoController::class, 'getCoordinateDetails'])->name('toko.coordinateDetails');
+        Route::put('/{id}', [TokoController::class, 'update'])->name('toko.update');
+        Route::delete('/{id}', [TokoController::class, 'destroy'])->name('toko.destroy');
     });
     
     Route::get('/barang-toko/getBarangToko', [BarangTokoController::class, 'getBarangToko'])->name('barang-toko.getBarangToko');
@@ -192,33 +226,76 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
         Route::delete('/{id}', [CustomerController::class, 'destroy'])->name('customer.destroy');
         Route::post('/import', [CustomerController::class, 'import'])->name('customer.import');
         Route::post('/sync-pemesanan', [CustomerController::class, 'syncFromPemesanan'])->name('customer.syncPemesanan');
-        Route::get('/debug-tables', [CustomerController::class, 'debugTables'])->name('customer.debugTables');
+    });
+    
+    // ===============================
+    // USER MANAGEMENT ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'user', 'middleware' => 'can:manage-users-and-market-map'], function() {
+        Route::get('/', [UserController::class, 'index'])->name('user.index');
+        Route::get('/data', [UserController::class, 'getData'])->name('user.data');
+        Route::post('/', [UserController::class, 'store'])->name('user.store');
+        Route::get('/{id}/edit', [UserController::class, 'edit'])->name('user.edit');
+        Route::put('/{id}', [UserController::class, 'update'])->name('user.update');
+        Route::delete('/{id}', [UserController::class, 'destroy'])->name('user.destroy');
+    });
+    
+    // ===============================
+    // MARKET MAP SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'market-map-settings', 'middleware' => 'can:manage-market-map-settings'], function() {
+        Route::get('/', [\App\Http\Controllers\MarketMapSettingController::class, 'index'])->name('market-map-settings.index');
+        Route::post('/update', [\App\Http\Controllers\MarketMapSettingController::class, 'update'])->name('market-map-settings.update');
+        Route::post('/reset', [\App\Http\Controllers\MarketMapSettingController::class, 'reset'])->name('market-map-settings.reset');
+        Route::get('/value/{key}', [\App\Http\Controllers\MarketMapSettingController::class, 'getValue'])->name('market-map-settings.getValue');
+    });
+
+    // ===============================
+    // PARTNER PERFORMANCE SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'partner-performance-settings', 'middleware' => 'can:manage-partner-performance-settings'], function() {
+        Route::get('/', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'index'])->name('partner-performance-settings.index');
+        Route::post('/update', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'update'])->name('partner-performance-settings.update');
+        Route::post('/reset', [\App\Http\Controllers\PartnerPerformanceSettingController::class, 'resetDefaults'])->name('partner-performance-settings.reset');
+    });
+
+    // ===============================
+    // INVENTORY OPTIMIZATION SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'inventory-optimization-settings', 'middleware' => 'can:manage-users'], function() {
+        Route::get('/', [InventoryOptimizationController::class, 'seasonalSettings'])->name('inventory-optimization.seasonal-settings');
+        Route::post('/update', [InventoryOptimizationController::class, 'updateSeasonalConfiguration'])->name('inventory-optimization.update-seasonal');
+    });
+
+    // ===============================
+    // SEASONAL INVENTORY SETTINGS ROUTES (Menu Sistem)
+    // ===============================
+    Route::group(['prefix' => 'seasonal-inventory-settings', 'middleware' => 'can:manage-users'], function() {
+        Route::get('/', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'index'])->name('seasonal-inventory-settings.index');
+        Route::post('/update', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'update'])->name('seasonal-inventory-settings.update');
+        Route::post('/reset', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'reset'])->name('seasonal-inventory-settings.reset');
+        Route::get('/value/{key}', [\App\Http\Controllers\SeasonalInventorySettingController::class, 'getValue'])->name('seasonal-inventory-settings.getValue');
     });
     
     // Route Transaksi
     Route::group(['prefix' => 'pengiriman'], function() {
         Route::get('/', [PengirimanController::class, 'index'])->name('pengiriman.index');
-        Route::get('/data', [PengirimanController::class, 'getData'])->name('pengiriman.data');
-        Route::get('/get-nomer', [PengirimanController::class, 'getNomerPengiriman'])->name('pengiriman.getNomerPengiriman');
-        Route::get('/get-barang-by-toko', [PengirimanController::class, 'getBarangByToko'])->name('pengiriman.getBarangByToko');
-        Route::put('/{id}/update-status', [PengirimanController::class, 'updateStatus'])->name('pengiriman.updateStatus');
-        Route::get('/export', [PengirimanController::class, 'export'])->name('pengiriman.export');
-        Route::get('/list', [PengirimanController::class, 'getList'])->name('pengiriman.list');
-        Route::post('/', [PengirimanController::class, 'store'])->name('pengiriman.store');
-        Route::get('/{id}/edit', [PengirimanController::class, 'edit'])->name('pengiriman.edit');
-        Route::put('/{id}', [PengirimanController::class, 'update'])->name('pengiriman.update');
-        Route::delete('/{id}', [PengirimanController::class, 'destroy'])->name('pengiriman.destroy');
+        Route::post('/list', [PengirimanController::class, 'list'])->name('pengiriman.list');
+        Route::get('/get_nomer', [PengirimanController::class, 'get_nomer'])->name('pengiriman.getNomer');
+        Route::get('/get_barang', [PengirimanController::class, 'get_barang'])->name('pengiriman.getBarang');
+        Route::get('/create_ajax', [PengirimanController::class, 'create_ajax'])->name('pengiriman.createAjax');
+        Route::post('/ajax', [PengirimanController::class, 'ajax'])->name('pengiriman.storeAjax');
+        Route::get('/{nomer}/show_ajax', [PengirimanController::class, 'show_ajax'])->name('pengiriman.showAjax');
+        Route::post('/{nomer}/update_status', [PengirimanController::class, 'update_status'])->name('pengiriman.updateStatus');
+        Route::get('/{nomer}/print', [PengirimanController::class, 'print'])->name('pengiriman.print');
     });
-    Route::resource('pengiriman', PengirimanController::class);
     
     Route::group(['prefix' => 'retur'], function() {
         Route::get('/', [ReturController::class, 'index'])->name('retur.index');
         Route::get('/data', [ReturController::class, 'getData'])->name('retur.data');
-        Route::get('/get-pengiriman', [ReturController::class, 'getPengiriman'])->name('retur.getPengiriman');
         Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
         Route::get('/export', [ReturController::class, 'export'])->name('retur.export');
-        Route::get('/{id}', [ReturController::class, 'show'])->name('retur.show');
-        Route::delete('/{id}', [ReturController::class, 'destroy'])->name('retur.destroy');
+        Route::get('/{nomerPengiriman}', [ReturController::class, 'show'])->name('retur.show');
     });
     
     Route::group(['prefix' => 'pemesanan'], function() {
@@ -230,21 +307,7 @@ Route::middleware(['auth', 'nocache', 'verifysession', 'session.timeout'])->grou
         Route::put('/{id}', [PemesananController::class, 'update'])->name('pemesanan.update');
         Route::delete('/{id}', [PemesananController::class, 'destroy'])->name('pemesanan.destroy');
     });
-    
-    // Route Laporan
-    Route::get('/laporan-pemesanan', [LaporanPemesananController::class, 'index'])->name('laporan.pemesanan');
-    Route::get('/laporan-pemesanan/data', [LaporanPemesananController::class, 'getData'])->name('laporan.pemesanan.data');
-    Route::post('/laporan-pemesanan/update-catatan', [LaporanPemesananController::class, 'updateCatatan'])->name('laporan.pemesanan.updateCatatan');
-    Route::get('/laporan-pemesanan/detail', [LaporanPemesananController::class, 'getDetailData'])->name('laporan.pemesanan.detail');
-    Route::get('/laporan-pemesanan/export-csv', [LaporanPemesananController::class, 'exportCsv'])->name('laporan.pemesanan.exportCsv');
-    
-    Route::get('/laporan-toko', [LaporanTokoController::class, 'index'])->name('laporan.toko');
-    Route::get('/laporan-toko/data', [LaporanTokoController::class, 'getData'])->name('laporan.toko.data');
-    Route::post('/laporan-toko/update-catatan', [LaporanTokoController::class, 'updateCatatan'])->name('laporan.toko.updateCatatan');
-    Route::get('/laporan-toko/detail', [LaporanTokoController::class, 'getDetailData'])->name('laporan.toko.detail');
-    Route::get('/laporan-toko/export-csv', [LaporanTokoController::class, 'exportCsv'])->name('laporan.toko.exportCsv');
-    Route::get('/laporan-toko/export-detail-csv', [LaporanTokoController::class, 'exportDetailCsv'])->name('laporan.toko.exportDetailCsv');
-    
+            
     // Route Follow Up Pelanggan (Complete with WhatsApp Integration)
     Route::group(['prefix' => 'follow-up-pelanggan'], function() {
         Route::get('/', [FollowUpPelangganController::class, 'index'])->name('follow-up-pelanggan.index');

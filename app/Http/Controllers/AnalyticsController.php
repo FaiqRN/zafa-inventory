@@ -15,6 +15,10 @@ use Exception;
 
 class AnalyticsController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-analytics');
+    }
     /**
      * Analytics Dashboard Main - Overview Only
      */
@@ -74,7 +78,7 @@ class AnalyticsController extends Controller
         try {
             $totalPartners = Toko::count();
             $activePartners = Toko::where('is_active', true)->count();
-            $totalProducts = Barang::where('is_deleted', 0)->count();
+            $totalProducts = Barang::count();
             $totalShipments = Pengiriman::where('status', 'terkirim')->count();
             
             // Last 30 days stats
@@ -404,7 +408,7 @@ class AnalyticsController extends Controller
             // Simplified calculation - count products with low recent activity
             $period = Carbon::now()->subDays(14);
             
-            $lowActivityProducts = Barang::where('is_deleted', 0)
+            $lowActivityProducts = Barang::query()
                 ->whereDoesntHave('pengiriman', function($query) use ($period) {
                     $query->where('status', 'terkirim')
                           ->where('tanggal_pengiriman', '>=', $period);
