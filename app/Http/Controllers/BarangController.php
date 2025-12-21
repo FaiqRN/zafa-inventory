@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Barang;
 use App\Helpers\MasterData\barang\BarangHelper;
 use App\Helpers\MasterData\barang\BarangStokHelper;
+use App\Services\BarangCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -40,8 +41,8 @@ class BarangController extends Controller
      */
     public function getData(Request $request)
     {
-        // Get active barang with stock information
-        $data = BarangHelper::getActiveBarang();
+        // Use cached data untuk performa lebih baik
+        $data = BarangCacheService::getAllBarang();
         
         $response = DataTables::of($data)
             ->addIndexColumn()
@@ -133,7 +134,8 @@ class BarangController extends Controller
      */
     public function edit($id)
     {
-        $barang = BarangHelper::getBarangById($id);
+        // Use cached data
+        $barang = BarangCacheService::getBarangById($id);
         
         if (!$barang) {
             return response()->json([
