@@ -57,6 +57,9 @@
         <table class="table table-bordered table-striped table-hover table-sm" id="table_pengiriman">
             <thead>
                 <tr>
+                    <th width="3%">
+                        <input type="checkbox" id="select-all" title="Pilih Semua">
+                    </th>
                     <th>No</th>
                     <th>No. Pengiriman</th>
                     <th>Tanggal</th>
@@ -88,7 +91,14 @@ function modalAction(url = '') {
 }
 
 function filterData() {
-    dataTable.ajax.reload();
+    dataTable.ajax.reload(null, false);
+}
+
+function resetFilter() {
+    $('#filter_toko').val('');
+    $('#filter_status').val('');
+    $('#filter_tanggal').val('');
+    dataTable.ajax.reload(null, false);
 }
 
 $(document).ready(function() {
@@ -101,14 +111,27 @@ $(document).ready(function() {
             data: function(d) {
                 d.toko_id = $('#filter_toko').val();
                 d.status = $('#filter_status').val();
-                d.start_date = $('#filter_start_date').val();
-                d.end_date = $('#filter_end_date').val();
+                d.tanggal_mulai = $('#filter_tanggal').val();
+                d.tanggal_akhir = $('#filter_tanggal').val();
             },
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             }
         },
         columns: [
+            {
+                data: 'nomer_pengiriman',
+                className: 'text-center',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    // Hanya tampilkan checkbox untuk status proses
+                    if (row.status === 'proses') {
+                        return `<input type="checkbox" class="row-checkbox" value="${data}" data-status="${row.status}">`;
+                    }
+                    return '';
+                }
+            },
             {
                 data: 'DT_RowIndex',
                 className: 'text-center',
@@ -168,6 +191,11 @@ $(document).ready(function() {
         ],
         order: [[2, 'desc']]
     });
+    
+    // Auto filter saat filter berubah (setelah DataTable diinisialisasi)
+    $('#filter_toko, #filter_status, #filter_tanggal').on('change', function() {
+        dataTable.ajax.reload(null, false);
+    });
 });
 
 function updateStatus(nomer, status) {
@@ -223,7 +251,7 @@ function updateStatus(nomer, status) {
                             timer: 2000,
                             showConfirmButton: false
                         });
-                        dataTable.ajax.reload();
+                        dataTable.ajax.reload(null, false);
                     } else {
                         Swal.fire({
                             icon: 'error',
@@ -246,6 +274,130 @@ function updateStatus(nomer, status) {
 
 function showDetail(nomer) {
     modalAction("{{ url('pengiriman') }}/" + nomer + "/show_ajax");
+}
+
+// Fungsi untuk Select All checkbox
+$(document).on('change', '#select-all', function() {
+    const isChecked = $(this).prop('checked');
+    $('.row-checkbox').prop('checked', isChecked);
+    updateBulkActionsVisibility();
+});
+
+// Fungsi untuk individual checkbox
+$(document).on('change', '.row-checkbox', function() {
+    const totalCheckboxes = $('.row-checkbox').length;
+    const checkedCheckboxes = $('.row-checkbox:checked').length;
+    $('#select-all').prop('checked', totalCheckboxes === checkedCheckboxes);
+    updateBulkActionsVisibility();
+});
+
+// Update visibility tombol aksi massal
+function updateBulkActionsVisibility() {
+    const checkedCount = $('.row-checkbox:checked').length;
+    $('#selected-count').text(checkedCount);
+    
+    if (checkedCount > 0) {
+        $('#bulk-actions').slideDown();
+    } else {
+        $('#bulk-actions').slideUp();
+    }
+}
+
+// Clear selection
+function clearSelection() {
+    $('.row-checkbox, #select-all').prop('checked', false);
+    updateBulkActionsVisibility();
+}
+
+// Update status massal
+function updateStatusBulk(status) {
+    const selectedNomers = [];
+    $('.row-checkbox:checked').each(function() {
+        selectedNomers.push($(this).val());
+    });
+    
+    if (selectedNomers.length === 0) {
+        Swal.fire('Perhatian', 'Tidak ada pengiriman yang dipilih', 'warning');
+        return;
+    }
+    
+    let title = '';
+    let text = '';
+    
+    if (status === 'terkirim') {
+        title = `Ubah ${selectedNomers.length} Pengiriman ke Terkirim?`;
+        text = 'Stok barang akan berkurang sesuai jumlah pengiriman';
+    } else if (status === 'batal') {
+        title = `Batalkan ${selectedNomers.length} Pengiriman?`;
+        text = 'Pengiriman akan dibatalkan';
+    }
+    
+    Swal.fire({
+        title: title,
+        text: text,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Lanjutkan',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Memproses...',
+                text: `Mengupdate ${selectedNomers.length} pengiriman`,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Update satu per satu
+            let successCount = 0;
+            let errorCount = 0;
+            let totalProcessed = 0;
+            
+            selectedNomers.forEach(function(nomer) {
+                $.ajax({
+                    url: "{{ url('pengiriman') }}/" + nomer + "/update_status",
+                    type: "POST",
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        status: status
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                        }
+                    },
+                    error: function() {
+                        errorCount++;
+                    },
+                    complete: function() {
+                        totalProcessed++;
+                        
+                        // Jika semua sudah diproses
+                        if (totalProcessed === selectedNomers.length) {
+                            Swal.fire({
+                                icon: successCount > 0 ? 'success' : 'error',
+                                title: 'Selesai!',
+                                html: `Berhasil: ${successCount}<br>Gagal: ${errorCount}`,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            
+                            // Reload tabel dan clear selection
+                            dataTable.ajax.reload(null, false);
+                            clearSelection();
+                        }
+                    }
+                });
+            });
+        }
+    });
 }
 </script>
 @endpush

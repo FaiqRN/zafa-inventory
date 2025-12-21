@@ -72,7 +72,13 @@ function modalAction(url = '') {
 }
 
 function filterData() {
-    dataTable.ajax.reload();
+    dataTable.ajax.reload(null, false);
+}
+
+function resetFilter() {
+    $('#filter_toko').val('');
+    $('#filter_date').val('');
+    dataTable.ajax.reload(null, false);
 }
 
 function showDetail(nomer) {
@@ -80,6 +86,15 @@ function showDetail(nomer) {
 }
 
 $(document).ready(function() {
+    // Auto filter saat toko dipilih
+    $('#filter_toko').on('change', function() {
+        dataTable.ajax.reload(null, false);
+    });
+    
+    // Auto filter saat tanggal dipilih
+    $('#filter_date').on('change', function() {
+        dataTable.ajax.reload(null, false);
+    });
     dataTable = $('#table_retur').DataTable({
         serverSide: true,
         processing: true,

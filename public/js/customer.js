@@ -1,4 +1,13 @@
 $(function() {
+    // Tekan Enter untuk submit form customer
+    $('#formCustomer, #formImport').on('keypress', function(e) {
+        if (e.which === 13 && !$(e.target).is('textarea')) { // Enter key
+            e.preventDefault();
+            $(this).submit();
+            return false;
+        }
+    });
+    
     // Initialize DataTable
     var table = $('#customerTable').DataTable({
         processing: true,

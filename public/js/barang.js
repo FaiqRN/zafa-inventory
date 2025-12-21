@@ -1,4 +1,12 @@
 $(document).ready(function () {
+    // Tekan Enter untuk submit form barang
+    $(document).on('keypress', '#formBarang', function(e) {
+        if (e.which === 13 && !$(e.target).is('textarea')) { // Enter key
+            e.preventDefault();\n            $(this).submit();
+            return false;
+        }
+    });
+    
     // Variables
     let selectedBarangId = null;
     let selectedBarangData = null;

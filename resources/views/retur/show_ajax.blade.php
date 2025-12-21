@@ -150,6 +150,28 @@
 
 <script>
 $(document).ready(function() {
+    // Auto-select input saat di-focus (untuk memudahkan input tanpa hapus angka 0)
+    $('.jumlah-retur').on('focus', function() {
+        // Select semua text saat focus, jadi user bisa langsung ketik angka baru
+        $(this).select();
+    });
+    
+    // Alternatif: Clear nilai jika masih 0
+    $('.jumlah-retur').on('click', function() {
+        if (parseInt($(this).val()) === 0) {
+            $(this).val('');
+        }
+    });
+    
+    // Tekan Enter untuk simpan data retur
+    $('#formRetur').on('keypress', function(e) {
+        if (e.which === 13 && !$(e.target).is('textarea')) { // Enter key
+            e.preventDefault();
+            $('#btnSimpanRetur').click();
+            return false;
+        }
+    });
+    
     // Hitung ulang total terjual dan hasil saat jumlah retur berubah
     $('.jumlah-retur').on('input', function() {
         const index = $(this).data('index');
@@ -193,7 +215,7 @@ $(document).ready(function() {
                     }).then(() => {
                         $('#myModal').modal('hide');
                         if (typeof dataTable !== 'undefined') {
-                            dataTable.ajax.reload();
+                            dataTable.ajax.reload(null, false);
                         }
                     });
                 } else {

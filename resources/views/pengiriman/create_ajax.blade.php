@@ -93,6 +93,15 @@ $(document).ready(function() {
         }
     });
 
+    // Tekan Enter untuk submit form pengiriman
+    $('#form-tambah-pengiriman').on('keypress', function(e) {
+        if (e.which === 13 && !$(e.target).is('textarea')) { // Enter key
+            e.preventDefault();
+            $(this).submit();
+            return false;
+        }
+    });
+
     $('#form-tambah-pengiriman').submit(function(e) {
         e.preventDefault();
         
@@ -190,7 +199,7 @@ $(document).ready(function() {
                         timer: 2000,
                         showConfirmButton: false
                     });
-                    dataTable.ajax.reload();
+                    dataTable.ajax.reload(null, false);
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -236,16 +245,29 @@ function loadBarangByToko(tokoId) {
                 title: 'Error',
                 text: 'Gagal memuat data barang'
             });
+            window.pengirimanBarangList = [];
         }
     });
 }
 
 function addBarangRow() {
-    if (window.pengirimanBarangList.length === 0) {
+    // Cek apakah toko sudah dipilih
+    const tokoId = $('#toko_id').val();
+    if (!tokoId) {
         Swal.fire({
             icon: 'warning',
             title: 'Perhatian',
             text: 'Pilih toko terlebih dahulu'
+        });
+        return;
+    }
+    
+    // Cek apakah data barang sudah ter-load
+    if (!window.pengirimanBarangList || window.pengirimanBarangList.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Perhatian',
+            text: 'Tidak ada barang tersedia untuk toko ini atau data sedang dimuat. Silakan tunggu sebentar.'
         });
         return;
     }
@@ -267,6 +289,9 @@ function addBarangRow() {
                 <select class="form-control form-control-sm barang-select" onchange="updateBarangInfo(this)" required>
                     ${options}
                 </select>
+                <button type="button" class="btn btn-success btn-sm mt-1 btn-add-below" onclick="addBarangRow()" style="display: none;" title="Tambah barang baru">
+                    <i class="fas fa-plus"></i>
+                </button>
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm jumlah-input" min="1" required>
@@ -278,7 +303,7 @@ function addBarangRow() {
                 <input type="text" class="form-control form-control-sm harga-input" readonly>
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-danger btn-sm" onclick="removeBarangRow(${window.pengirimanRowIndex})">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeBarangRow(${window.pengirimanRowIndex})" title="Hapus baris">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -304,8 +329,15 @@ function updateBarangInfo(select) {
             $(select).val('');
             row.find('.satuan-input').val('');
             row.find('.harga-input').val('');
+            row.find('.btn-add-below').hide();
             return;
         }
+        
+        // Tampilkan tombol "Tambah Barang" di bawah dropdown
+        row.find('.btn-add-below').fadeIn();
+    } else {
+        // Sembunyikan tombol jika barang tidak dipilih
+        row.find('.btn-add-below').hide();
     }
     
     row.find('.satuan-input').val(selectedOption.data('satuan'));
