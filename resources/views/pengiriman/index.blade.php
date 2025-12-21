@@ -15,6 +15,9 @@
     <div class="card-header">
         <h3 class="card-title">Daftar Pengiriman</h3>
         <div class="card-tools">
+            <button type="button" class="btn btn-success btn-sm mr-2" id="btnBulkApprove" style="display: none;" onclick="bulkApprove()">
+                <i class="fas fa-check-double"></i> Approve Selected (<span id="selectedCount">0</span>)
+            </button>
             <button type="button" class="btn btn-primary btn-sm" onclick="modalAction('{{ url('/pengiriman/create_ajax') }}')">
                 <i class="fas fa-plus"></i> Tambah Pengiriman
             </button>
@@ -57,6 +60,9 @@
         <table class="table table-bordered table-striped table-hover table-sm" id="table_pengiriman">
             <thead>
                 <tr>
+                    <th class="text-center" style="width: 30px;">
+                        <input type="checkbox" id="selectAll" title="Select All Proses">
+                    </th>
                     <th>No</th>
                     <th>No. Pengiriman</th>
                     <th>Tanggal</th>
@@ -80,6 +86,7 @@
 @push('js')
 <script>
 let dataTable;
+let selectedItems = [];
 
 function modalAction(url = '') {
     $('#myModal').load(url, function() {
@@ -88,7 +95,37 @@ function modalAction(url = '') {
 }
 
 function filterData() {
+    selectedItems = [];
+    updateBulkButton();
     dataTable.ajax.reload();
+}
+
+function updateBulkButton() {
+    $('#selectedCount').text(selectedItems.length);
+    if (selectedItems.length > 0) {
+        $('#btnBulkApprove').show();
+    } else {
+        $('#btnBulkApprove').hide();
+    }
+}
+
+function toggleSelectItem(nomer, checked) {
+    if (checked) {
+        if (!selectedItems.includes(nomer)) {
+            selectedItems.push(nomer);
+        }
+    } else {
+        selectedItems = selectedItems.filter(item => item !== nomer);
+    }
+    updateBulkButton();
+    updateSelectAllCheckbox();
+}
+
+function updateSelectAllCheckbox() {
+    let allProsesCheckboxes = $('.row-checkbox:visible');
+    let checkedCount = allProsesCheckboxes.filter(':checked').length;
+    $('#selectAll').prop('checked', allProsesCheckboxes.length > 0 && checkedCount === allProsesCheckboxes.length);
+    $('#selectAll').prop('indeterminate', checkedCount > 0 && checkedCount < allProsesCheckboxes.length);
 }
 
 $(document).ready(function() {
@@ -109,6 +146,19 @@ $(document).ready(function() {
             }
         },
         columns: [
+            {
+                data: 'nomer_pengiriman',
+                className: 'text-center',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    if (row.status === 'proses') {
+                        let checked = selectedItems.includes(data) ? 'checked' : '';
+                        return `<input type="checkbox" class="row-checkbox" data-nomer="${data}" ${checked} onchange="toggleSelectItem('${data}', this.checked)">`;
+                    }
+                    return '';
+                }
+            },
             {
                 data: 'DT_RowIndex',
                 className: 'text-center',
@@ -191,7 +241,7 @@ function updateStatus(nomer, status) {
         icon: icon,
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
+        cancelButtonColor: '#dc3545',
         confirmButtonText: 'Ya, Lanjutkan',
         cancelButtonText: 'Batal'
     }).then((result) => {
@@ -246,6 +296,112 @@ function updateStatus(nomer, status) {
 
 function showDetail(nomer) {
     modalAction("{{ url('pengiriman') }}/" + nomer + "/show_ajax");
+}
+
+// Select All functionality
+$('#selectAll').on('change', function() {
+    let checked = $(this).prop('checked');
+    $('.row-checkbox:visible').each(function() {
+        $(this).prop('checked', checked);
+        toggleSelectItem($(this).data('nomer'), checked);
+    });
+});
+
+// Bulk Approve function
+function bulkApprove() {
+    if (selectedItems.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Peringatan',
+            text: 'Pilih minimal satu pengiriman untuk di-approve'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Approve ' + selectedItems.length + ' Pengiriman?',
+        text: 'Stok barang akan berkurang sesuai jumlah pengiriman yang dipilih',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Approve Semua',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            processBulkApprove();
+        }
+    });
+}
+
+function processBulkApprove() {
+    let total = selectedItems.length;
+    let processed = 0;
+    let success = 0;
+    let failed = 0;
+    let failedItems = [];
+
+    Swal.fire({
+        title: 'Memproses...',
+        html: `<div>Memproses <b>0</b> dari <b>${total}</b> pengiriman</div><div class="progress mt-3"><div class="progress-bar" role="progressbar" style="width: 0%"></div></div>`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    let promises = selectedItems.map(nomer => {
+        return $.ajax({
+            url: "{{ url('pengiriman') }}/" + nomer + "/update_status",
+            type: "POST",
+            data: {
+                _token: '{{ csrf_token() }}',
+                status: 'terkirim'
+            }
+        }).then(response => {
+            processed++;
+            if (response.status === 'success') {
+                success++;
+            } else {
+                failed++;
+                failedItems.push(nomer);
+            }
+            updateProgress(processed, total);
+        }).catch(error => {
+            processed++;
+            failed++;
+            failedItems.push(nomer);
+            updateProgress(processed, total);
+        });
+    });
+
+    Promise.all(promises).then(() => {
+        selectedItems = [];
+        updateBulkButton();
+        dataTable.ajax.reload();
+
+        let message = `Berhasil: ${success} pengiriman`;
+        if (failed > 0) {
+            message += `<br>Gagal: ${failed} pengiriman (${failedItems.join(', ')})`;
+        }
+
+        Swal.fire({
+            icon: failed === 0 ? 'success' : 'warning',
+            title: failed === 0 ? 'Berhasil!' : 'Selesai dengan Error',
+            html: message,
+            timer: failed === 0 ? 3000 : null,
+            showConfirmButton: failed > 0
+        });
+    });
+}
+
+function updateProgress(processed, total) {
+    let percent = Math.round((processed / total) * 100);
+    Swal.update({
+        html: `<div>Memproses <b>${processed}</b> dari <b>${total}</b> pengiriman</div><div class="progress mt-3"><div class="progress-bar" role="progressbar" style="width: ${percent}%">${percent}%</div></div>`
+    });
 }
 </script>
 @endpush

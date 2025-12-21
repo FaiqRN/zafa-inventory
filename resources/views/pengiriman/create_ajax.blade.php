@@ -31,9 +31,6 @@
 
                 <hr>
                 <h6>Daftar Barang</h6>
-                <button type="button" class="btn btn-sm btn-success mb-2" onclick="addBarangRow()">
-                    <i class="fas fa-plus"></i> Tambah Barang
-                </button>
 
                 <div class="table-responsive">
                     <table class="table table-bordered table-sm">
@@ -48,6 +45,15 @@
                         </thead>
                         <tbody id="barang-rows">
                         </tbody>
+                        <tfoot>
+                            <tr id="row-tambah-barang">
+                                <td colspan="5">
+                                    <button type="button" class="btn btn-sm btn-success" onclick="addBarangRow()">
+                                        <i class="fas fa-plus"></i> Tambah Barang
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
