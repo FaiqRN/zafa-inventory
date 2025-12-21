@@ -3,21 +3,6 @@ $(document).ready(function () {
     let currentStep = 1;
     const totalSteps = 3;
 
-    // Tekan Enter untuk submit form pemesanan
-    $('#formPemesanan').on('keypress', function(e) {
-        if (e.which === 13 && !$(e.target).is('textarea') && !$(e.target).is('select')) { // Enter key
-            e.preventDefault();
-            // Jika di step terakhir, submit form
-            if (currentStep === totalSteps) {
-                $(this).submit();
-            } else {
-                // Jika belum step terakhir, lanjut ke step berikutnya
-                $('#btnNextStep').click();
-            }
-            return false;
-        }
-    });
-
     // Format tanggal
     function formatDate(date) {
         if (!date) return '-';
@@ -534,7 +519,7 @@ $(document).ready(function () {
             success: function (response) {
                 $('#modalPemesanan').modal('hide');
                 Swal.fire('Sukses', response.message, 'success');
-                table.ajax.reload(null, false);
+                table.ajax.reload();
             },
             error: function (xhr) {
                 const response = xhr.responseJSON;
@@ -632,7 +617,7 @@ $(document).ready(function () {
                 success: function (response) {
                     $('#deleteModal').modal('hide');
                     Swal.fire('Sukses', response.message, 'success');
-                    table.ajax.reload(null, false);
+                    table.ajax.reload();
                 },
                 error: function (xhr) {
                     const response = xhr.responseJSON;

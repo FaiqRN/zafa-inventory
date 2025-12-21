@@ -1,17 +1,5 @@
 $(document).ready(function () {
     // ========================================
-    // ENTER KEY SUBMIT
-    // ========================================
-    // Tekan Enter untuk submit form toko
-    $('#formToko').on('keypress', function(e) {
-        if (e.which === 13 && !$(e.target).is('textarea')) { // Enter key
-            e.preventDefault();
-            $(this).submit();
-            return false;
-        }
-    });
-    
-    // ========================================
     // INITIALIZATION
     // ========================================
     console.log('Loading Smart Address Parsing with Kelurahan Detection...');
