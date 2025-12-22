@@ -204,20 +204,30 @@ class BarangHelper
     }
 
     /**
-     * Generate unique barang ID
+     * Generate unique barang ID dengan format BRG0000001
      *
      * @return string
      */
     public static function generateUniqueBarangId()
     {
-        $barangId = 'BRG' . strtoupper(Str::random(7));
-        
-        // Check if ID already exists and regenerate if needed
-        while (Barang::find($barangId)) {
-            $barangId = 'BRG' . strtoupper(Str::random(7));
+        $prefix = 'BRG';
+        $padLength = 7; // Total 10 karakter: BRG + 7 digit
+
+        // Cari ID terakhir dengan format BRG + angka
+        $lastBarang = Barang::where(Barang::FIELD_BARANG_ID, 'like', $prefix . '%')
+            ->whereRaw("SUBSTRING(barang_id, 4) REGEXP '^[0-9]+$'")
+            ->orderByRaw('CAST(SUBSTRING(barang_id, 4) AS UNSIGNED) DESC')
+            ->first();
+
+        if (!$lastBarang) {
+            return $prefix . str_pad('1', $padLength, '0', STR_PAD_LEFT);
         }
 
-        return $barangId;
+        $lastId = $lastBarang->{Barang::FIELD_BARANG_ID};
+        $lastNumber = (int) substr($lastId, strlen($prefix));
+        $nextNumber = $lastNumber + 1;
+
+        return $prefix . str_pad($nextNumber, $padLength, '0', STR_PAD_LEFT);
     }
 
     /**

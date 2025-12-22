@@ -25,7 +25,47 @@ class Barang extends Model
     protected $table = self::TABLE;
     protected $primaryKey = self::FIELD_BARANG_ID;
     protected $keyType = 'string';
+    public $incrementing = false;
     public $timestamps = true;
+
+    /**
+     * Boot method untuk auto-generate barang_id
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->{self::FIELD_BARANG_ID})) {
+                $model->{self::FIELD_BARANG_ID} = self::generateBarangId();
+            }
+        });
+    }
+
+    /**
+     * Generate barang_id dengan format BRG0000001
+     *
+     * @return string
+     */
+    public static function generateBarangId(): string
+    {
+        $prefix = 'BRG';
+        $padLength = 7; // Total 10 karakter: BRG + 7 digit
+
+        $lastBarang = self::where(self::FIELD_BARANG_ID, 'like', $prefix . '%')
+            ->orderByRaw('CAST(SUBSTRING(' . self::FIELD_BARANG_ID . ', 4) AS UNSIGNED) DESC')
+            ->first();
+
+        if (!$lastBarang) {
+            return $prefix . str_pad('1', $padLength, '0', STR_PAD_LEFT);
+        }
+
+        $lastId = $lastBarang->{self::FIELD_BARANG_ID};
+        $lastNumber = (int) substr($lastId, strlen($prefix));
+        $nextNumber = $lastNumber + 1;
+
+        return $prefix . str_pad($nextNumber, $padLength, '0', STR_PAD_LEFT);
+    }
 
     protected $fillable = [
         self::FIELD_BARANG_ID,
