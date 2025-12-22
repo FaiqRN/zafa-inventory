@@ -272,7 +272,68 @@ class GeocodingService
                 ];
             }
 
-            Log::info('Internal Street Database: No matching street found');
+            // ============================================================
+            // FALLBACK HIERARCHY: Jalan tidak ada, coba fallback ke Kelurahan
+            // Urutan: Jalan → Kelurahan → Kecamatan → Kota
+            // ============================================================
+            
+            Log::info('Internal Street Database: No matching street found, trying fallback hierarchy');
+
+            // FALLBACK 1: Jika kelurahan ditemukan, gunakan koordinat kelurahan
+            if ($kelurahanContext) {
+                Log::info("Internal Street Database: FALLBACK to kelurahan - {$kelurahanContext->nama}");
+                
+                return [
+                    'latitude' => (float) $kelurahanContext->latitude,
+                    'longitude' => (float) $kelurahanContext->longitude,
+                    'formatted_address' => "{$kelurahanContext->nama}, {$kelurahanContext->kecamatan}, {$kelurahanContext->kota}",
+                    'accuracy' => 'medium',
+                    'provider' => 'internal_kelurahan_fallback',
+                    'confidence' => 0.70,
+                    'match_score' => 70,
+                    'kelurahan_id' => $kelurahanContext->id,
+                    'kelurahan_name' => $kelurahanContext->nama,
+                    'kecamatan' => $kelurahanContext->kecamatan,
+                    'kota' => $kelurahanContext->kota,
+                    'validation_passed' => true,
+                    'parsed_address' => $parsedAddress,
+                    'fallback_reason' => 'street_not_found_kelurahan_used',
+                    'requested_street' => $parsedAddress['street'] ?? null,
+                ];
+            }
+
+            // FALLBACK 2: Jika kecamatan ada tapi kelurahan tidak, cari koordinat kecamatan
+            if ($kecamatanName && $kotaName) {
+                $kecamatanCoord = \App\Models\KelurahanCoordinate::active()
+                    ->whereRaw('LOWER(kecamatan) LIKE ?', ["%{$kecamatanName}%"])
+                    ->whereRaw('LOWER(kota) LIKE ?', ["%{$kotaName}%"])
+                    ->selectRaw('AVG(latitude) as lat, AVG(longitude) as lng, kecamatan, kota')
+                    ->groupBy('kecamatan', 'kota')
+                    ->first();
+
+                if ($kecamatanCoord && $kecamatanCoord->lat && $kecamatanCoord->lng) {
+                    Log::info("Internal Street Database: FALLBACK to kecamatan - {$kecamatanCoord->kecamatan}");
+                    
+                    return [
+                        'latitude' => (float) $kecamatanCoord->lat,
+                        'longitude' => (float) $kecamatanCoord->lng,
+                        'formatted_address' => "{$kecamatanCoord->kecamatan}, {$kecamatanCoord->kota}",
+                        'accuracy' => 'low',
+                        'provider' => 'internal_kecamatan_fallback',
+                        'confidence' => 0.55,
+                        'match_score' => 55,
+                        'kecamatan' => $kecamatanCoord->kecamatan,
+                        'kota' => $kecamatanCoord->kota,
+                        'validation_passed' => true,
+                        'parsed_address' => $parsedAddress,
+                        'fallback_reason' => 'kelurahan_not_found_kecamatan_used',
+                        'requested_kelurahan' => $kelurahanName,
+                        'requested_street' => $parsedAddress['street'] ?? null,
+                    ];
+                }
+            }
+
+            Log::info('Internal Street Database: No fallback available');
             return null;
 
         } catch (\Exception $e) {
@@ -297,8 +358,9 @@ class GeocodingService
 
         // Ambil kota_type untuk membedakan Kota vs Kabupaten
         $kotaType = $parsedAddress['kota_type'] ?? null;
+        $parsedKelurahan = $parsedAddress['kelurahan'] ?? null;
 
-        Log::info("searchStreetsWithContext: Looking for street '{$streetName}' with context - kota: {$kotaName} (type: {$kotaType}), kecamatan: {$kecamatanName}, kelurahan_id: {$kelurahanId}");
+        Log::info("searchStreetsWithContext: Looking for street '{$streetName}' with context - kota: {$kotaName} (type: {$kotaType}), kecamatan: {$kecamatanName}, kelurahan: {$parsedKelurahan}");
 
         // Build query dengan prioritas konteks wilayah
         $query = \App\Models\Jalan::active()
@@ -306,14 +368,14 @@ class GeocodingService
             ->searchByName($streetName);
 
         // Ambil semua kandidat
-        $candidates = $query->limit(50)->get();
+        $candidates = $query->limit(100)->get();
 
         if ($candidates->isEmpty()) {
             // Coba dengan searchByAddress jika searchByName tidak menemukan
             $candidates = \App\Models\Jalan::active()
                 ->with('kelurahan')
                 ->searchByAddress($address)
-                ->limit(50)
+                ->limit(100)
                 ->get();
         }
 
@@ -322,117 +384,129 @@ class GeocodingService
             return collect();
         }
 
-        // Score setiap kandidat dengan mempertimbangkan konteks wilayah
-        $scoredCandidates = $candidates->map(function($jalan) use ($address, $kelurahanId, $kotaName, $kotaType, $kecamatanName) {
-            // Base score dari fuzzy matching nama jalan
-            $baseScore = $jalan->advancedFuzzyMatchScore($address, $kelurahanId);
-            
-            // Bonus untuk konteks wilayah yang cocok
-            $contextBonus = 0;
+        // ============================================================
+        // PRIORITAS PENCARIAN (dari tinggi ke rendah):
+        // 1. Jalan + Kelurahan cocok → best match (score 100)
+        // 2. Jalan + Kecamatan cocok → good match (score 85)
+        // 3. Jalan + Kota cocok → acceptable (score 70)
+        // 4. Jalan tanpa context match → low priority (score 50)
+        // ============================================================
+
+        $scoredCandidates = $candidates->map(function($jalan) use ($streetName, $kotaName, $kotaType, $kecamatanName, $parsedKelurahan) {
+            $hasKelurahan = $jalan->kelurahan !== null;
+            $matchLevel = 'none';
+            $score = 50; // Base score untuk nama jalan cocok
             $contextMatches = [];
 
-            // Cek apakah jalan punya relasi kelurahan
-            $hasKelurahan = $jalan->kelurahan !== null;
-            $jalanKota = $hasKelurahan ? strtolower($jalan->kelurahan->kota ?? '') : '';
+            if (!$hasKelurahan) {
+                $jalan->match_score = $score;
+                $jalan->match_level = 'no_context';
+                $jalan->context_matches = ['no_kelurahan_data'];
+                return $jalan;
+            }
 
-            // PENTING: Cek apakah Kota vs Kabupaten cocok
+            $jalanKelurahan = strtolower($jalan->kelurahan->nama ?? '');
+            $jalanKecamatan = strtolower($jalan->kelurahan->kecamatan ?? '');
+            $jalanKota = strtolower($jalan->kelurahan->kota ?? '');
+
+            // Cek Kota/Kabupaten match
+            $kotaMatch = false;
             if ($kotaName && $kotaType) {
-                // Deteksi tipe kota dari data jalan
                 $isKotaMalang = str_contains($jalanKota, 'kota') && str_contains($jalanKota, 'malang');
                 $isKabMalang = str_contains($jalanKota, 'kabupaten') && str_contains($jalanKota, 'malang');
                 
-                // Jika user mencari di "Kota Malang"
                 if ($kotaType === 'kota' && str_contains(strtolower($kotaName), 'malang')) {
-                    if ($isKotaMalang) {
-                        $contextBonus += 25; // Bonus besar untuk Kota Malang
-                        $contextMatches[] = 'kota_exact';
-                    } elseif ($isKabMalang) {
-                        $contextBonus -= 30; // Penalty besar untuk Kabupaten Malang
-                        $contextMatches[] = 'kota_mismatch';
-                    } elseif (!$hasKelurahan) {
-                        // Jalan tanpa kelurahan - beri penalty sedang
-                        $contextBonus -= 15;
-                        $contextMatches[] = 'no_kelurahan';
-                    }
-                }
-                // Jika user mencari di "Kabupaten Malang"
-                elseif ($kotaType === 'kabupaten' && str_contains(strtolower($kotaName), 'malang')) {
-                    if ($isKabMalang) {
-                        $contextBonus += 25;
-                        $contextMatches[] = 'kota_exact';
-                    } elseif ($isKotaMalang) {
-                        $contextBonus -= 30;
-                        $contextMatches[] = 'kota_mismatch';
-                    } elseif (!$hasKelurahan) {
-                        $contextBonus -= 15;
-                        $contextMatches[] = 'no_kelurahan';
-                    }
-                }
-                // Untuk kota lain (bukan Malang)
-                elseif ($kotaName) {
-                    if (str_contains($jalanKota, $kotaName) || str_contains($kotaName, $jalanKota)) {
-                        $contextBonus += 15;
-                        $contextMatches[] = 'kota';
-                    } elseif ($hasKelurahan) {
-                        $contextBonus -= 10;
-                    }
-                }
-            }
-            // Fallback jika tidak ada kota_type tapi ada kotaName
-            elseif ($kotaName && $hasKelurahan) {
-                if (str_contains($jalanKota, $kotaName) || str_contains($kotaName, $jalanKota)) {
-                    $contextBonus += 15;
-                    $contextMatches[] = 'kota';
+                    $kotaMatch = $isKotaMalang;
+                } elseif ($kotaType === 'kabupaten' && str_contains(strtolower($kotaName), 'malang')) {
+                    $kotaMatch = $isKabMalang;
                 } else {
-                    $contextBonus -= 10;
+                    $kotaMatch = str_contains($jalanKota, strtolower($kotaName));
                 }
+            } elseif ($kotaName) {
+                $kotaMatch = str_contains($jalanKota, strtolower($kotaName));
             }
 
-            // Bonus untuk Kecamatan yang cocok
-            if ($kecamatanName && $hasKelurahan) {
-                $jalanKecamatan = strtolower($jalan->kelurahan->kecamatan ?? '');
-                if (str_contains($jalanKecamatan, $kecamatanName) || str_contains($kecamatanName, $jalanKecamatan)) {
-                    $contextBonus += 12;
-                    $contextMatches[] = 'kecamatan';
-                }
+            // Cek Kecamatan match
+            $kecamatanMatch = false;
+            if ($kecamatanName) {
+                $kecamatanMatch = str_contains($jalanKecamatan, strtolower($kecamatanName)) 
+                               || str_contains(strtolower($kecamatanName), $jalanKecamatan);
             }
 
-            // Bonus untuk Kelurahan yang cocok
-            if ($kelurahanId && $jalan->kelurahan_id == $kelurahanId) {
-                $contextBonus += 10;
-                $contextMatches[] = 'kelurahan';
+            // Cek Kelurahan match
+            $kelurahanMatch = false;
+            if ($parsedKelurahan) {
+                $kelurahanMatch = str_contains($jalanKelurahan, strtolower($parsedKelurahan)) 
+                               || str_contains(strtolower($parsedKelurahan), $jalanKelurahan);
             }
 
-            // Final score
-            $finalScore = min(100, max(0, $baseScore + $contextBonus));
+            // ============================================================
+            // SCORING BERDASARKAN PRIORITAS
+            // ============================================================
             
-            $jalan->match_score = $finalScore;
-            $jalan->base_score = $baseScore;
-            $jalan->context_bonus = $contextBonus;
+            // PRIORITAS 1: Jalan + Kelurahan + Kecamatan + Kota cocok (BEST)
+            if ($kelurahanMatch && $kecamatanMatch && $kotaMatch) {
+                $score = 100;
+                $matchLevel = 'kelurahan_exact';
+                $contextMatches = ['kelurahan', 'kecamatan', 'kota'];
+            }
+            // PRIORITAS 2: Jalan + Kecamatan + Kota cocok (kelurahan beda/tidak ada)
+            elseif ($kecamatanMatch && $kotaMatch) {
+                $score = 85;
+                $matchLevel = 'kecamatan_match';
+                $contextMatches = ['kecamatan', 'kota'];
+                if ($kelurahanMatch) {
+                    $contextMatches[] = 'kelurahan';
+                }
+            }
+            // PRIORITAS 3: Jalan + Kota cocok (kecamatan beda)
+            elseif ($kotaMatch) {
+                $score = 70;
+                $matchLevel = 'kota_match';
+                $contextMatches = ['kota'];
+            }
+            // PRIORITAS 4: Kota tidak cocok (Kota vs Kabupaten salah)
+            else {
+                $score = 30; // Score rendah, kemungkinan besar salah
+                $matchLevel = 'kota_mismatch';
+                $contextMatches = ['kota_mismatch'];
+            }
+
+            $jalan->match_score = $score;
+            $jalan->match_level = $matchLevel;
             $jalan->context_matches = $contextMatches;
-            $jalan->debug_kota = $jalanKota;
+            $jalan->debug_info = [
+                'kelurahan' => $jalanKelurahan,
+                'kecamatan' => $jalanKecamatan,
+                'kota' => $jalanKota,
+                'kelurahan_match' => $kelurahanMatch,
+                'kecamatan_match' => $kecamatanMatch,
+                'kota_match' => $kotaMatch,
+            ];
 
             return $jalan;
         });
 
-        // Filter dan sort berdasarkan score
-        $results = $scoredCandidates
-            ->filter(fn($jalan) => $jalan->match_score >= $minScore)
-            ->sortByDesc('match_score')
-            ->take(5);
+        // Sort by score descending
+        $sortedCandidates = $scoredCandidates->sortByDesc('match_score');
 
-        // Log semua kandidat untuk debugging
-        if ($scoredCandidates->isNotEmpty()) {
-            Log::info("searchStreetsWithContext: All candidates scored:");
-            foreach ($scoredCandidates->sortByDesc('match_score')->take(10) as $candidate) {
-                $kelInfo = $candidate->kelurahan ? "{$candidate->kelurahan->kecamatan}, {$candidate->kelurahan->kota}" : 'NO_KELURAHAN';
-                Log::info("  - {$candidate->nama_jalan} | score:{$candidate->match_score} base:{$candidate->base_score} bonus:{$candidate->context_bonus} | {$kelInfo} | ctx:" . implode(',', $candidate->context_matches ?: []));
-            }
+        // Log untuk debugging
+        Log::info("searchStreetsWithContext: Scored " . $sortedCandidates->count() . " candidates:");
+        foreach ($sortedCandidates->take(5) as $candidate) {
+            $kelInfo = $candidate->kelurahan 
+                ? "{$candidate->kelurahan->nama}, {$candidate->kelurahan->kecamatan}, {$candidate->kelurahan->kota}" 
+                : 'NO_KELURAHAN';
+            Log::info("  - {$candidate->nama_jalan} | score:{$candidate->match_score} level:{$candidate->match_level} | {$kelInfo}");
         }
+
+        // Filter berdasarkan minScore
+        $results = $sortedCandidates
+            ->filter(fn($jalan) => $jalan->match_score >= $minScore)
+            ->take(5);
 
         if ($results->isNotEmpty()) {
             $best = $results->first();
-            Log::info("searchStreetsWithContext: SELECTED - {$best->nama_jalan} (score: {$best->match_score}, base: {$best->base_score}, bonus: {$best->context_bonus}, context: " . implode(',', $best->context_matches) . ")");
+            Log::info("searchStreetsWithContext: SELECTED - {$best->nama_jalan} (score: {$best->match_score}, level: {$best->match_level})");
         } else {
             Log::info("searchStreetsWithContext: No results passed minScore filter ({$minScore})");
         }
@@ -446,20 +520,59 @@ class GeocodingService
     private static function tryPoiLookup($address, $parsedAddress = null)
     {
         try {
-            // Common POI keywords
+            $addressLower = strtolower($address);
+            
+            // ============================================================
+            // STRATEGI 1: Cari langsung berdasarkan nama spesifik di alamat
+            // Ini handle kasus seperti "Universitas Brawijaya" atau "UB"
+            // ============================================================
+            
+            // Bersihkan alamat dari kata-kata umum untuk dapat nama POI
+            $cleanedForPoi = preg_replace('/\b(jl\.?|jalan|no\.?|nomor|rt|rw|kec\.?|kecamatan|kel\.?|kelurahan|kota|kabupaten|kab\.?|malang|jawa timur|jatim|\d+)\b/i', '', $addressLower);
+            $cleanedForPoi = preg_replace('/[,\.\-\/]+/', ' ', $cleanedForPoi);
+            $cleanedForPoi = preg_replace('/\s+/', ' ', trim($cleanedForPoi));
+            
+            if (strlen($cleanedForPoi) >= 3) {
+                // Cari POI yang namanya mengandung kata-kata dari alamat
+                $words = array_filter(explode(' ', $cleanedForPoi), fn($w) => strlen($w) >= 3);
+                
+                if (!empty($words)) {
+                    $poiQuery = \App\Models\Poi::active();
+                    
+                    // Cari POI yang mengandung semua kata penting
+                    foreach ($words as $word) {
+                        $poiQuery->where(function($q) use ($word) {
+                            $q->whereRaw('LOWER(nama) LIKE ?', ["%{$word}%"])
+                              ->orWhereRaw('LOWER(nama_normalized) LIKE ?', ["%{$word}%"]);
+                        });
+                    }
+                    
+                    $directMatch = $poiQuery->first();
+                    
+                    if ($directMatch) {
+                        Log::info("POI Lookup: Direct match found - {$directMatch->nama}");
+                        return self::buildPoiResult($directMatch, 95);
+                    }
+                }
+            }
+
+            // ============================================================
+            // STRATEGI 2: Keyword-based lookup untuk POI umum
+            // ============================================================
+            
             $poiKeywords = [
                 'indomaret', 'alfamart', 'alfamidi', 'circle k', 'lawson',
                 'starbucks', 'mcdonald', 'kfc', 'burger king', 'pizza hut',
-                'bank bca', 'bank bri', 'bank mandiri', 'bank bni',
+                'bank bca', 'bank bri', 'bank mandiri', 'bank bni', 'atm',
                 'spbu', 'pertamina', 'shell',
-                'rs ', 'rumah sakit', 'puskesmas', 'klinik',
-                'sma ', 'smp ', 'sd ', 'universitas', 'sekolah',
+                'rs ', 'rumah sakit', 'puskesmas', 'klinik', 'apotek',
+                'sma ', 'smp ', 'sd ', 'universitas', 'sekolah', 'kampus',
                 'masjid', 'gereja', 'pura', 'vihara',
+                'mall', 'plaza', 'pasar', 'terminal', 'stasiun',
+                'hotel', 'guest house', 'penginapan',
             ];
 
-            $addressLower = strtolower($address);
             $foundKeyword = null;
-
             foreach ($poiKeywords as $keyword) {
                 if (strpos($addressLower, $keyword) !== false) {
                     $foundKeyword = $keyword;
@@ -473,11 +586,11 @@ class GeocodingService
 
             // Search POI in database
             $pois = \App\Models\Poi::active()
-                ->where(function($q) use ($foundKeyword, $address) {
+                ->where(function($q) use ($foundKeyword) {
                     $q->whereRaw('LOWER(nama) LIKE ?', ["%{$foundKeyword}%"])
                       ->orWhereRaw('LOWER(nama_normalized) LIKE ?', ["%{$foundKeyword}%"]);
                 })
-                ->limit(10)
+                ->limit(20)
                 ->get();
 
             if ($pois->isEmpty()) {
@@ -490,18 +603,32 @@ class GeocodingService
                 return self::buildPoiResult($poi, 90);
             }
 
-            // Multiple results - try to find best match using address context
+            // Multiple results - find best match using full address similarity
             $bestPoi = null;
             $bestScore = 0;
 
             foreach ($pois as $poi) {
-                $score = 70; // Base score for keyword match
+                $score = 70; // Base score
+                $poiNameLower = strtolower($poi->nama);
+                
+                // Bonus besar jika nama POI ada di alamat input
+                if (strpos($addressLower, $poiNameLower) !== false) {
+                    $score += 25;
+                }
+                
+                // Bonus untuk setiap kata yang cocok
+                $poiWords = explode(' ', $poiNameLower);
+                foreach ($poiWords as $word) {
+                    if (strlen($word) >= 3 && strpos($addressLower, $word) !== false) {
+                        $score += 3;
+                    }
+                }
 
                 // Bonus for street name match
                 if (!empty($parsedAddress['street'])) {
                     $streetNormalized = strtolower($parsedAddress['street']);
                     if ($poi->alamat_jalan && strpos(strtolower($poi->alamat_jalan), $streetNormalized) !== false) {
-                        $score += 20;
+                        $score += 10;
                     }
                 }
 
@@ -509,7 +636,7 @@ class GeocodingService
                 if (!empty($parsedAddress['kelurahan']) && $poi->kelurahan) {
                     $kelNormalized = strtolower($parsedAddress['kelurahan']);
                     if (strpos(strtolower($poi->kelurahan->nama ?? ''), $kelNormalized) !== false) {
-                        $score += 10;
+                        $score += 5;
                     }
                 }
 
@@ -519,7 +646,8 @@ class GeocodingService
                 }
             }
 
-            if ($bestPoi) {
+            if ($bestPoi && $bestScore >= 75) {
+                Log::info("POI Lookup: Best match - {$bestPoi->nama} (score: {$bestScore})");
                 return self::buildPoiResult($bestPoi, $bestScore);
             }
 
@@ -678,6 +806,35 @@ class GeocodingService
                 if (strlen($cleanPart) >= 3 && strlen($cleanPart) <= 30) {
                     $result['kelurahan'] = $cleanPart;
                     break;
+                }
+            }
+        }
+
+        // FALLBACK: Jika street masih kosong, ambil bagian pertama sebagai potential street name
+        // Ini handle alamat seperti "Indrokilo, Wonosari, Kabupaten Malang" tanpa prefix Jl.
+        if (empty($result['street'])) {
+            $parts = array_map('trim', explode(',', $address));
+            if (!empty($parts[0])) {
+                $firstPart = trim($parts[0]);
+                // Pastikan bukan keyword wilayah dan panjang wajar untuk nama jalan/dusun
+                if (!preg_match('/\b(kel\.?|kelurahan|kec\.?|kecamatan|kota|kabupaten|kab\.?|rt|rw|provinsi|prov\.?|jawa)\b/i', $firstPart)) {
+                    $cleanFirst = trim(preg_replace('/[^a-zA-Z\s\d\-\.]/u', '', $firstPart));
+                    if (strlen($cleanFirst) >= 3 && strlen($cleanFirst) <= 50) {
+                        $result['street'] = $cleanFirst;
+                        $result['street_no_prefix'] = true; // Flag bahwa ini alamat tanpa prefix jalan
+                        Log::info("NLP Parser: Extracted street without prefix - '{$cleanFirst}'");
+                    }
+                }
+            }
+            
+            // Jika kelurahan masih kosong dan ada part kedua, gunakan sebagai kelurahan
+            if (empty($result['kelurahan']) && count($parts) >= 2) {
+                $secondPart = trim($parts[1]);
+                if (!preg_match('/\b(jl\.?|jalan|gang|gg\.?|no\.?|kec\.?|kecamatan|kota|kabupaten|kab\.?|rt|rw)\b/i', $secondPart)) {
+                    $cleanSecond = trim(preg_replace('/[^a-zA-Z\s]/', '', $secondPart));
+                    if (strlen($cleanSecond) >= 3 && strlen($cleanSecond) <= 30) {
+                        $result['kelurahan'] = $cleanSecond;
+                    }
                 }
             }
         }

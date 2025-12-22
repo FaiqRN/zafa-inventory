@@ -111,8 +111,9 @@ class ImportOsmData extends Command
                         }
                     }
                 } elseif ($parsed['osm_type'] === 'nodes' && $parsed['name'] && \in_array($type, ['all', 'pois'])) {
-                    // POI with name
-                    if ($parsed['amenity'] || $parsed['shop']) {
+                    // POI with name - include amenity, shop, place, tourism, leisure, office, healthcare, building
+                    if ($parsed['amenity'] || $parsed['shop'] || $parsed['place'] || $parsed['tourism'] 
+                        || $parsed['leisure'] || $parsed['office'] || $parsed['healthcare'] || $parsed['building']) {
                         if ($dryRun) {
                             $this->poisImported++;
                         } else {
@@ -160,16 +161,23 @@ class ImportOsmData extends Command
     /**
      * Parse a single line from the COPY section
      * 
-     * Column order from SQL file:
-     * 0: geom, 1: osm_id, 2: osm_type, 3: health_facility_type, 4: roof_material,
-     * 5: addr_street, 6: width, 7: amenity, 8: highway, 9: staff_count_doctors,
-     * 10: medical_system_western, 11: isced_level, 12: smoothness, 13: operator_type,
-     * 14: opening_hours, 15: toilets_disposal, 16: surface, 17: health_facility_bed,
-     * 18: capacity, 19: access, 20: leisure, 21: addr_postcode, 22: status,
-     * 23: addr_housenumber, 24: layer, 25: boundary, 26: health_facility_level,
-     * 27: bridge, 28: access_roof, 29: building, 30: toilets_handwashing,
-     * 31: name, 32: tunnel, 33: operator, 34: oneway, 35: landuse, 36: shop,
-     * 37: building_material, 38: staff_count_nurses
+     * Column order from SQL file (Data_Jalan_Malang.sql):
+     * 0: geom, 1: osm_id, 2: osm_type, 3: health_facility_type, 4: power, 5: water,
+     * 6: man_made, 7: roof_material, 8: admin_level, 9: addr_street, 10: width,
+     * 11: amenity, 12: highway, 13: backup_generator, 14: beds, 15: historic,
+     * 16: barrier, 17: office, 18: rooms, 19: fuel, 20: staff_count_doctors,
+     * 21: medical_system_western, 22: isced_level, 23: smoothness, 24: religion,
+     * 25: pump, 26: operator_type, 27: opening_hours, 28: population, 29: communication_radio,
+     * 30: toilets_disposal, 31: surface, 32: health_facility_bed, 33: tower,
+     * 34: public_transport, 35: network, 36: parking, 37: name_en, 38: capacity,
+     * 39: covered, 40: access, 41: tourism, 42: blockage, 43: government, 44: layer,
+     * 45: leisure, 46: addr_postcode, 47: emergency, 48: status, 49: boundary,
+     * 50: health_facility_level, 51: bridge, 52: addr_housenumber, 53: diameter,
+     * 54: communication_mobile, 55: access_roof, 56: building, 57: railway,
+     * 58: denomination, 59: place, 60: toilets_handwashing, 61: military, 62: healthcare,
+     * 63: name, 64: depth, 65: name_fr, 66: tunnel, 67: name_sw, 68: oneway,
+     * 69: operator, 70: landuse, 71: waterway, 72: aeroway, 73: shop,
+     * 74: building_material, 75: natural, 76: staff_count_nurses, 77: is_in
      */
     private function parseLine(string $line): ?array
     {
@@ -200,14 +208,24 @@ class ImportOsmData extends Command
             'coordinates' => $coordinates,
             'osm_id' => $this->parseField($fields[1] ?? null),
             'osm_type' => $this->parseField($fields[2] ?? null),
-            'name' => $this->parseField($fields[31] ?? null),
-            'highway' => $this->parseField($fields[8] ?? null),
-            'amenity' => $this->parseField($fields[7] ?? null),
-            'shop' => $this->parseField($fields[36] ?? null),
-            'addr_street' => $this->parseField($fields[5] ?? null),
-            'addr_housenumber' => $this->parseField($fields[23] ?? null),
-            'addr_postcode' => $this->parseField($fields[21] ?? null),
-            'surface' => $this->parseField($fields[16] ?? null),
+            'name' => $this->parseField($fields[63] ?? null),
+            'highway' => $this->parseField($fields[12] ?? null),
+            'amenity' => $this->parseField($fields[11] ?? null),
+            'shop' => $this->parseField($fields[73] ?? null),
+            'addr_street' => $this->parseField($fields[9] ?? null),
+            'addr_housenumber' => $this->parseField($fields[52] ?? null),
+            'addr_postcode' => $this->parseField($fields[46] ?? null),
+            'surface' => $this->parseField($fields[31] ?? null),
+            'place' => $this->parseField($fields[59] ?? null),
+            'tourism' => $this->parseField($fields[41] ?? null),
+            // Additional fields
+            'building' => $this->parseField($fields[56] ?? null),
+            'leisure' => $this->parseField($fields[45] ?? null),
+            'landuse' => $this->parseField($fields[70] ?? null),
+            'healthcare' => $this->parseField($fields[62] ?? null),
+            'office' => $this->parseField($fields[17] ?? null),
+            'religion' => $this->parseField($fields[24] ?? null),
+            'operator' => $this->parseField($fields[69] ?? null),
         ];
     }
 
@@ -576,8 +594,17 @@ class ImportOsmData extends Command
         // Find kelurahan
         $kelurahanId = $this->findKelurahanByCoordinate($coords['lat'], $coords['lng']);
 
-        // Determine category
-        $kategori = Poi::mapOsmTypeToKategori($data['amenity'], $data['shop']);
+        // Determine category - check all OSM type fields
+        $kategori = Poi::mapOsmTypeToKategori(
+            $data['amenity'],
+            $data['shop'],
+            $data['place'] ?? null,
+            $data['tourism'] ?? null,
+            $data['leisure'] ?? null,
+            $data['office'] ?? null,
+            $data['healthcare'] ?? null,
+            $data['building'] ?? null
+        );
 
         Poi::create([
             Poi::FIELD_OSM_ID => $data['osm_id'],

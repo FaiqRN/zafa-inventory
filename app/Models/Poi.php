@@ -144,11 +144,19 @@ class Poi extends Model
     }
 
     /**
-     * Map OSM amenity/shop type ke kategori internal
+     * Map OSM type fields ke kategori internal
      */
-    public static function mapOsmTypeToKategori(?string $amenity, ?string $shop): string
-    {
-        // Check amenity first
+    public static function mapOsmTypeToKategori(
+        ?string $amenity,
+        ?string $shop,
+        ?string $place = null,
+        ?string $tourism = null,
+        ?string $leisure = null,
+        ?string $office = null,
+        ?string $healthcare = null,
+        ?string $building = null
+    ): string {
+        // Check amenity first (highest priority)
         if ($amenity) {
             $amenityMap = [
                 'restaurant' => self::KATEGORI_RESTAURANT,
@@ -156,17 +164,37 @@ class Poi extends Model
                 'cafe' => self::KATEGORI_CAFE,
                 'school' => self::KATEGORI_SCHOOL,
                 'kindergarten' => self::KATEGORI_SCHOOL,
+                'college' => self::KATEGORI_SCHOOL,
+                'university' => self::KATEGORI_SCHOOL,
                 'hospital' => self::KATEGORI_HOSPITAL,
                 'clinic' => self::KATEGORI_HOSPITAL,
+                'doctors' => self::KATEGORI_HOSPITAL,
+                'dentist' => self::KATEGORI_HOSPITAL,
+                'pharmacy' => self::KATEGORI_HOSPITAL,
                 'bank' => self::KATEGORI_BANK,
                 'atm' => self::KATEGORI_ATM,
                 'place_of_worship' => self::KATEGORI_PLACE_OF_WORSHIP,
                 'fuel' => self::KATEGORI_FUEL,
+                'marketplace' => self::KATEGORI_CONVENIENCE,
+                'police' => 'government',
+                'fire_station' => 'government',
+                'townhall' => 'government',
+                'post_office' => 'government',
+                'library' => 'public_facility',
+                'community_centre' => 'public_facility',
             ];
 
             if (isset($amenityMap[$amenity])) {
                 return $amenityMap[$amenity];
             }
+            
+            // Return amenity type as-is if not mapped
+            return "amenity_{$amenity}";
+        }
+
+        // Check healthcare
+        if ($healthcare) {
+            return self::KATEGORI_HOSPITAL;
         }
 
         // Check shop type
@@ -175,11 +203,70 @@ class Poi extends Model
                 'convenience' => self::KATEGORI_CONVENIENCE,
                 'supermarket' => self::KATEGORI_CONVENIENCE,
                 'kiosk' => self::KATEGORI_CONVENIENCE,
+                'grocery' => self::KATEGORI_CONVENIENCE,
+                'general' => self::KATEGORI_CONVENIENCE,
+                'bakery' => self::KATEGORI_RESTAURANT,
+                'butcher' => self::KATEGORI_CONVENIENCE,
             ];
 
             if (isset($shopMap[$shop])) {
                 return $shopMap[$shop];
             }
+            
+            return "shop_{$shop}";
+        }
+
+        // Check office type
+        if ($office) {
+            $officeMap = [
+                'government' => 'government',
+                'company' => 'office',
+                'insurance' => 'office',
+                'lawyer' => 'office',
+                'notary' => 'office',
+            ];
+            
+            return $officeMap[$office] ?? "office_{$office}";
+        }
+
+        // Check leisure type
+        if ($leisure) {
+            $leisureMap = [
+                'park' => 'leisure_park',
+                'playground' => 'leisure_playground',
+                'sports_centre' => 'leisure_sports',
+                'stadium' => 'leisure_sports',
+                'swimming_pool' => 'leisure_sports',
+                'fitness_centre' => 'leisure_sports',
+            ];
+            
+            return $leisureMap[$leisure] ?? "leisure_{$leisure}";
+        }
+
+        // Check place type (village, town, etc.)
+        if ($place) {
+            return "place_{$place}";
+        }
+
+        // Check tourism type
+        if ($tourism) {
+            return "tourism_{$tourism}";
+        }
+
+        // Check building type
+        if ($building) {
+            $buildingMap = [
+                'school' => self::KATEGORI_SCHOOL,
+                'hospital' => self::KATEGORI_HOSPITAL,
+                'church' => self::KATEGORI_PLACE_OF_WORSHIP,
+                'mosque' => self::KATEGORI_PLACE_OF_WORSHIP,
+                'temple' => self::KATEGORI_PLACE_OF_WORSHIP,
+                'commercial' => 'building_commercial',
+                'industrial' => 'building_industrial',
+                'residential' => 'building_residential',
+            ];
+            
+            return $buildingMap[$building] ?? "building_{$building}";
         }
 
         return self::KATEGORI_OTHER;
