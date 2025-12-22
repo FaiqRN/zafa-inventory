@@ -110,10 +110,14 @@ class ImportOsmData extends Command
                             }
                         }
                     }
-                } elseif ($parsed['osm_type'] === 'nodes' && $parsed['name'] && \in_array($type, ['all', 'pois'])) {
-                    // POI with name - include amenity, shop, place, tourism, leisure, office, healthcare, building
-                    if ($parsed['amenity'] || $parsed['shop'] || $parsed['place'] || $parsed['tourism'] 
-                        || $parsed['leisure'] || $parsed['office'] || $parsed['healthcare'] || $parsed['building']) {
+                } elseif ($parsed['osm_type'] === 'nodes' && \in_array($type, ['all', 'pois'])) {
+                    // POI - any node with name and some identifying attribute
+                    $hasName = !empty($parsed['name']);
+                    $hasCategory = $parsed['amenity'] || $parsed['shop'] || $parsed['place'] || $parsed['tourism'] 
+                        || $parsed['leisure'] || $parsed['office'] || $parsed['healthcare'] || $parsed['building'];
+                    
+                    // Import jika punya nama DAN kategori, ATAU punya nama saja (untuk POI tanpa kategori)
+                    if ($hasName && $hasCategory) {
                         if ($dryRun) {
                             $this->poisImported++;
                         } else {
@@ -572,6 +576,7 @@ class ImportOsmData extends Command
                 $this->importPoi($poi);
             } catch (\Exception $e) {
                 Log::warning("Failed to import POI {$poi['osm_id']}: " . $e->getMessage());
+                $this->error("POI Error: " . $e->getMessage());
                 $this->skipped++;
             }
         }
@@ -606,16 +611,31 @@ class ImportOsmData extends Command
             $data['building'] ?? null
         );
 
+        // Clean and truncate address fields - OSM data can be inconsistent
+        $addrStreet = $data['addr_street'];
+        $addrHousenumber = $data['addr_housenumber'];
+        $addrPostcode = $data['addr_postcode'];
+        
+        // If housenumber looks like full address, extract just the number
+        if ($addrHousenumber && strlen($addrHousenumber) > 20) {
+            // Try to extract just the number part
+            if (preg_match('/(?:no\.?\s*)?(\d+[A-Za-z]?(?:\s*[-\/]\s*\d+[A-Za-z]?)?)/i', $addrHousenumber, $matches)) {
+                $addrHousenumber = $matches[1];
+            } else {
+                $addrHousenumber = null; // Skip if can't extract
+            }
+        }
+
         Poi::create([
             Poi::FIELD_OSM_ID => $data['osm_id'],
-            Poi::FIELD_NAMA => $data['name'],
+            Poi::FIELD_NAMA => substr($data['name'], 0, 255),
             Poi::FIELD_NAMA_NORMALIZED => Poi::normalizeNama($data['name']),
-            Poi::FIELD_KATEGORI => $kategori,
+            Poi::FIELD_KATEGORI => substr($kategori, 0, 50),
             Poi::FIELD_LATITUDE => $coords['lat'],
             Poi::FIELD_LONGITUDE => $coords['lng'],
-            Poi::FIELD_ALAMAT_JALAN => $data['addr_street'],
-            Poi::FIELD_NOMOR_RUMAH => $data['addr_housenumber'],
-            Poi::FIELD_KODE_POS => $data['addr_postcode'],
+            Poi::FIELD_ALAMAT_JALAN => $addrStreet ? substr($addrStreet, 0, 255) : null,
+            Poi::FIELD_NOMOR_RUMAH => $addrHousenumber ? substr($addrHousenumber, 0, 20) : null,
+            Poi::FIELD_KODE_POS => $addrPostcode ? substr($addrPostcode, 0, 10) : null,
             Poi::FIELD_KELURAHAN_ID => $kelurahanId,
             Poi::FIELD_IS_ACTIVE => true,
         ]);
