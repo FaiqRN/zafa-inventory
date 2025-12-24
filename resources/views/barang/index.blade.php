@@ -50,7 +50,7 @@
                         </table>
                     </div>
                     
-                    <!-- Pagination -->
+                    <!-- Pagination
                     <div class="pagination-wrapper mt-3">
                         <div class="row align-items-center">
                             <div class="col-sm-6">
@@ -72,7 +72,7 @@
                                 </nav>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -131,7 +131,7 @@
                             </table>
                         </div>
                         
-                        <!-- Pagination -->
+                        <!-- Pagination
                         <div class="pagination-wrapper mt-3">
                             <div class="row align-items-center">
                                 <div class="col-sm-6">
@@ -153,7 +153,7 @@
                                     </nav>
                                 </div>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>

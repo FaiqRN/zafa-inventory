@@ -13,6 +13,10 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             KelurahanCoordinateSeeder::class,
             JalanSeeder::class,
+            TokoSeeder::class,
+            BarangSeeder::class,
+            BarangStokSeeder::class,
+            BarangTokoSeeder::class,
         ]);
     }
 }
