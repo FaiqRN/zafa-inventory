@@ -379,7 +379,7 @@ class InventoryOptimizationController extends Controller
                 ->get()
                 ->keyBy('month');
             
-            // Fill missing months with defaults
+            // nanti dibuat menjadi seeder saja agar dapat di customisasi
             $defaultAdjustments = [
                 1 => ['multiplier' => 1.1, 'description' => 'Perayaan Tahun Baru - peningkatan konsumsi'],
                 2 => ['multiplier' => 0.95, 'description' => 'Periode normalisasi pasca liburan'],

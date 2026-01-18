@@ -90,7 +90,6 @@
     <div class="header">
         <div>[Tanggal: {{ \Carbon\Carbon::parse($pengiriman['tanggal_pengiriman'])->format('d-m-Y') }}]</div>
         <div>Tuan Toko: <strong>{{ $pengiriman['toko']->nama_toko }}</strong></div>
-        <div style="text-align: right;">[Bayar Segar]</div>
     </div>
 
     <hr style="border: 1px solid black;">
