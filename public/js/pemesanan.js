@@ -2,6 +2,23 @@
 $(document).ready(function () {
     let currentStep = 1;
     const totalSteps = 3;
+    const pemesananPermissions = window.pemesananPermissions || {};
+    const canCreatePemesanan = !!pemesananPermissions.create;
+    const canEditPemesanan = !!pemesananPermissions.edit;
+    const canDeletePemesanan = !!pemesananPermissions.delete;
+
+    function showPermissionDeniedMessage(message) {
+        Swal.fire('Akses Ditolak', message, 'warning');
+    }
+
+    function canSubmitCurrentForm() {
+        const formAction = $('#form_action').val();
+        if (formAction === 'edit') {
+            return canEditPemesanan;
+        }
+
+        return canCreatePemesanan;
+    }
 
     // Format tanggal
     function formatDate(date) {
@@ -82,7 +99,12 @@ $(document).ready(function () {
         } else if (step === totalSteps) {
             $('#btnPrevStep').show();
             $('#btnNextStep').hide();
-            $('#btnSubmit').show();
+
+            if (canSubmitCurrentForm()) {
+                $('#btnSubmit').show();
+            } else {
+                $('#btnSubmit').hide();
+            }
 
             // Update summary - check if multi-item mode
             if (typeof window.updateSummaryMultiItem === 'function') {
@@ -244,7 +266,6 @@ $(document).ready(function () {
         const selectedOption = $(this).find(':selected');
         const harga = parseFloat(selectedOption.data('harga')) || 0;
         const stok = parseInt(selectedOption.data('stok')) || 0;
-        const namaBarang = selectedOption.text().split(' - ')[0];
 
         if ($(this).val()) {
             // Show info box
@@ -305,6 +326,11 @@ $(document).ready(function () {
 
     // Tambah Pemesanan Button
     $('#btnTambahPemesanan').click(function () {
+        if (!canCreatePemesanan) {
+            showPermissionDeniedMessage('Anda tidak memiliki izin untuk menambah pemesanan.');
+            return;
+        }
+
         $('#form_action').val('add');
         $('#formPemesanan')[0].reset();
         $('#modalPemesananLabel').text('Tambah Pemesanan');
@@ -349,6 +375,11 @@ $(document).ready(function () {
 
     // Edit pemesanan
     $(document).on('click', '.btn-edit', function () {
+        if (!canEditPemesanan) {
+            showPermissionDeniedMessage('Anda tidak memiliki izin untuk mengubah pemesanan.');
+            return;
+        }
+
         const id = $(this).data('id');
         $('#form_action').val('edit');
         $('#modalPemesananLabel').text('Edit Pemesanan');
@@ -449,6 +480,16 @@ $(document).ready(function () {
 
         const formAction = $('#form_action').val();
         const pemesananId = $('#pemesanan_id').val();
+
+        if (formAction === 'add' && !canCreatePemesanan) {
+            showPermissionDeniedMessage('Anda tidak memiliki izin untuk menambah pemesanan.');
+            return;
+        }
+
+        if (formAction === 'edit' && !canEditPemesanan) {
+            showPermissionDeniedMessage('Anda tidak memiliki izin untuk mengubah pemesanan.');
+            return;
+        }
 
         let url, method;
         if (formAction === 'add') {
@@ -601,6 +642,11 @@ $(document).ready(function () {
 
     // Delete confirmation
     $(document).on('click', '.btn-delete', function () {
+        if (!canDeletePemesanan) {
+            showPermissionDeniedMessage('Anda tidak memiliki izin untuk menghapus pemesanan.');
+            return;
+        }
+
         const id = $(this).data('id');
         const nama = $(this).data('nama');
         $('#delete-item-name').text(nama);

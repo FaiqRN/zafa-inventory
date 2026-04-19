@@ -1,7 +1,7 @@
 @extends('layouts.template')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid pemesanan-page">
     <!-- Filter Card - Single Row Layout -->
     <div class="card">
         <div class="card-header">
@@ -72,9 +72,11 @@
         <div class="card-header">
             <h3 class="card-title">Daftar Pemesanan</h3>
             <div class="card-tools">
+                @can('create-pemesanan')
                 <button type="button" class="btn btn-primary" id="btnTambahPemesanan">
                     <i class="fas fa-plus"></i> Tambah Pemesanan
                 </button>
+                @endcan
             </div>
         </div>
         <div class="card-body">
@@ -108,7 +110,7 @@
 <div class="modal fade" id="modalPemesanan" tabindex="-1" role="dialog" aria-labelledby="modalPemesananLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-gradient-primary">
+            <div class="modal-header pemesanan-modal-header">
                 <h5 class="modal-title text-white" id="modalPemesananLabel">Tambah Pemesanan</h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -426,9 +428,11 @@
                     <button type="button" class="btn btn-primary" id="btnNextStep">
                         Selanjutnya <i class="fas fa-arrow-right"></i>
                     </button>
+                    @canany(['create-pemesanan', 'edit-pemesanan'])
                     <button type="submit" class="btn btn-success" id="btnSubmit" style="display:none;">
                         <i class="fas fa-save"></i> Simpan Pemesanan
                     </button>
+                    @endcanany
                 </div>
             </form>
         </div>
@@ -609,16 +613,16 @@
 <link rel="stylesheet" href="{{asset('adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css')}}">
 <style>
 /* Multi-Step Modal Styles */
-.steps-container {
+.pemesanan-page .steps-container {
     padding: 15px 0;
 }
 
-.step-item {
+.pemesanan-page .step-item {
     position: relative;
     cursor: default;
 }
 
-.step-item::before {
+.pemesanan-page .step-item::before {
     content: '';
     position: absolute;
     top: 25px;
@@ -629,17 +633,17 @@
     z-index: 0;
 }
 
-.step-item:first-child::before {
+.pemesanan-page .step-item:first-child::before {
     width: 50%;
     left: 50%;
 }
 
-.step-item:last-child::before {
+.pemesanan-page .step-item:last-child::before {
     width: 50%;
     left: 0;
 }
 
-.step-circle {
+.pemesanan-page .step-circle {
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -655,34 +659,34 @@
     transition: all 0.3s ease;
 }
 
-.step-item.active .step-circle {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.pemesanan-page .step-item.active .step-circle {
+    background: linear-gradient(135deg, var(--zafa-yellow) 0%, var(--zafa-orange) 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.35);
     transform: scale(1.1);
 }
 
-.step-item.completed .step-circle {
-    background: #28a745;
+.pemesanan-page .step-item.completed .step-circle {
+    background: var(--zafa-turquoise);
     color: white;
 }
 
-.step-label {
+.pemesanan-page .step-label {
     font-size: 13px;
     font-weight: 600;
     color: #6c757d;
 }
 
-.step-item.active .step-label {
-    color: #667eea;
+.pemesanan-page .step-item.active .step-label {
+    color: var(--zafa-orange);
 }
 
-.step-item.completed .step-label {
-    color: #28a745;
+.pemesanan-page .step-item.completed .step-label {
+    color: var(--zafa-teal);
 }
 
 /* Form Animation */
-.step-content {
+.pemesanan-page .step-content {
     animation: fadeIn 0.4s ease-in;
 }
 
@@ -698,60 +702,56 @@
 }
 
 /* Enhanced Input Styles */
-.form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+.pemesanan-page .form-control:focus {
+    border-color: var(--zafa-yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.2);
 }
 
 /* Info Box Enhancement */
-#barang-info {
-    border-left: 4px solid #17a2b8;
+.pemesanan-page #barang-info {
+    border-left: 4px solid var(--zafa-turquoise);
 }
 
 /* Summary Card */
-.card.bg-light {
-    border-left: 4px solid #667eea;
+.pemesanan-page .card.bg-light {
+    border-left: 4px solid var(--zafa-yellow);
 }
 
-/* Button Enhancement */
-.btn-primary {
-    background: linear-gradient(135deg, #f6bf60 0%, #f9cc7e 100%);
-    border: none;
+.pemesanan-page .text-primary {
+    color: var(--zafa-orange) !important;
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #e07848 0%, #6a3802 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+.pemesanan-page .text-info {
+    color: var(--zafa-teal) !important;
 }
 
-.btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    border: none;
+.pemesanan-modal-header {
+    background-color: var(--zafa-yellow) !important;
+    border-bottom: 1px solid var(--zafa-orange) !important;
 }
 
-.btn-success:hover {
-    background: linear-gradient(135deg, #218838 0%, #1aa179 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+.pemesanan-modal-header .modal-title,
+.pemesanan-modal-header .close {
+    color: var(--zafa-dark) !important;
+    text-shadow: none !important;
 }
 
 /* Select2 Custom */
-.select2-container--bootstrap4 .select2-selection {
+.pemesanan-page .select2-container--bootstrap4 .select2-selection {
     height: calc(2.25rem + 2px);
 }
 
-.select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+.pemesanan-page .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
     line-height: calc(2.25rem);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .step-label {
+    .pemesanan-page .step-label {
         font-size: 11px;
     }
     
-    .step-circle {
+    .pemesanan-page .step-circle {
         width: 40px;
         height: 40px;
         font-size: 16px;
@@ -761,6 +761,13 @@
 @endpush
 
 @push('js')
+<script>
+window.pemesananPermissions = {
+    create: @json(\Illuminate\Support\Facades\Gate::allows('create-pemesanan')),
+    edit: @json(\Illuminate\Support\Facades\Gate::allows('edit-pemesanan')),
+    delete: @json(\Illuminate\Support\Facades\Gate::allows('delete-pemesanan')),
+};
+</script>
 <script src="{{asset('adminlte/plugins/select2/js/select2.full.min.js')}}"></script>
 <script src="{{ asset('js/pemesanan.js') }}?v={{ time() }}"></script>
 <script src="{{ asset('js/pemesanan-multi-item.js') }}?v={{ time() }}"></script>

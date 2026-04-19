@@ -8,13 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProfileHelper
 {
-    /**
-     * Validate profile data
-     *
-     * @param array $data
-     * @param int $userId
-     * @return array
-     */
+
     public static function getValidationRules(int $userId): array
     {
         return [
@@ -31,11 +25,6 @@ class ProfileHelper
         ];
     }
 
-    /**
-     * Get validation messages
-     *
-     * @return array
-     */
     public static function getValidationMessages(): array
     {
         return [
@@ -54,13 +43,6 @@ class ProfileHelper
         ];
     }
 
-    /**
-     * Update user profile data
-     *
-     * @param User $user
-     * @param array $data
-     * @return User
-     */
     public static function updateProfile(User $user, array $data): User
     {
         $user->{User::FIELD_FIRSTNAME} = $data['firstname'];
@@ -77,25 +59,16 @@ class ProfileHelper
         return $user;
     }
 
-    /**
-     * Handle profile photo upload
-     *
-     * @param User $user
-     * @param \Illuminate\Http\UploadedFile $file
-     * @return string|null
-     */
     public static function handlePhotoUpload(User $user, $file): ?string
     {
         try {
             Log::info('Attempting to upload photo for user: ' . $user->{User::FIELD_USER_ID});
             
-            // Buat direktori jika belum ada
             if (!Storage::exists('public/profile')) {
                 Storage::makeDirectory('public/profile');
                 Log::info('Created directory: public/profile');
             }
             
-            // Hapus foto lama jika ada
             if ($user->{User::FIELD_FOTO}) {
                 $oldPhotoPath = 'public/profile/' . $user->{User::FIELD_FOTO};
                 if (Storage::exists($oldPhotoPath)) {
@@ -104,7 +77,6 @@ class ProfileHelper
                 }
             }
 
-            // Upload foto baru
             $fileName = time() . '_' . $file->getClientOriginalName();
             $path = $file->storeAs('public/profile', $fileName);
             
@@ -118,12 +90,6 @@ class ProfileHelper
         }
     }
 
-    /**
-     * Delete profile photo
-     *
-     * @param User $user
-     * @return bool
-     */
     public static function deletePhoto(User $user): bool
     {
         try {
@@ -142,12 +108,6 @@ class ProfileHelper
         }
     }
 
-    /**
-     * Get profile photo URL
-     *
-     * @param User $user
-     * @return string
-     */
     public static function getPhotoUrl(User $user): string
     {
         if ($user->{User::FIELD_FOTO} && Storage::exists('public/profile/' . $user->{User::FIELD_FOTO})) {
@@ -157,11 +117,6 @@ class ProfileHelper
         return asset('adminlte/dist/img/user-default.jpg');
     }
 
-    /**
-     * Get password validation rules
-     *
-     * @return array
-     */
     public static function getPasswordValidationRules(): array
     {
         return [
@@ -170,11 +125,6 @@ class ProfileHelper
         ];
     }
 
-    /**
-     * Get password validation messages
-     *
-     * @return array
-     */
     public static function getPasswordValidationMessages(): array
     {
         return [
@@ -185,12 +135,6 @@ class ProfileHelper
         ];
     }
 
-    /**
-     * Format user info for display
-     *
-     * @param User $user
-     * @return array
-     */
     public static function formatUserInfo(User $user): array
     {
         return [

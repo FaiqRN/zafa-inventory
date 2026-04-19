@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Services\ZscoreActivePairSyncService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Facades\Log;
@@ -56,7 +57,7 @@ class Kernel extends ConsoleKernel
                  ->description('Generate daily WhatsApp usage report')
                  ->environments(['production']);
 
-        // Weekly WhatsApp performance summary setiap Senin jam 9 pagi  
+        // Weekly WhatsApp performance summary setiap Senin jam 9 pagi
         $schedule->command('whatsapp:report --weekly')
                  ->weeklyOn(1, '09:00')
                  ->description('Generate weekly WhatsApp performance summary')
@@ -70,7 +71,7 @@ class Kernel extends ConsoleKernel
         // ========================================
         // HEALTH CHECKS AND MONITORING
         // ========================================
-        
+
         // Check system health setiap jam
         $schedule->command('whatsapp:health-check')
                  ->hourly()
@@ -88,10 +89,26 @@ class Kernel extends ConsoleKernel
                  ->at('04:00')
                  ->description('Optimize follow up database tables');
 
+        // Sinkronisasi pasangan aktif Z-score agar tidak ada missing pair
+        $schedule->call(function () {
+                    $syncStats = app(ZscoreActivePairSyncService::class)->syncActivePairs(180, true, 'scheduler');
+
+                    if (($syncStats['inserted_rows'] ?? 0) > 0) {
+                        Log::info('zscore active pair auto-sync menambah missing pair', $syncStats);
+                    }
+                 })
+                 ->dailyAt('01:30')
+                 ->name('zscore-active-pairs-auto-sync')
+                 ->withoutOverlapping()
+                 ->description('Auto-sync default Z-score untuk pasangan aktif toko-barang (6 bulan)')
+                 ->onFailure(function () {
+                     Log::error('zscore active pair auto-sync failed');
+                 });
+
         // ========================================
         // AUTOMATED FOLLOW UP CAMPAIGNS (Optional)
         // ========================================
-        
+
         // Auto follow up untuk pelanggan tidak kembali (setiap Selasa jam 10 pagi)
         $schedule->command('followup:auto-campaign --type=pelangganTidakKembali --dry-run=false')
                  ->weeklyOn(2, '10:00')

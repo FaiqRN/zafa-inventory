@@ -27,12 +27,6 @@ class LoginAttempt extends Model
 
     public $timestamps = false;
 
-    /**
-     * Check if account is currently locked
-     *
-     * @param string $username
-     * @return bool
-     */
     public static function isLocked(string $username): bool
     {
         $latestAttempt = self::where('username', $username)
@@ -47,12 +41,6 @@ class LoginAttempt extends Model
         return $latestAttempt->locked_until->isFuture();
     }
 
-    /**
-     * Get remaining lock time in seconds
-     *
-     * @param string $username
-     * @return int
-     */
     public static function getLockTimeRemaining(string $username): int
     {
         $latestAttempt = self::where('username', $username)
@@ -67,13 +55,6 @@ class LoginAttempt extends Model
         return $latestAttempt->locked_until->diffInSeconds(now());
     }
 
-    /**
-     * Count failed attempts in the last X minutes
-     *
-     * @param string $username
-     * @param int $minutes
-     * @return int
-     */
     public static function countRecentFailedAttempts(string $username, int $minutes = 15): int
     {
         return self::where('username', $username)
@@ -82,15 +63,6 @@ class LoginAttempt extends Model
             ->count();
     }
 
-    /**
-     * Record a login attempt
-     *
-     * @param string $username
-     * @param string $ipAddress
-     * @param string|null $userAgent
-     * @param bool $successful
-     * @return self
-     */
     public static function recordAttempt(
         string $username,
         string $ipAddress,
@@ -106,13 +78,6 @@ class LoginAttempt extends Model
         ]);
     }
 
-    /**
-     * Lock account for specified minutes
-     *
-     * @param string $username
-     * @param int $minutes
-     * @return void
-     */
     public static function lockAccount(string $username, int $minutes = 30): void
     {
         self::create([
@@ -125,12 +90,6 @@ class LoginAttempt extends Model
         ]);
     }
 
-    /**
-     * Clear failed attempts for username
-     *
-     * @param string $username
-     * @return void
-     */
     public static function clearAttempts(string $username): void
     {
         self::where('username', $username)

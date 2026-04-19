@@ -26,5 +26,29 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+
+        // Custom 403 error page with layout
+        $this->renderable(function (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki izin untuk mengakses resource ini.',
+                    'error' => $e->getMessage()
+                ], 403);
+            }
+
+            return response()->view('errors.403', ['exception' => $e], 403);
+        });
+
+        // Custom 403 for authorization exceptions
+        $this->renderable(function (\Illuminate\Auth\Access\AuthorizationException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Aksi ini tidak diizinkan.',
+                    'error' => $e->getMessage()
+                ], 403);
+            }
+
+            return response()->view('errors.403', ['exception' => $e], 403);
+        });
     }
 }

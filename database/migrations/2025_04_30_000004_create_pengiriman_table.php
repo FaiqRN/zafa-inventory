@@ -19,25 +19,16 @@ class CreatePengirimanTable extends Migration
             $table->string('barang_id', 10);
             $table->string('nomer_pengiriman', 50);
             $table->date('tanggal_pengiriman');
+            $table->date('tanggal_terima')->nullable();
             $table->integer('jumlah_kirim');
             $table->enum('status', ['terkirim', 'proses','batal'])->default('proses');
-            $table->foreign('toko_id')
-                  ->references('toko_id')
-                  ->on('toko')
-                  ->onDelete('cascade')
-                  ->onUpdate('cascade');
-                  
-            $table->foreign('barang_id') 
-                  ->references('barang_id')
-                  ->on('barang')
-                  ->onDelete('cascade')
-                  ->onUpdate('cascade');
+            $table->foreign('toko_id')->references('toko_id')->on('toko')->onDelete('cascade')->onUpdate('cascade');
+            $table->foreign('barang_id')->references('barang_id')->on('barang')->onDelete('cascade')->onUpdate('cascade');
             
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->string('user_create')->nullable();
             $table->string('user_update')->nullable();
-                  
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_general_ci';
         });

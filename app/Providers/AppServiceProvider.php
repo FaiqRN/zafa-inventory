@@ -4,19 +4,24 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Barang;
 use App\Models\Pemesanan;
+use App\Models\Toko;
+use App\Models\Pengiriman;
+use App\Models\Retur;
+use App\Observers\BarangCacheObserver;
 use App\Observers\PemesananObserver;
+use App\Observers\TokoCacheObserver;
+use App\Observers\PengirimanCacheObserver;
+use App\Observers\ReturCacheObserver;
 use App\Services\WablasService;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
+
     public function register(): void
     {
         Excel::macro('storeMultiple', function (...$args) {
-            // Helper macro for Excel
         });
 
         $this->app->singleton(WablasService::class, function ($app) {
@@ -24,11 +29,13 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
+
     public function boot(): void
     {
+        Barang::observe(BarangCacheObserver::class);
         Pemesanan::observe(PemesananObserver::class);
+        Toko::observe(TokoCacheObserver::class);
+        Pengiriman::observe(PengirimanCacheObserver::class);
+        Retur::observe(ReturCacheObserver::class);
     }
 }

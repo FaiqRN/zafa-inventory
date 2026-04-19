@@ -18,8 +18,8 @@ class CreateBarangTable extends Migration
             $table->string('barang_kode', 20);
             $table->string('nama_barang', 100);
             $table->decimal('harga_awal_barang', 10, 2);
-            $table->integer('stok')->default(0)->comment('Stok barang');
             $table->string('satuan', 20);
+            $table->integer('shelf_life')->unsigned()->comment('Durasi barang bisa disimpan dalam satuan hari sejak tanggal produksi');
             $table->string('keterangan', 255)->nullable();
             
             $table->timestamp('created_at')->useCurrent();

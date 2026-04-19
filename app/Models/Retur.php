@@ -15,7 +15,6 @@ class Retur extends Model
     public const FIELD_TOKO_ID = 'toko_id';
     public const FIELD_BARANG_ID = 'barang_id';
     public const FIELD_NOMER_PENGIRIMAN = 'nomer_pengiriman';
-    public const FIELD_TANGGAL_PENGIRIMAN = 'tanggal_pengiriman';
     public const FIELD_TANGGAL_RETUR = 'tanggal_retur';
     public const FIELD_HARGA_AWAL_BARANG = 'harga_awal_barang';
     public const FIELD_JUMLAH_KIRIM = 'jumlah_kirim';
@@ -40,7 +39,6 @@ class Retur extends Model
         self::FIELD_TOKO_ID,
         self::FIELD_BARANG_ID,
         self::FIELD_NOMER_PENGIRIMAN,
-        self::FIELD_TANGGAL_PENGIRIMAN,
         self::FIELD_TANGGAL_RETUR,
         self::FIELD_HARGA_AWAL_BARANG,
         self::FIELD_JUMLAH_KIRIM,
@@ -55,7 +53,6 @@ class Retur extends Model
     ];
 
     protected $casts = [
-        self::FIELD_TANGGAL_PENGIRIMAN => 'date',
         self::FIELD_TANGGAL_RETUR => 'date',
         self::FIELD_HARGA_AWAL_BARANG => 'decimal:2',
         self::FIELD_JUMLAH_KIRIM => 'integer',

@@ -4,24 +4,17 @@ namespace App\Helpers\MasterData\barang;
 
 use App\Models\Barang;
 use App\Models\BarangStok;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class BarangStokHelper
 {
-    /**
-     * Tambah stok baru dengan sistem FIFO
-     *
-     * @param string $barangId
-     * @param int $jumlah
-     * @param string $tanggal
-     * @param string|null $catatan
-     * @return array
-     */
+
     public static function tambahStok($barangId, $jumlah, $tanggal, $catatan = null)
     {
         try {
-            // Validasi barang exists
             $barang = Barang::find($barangId);
             if (!$barang) {
                 return [
@@ -31,7 +24,6 @@ class BarangStokHelper
                 ];
             }
 
-            // Validasi jumlah > 0
             if ($jumlah <= 0) {
                 return [
                     'success' => false,
@@ -40,7 +32,6 @@ class BarangStokHelper
                 ];
             }
 
-            // Validasi tanggal tidak boleh future date
             if (strtotime($tanggal) > strtotime(date('Y-m-d'))) {
                 return [
                     'success' => false,
@@ -51,7 +42,6 @@ class BarangStokHelper
 
             DB::beginTransaction();
 
-            // Buat record baru di barang_stok
             $barangStok = BarangStok::create([
                 BarangStok::FIELD_BARANG_ID => $barangId,
                 BarangStok::FIELD_TANGGAL_STOCK_BARANG => $tanggal,
@@ -59,11 +49,8 @@ class BarangStokHelper
                 BarangStok::FIELD_SISA_STOK => $jumlah,
                 BarangStok::FIELD_STOK_AWAL => $jumlah,
                 BarangStok::FIELD_CATATAN => $catatan,
-                BarangStok::FIELD_USER_CREATE => auth()->user()->username ?? 'system',
+                BarangStok::FIELD_USER_CREATE => self::resolveCurrentUsername(),
             ]);
-
-            // Update total stok di tabel barang (increment)
-            $barang->increment(Barang::FIELD_STOK, $jumlah);
 
             DB::commit();
 
@@ -85,17 +72,9 @@ class BarangStokHelper
         }
     }
 
-    /**
-     * Kurangi stok dengan sistem FIFO
-     *
-     * @param string $barangId
-     * @param int $jumlah
-     * @return array
-     */
     public static function kurangiStok($barangId, $jumlah)
     {
         try {
-            // Validasi stok tersedia cukup
             $validasi = self::validateStokCukup($barangId, $jumlah);
             if (!$validasi['is_available']) {
                 return [
@@ -107,7 +86,6 @@ class BarangStokHelper
 
             DB::beginTransaction();
 
-            // Ambil batch available dengan FIFO order
             $batches = BarangStok::byBarang($barangId)
                 ->available()
                 ->fifo()
@@ -121,7 +99,7 @@ class BarangStokHelper
 
                 $kurangDariBatch = min($batch->{BarangStok::FIELD_SISA_STOK}, $sisaKurang);
                 $batch->{BarangStok::FIELD_SISA_STOK} -= $kurangDariBatch;
-                $batch->{BarangStok::FIELD_USER_UPDATE} = auth()->user()->username ?? 'system';
+                $batch->{BarangStok::FIELD_USER_UPDATE} = self::resolveCurrentUsername();
                 $batch->save();
 
                 $sisaKurang -= $kurangDariBatch;
@@ -134,13 +112,8 @@ class BarangStokHelper
                 ];
             }
 
-            // Update total stok di tabel barang (decrement)
-            $barang = Barang::find($barangId);
-            $barang->decrement(Barang::FIELD_STOK, $jumlah);
-
             DB::commit();
 
-            // Log detail pengurangan
             Log::info("Stok dikurangi untuk barang {$barangId}", [
                 'jumlah_total' => $jumlah,
                 'batch_dikurangi' => $batchDikurangi
@@ -167,24 +140,12 @@ class BarangStokHelper
         }
     }
 
-    /**
-     * Get total stok tersedia (sum sisa_stok)
-     *
-     * @param string $barangId
-     * @return int
-     */
     public static function getStokTersedia($barangId)
     {
         return BarangStok::byBarang($barangId)
             ->sum(BarangStok::FIELD_SISA_STOK);
     }
 
-    /**
-     * Get detail semua batch untuk barang
-     *
-     * @param string $barangId
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public static function getDetailBatch($barangId)
     {
         return BarangStok::byBarang($barangId)
@@ -205,13 +166,6 @@ class BarangStokHelper
             });
     }
 
-    /**
-     * Validasi apakah stok cukup
-     *
-     * @param string $barangId
-     * @param int $jumlah
-     * @return array
-     */
     public static function validateStokCukup($barangId, $jumlah)
     {
         $availableStock = self::getStokTersedia($barangId);
@@ -224,13 +178,6 @@ class BarangStokHelper
         ];
     }
 
-    /**
-     * Get batch terlama yang masih ada sisa
-     *
-     * @param string $barangId
-     * @param int $limit
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public static function getBatchTerlama($barangId, $limit = 5)
     {
         return BarangStok::byBarang($barangId)
@@ -240,12 +187,6 @@ class BarangStokHelper
             ->get();
     }
 
-    /**
-     * Get summary stok untuk barang
-     *
-     * @param string $barangId
-     * @return array
-     */
     public static function getStokSummary($barangId)
     {
         $batches = BarangStok::byBarang($barangId)->get();
@@ -273,5 +214,32 @@ class BarangStokHelper
             'batch_tertua' => $batchTertua ? $batchTertua->{BarangStok::FIELD_TANGGAL_STOCK_BARANG}->format('d/m/Y') : '-',
             'batch_terbaru' => $batchTerbaru ? $batchTerbaru->{BarangStok::FIELD_TANGGAL_STOCK_BARANG}->format('d/m/Y') : '-',
         ];
+    }
+
+    private static function resolveCurrentUsername(): string
+    {
+        static $resolved = false;
+        static $resolvedUsername = 'system';
+
+        if ($resolved) {
+            return $resolvedUsername;
+        }
+
+        $resolved = true;
+        $authIdentifier = Auth::id();
+
+        if ($authIdentifier === null) {
+            return $resolvedUsername;
+        }
+
+        $username = User::query()
+            ->where(User::FIELD_USERNAME, (string) $authIdentifier)
+            ->value(User::FIELD_USERNAME);
+
+        if ($username !== null) {
+            $resolvedUsername = (string) $username;
+        }
+
+        return $resolvedUsername;
     }
 }

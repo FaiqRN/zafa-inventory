@@ -6,8 +6,11 @@ use App\Models\Pengiriman;
 use App\Models\BarangToko;
 use App\Models\Barang;
 use App\Models\BarangStok;
+use App\Models\User;
+use App\Services\PengirimanCacheService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class PengirimanHelper
 {
@@ -57,7 +60,7 @@ class PengirimanHelper
         
         try {
             $nomerPengiriman = self::generateNomerPengiriman();
-            $userId = auth()->user()->user_id ?? 'SYSTEM';
+            $userId = self::resolveCurrentUserId();
             
             foreach ($data['items'] as $item) {
                 $pengirimanId = self::generatePengirimanId();
@@ -84,6 +87,9 @@ class PengirimanHelper
             }
             
             DB::commit();
+            
+            PengirimanCacheService::clearAllCache();
+            
             return ['success' => true, 'nomer_pengiriman' => $nomerPengiriman];
             
         } catch (\Exception $e) {
@@ -121,14 +127,23 @@ class PengirimanHelper
                     Log::info("Mengembalikan stok untuk barang_id: " . $pengiriman->{Pengiriman::FIELD_BARANG_ID});
                     self::restoreStock($pengiriman);
                 }
+
+                $tanggalTerima = $pengiriman->{Pengiriman::FIELD_TANGGAL_TERIMA};
+                if ($newStatus === 'terkirim' && empty($tanggalTerima)) {
+                    $tanggalTerima = now()->toDateString();
+                }
                 
                 $pengiriman->update([
                     Pengiriman::FIELD_STATUS => $newStatus,
-                    Pengiriman::FIELD_USER_UPDATE => auth()->user()->user_id ?? 'SYSTEM',
+                    Pengiriman::FIELD_TANGGAL_TERIMA => $tanggalTerima,
+                    Pengiriman::FIELD_USER_UPDATE => self::resolveCurrentUserId(),
                 ]);
             }
             
             DB::commit();
+            
+            PengirimanCacheService::clearPengirimanCache($nomerPengiriman);
+            
             Log::info("Status berhasil diupdate");
             return ['success' => true];
             
@@ -147,7 +162,7 @@ class PengirimanHelper
             throw new \Exception("Barang tidak ditemukan");
         }
         
-        $currentStok = $barang->{Barang::FIELD_STOK};
+        $currentStok = $barang->stok; 
         $jumlahKirim = $pengiriman->{Pengiriman::FIELD_JUMLAH_KIRIM};
         
         Log::info("Reduce Stock Detail", [
@@ -161,17 +176,12 @@ class PengirimanHelper
         if ($currentStok < $jumlahKirim) {
             throw new \Exception("Stok tidak mencukupi untuk barang: " . $barang->{Barang::FIELD_NAMA_BARANG});
         }
-        
-        $barang->update([
-            Barang::FIELD_STOK => $currentStok - $jumlahKirim,
-            Barang::FIELD_USER_UPDATE => auth()->user()->user_id ?? 'SYSTEM',
-        ]);
-        
+
         self::reduceStockFIFO($pengiriman->{Pengiriman::FIELD_BARANG_ID}, $jumlahKirim);
         
         Log::info("Stok berhasil dikurangi", [
             'barang_id' => $barang->{Barang::FIELD_BARANG_ID},
-            'new_stok' => $barang->fresh()->{Barang::FIELD_STOK}
+            'new_stok' => $barang->fresh()->stok
         ]);
     }
 
@@ -183,7 +193,7 @@ class PengirimanHelper
             throw new \Exception("Barang tidak ditemukan");
         }
         
-        $currentStok = $barang->{Barang::FIELD_STOK};
+        $currentStok = $barang->stok; 
         $jumlahKirim = $pengiriman->{Pengiriman::FIELD_JUMLAH_KIRIM};
         
         Log::info("Restore Stock Detail", [
@@ -193,17 +203,12 @@ class PengirimanHelper
             'jumlah_kirim' => $jumlahKirim,
             'new_stok' => $currentStok + $jumlahKirim
         ]);
-        
-        $barang->update([
-            Barang::FIELD_STOK => $currentStok + $jumlahKirim,
-            Barang::FIELD_USER_UPDATE => auth()->user()->user_id ?? 'SYSTEM',
-        ]);
-        
+
         self::restoreStockFIFO($pengiriman->{Pengiriman::FIELD_BARANG_ID}, $jumlahKirim);
         
         Log::info("Stok berhasil dikembalikan", [
             'barang_id' => $barang->{Barang::FIELD_BARANG_ID},
-            'new_stok' => $barang->fresh()->{Barang::FIELD_STOK}
+            'new_stok' => $barang->fresh()->stok
         ]);
     }
 
@@ -233,7 +238,7 @@ class PengirimanHelper
             
             $batch->update([
                 BarangStok::FIELD_SISA_STOK => $sisaStok - $deduct,
-                BarangStok::FIELD_USER_UPDATE => auth()->user()->user_id ?? 'SYSTEM',
+                BarangStok::FIELD_USER_UPDATE => self::resolveCurrentUserId(),
             ]);
             
             $remaining -= $deduct;
@@ -266,7 +271,7 @@ class PengirimanHelper
             
             $batch->update([
                 BarangStok::FIELD_SISA_STOK => $sisaStok + $jumlah,
-                BarangStok::FIELD_USER_UPDATE => auth()->user()->user_id ?? 'SYSTEM',
+                BarangStok::FIELD_USER_UPDATE => self::resolveCurrentUserId(),
             ]);
             
             Log::info("FIFO Restore - Batch dikembalikan", [
@@ -275,6 +280,33 @@ class PengirimanHelper
                 'new_sisa' => $sisaStok + $jumlah
             ]);
         }
+    }
+
+    private static function resolveCurrentUserId(): string
+    {
+        static $resolved = false;
+        static $resolvedUserId = 'SYSTEM';
+
+        if ($resolved) {
+            return $resolvedUserId;
+        }
+
+        $resolved = true;
+        $authIdentifier = Auth::id();
+
+        if ($authIdentifier === null) {
+            return $resolvedUserId;
+        }
+
+        $userId = User::query()
+            ->where(User::FIELD_USERNAME, (string) $authIdentifier)
+            ->value(User::FIELD_USER_ID);
+
+        if ($userId !== null) {
+            $resolvedUserId = (string) $userId;
+        }
+
+        return $resolvedUserId;
     }
 
     public static function getPengirimanByNomer($nomerPengiriman)
@@ -288,16 +320,22 @@ class PengirimanHelper
         }
         
         $first = $pengirimanList->first();
+        $tokoId = $first->{Pengiriman::FIELD_TOKO_ID};
+        
+        $barangIds = $pengirimanList->pluck(Pengiriman::FIELD_BARANG_ID)->unique();
+        $barangTokoMap = BarangToko::where(BarangToko::FIELD_TOKO_ID, $tokoId)
+            ->whereIn(BarangToko::FIELD_BARANG_ID, $barangIds)
+            ->get()
+            ->keyBy(BarangToko::FIELD_BARANG_ID);
         
         return [
             'nomer_pengiriman' => $first->{Pengiriman::FIELD_NOMER_PENGIRIMAN},
             'tanggal_pengiriman' => $first->{Pengiriman::FIELD_TANGGAL_PENGIRIMAN},
             'toko' => $first->toko,
             'status' => $first->{Pengiriman::FIELD_STATUS},
-            'items' => $pengirimanList->map(function($p) {
-                $barangToko = BarangToko::where(BarangToko::FIELD_TOKO_ID, $p->{Pengiriman::FIELD_TOKO_ID})
-                    ->where(BarangToko::FIELD_BARANG_ID, $p->{Pengiriman::FIELD_BARANG_ID})
-                    ->first();
+            'items' => $pengirimanList->map(function($p) use ($barangTokoMap) {
+                $barangId = $p->{Pengiriman::FIELD_BARANG_ID};
+                $barangToko = $barangTokoMap->get($barangId);
                 
                 return [
                     'barang' => $p->barang,
@@ -327,7 +365,7 @@ class PengirimanHelper
                 'nama_barang' => $bt->barang->{Barang::FIELD_NAMA_BARANG},
                 'satuan' => $bt->barang->{Barang::FIELD_SATUAN},
                 'harga' => $bt->{BarangToko::FIELD_HARGA_BARANG_TOKO},
-                'stok' => $bt->barang->{Barang::FIELD_STOK},
+                'stok' => $bt->barang->stok, 
             ];
         });
     }

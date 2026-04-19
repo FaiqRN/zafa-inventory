@@ -6,11 +6,7 @@ use App\Models\Toko;
 
 class TokoHelper
 {
-    /**
-     * Generate next toko code
-     *
-     * @return string
-     */
+
     public static function generateKode(): string
     {
         $lastToko = Toko::orderBy(Toko::FIELD_TOKO_ID, 'desc')->first();
@@ -31,12 +27,6 @@ class TokoHelper
         return 'TKO001';
     }
 
-    /**
-     * Get quality badge for UI display
-     *
-     * @param string|null $quality
-     * @return array
-     */
     public static function getQualityBadge(?string $quality): array
     {
         $badges = [
@@ -51,15 +41,6 @@ class TokoHelper
         return $badges[$quality] ?? $badges['failed'];
     }
 
-    /**
-     * Calculate distance between two coordinates in kilometers using Haversine formula
-     *
-     * @param float $lat1
-     * @param float $lon1
-     * @param float $lat2
-     * @param float $lon2
-     * @return float
-     */
     public static function calculateDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
         $earthRadius = 6371; // km
@@ -75,12 +56,6 @@ class TokoHelper
         return round($earthRadius * $c, 2);
     }
 
-    /**
-     * Format distance for human-readable display
-     *
-     * @param float $meters Distance in meters
-     * @return string Formatted distance string
-     */
     public static function formatDistance(float $meters): string
     {
         if ($meters < 1000) {
@@ -89,41 +64,20 @@ class TokoHelper
         return round($meters / 1000, 2) . ' km';
     }
 
-    /**
-     * Build full address string
-     *
-     * @param array $data
-     * @return string
-     */
     public static function buildFullAddress(array $data): string
     {
-        return trim(
-            ($data[Toko::FIELD_ALAMAT] ?? '') . ', ' .
-            ($data[Toko::FIELD_WILAYAH_KELURAHAN] ?? '') . ', ' .
-            ($data[Toko::FIELD_WILAYAH_KECAMATAN] ?? '') . ', ' .
-            ($data[Toko::FIELD_WILAYAH_KOTA_KABUPATEN] ?? '') . ', Jawa Timur, Indonesia'
-        );
+        $parts = array_filter([
+            $data[Toko::FIELD_ALAMAT] ?? '',
+            $data[Toko::FIELD_WILAYAH_KELURAHAN] ?? '',
+            $data[Toko::FIELD_WILAYAH_KECAMATAN] ?? '',
+            $data[Toko::FIELD_WILAYAH_KOTA_KABUPATEN] ?? '',
+            'Jawa Timur',
+            'Indonesia'
+        ]);
+
+        return implode(', ', $parts);
     }
 
-    /**
-     * Get no-cache headers for API responses
-     *
-     * @return array
-     */
-    public static function getNoCacheHeaders(): array
-    {
-        return [
-            'Cache-Control' => 'no-cache, no-store, must-revalidate',
-            'Pragma' => 'no-cache',
-            'Expires' => '0'
-        ];
-    }
-
-    /**
-     * Get validation rules for store operation
-     *
-     * @return array
-     */
     public static function getStoreValidationRules(): array
     {
         return [
@@ -140,11 +94,6 @@ class TokoHelper
         ];
     }
 
-    /**
-     * Get validation rules for update operation
-     *
-     * @return array
-     */
     public static function getUpdateValidationRules(): array
     {
         return [
@@ -160,11 +109,6 @@ class TokoHelper
         ];
     }
 
-    /**
-     * Get validation messages
-     *
-     * @return array
-     */
     public static function getValidationMessages(): array
     {
         return [
@@ -175,11 +119,6 @@ class TokoHelper
         ];
     }
 
-    /**
-     * Get coordinate validation rules
-     *
-     * @return array
-     */
     public static function getCoordinateValidationRules(): array
     {
         return [
@@ -188,37 +127,6 @@ class TokoHelper
         ];
     }
 
-    /**
-     * Get geocode validation rules
-     *
-     * @return array
-     */
-    public static function getGeocodeValidationRules(): array
-    {
-        return [
-            Toko::FIELD_TOKO_ID => 'required|exists:' . Toko::TABLE . ',' . Toko::FIELD_TOKO_ID,
-            Toko::FIELD_ALAMAT => 'required|string'
-        ];
-    }
-
-    /**
-     * Get preview geocode validation rules
-     *
-     * @return array
-     */
-    public static function getPreviewGeocodeValidationRules(): array
-    {
-        return [
-            Toko::FIELD_ALAMAT => 'required|string'
-        ];
-    }
-
-    /**
-     * Format toko data for list response
-     *
-     * @param Toko $toko
-     * @return array
-     */
     public static function formatTokoForList(Toko $toko): array
     {
         return [

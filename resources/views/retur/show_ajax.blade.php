@@ -7,8 +7,6 @@
             </button>
         </div>
         <div class="modal-body">
-            <div id="alert-container-modal"></div>
-            
             <h6 class="mb-3">Informasi Pengiriman</h6>
             <div class="row mb-3">
                 <div class="col-md-4">
@@ -28,6 +26,12 @@
             @if($isLocked)
                 <div class="alert alert-info">
                     <i class="fas fa-lock"></i> Data retur sudah disimpan dan tidak dapat diubah lagi.
+                </div>
+            @endif
+
+            @if(!$isLocked && !$canCreateRetur)
+                <div class="alert alert-secondary">
+                    <i class="fas fa-eye"></i> Anda hanya memiliki akses lihat data retur.
                 </div>
             @endif
             
@@ -70,27 +74,27 @@
                                 <td class="text-center">{{ \Carbon\Carbon::parse($item->tanggal_pengiriman)->format('d/m/Y') }}</td>
                                 <td>
                                     <input type="hidden" name="items[{{ $index }}][pengiriman_id]" value="{{ $item->pengiriman_id }}">
-                                    @if($isLocked)
+                                    @if($isLocked || !$canCreateRetur)
                                         <span>{{ \Carbon\Carbon::parse($tanggalRetur)->format('d/m/Y') }}</span>
                                     @else
-                                        <input type="date" 
-                                               class="form-control form-control-sm tanggal-retur" 
-                                               name="items[{{ $index }}][tanggal_retur]" 
-                                               value="{{ $tanggalRetur }}" 
+                                        <input type="date"
+                                               class="form-control form-control-sm tanggal-retur"
+                                               name="items[{{ $index }}][tanggal_retur]"
+                                               value="{{ $tanggalRetur }}"
                                                required>
                                     @endif
                                 </td>
                                 <td class="text-right">{{ number_format($hargaAwalBarang, 2, ',', '.') }}</td>
                                 <td class="text-center">{{ $item->jumlah_kirim }}</td>
                                 <td>
-                                    @if($isLocked)
+                                    @if($isLocked || !$canCreateRetur)
                                         <span class="d-block text-center">{{ $jumlahRetur }}</span>
                                     @else
-                                        <input type="number" 
-                                               class="form-control form-control-sm jumlah-retur" 
-                                               name="items[{{ $index }}][jumlah_retur]" 
-                                               value="{{ $jumlahRetur }}" 
-                                               min="0" 
+                                        <input type="number"
+                                               class="form-control form-control-sm jumlah-retur"
+                                               name="items[{{ $index }}][jumlah_retur]"
+                                               value="{{ $jumlahRetur }}"
+                                               min="0"
                                                max="{{ $item->jumlah_kirim }}"
                                                data-max="{{ $item->jumlah_kirim }}"
                                                data-index="{{ $index }}"
@@ -105,11 +109,11 @@
                                     <span class="hasil" data-index="{{ $index }}">{{ number_format($hasil, 2, ',', '.') }}</span>
                                 </td>
                                 <td>
-                                    @if($isLocked)
+                                    @if($isLocked || !$canCreateRetur)
                                         <span>{{ $kondisi }}</span>
                                     @else
-                                        <select class="form-control form-control-sm" 
-                                                name="items[{{ $index }}][kondisi]" 
+                                        <select class="form-control form-control-sm"
+                                                name="items[{{ $index }}][kondisi]"
                                                 required>
                                             <option value="Tidak Ada Retur" {{ $kondisi == 'Tidak Ada Retur' ? 'selected' : '' }}>Tidak Ada Retur</option>
                                             <option value="Rusak" {{ $kondisi == 'Rusak' ? 'selected' : '' }}>Rusak</option>
@@ -122,11 +126,11 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($isLocked)
+                                    @if($isLocked || !$canCreateRetur)
                                         <span>{{ $keterangan }}</span>
                                     @else
-                                        <textarea class="form-control form-control-sm" 
-                                                  name="items[{{ $index }}][keterangan]" 
+                                        <textarea class="form-control form-control-sm"
+                                                  name="items[{{ $index }}][keterangan]"
                                                   rows="1">{{ $keterangan }}</textarea>
                                     @endif
                                 </td>
@@ -139,7 +143,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            @if(!$isLocked)
+            @if(!$isLocked && $canCreateRetur)
                 <button type="button" class="btn btn-primary" id="btnSimpanRetur">
                     <i class="fas fa-save"></i> Simpan Data Retur
                 </button>
@@ -150,14 +154,14 @@
 
 <script>
 $(document).ready(function() {
-    // Hitung ulang total terjual dan hasil saat jumlah retur berubah
+    const canCreateRetur = @json($canCreateRetur);
+
     $('.jumlah-retur').on('input', function() {
         const index = $(this).data('index');
         const max = parseInt($(this).data('max'));
         const harga = parseFloat($(this).data('harga')) || 0;
         let jumlahRetur = parseInt($(this).val()) || 0;
         
-        // Validasi tidak melebihi jumlah kirim
         if (jumlahRetur > max) {
             jumlahRetur = max;
             $(this).val(max);
@@ -175,8 +179,32 @@ $(document).ready(function() {
         $(`.hasil[data-index="${index}"]`).text(hasil.toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
     });
     
-    // Submit form
     $('#btnSimpanRetur').click(function() {
+        if (!canCreateRetur) {
+            AlertHelper.error('Akses ditolak', 'Anda tidak memiliki izin untuk menyimpan retur.', false);
+            return;
+        }
+
+        let validationError = false;
+        let errorMessage = '';
+        
+        $('.jumlah-retur').each(function() {
+            const index = $(this).data('index');
+            const jumlahRetur = parseInt($(this).val()) || 0;
+            const kondisi = $(`select[name="items[${index}][kondisi]"]`).val();
+            
+            if (jumlahRetur > 0 && kondisi === 'Tidak Ada Retur') {
+                validationError = true;
+                errorMessage = 'Jika jumlah retur lebih dari 0, kondisi tidak boleh "Tidak Ada Retur". Silakan pilih kondisi yang sesuai.';
+                return false;
+            }
+        });
+        
+        if (validationError) {
+            AlertHelper.error('Validasi gagal', errorMessage, false);
+            return;
+        }
+        
         const formData = $('#formRetur').serialize();
         
         $.ajax({
@@ -185,45 +213,19 @@ $(document).ready(function() {
             data: formData,
             success: function(response) {
                 if (response.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: response.message,
-                        timer: 1500
-                    }).then(() => {
-                        $('#myModal').modal('hide');
-                        if (typeof dataTable !== 'undefined') {
-                            dataTable.ajax.reload();
-                        }
-                    });
+                    $('#myModal').modal('hide');
+                    if (typeof dataTable !== 'undefined') {
+                        dataTable.ajax.reload();
+                    }
+                    AlertHelper.success('Berhasil', response.message);
                 } else {
-                    showAlertModal('danger', response.message);
+                    AlertHelper.error('Gagal', response.message || 'Gagal menyimpan data retur', false);
                 }
             },
             error: function(xhr) {
-                let message = 'Terjadi kesalahan saat menyimpan data';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    message = xhr.responseJSON.message;
-                }
-                showAlertModal('danger', message);
+                AlertHelper.ajaxError('Error!', xhr, 'Terjadi kesalahan saat menyimpan data', false);
             }
         });
     });
-    
-    function showAlertModal(type, message) {
-        const alert = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
-        $('#alert-container-modal').html(alert);
-        
-        setTimeout(function() {
-            $('.alert').alert('close');
-        }, 5000);
-    }
 });
 </script>

@@ -24,7 +24,6 @@ class LoginRequest extends FormRequest
         return [
             'username' => ['required', 'string'],
             'password' => ['required'],
-            'remember' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -39,7 +38,6 @@ class LoginRequest extends FormRequest
             'username.required' => 'Username harus diisi.',
             'username.string' => 'Username harus berupa teks.',
             'password.required' => 'Password harus diisi.',
-            'remember.boolean' => 'Nilai remember me tidak valid.',
         ];
     }
 }

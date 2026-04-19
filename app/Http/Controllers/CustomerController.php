@@ -14,9 +14,24 @@ use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends Controller
 {
-    /**
-     * Display a listing of the customers.
-     */
+    public function __construct()
+    {
+        $this->middleware('can:view-customer')->only([
+            'index',
+            'getData',
+        ]);
+        $this->middleware('can:create-customer')->only([
+            'store',
+            'import',
+            'syncFromPemesanan',
+        ]);
+        $this->middleware('can:edit-customer')->only([
+            'edit',
+            'update',
+        ]);
+        $this->middleware('can:delete-customer')->only(['destroy']);
+    }
+
     public function index()
     {
         return view('customer.index', [
@@ -28,68 +43,80 @@ class CustomerController extends Controller
         ]);
     }
 
-    /**
-     * Get customer data for DataTables
-     */
     public function getData(Request $request)
     {
-        $draw = $request->get('draw');
-        $start = $request->get("start");
-        $rowperpage = $request->get("length");
+        try {
+            $draw = $request->get('draw', 1);
+            $start = $request->get('start', 0);
+            $rowperpage = $request->get('length', 10);
+            $search_arr = $request->get('search', []);
+            $order_arr = $request->get('order', []);
+            $columns_arr = $request->get('columns', []);
 
-        $columnIndex_arr = $request->get('order');
-        $columnName_arr = $request->get('columns');
-        $order_arr = $request->get('order');
-        $search_arr = $request->get('search');
+            // Validasi dan sanitasi sort column
+            $columnName = 'customer_id';
+            $columnSortOrder = 'desc';
+            
+            if (!empty($order_arr) && is_array($order_arr)) {
+                $columnIndex = $order_arr[0]['column'] ?? 0;
+                if (isset($columns_arr[$columnIndex]['data'])) {
+                    $requestedColumn = $columns_arr[$columnIndex]['data'];
+                    // Whitelist columns untuk prevent SQL injection
+                    $allowedColumns = ['customer_id', 'nama', 'gender', 'usia', 'alamat', 'email', 'no_tlp', 'created_at'];
+                    if (in_array($requestedColumn, $allowedColumns)) {
+                        $columnName = $requestedColumn;
+                    }
+                }
+                $columnSortOrder = in_array(strtoupper($order_arr[0]['dir'] ?? ''), ['ASC', 'DESC']) ? $order_arr[0]['dir'] : 'desc';
+            }
+            
+            $searchValue = $search_arr['value'] ?? '';
 
-        $columnIndex = $columnIndex_arr[0]['column'];
-        $columnName = $columnName_arr[$columnIndex]['data'];
-        $columnSortOrder = $order_arr[0]['dir'];
-        $searchValue = $search_arr['value'];
+            $totalRecords = Customer::count();
+            $totalRecordswithFilter = Customer::search($searchValue)->count();
 
-        // Total records
-        $totalRecords = Customer::count();
-        $totalRecordswithFilter = Customer::search($searchValue)->count();
+            $records = Customer::search($searchValue)
+                ->orderBy($columnName, $columnSortOrder)
+                ->skip($start)
+                ->take($rowperpage)
+                ->get();
 
-        // Fetch records
-        $records = Customer::search($searchValue)
-            ->orderBy($columnName, $columnSortOrder)
-            ->skip($start)
-            ->take($rowperpage)
-            ->get();
+            $data_arr = [];
+            $i = $start + 1;
+            
+            foreach ($records as $record) {
+                $data_arr[] = [
+                    'no' => $i++,
+                    'customer_id' => $record->customer_id,
+                    'nama' => $record->nama,
+                    'gender' => $record->gender == 'L' ? 'Laki-laki' : 'Perempuan',
+                    'usia' => $record->usia,
+                    'alamat' => $record->alamat,
+                    'email' => $record->email,
+                    'no_tlp' => $record->no_tlp,
+                    'source' => $record->getSourceLabel(),
+                    'created_at' => $record->created_at->format('d-m-Y H:i:s'),
+                    'actions' => ''
+                ];
+            }
 
-        $data_arr = [];
-        $i = $start + 1;
-        
-        foreach ($records as $record) {
-            $data_arr[] = [
-                "no" => $i++,
-                "customer_id" => $record->customer_id,
-                "nama" => $record->nama,
-                "gender" => $record->gender == 'L' ? 'Laki-laki' : 'Perempuan',
-                "usia" => $record->usia,
-                "alamat" => $record->alamat,
-                "email" => $record->email,
-                "no_tlp" => $record->no_tlp,
-                "source" => $record->getSourceLabel(),
-                "created_at" => $record->created_at->format('d-m-Y H:i:s'),
-                "actions" => ''
-            ];
+            return response()->json([
+                'draw' => intval($draw),
+                'iTotalRecords' => $totalRecords,
+                'iTotalDisplayRecords' => $totalRecordswithFilter,
+                'aaData' => $data_arr
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching customer data: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->get('draw', 1)),
+                'iTotalRecords' => 0,
+                'iTotalDisplayRecords' => 0,
+                'aaData' => []
+            ]);
         }
-
-        $response = [
-            "draw" => intval($draw),
-            "iTotalRecords" => $totalRecords,
-            "iTotalDisplayRecords" => $totalRecordswithFilter,
-            "aaData" => $data_arr
-        ];
-
-        return response()->json($response);
     }
 
-    /**
-     * Store a newly created customer.
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -125,9 +152,6 @@ class CustomerController extends Controller
         }
     }
 
-    /**
-     * Get a specific customer for editing.
-     */
     public function edit($id)
     {
         $customer = Customer::find($id);
@@ -145,9 +169,6 @@ class CustomerController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified customer.
-     */
     public function update(Request $request, $id)
     {
         $customer = Customer::find($id);
@@ -192,9 +213,6 @@ class CustomerController extends Controller
         }
     }
 
-    /**
-     * Remove the specified customer.
-     */
     public function destroy($id)
     {
         $customer = Customer::find($id);
@@ -222,102 +240,91 @@ class CustomerController extends Controller
         }
     }
 
-// Tambahkan fungsi import ini ke CustomerController.php
-
-/**
- * Import customers from Excel/CSV file
- */
-public function import(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'file' => 'required|file|max:2048',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $validator->errors()->first()
-        ], 422);
-    }
-
-    try {
-        // Get file details
-        $file = $request->file('file');
-        $originalName = $file->getClientOriginalName();
-        $extension = strtolower($file->getClientOriginalExtension());
-        $mimeType = $file->getMimeType();
-        
-        // Store file temporarily
-        $tempPath = $file->getRealPath();
-        $storedPath = storage_path('app/temp_imports/') . time() . '_' . $originalName;
-        
-        // Create directory if it doesn't exist
-        if (!file_exists(storage_path('app/temp_imports/'))) {
-            mkdir(storage_path('app/temp_imports/'), 0755, true);
-        }
-        
-        // Copy file to storage
-        copy($tempPath, $storedPath);
-        
-        // Use different import methods based on file type
-        if ($extension == 'csv' || $mimeType == 'text/csv' || $mimeType == 'text/plain') {
-            // Use manual CSV importer
-            $importer = new ManualCSVImporter();
-            $result = $importer->import($storedPath);
-            
-            $processed = $result['processed'];
-            $inserted = $result['inserted'];
-            $updated = $result['updated'];
-            $errors = $importer->getErrors();
-        } else {
-            // Use Excel importer for xlsx/xls
-            $importer = new SimpleCustomerImporter();
-            Excel::import($importer, $storedPath);
-            
-            $processed = $importer->getProcessedCount();
-            $inserted = $importer->getInsertedCount();
-            $updated = $importer->getUpdatedCount();
-            $errors = $importer->getErrors();
-        }
-        
-        // Clean up temporary file
-        if (file_exists($storedPath)) {
-            unlink($storedPath);
-        }
-        
-        // Build response message
-        $message = "Berhasil mengimpor {$inserted} data baru";
-        if ($updated > 0) {
-            $message .= " dan memperbarui {$updated} data yang sudah ada";
-        }
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => $message,
-            'details' => [
-                'processed' => $processed,
-                'inserted' => $inserted,
-                'updated' => $updated,
-                'errors' => $errors ?? []
-            ]
+    public function import(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:csv,txt,xls,xlsx|max:5120',
         ]);
-    } catch (\Exception $e) {
-        Log::error('Import error: ' . $e->getMessage());
-        Log::error('Stack trace: ' . $e->getTraceAsString());
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        $storedPath = null;
         
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Gagal mengimpor data: ' . $e->getMessage()
-        ], 500);
+        try {
+            $file = $request->file('file');
+            $originalName = $file->getClientOriginalName();
+            $extension = strtolower($file->getClientOriginalExtension());
+            $mimeType = $file->getMimeType();
+            
+            $tempPath = $file->getRealPath();
+            $tempDir = storage_path('app/temp_imports');
+            
+            if (!file_exists($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+            
+            $storedPath = $tempDir . '/' . time() . '_' . $originalName;
+            
+            if (!copy($tempPath, $storedPath)) {
+                throw new \Exception('Gagal menyalin file ke direktori temporary');
+            }
+            
+            // Process berdasarkan extension
+            if ($extension === 'csv' || $mimeType === 'text/csv' || $mimeType === 'text/plain') {
+                $importer = new ManualCSVImporter();
+                $result = $importer->import($storedPath);
+                $processed = $result['processed'] ?? 0;
+                $inserted = $result['inserted'] ?? 0;
+                $updated = $result['updated'] ?? 0;
+                $errors = $importer->getErrors();
+            } else {
+                $importer = new SimpleCustomerImporter();
+                Excel::import($importer, $storedPath);
+                $processed = $importer->getProcessedCount();
+                $inserted = $importer->getInsertedCount();
+                $updated = $importer->getUpdatedCount();
+                $errors = $importer->getErrors();
+            }
+
+            $message = "Berhasil mengimpor {$inserted} data baru";
+            if ($updated > 0) {
+                $message .= " dan memperbarui {$updated} data yang sudah ada";
+            }
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => $message,
+                'details' => [
+                    'processed' => $processed,
+                    'inserted' => $inserted,
+                    'updated' => $updated,
+                    'errors' => $errors ?? []
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Import error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengimpor data: ' . $e->getMessage()
+            ], 500);
+        } finally {
+            // Guarantee file cleanup
+            if ($storedPath && file_exists($storedPath)) {
+                unlink($storedPath);
+            }
+        }
     }
-}
-    /**
-     * Sync customers from pemesanan data - FIXED VERSION
-     */
+
     public function syncFromPemesanan()
     {
         try {
-            // Get customers from pemesanan who don't exist in customer table yet
             $newCustomers = DB::table('pemesanan as p')
                 ->select(
                     'p.pemesanan_id',
@@ -339,7 +346,6 @@ public function import(Request $request)
                 ]);
             }
 
-            // Insert new customers
             $inserted = 0;
             foreach ($newCustomers as $customer) {
                 $customerData = (array) $customer;

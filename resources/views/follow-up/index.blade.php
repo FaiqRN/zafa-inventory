@@ -20,12 +20,6 @@
     <div class="card card-outline card-primary">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="card-title mb-0">
-                        <i class=""></i>
-                        Follow Up Pelanggan
-                    </h3>
-                </div>
                 <div class="d-flex align-items-center">
                     <!-- WhatsApp Device Status Indicator -->
                     <div id="deviceStatusIndicator" class="mr-3">
@@ -36,14 +30,12 @@
                     </div>
                     
                     <!-- Test Connection Button -->
+                    @can('edit-follow-up')
                     <button type="button" class="btn btn-sm btn-outline-success mr-2" id="testConnectionBtn" title="Test WhatsApp Connection">
                         <i class="fas fa-wifi mr-1"></i>
                         Test
                     </button>
-                    
-                    <div class="badge badge-warning p-2" style="font-size: 1rem;">
-                        Zafa Potato App
-                    </div>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -129,15 +121,17 @@
                             <!-- Kolom Kiri - Upload Gambar -->
                             <div class="col-md-5">
                                 <label class="small text-muted mb-2">Upload Gambar (Opsional)</label>
-                                <div class="upload-box-simple rounded p-4 text-center" style="min-height: 240px; background-color: #fafafa; border: 2px dashed #667eea !important; transition: all 0.3s ease; cursor: pointer;" onclick="document.getElementById('imageInput').click()">
-                                    <input type="file" id="imageInput" multiple accept="image/*" class="d-none">
+                                <div class="upload-box-simple rounded p-4 text-center" style="min-height: 240px; background-color: #fafafa; border: 2px dashed #667eea !important; transition: all 0.3s ease; cursor: pointer;" @can('create-follow-up') onclick="document.getElementById('imageInput').click()" @endcan>
+                                    <input type="file" id="imageInput" multiple accept="image/*" class="d-none" @cannot('create-follow-up') disabled @endcannot>
                                     <div id="uploadPlaceholder">
                                         <i class="fas fa-image fa-3x mb-3" style="color: #667eea;"></i>
                                         <p class="text-dark mb-2">Klik untuk upload gambar</p>
                                         <p class="text-muted small mb-3">atau drag & drop file di sini</p>
+                                        @can('create-follow-up')
                                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); document.getElementById('imageInput').click()">
                                             <i class="fas fa-folder-open mr-1"></i> Pilih File
                                         </button>
+                                        @endcan
                                         <p class="small text-muted mt-3 mb-0">JPG, PNG, GIF - Max 5MB</p>
                                     </div>
                                     
@@ -152,7 +146,7 @@
                             <div class="col-md-7">
                                 <label class="small text-muted mb-2">Pesan untuk Customer</label>
                                 <textarea class="form-control" id="followUpMessage" name="message" rows="7" 
-                                    placeholder="Contoh: Halo! Terima kasih sudah menjadi pelanggan setia Zafa Potato. Ada promo spesial untuk Anda!"></textarea>
+                                    placeholder="Contoh: Halo! Terima kasih sudah menjadi pelanggan setia Zafa Potato. Ada promo spesial untuk Anda!" @cannot('create-follow-up') readonly @endcannot></textarea>
                                 <small class="form-text text-muted">
                                     <span id="charCount">0</span>/1000 karakter
                                 </small>
@@ -160,12 +154,17 @@
                                 <div class="mt-3 d-flex justify-content-between align-items-center">
                                     <small class="text-muted">Akan dikirim via WhatsApp</small>
                                     <div>
+                                        @can('create-follow-up')
                                         <button type="button" class="btn btn-sm btn-outline-secondary mr-2" id="previewBtn">Preview</button>
                                         <button type="submit" class="btn btn-sm btn-primary" id="sendMassFollowUpBtn" disabled>
                                             Kirim ke <span id="targetCount">0</span> Customer
                                         </button>
+                                        @endcan
                                     </div>
                                 </div>
+                                @cannot('create-follow-up')
+                                <small class="text-muted d-block mt-2">Anda hanya memiliki akses lihat pada menu Follow Up Pelanggan.</small>
+                                @endcannot
                             </div>
                         </div>
                     </form>
@@ -354,10 +353,12 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                @can('create-follow-up')
                 <button type="button" class="btn btn-success" id="confirmSendBtn">
                     <i class="fab fa-whatsapp mr-1"></i>
                     Kirim WhatsApp Sekarang
                 </button>
+                @endcan
             </div>
         </div>
     </div>
@@ -385,6 +386,12 @@
 @endsection
 
 @push('js')
+    <script>
+        window.followUpPermissions = {
+            create: @json(\Illuminate\Support\Facades\Gate::allows('create-follow-up')),
+            edit: @json(\Illuminate\Support\Facades\Gate::allows('edit-follow-up')),
+        };
+    </script>
     <!-- SweetAlert2 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.7.12/sweetalert2.min.js"></script>
     <!-- Follow Up Custom JavaScript -->

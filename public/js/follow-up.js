@@ -1,49 +1,53 @@
-/**
- * Follow Up Pelanggan JavaScript Module - FIXED VERSION
- * Zafa Potato CRM System - WhatsApp Integration Ready
- * FIXED: Proper error handling, device status checking, and broadcast functionality
- */
-
-// Global Variables
 let selectedFilters = [];
 let uploadedImages = [];
 let filteredCustomers = [];
 let isLoadingCustomers = false;
 let deviceStatus = null;
 let deviceCheckInterval = null;
+const followUpPermissions = window.followUpPermissions || {};
+const canCreateFollowUp = !!followUpPermissions.create;
+const canEditFollowUp = !!followUpPermissions.edit;
 
-// Document Ready
 $(document).ready(function() {
     initializeFollowUp();
 });
 
-/**
- * Initialize Follow Up Module - FIXED
- */
 function initializeFollowUp() {
     console.log('🚀 Initializing Follow Up Pelanggan module (FIXED VERSION)');
     
-    // Check WhatsApp device status first (CRITICAL)
     checkDeviceStatus();
     
-    // Load initial data
     loadRiwayatData();
     
-    // Setup event listeners
     setupEventListeners();
     
-    // Setup image upload functionality
     setupImageUpload();
+
+    applyPermissionState();
     
-    // Setup periodic device status check (CRITICAL)
-    deviceCheckInterval = setInterval(checkDeviceStatus, 30000); // Check every 30 seconds
+    deviceCheckInterval = setInterval(checkDeviceStatus, 30000); 
     
     console.log('✅ Follow Up Pelanggan module initialized (FIXED VERSION)');
 }
 
-/**
- * FIXED: Check WhatsApp Device Status with better error handling
- */
+function applyPermissionState() {
+    if (!canCreateFollowUp) {
+        $('#followUpMessage').prop('readonly', true);
+        $('#imageInput').prop('disabled', true);
+        $('#previewBtn').prop('disabled', true);
+        $('#sendMassFollowUpBtn').prop('disabled', true);
+        $('#confirmSendBtn').prop('disabled', true);
+        $('.upload-box-simple, .upload-box-elegant').css({
+            opacity: '0.6',
+            cursor: 'not-allowed'
+        });
+    }
+
+    if (!canEditFollowUp) {
+        $('#testConnectionBtn').prop('disabled', true);
+    }
+}
+
 function checkDeviceStatus() {
     $.ajax({
         url: '/follow-up-pelanggan/device-status',
@@ -81,15 +85,11 @@ function checkDeviceStatus() {
     });
 }
 
-/**
- * FIXED: Update Device Status UI with better visual feedback
- */
 function updateDeviceStatusUI(status) {
     const statusIndicator = $('#deviceStatusIndicator');
     const sendButton = $('#sendMassFollowUpBtn');
     const testButton = $('#testConnectionBtn');
     
-    // Create status indicator if it doesn't exist
     if (statusIndicator.length === 0) {
         $('.card-title:contains("Follow Up Pelanggan")').parent().append(`
             <div id="deviceStatusIndicator" class="ml-auto">
@@ -106,18 +106,26 @@ function updateDeviceStatusUI(status) {
             </div>
         `);
         
-        // Enable functionality
         if (sendButton.length) {
-            sendButton.prop('title', '');
-            sendButton.removeClass('btn-secondary').addClass('btn-success');
+            if (canCreateFollowUp) {
+                sendButton.prop('title', '');
+                sendButton.removeClass('btn-secondary').addClass('btn-success');
+            } else {
+                sendButton.prop('title', 'Anda tidak memiliki izin create-follow-up');
+                sendButton.addClass('btn-secondary').removeClass('btn-success');
+            }
         }
         
         if (testButton.length) {
-            testButton.prop('disabled', false);
-            testButton.removeClass('btn-outline-secondary').addClass('btn-outline-success');
+            testButton.prop('disabled', !canEditFollowUp);
+            if (canEditFollowUp) {
+                testButton.removeClass('btn-outline-secondary').addClass('btn-outline-success');
+            } else {
+                testButton.addClass('btn-outline-secondary').removeClass('btn-outline-success');
+            }
         }
         
-        console.log('✅ Device connected successfully');
+        console.log('Device connected successfully');
     } else {
         $('#deviceStatusIndicator').html(`
             <div class="d-flex align-items-center">
@@ -129,14 +137,19 @@ function updateDeviceStatusUI(status) {
             </div>
         `);
         
-        // Show warning on send button
         if (sendButton.length) {
-            sendButton.prop('title', 'WhatsApp device tidak terhubung - klik untuk bantuan');
-            sendButton.addClass('btn-secondary').removeClass('btn-success');
+            if (canCreateFollowUp) {
+                sendButton.prop('title', 'WhatsApp device tidak terhubung - klik untuk bantuan');
+                sendButton.addClass('btn-secondary').removeClass('btn-success');
+            } else {
+                sendButton.prop('title', 'Anda tidak memiliki izin create-follow-up');
+                sendButton.addClass('btn-secondary').removeClass('btn-success');
+            }
         }
         
         if (testButton.length) {
-            testButton.prop('disabled', false); // Allow testing even when disconnected
+            // Allow testing when disconnected only for users with edit permission.
+            testButton.prop('disabled', !canEditFollowUp);
             testButton.removeClass('btn-outline-success').addClass('btn-outline-secondary');
         }
         
@@ -146,12 +159,9 @@ function updateDeviceStatusUI(status) {
     updateSendButton();
 }
 
-/**
- * NEW: Show device connection help
- */
 function showDeviceHelp() {
     Swal.fire({
-        title: '📱 WhatsApp Device Help',
+        title: 'WhatsApp Device Help',
         html: `
             <div class="text-left">
                 <h6><i class="fas fa-exclamation-triangle text-warning mr-2"></i>Device Tidak Terhubung</h6>
@@ -177,23 +187,23 @@ function showDeviceHelp() {
         confirmButtonColor: '#28a745'
     }).then((result) => {
         if (result.isConfirmed) {
+            if (!canEditFollowUp) {
+                showErrorMessage('Anda tidak memiliki izin untuk test koneksi WhatsApp.');
+                return;
+            }
+
             testWhatsAppConnection();
         }
     });
 }
 
-/**
- * Setup Event Listeners - FIXED
- */
 function setupEventListeners() {
-    // Filter checkbox change handler
     $('.filter-checkbox').off('change').on('change', function(e) {
         e.stopPropagation();
         updateFilters();
         loadFilteredCustomers();
     });
     
-    // Character count for message
     $('#followUpMessage').off('input').on('input', function() {
         const length = $(this).val().length;
         $('#charCount').text(length);
@@ -207,14 +217,17 @@ function setupEventListeners() {
         updateSendButton();
     });
     
-    // FIXED: Form submission with better validation
     $('#massFollowUpForm').off('submit').on('submit', function(e) {
         e.preventDefault();
+
+        if (!canCreateFollowUp) {
+            showErrorMessage('Anda tidak memiliki izin untuk mengirim follow up.');
+            return;
+        }
         
-        // CRITICAL: Check device status before proceeding
         if (!deviceStatus || !deviceStatus.isConnected) {
             Swal.fire({
-                title: '❌ WhatsApp Tidak Terhubung',
+                title: 'WhatsApp Tidak Terhubung',
                 html: `
                     <div class="text-center">
                         <p class="mb-3">Device WhatsApp tidak terhubung. Pesan tidak dapat dikirim.</p>
@@ -237,13 +250,11 @@ function setupEventListeners() {
             return;
         }
         
-        // Validate customers
         if (!filteredCustomers || filteredCustomers.length === 0) {
             Swal.fire('❌ Error', 'Tidak ada customer yang dipilih', 'error');
             return;
         }
         
-        // Validate message or images
         const message = $('#followUpMessage').val().trim();
         if (!message && uploadedImages.length === 0) {
             Swal.fire('❌ Error', 'Pesan atau gambar harus diisi minimal salah satu', 'error');
@@ -254,9 +265,13 @@ function setupEventListeners() {
         showPreview();
     });
     
-    // Preview button
     $('#previewBtn').off('click').on('click', function(e) {
         e.preventDefault();
+
+        if (!canCreateFollowUp) {
+            showErrorMessage('Anda tidak memiliki izin untuk preview/kirim follow up.');
+            return;
+        }
         
         if (!deviceStatus || !deviceStatus.isConnected) {
             Swal.fire('⚠️ Warning', 'WhatsApp device tidak terhubung', 'warning');
@@ -267,38 +282,50 @@ function setupEventListeners() {
         showPreview();
     });
     
-    // FIXED: Confirm send button with better error handling
     $('#confirmSendBtn').off('click').on('click', function(e) {
         e.preventDefault();
+
+        if (!canCreateFollowUp) {
+            showErrorMessage('Anda tidak memiliki izin untuk mengirim follow up.');
+            return;
+        }
+
         sendMassFollowUp();
     });
     
-    // Refresh riwayat
+
     $('#refreshRiwayatBtn').off('click').on('click', function(e) {
         e.preventDefault();
         loadRiwayatData();
     });
 
-    // Search input with debounce
     $('#searchCustomer').off('input').on('input', debounce(function() {
         if (selectedFilters.length > 0) {
             loadFilteredCustomers();
         }
     }, 500));
     
-    // FIXED: Test connection button
     $('#testConnectionBtn').off('click').on('click', function(e) {
         e.preventDefault();
+
+        if (!canEditFollowUp) {
+            showErrorMessage('Anda tidak memiliki izin untuk test koneksi WhatsApp.');
+            return;
+        }
+
         testWhatsAppConnection();
     });
 }
 
-/**
- * FIXED: Test WhatsApp Connection with comprehensive feedback
- */
+
 function testWhatsAppConnection() {
+    if (!canEditFollowUp) {
+        showErrorMessage('Anda tidak memiliki izin untuk test koneksi WhatsApp.');
+        return;
+    }
+
     Swal.fire({
-        title: '🧪 Testing WhatsApp Connection...',
+        title: 'Testing WhatsApp Connection...',
         html: `
             <div class="text-center">
                 <p>Mengirim pesan test ke nomor admin</p>
@@ -337,13 +364,12 @@ function testWhatsAppConnection() {
                     timerProgressBar: true
                 });
                 
-                // Refresh device status after successful test
                 setTimeout(() => {
                     checkDeviceStatus();
                 }, 2000);
             } else {
                 Swal.fire({
-                    title: '❌ Test Gagal',
+                    title: 'Test Gagal',
                     html: `
                         <div class="text-center">
                             <p class="text-danger mb-3">${response.message || 'Test koneksi gagal'}</p>
@@ -404,9 +430,7 @@ function testWhatsAppConnection() {
     });
 }
 
-/**
- * Update Filter System - FIXED
- */
+
 function updateFilters() {
     selectedFilters = [];
     $('.filter-checkbox:checked').each(function() {
@@ -427,9 +451,6 @@ function updateFilters() {
     }
 }
 
-/**
- * FIXED: Load Filtered Customers with better error handling
- */
 function loadFilteredCustomers() {
     if (selectedFilters.length === 0) {
         filteredCustomers = [];
@@ -501,9 +522,6 @@ function loadFilteredCustomers() {
     });
 }
 
-/**
- * Display Customers in List - FIXED
- */
 function displayCustomers(customers) {
     const customerList = $('#customerList');
     const defaultState = $('#defaultCustomerState');
@@ -526,7 +544,6 @@ function displayCustomers(customers) {
         try {
             const initial = customer.initial || getInitialFromName(customer.name || 'Unknown');
             
-            // FIXED: Better validation for phone numbers
             const phoneDisplay = customer.phone ? 
                 (customer.phone.startsWith('62') ? customer.phone : 'Invalid: ' + customer.phone) : 
                 'No phone';
@@ -561,22 +578,26 @@ function displayCustomers(customers) {
     updateSendButton();
 }
 
-/**
- * FIXED: Update Send Button State with comprehensive validation
- */
 function updateSendButton() {
-    const hasMessage = $('#followUpMessage').val().trim().length > 0;
+    const messageValue = $('#followUpMessage').val() || '';
+    const hasMessage = messageValue.trim().length > 0;
     const hasImages = uploadedImages.length > 0;
     const hasTargets = filteredCustomers.length > 0;
-    const isValidMessage = $('#followUpMessage').val().length <= 1000;
+    const isValidMessage = messageValue.length <= 1000;
     const isDeviceConnected = deviceStatus && deviceStatus.isConnected;
     
-    const canSend = (hasMessage || hasImages) && hasTargets && isValidMessage && isDeviceConnected;
+    const canSend = canCreateFollowUp && (hasMessage || hasImages) && hasTargets && isValidMessage && isDeviceConnected;
     
     const sendButton = $('#sendMassFollowUpBtn');
     sendButton.prop('disabled', !canSend);
+
+    if (!canCreateFollowUp) {
+        sendButton.addClass('btn-secondary').removeClass('btn-success btn-danger');
+        sendButton.html('<i class="fas fa-lock mr-2"></i>Akses kirim dibatasi');
+        $('#targetCount').text(filteredCustomers.length);
+        return;
+    }
     
-    // FIXED: Update button text and styling based on various states
     if (!isDeviceConnected) {
         sendButton.addClass('btn-secondary').removeClass('btn-success');
         sendButton.html('<i class="fas fa-exclamation-triangle mr-2"></i>Device Disconnected');
@@ -597,10 +618,12 @@ function updateSendButton() {
     $('#targetCount').text(filteredCustomers.length);
 }
 
-/**
- * Show Preview Modal - FIXED
- */
 function showPreview() {
+    if (!canCreateFollowUp) {
+        showErrorMessage('Anda tidak memiliki izin untuk preview/kirim follow up.');
+        return;
+    }
+
     $('#previewTargetCount').text(filteredCustomers.length);
     
     const previewImages = $('#previewImages');
@@ -617,7 +640,6 @@ function showPreview() {
     const message = $('#followUpMessage').val() || '<em class="text-muted">Tidak ada pesan teks</em>';
     $('#previewMessage').html(message.replace(/\n/g, '<br>'));
     
-    // FIXED: Update confirm button based on device status
     const confirmBtn = $('#confirmSendBtn');
     if (deviceStatus && deviceStatus.isConnected) {
         confirmBtn.prop('disabled', false);
@@ -630,14 +652,15 @@ function showPreview() {
     }
 }
 
-/**
- * FIXED: Send Mass Follow Up with comprehensive error handling and progress tracking
- */
 function sendMassFollowUp() {
-    const message = $('#followUpMessage').val();
+    if (!canCreateFollowUp) {
+        showErrorMessage('Anda tidak memiliki izin untuk mengirim follow up.');
+        return;
+    }
+
+    const message = $('#followUpMessage').val() || '';
     const targetType = determineTargetType();
     
-    // CRITICAL: Final validation before sending
     if (filteredCustomers.length === 0) {
         showErrorMessage('Tidak ada customer yang dipilih');
         return;
@@ -648,7 +671,6 @@ function sendMassFollowUp() {
         return;
     }
     
-    // CRITICAL: Final device status check
     if (!deviceStatus || !deviceStatus.isConnected) {
         showErrorMessage('WhatsApp device tidak terhubung. Pesan tidak dapat dikirim.');
         return;
@@ -664,7 +686,6 @@ function sendMassFollowUp() {
         formData.append(`images[${index}]`, imageData.file);
     });
     
-    // FIXED: Show loading with realistic time estimation
     const estimatedTime = Math.ceil(filteredCustomers.length * 3.5); // 3.5 seconds per customer (more realistic)
     const estimatedMinutes = Math.ceil(estimatedTime / 60);
     
@@ -694,7 +715,6 @@ function sendMassFollowUp() {
         didOpen: () => {
             Swal.showLoading();
             
-            // FIXED: More realistic progress simulation
             let progress = 0;
             const progressInterval = setInterval(() => {
                 progress += 2;
@@ -703,7 +723,7 @@ function sendMassFollowUp() {
                 } else {
                     clearInterval(progressInterval);
                 }
-            }, (estimatedTime * 1000) / 42); // Smoother progress
+            }, (estimatedTime * 1000) / 42); 
         }
     });
     
@@ -713,13 +733,12 @@ function sendMassFollowUp() {
         data: formData,
         processData: false,
         contentType: false,
-        timeout: (estimatedTime + 60) * 1000, // Add 60 seconds buffer
+        timeout: (estimatedTime + 60) * 1000, 
         xhr: function() {
-            // FIXED: Add upload progress tracking for images
             var xhr = new window.XMLHttpRequest();
             xhr.upload.addEventListener("progress", function(evt) {
                 if (evt.lengthComputable) {
-                    var percentComplete = (evt.loaded / evt.total) * 20; // Upload is 20% of total progress
+                    var percentComplete = (evt.loaded / evt.total) * 20; 
                     $('.progress-bar').css('width', Math.min(percentComplete, 20) + '%');
                 }
             }, false);
@@ -857,9 +876,6 @@ function sendMassFollowUp() {
     });
 }
 
-/**
- * FIXED: Show detailed send results with better formatting
- */
 function showSendResults(results) {
     if (!results || results.length === 0) {
         showErrorMessage('Tidak ada detail hasil untuk ditampilkan');
@@ -909,9 +925,6 @@ function showSendResults(results) {
     });
 }
 
-/**
- * Reset Form After Send - FIXED
- */
 function resetForm() {
     $('#followUpMessage').val('');
     $('#charCount').text('0');
@@ -926,10 +939,14 @@ function resetForm() {
     console.log('✅ Form reset successfully');
 }
 
-// FIXED: Setup Image Upload Functionality
 function setupImageUpload() {
     const imageInput = $('#imageInput');
-    const uploadBox = $('.upload-box-elegant');
+    const uploadBox = $('.upload-box-simple, .upload-box-elegant');
+
+    if (!canCreateFollowUp) {
+        imageInput.prop('disabled', true);
+        return;
+    }
     
     imageInput.off('change');
     
@@ -937,7 +954,6 @@ function setupImageUpload() {
         handleImageFiles(this.files);
     });
     
-    // Drag and drop functionality
     uploadBox.off('dragover dragleave drop');
     
     uploadBox.on('dragover', function(e) {
@@ -971,18 +987,19 @@ function setupImageUpload() {
     });
 }
 
-/**
- * FIXED: Handle Image Files Upload with better validation
- */
 function handleImageFiles(files) {
+    if (!canCreateFollowUp) {
+        showErrorMessage('Anda tidak memiliki izin untuk upload gambar follow up.');
+        return;
+    }
+
     Array.from(files).forEach(file => {
         if (file.type.startsWith('image/')) {
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            if (file.size > 5 * 1024 * 1024) { 
                 showErrorMessage(`File ${file.name} terlalu besar. Maksimal 5MB.`);
                 return;
             }
             
-            // Check total images limit
             if (uploadedImages.length >= 5) {
                 showErrorMessage('Maksimal 5 gambar per broadcast');
                 return;
@@ -1007,9 +1024,6 @@ function handleImageFiles(files) {
     });
 }
 
-/**
- * Add Image Preview - FIXED with Elegant Design
- */
 function addImagePreview(src, name, file) {
     const previewArea = $('#imagePreviewArea');
     const previewContainer = $('#imagePreviewContainer');
@@ -1051,9 +1065,6 @@ function addImagePreview(src, name, file) {
     );
 }
 
-/**
- * Remove Image from Preview - FIXED
- */
 function removeImage(index) {
     uploadedImages.splice(index, 1);
     $(`.image-preview-container[data-index="${index}"]`).remove();
@@ -1064,7 +1075,6 @@ function removeImage(index) {
         $('#imageInput').val('');
     }
     
-    // Re-index remaining images
     $('.image-preview-container').each(function(i) {
         $(this).attr('data-index', i);
         $(this).find('.remove-image-btn').attr('onclick', `FollowUpModule.removeImage(${i})`);
@@ -1074,17 +1084,11 @@ function removeImage(index) {
     console.log(`✅ Image removed, ${uploadedImages.length} images remaining`);
 }
 
-/**
- * Show Full Image in Modal
- */
 function showFullImage(src) {
     $('#fullImageView').attr('src', src);
     $('#imageFullModal').modal('show');
 }
 
-/**
- * Show Customer Detail Modal
- */
 function showCustomerDetail(customerIndex) {
     try {
         const customer = filteredCustomers[customerIndex];
@@ -1119,16 +1123,13 @@ function showCustomerDetail(customerIndex) {
     }
 }
 
-/**
- * Load Riwayat Data from Database - FIXED
- */
 function loadRiwayatData() {
     showLoadingState('#riwayatTableBody');
     
     $.ajax({
         url: '/follow-up-pelanggan/history',
         type: 'GET',
-        timeout: 20000, // Increased timeout
+        timeout: 20000, 
         success: function(response) {
             hideLoadingState('#riwayatTableBody');
             
@@ -1148,9 +1149,6 @@ function loadRiwayatData() {
     });
 }
 
-/**
- * Display Riwayat in Table - FIXED
- */
 function displayRiwayat(data) {
     const tableBody = $('#riwayatTableBody');
     const noDataMessage = $('#noRiwayatMessage');
@@ -1186,9 +1184,6 @@ function displayRiwayat(data) {
     });
 }
 
-/**
- * Show error state in customer list
- */
 function showErrorState(message) {
     const customerList = $('#customerList');
     const defaultState = $('#defaultCustomerState');
@@ -1215,9 +1210,6 @@ function showErrorState(message) {
     updateSendButton();
 }
 
-/**
- * Helper Functions
- */
 function getCustomerTypeLabel(type) {
     const labels = {
         'pelangganLama': 'Lama',
@@ -1288,18 +1280,12 @@ function debounce(func, wait) {
     };
 }
 
-/**
- * Cleanup on page unload
- */
 $(window).on('beforeunload', function() {
     if (deviceCheckInterval) {
         clearInterval(deviceCheckInterval);
     }
 });
 
-/**
- * Export Functions for Global Access
- */
 window.FollowUpModule = {
     showCustomerDetail,
     removeImage,
@@ -1311,5 +1297,3 @@ window.FollowUpModule = {
     checkDeviceStatus,
     showDeviceHelp
 };
-
-console.log('✅ Follow Up Pelanggan JavaScript loaded successfully (FIXED VERSION - WhatsApp Integration Ready)');

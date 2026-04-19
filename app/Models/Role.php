@@ -26,4 +26,12 @@ class Role extends Model
     {
         return $this->hasMany(User::class, 'role_id', self::FIELD_ROLE_ID);
     }
+
+    /**
+     * Get corresponding Spatie role
+     */
+    public function spatieRole()
+    {
+        return \Spatie\Permission\Models\Role::where('name', $this->nama_role)->first();
+    }
 }

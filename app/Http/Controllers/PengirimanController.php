@@ -7,6 +7,7 @@ use App\Models\Toko;
 use App\Models\Barang;
 use App\Models\BarangToko;
 use App\Helpers\MasterData\pengiriman\PengirimanHelper;
+use App\Services\PengirimanCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +16,23 @@ use Carbon\Carbon;
 
 class PengirimanController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('can:view-pengiriman')->only([
+            'index',
+            'list',
+            'show_ajax',
+            'print',
+        ]);
+        $this->middleware('can:create-pengiriman')->only([
+            'create_ajax',
+            'get_nomer',
+            'get_barang',
+            'ajax',
+        ]);
+        $this->middleware('can:edit-pengiriman')->only(['update_status']);
+    }
+
     public function index()
     {
         $toko = Toko::orderBy(Toko::FIELD_NAMA_TOKO, 'asc')->get();
@@ -26,8 +44,7 @@ class PengirimanController extends Controller
 
     public function list(Request $request)
     {
-        $query = Pengiriman::with(['toko', 'barang'])
-            ->select('nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 'status')
+        $query = Pengiriman::select('nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 'status')
             ->groupBy('nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 'status');
         
         if ($request->has('toko_id') && !empty($request->toko_id)) {
@@ -57,10 +74,12 @@ class PengirimanController extends Controller
         $query->orderBy(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, 'desc')
               ->orderBy(Pengiriman::FIELD_NOMER_PENGIRIMAN, 'desc');
         
-        return DataTables::of($query)
+        return DataTables::eloquent($query)
             ->addIndexColumn()
             ->addColumn('toko_nama', function($row) {
-                return $row->toko->{Toko::FIELD_NAMA_TOKO};
+                // Lazy load toko only when needed
+                $toko = Toko::find($row->toko_id);
+                return $toko ? $toko->{Toko::FIELD_NAMA_TOKO} : '';
             })
             ->addColumn('formatted_tanggal', function($row) {
                 return Carbon::parse($row->{Pengiriman::FIELD_TANGGAL_PENGIRIMAN})->format('d/m/Y');
@@ -108,7 +127,6 @@ class PengirimanController extends Controller
 
     public function ajax(Request $request)
     {
-        // Log untuk debugging
         Log::info('Pengiriman Request Data:', $request->all());
         
         $validator = Validator::make($request->all(), [
@@ -145,7 +163,7 @@ class PengirimanController extends Controller
 
     public function show_ajax($nomerPengiriman)
     {
-        $pengiriman = PengirimanHelper::getPengirimanByNomer($nomerPengiriman);
+        $pengiriman = PengirimanCacheService::getPengirimanByNomer($nomerPengiriman);
         
         if (!$pengiriman) {
             return response()->json([
@@ -183,13 +201,13 @@ class PengirimanController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => $result['message']
-            ], 500);
+            ]);
         }
     }
 
     public function print($nomerPengiriman)
     {
-        $pengiriman = PengirimanHelper::getPengirimanByNomer($nomerPengiriman);
+        $pengiriman = PengirimanCacheService::getPengirimanByNomer($nomerPengiriman);
         
         if (!$pengiriman) {
             abort(404, 'Pengiriman tidak ditemukan');

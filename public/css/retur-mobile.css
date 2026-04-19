@@ -1,0 +1,140 @@
+/*
+ * Retur mobile-specific styles.
+ * Scoped to .retur-page to avoid cross-page side effects.
+ */
+
+@media (max-width: 767.98px) {
+    .retur-page .row.mb-3,
+    .retur-page .dataTables_wrapper .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .retur-page .row.mb-3 > [class*="col-"],
+    .retur-page .dataTables_wrapper .row > [class*="col-"] {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .retur-page .retur-table-wrap,
+    .retur-page .dataTables_wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .retur-page .retur-table-wrap {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .retur-page #table_retur {
+        min-width: 760px;
+        table-layout: auto !important;
+    }
+
+    .retur-page #table_retur th,
+    .retur-page #table_retur td {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        vertical-align: top !important;
+    }
+
+    /* Keep first column normal; only action column stays fixed while scrolling. */
+    .retur-page #table_retur th:first-child,
+    .retur-page #table_retur td:first-child {
+        position: static !important;
+        left: auto !important;
+        z-index: auto !important;
+    }
+
+    .retur-page #table_retur th:last-child,
+    .retur-page #table_retur td:last-child {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 3 !important;
+        min-width: 110px;
+        background: #ffffff !important;
+        box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.35);
+    }
+
+    .retur-page #table_retur thead th:last-child {
+        z-index: 4 !important;
+        background: #f8f9fa !important;
+    }
+
+    .retur-page #table_retur td:last-child .d-flex {
+        justify-content: flex-start !important;
+    }
+
+    .retur-page #table_retur .btn {
+        width: auto !important;
+        min-width: 78px;
+    }
+
+    .retur-page .dataTables_wrapper .dataTables_filter,
+    .retur-page .dataTables_wrapper .dataTables_length {
+        text-align: left !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    .retur-page .dataTables_wrapper .dataTables_filter label,
+    .retur-page .dataTables_wrapper .dataTables_length label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .retur-page .dataTables_wrapper .dataTables_filter input,
+    .retur-page .dataTables_wrapper .dataTables_length select {
+        margin-left: 0 !important;
+    }
+
+    .retur-page .dataTables_wrapper .dataTables_filter input {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-top: 0 !important;
+    }
+
+    .retur-page .dataTables_wrapper .dataTables_length select {
+        width: auto !important;
+        min-width: 90px;
+        margin-top: 0 !important;
+    }
+
+    .retur-page .dataTables_wrapper .dataTables_paginate,
+    .retur-page .dataTables_wrapper .dataTables_info {
+        text-align: left !important;
+    }
+
+    /* Modal detail retur: disable sticky columns from global responsive.css */
+    .retur-page #myModal .table-responsive {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .retur-page #myModal .table {
+        min-width: 980px;
+    }
+
+    .retur-page #myModal .table th,
+    .retur-page #myModal .table td {
+        white-space: nowrap !important;
+    }
+
+    .retur-page #myModal .table th:first-child,
+    .retur-page #myModal .table td:first-child,
+    .retur-page #myModal .table th:last-child,
+    .retur-page #myModal .table td:last-child {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        z-index: auto !important;
+        background: inherit !important;
+        box-shadow: none !important;
+    }
+}

@@ -15,7 +15,7 @@ class SyncFollowUpStatusCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'followup:sync-status 
+    protected $signature = 'followup:sync-status
                             {--days=7 : Number of days to check back}
                             {--status=sent : Status to sync (sent, delivered)}
                             {--limit=100 : Maximum number of records to process}';

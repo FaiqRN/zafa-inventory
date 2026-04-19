@@ -18,7 +18,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(to right, #e0eafc, #cfdef3);
+      background: linear-gradient(to right, #fceec0, #f9dba7);
     }
 
     .container {
@@ -207,24 +207,7 @@
       border: 1px solid #f5c6cb;
     }
 
-    .remember-me {
-      display: flex;
-      align-items: center;
-      margin-bottom: 20px;
-    }
 
-    .remember-me input[type="checkbox"] {
-      width: auto;
-      margin-right: 8px;
-      cursor: pointer;
-    }
-
-    .remember-me label {
-      margin: 0;
-      cursor: pointer;
-      font-weight: 400;
-      font-size: 14px;
-    }
 
     .btn-login {
       width: 100%;
@@ -382,7 +365,7 @@
 <!-- Login Form -->
 <div class="container">
   <div class="left">
-    <img src="{{ asset('adminlte/dist/img/zafalogo.png') }}" alt="Logo">
+    <img src="{{ asset('adminlte/dist/img/Zlogo.png') }}" alt="Logo">
     <h2>Hello, Welcome!</h2>
     <p>Please login to continue</p>
   </div>
@@ -454,13 +437,7 @@
         @error('password')
           <span class="error-message">{{ $message }}</span>
         @enderror
-        <a href="#">Forgot Password?</a>
-      </div>
-
-      <!-- Remember Me -->
-      <div class="remember-me">
-        <input type="checkbox" name="remember" id="remember" value="1">
-        <label for="remember">Remember Me</label>
+        <a href="{{ route('password.request') }}">Forgot Password?</a>
       </div>
 
       <button class="btn-login" type="submit">Login</button>

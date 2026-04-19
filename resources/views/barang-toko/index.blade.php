@@ -27,14 +27,14 @@
         <div class="card-header">
             <h3 class="card-title">Daftar Barang di <span id="toko-name-display"></span></h3>
             <div class="card-tools">
+                @can('create-barang-toko')
                 <button type="button" class="btn btn-primary" id="btnTambahBarang">
                     <i class="fas fa-plus"></i> Tambah Barang
                 </button>
+                @endcan
             </div>
         </div>
         <div class="card-body">
-            <div id="alert-container"></div>
-            
             <div class="table-responsive">
                 <table class="table table-bordered table-striped" id="table-barang-toko">
                     <thead>
@@ -152,30 +152,15 @@
         </div>
     </div>
 </div>
-
-<!-- Modal Konfirmasi Hapus -->
-<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Konfirmasi Hapus</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Apakah Anda yakin ingin menghapus barang ini dari toko?</p>
-                <p id="delete-item-name" class="font-weight-bold"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-danger" id="btnDelete">Hapus</button>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('js')
+<script>
+    window.barangTokoPermissions = {
+        canCreate: @json(auth()->check() && auth()->user()->can('create-barang-toko')),
+        canEdit: @json(auth()->check() && auth()->user()->can('edit-barang-toko')),
+        canDelete: @json(auth()->check() && auth()->user()->can('delete-barang-toko'))
+    };
+</script>
 <script src="{{ asset('js/barang-toko.js') }}?v={{ time() }}"></script>
 @endpush

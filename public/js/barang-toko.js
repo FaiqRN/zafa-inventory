@@ -2,6 +2,10 @@ $(document).ready(function() {
     // Current selected toko
     var selectedTokoId = '';
     var selectedTokoName = '';
+    var permissionState = window.barangTokoPermissions || {};
+    var canCreateBarangToko = Boolean(permissionState.canCreate);
+    var canEditBarangToko = Boolean(permissionState.canEdit);
+    var canDeleteBarangToko = Boolean(permissionState.canDelete);
     
     // Initialize select2 if available
     if ($.fn.select2) {
@@ -54,6 +58,26 @@ $(document).ready(function() {
                     let tableHtml = '';
                     
                     $.each(response.data, function(index, item) {
+                        var actionButtons = '';
+
+                        if (canEditBarangToko) {
+                            actionButtons += `
+                                    <button type="button" class="btn btn-sm btn-info btn-edit" data-id="${item.barang_toko_id}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>`;
+                        }
+
+                        if (canDeleteBarangToko) {
+                            actionButtons += `
+                                    <button type="button" class="btn btn-sm btn-danger btn-delete" data-id="${item.barang_toko_id}" data-name="${item.barang.nama_barang}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>`;
+                        }
+
+                        if (!actionButtons.trim()) {
+                            actionButtons = '-';
+                        }
+
                         tableHtml += `
                             <tr id="row-${item.barang_toko_id}">
                                 <td>${index + 1}</td>
@@ -63,12 +87,7 @@ $(document).ready(function() {
                                 <td>Rp ${formatRupiah(item.harga_barang_toko)}</td>
                                 <td>${item.barang.satuan}</td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-info btn-edit" data-id="${item.barang_toko_id}">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-danger btn-delete" data-id="${item.barang_toko_id}" data-name="${item.barang.nama_barang}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    ${actionButtons}
                                 </td>
                             </tr>
                         `;
@@ -81,7 +100,7 @@ $(document).ready(function() {
             },
             error: function() {
                 $('#barang-toko-body').html('<tr><td colspan="7" class="text-center text-danger">Gagal memuat data</td></tr>');
-                showAlert('danger', 'Gagal memuat data barang toko. Silahkan coba lagi.');
+                AlertHelper.error('Gagal memuat data barang toko. Silahkan coba lagi.');
             }
         });
     }
@@ -122,7 +141,7 @@ $(document).ready(function() {
                 }
             },
             error: function() {
-                showAlert('danger', 'Gagal memuat data barang. Silahkan coba lagi.');
+                AlertHelper.error('Gagal memuat data barang. Silahkan coba lagi.');
             }
         });
     }
@@ -140,8 +159,13 @@ $(document).ready(function() {
     
     // Button to show tambah barang modal
     $('#btnTambahBarang').click(function() {
+        if (!canCreateBarangToko) {
+            AlertHelper.error('Anda tidak memiliki izin untuk menambah barang per toko.');
+            return;
+        }
+
         if (!selectedTokoId) {
-            showAlert('warning', 'Silahkan pilih toko terlebih dahulu');
+            AlertHelper.warning('Silahkan pilih toko terlebih dahulu');
             return;
         }
         
@@ -157,6 +181,11 @@ $(document).ready(function() {
     // Submit form tambah barang ke toko
     $('#formTambahBarang').submit(function(e) {
         e.preventDefault();
+
+        if (!canCreateBarangToko) {
+            AlertHelper.error('Anda tidak memiliki izin untuk menambah barang per toko.');
+            return;
+        }
         
         // Clear previous errors
         clearErrors();
@@ -180,16 +209,16 @@ $(document).ready(function() {
                 loadBarangTokoData(selectedTokoId);
                 
                 // Show success message
-                showAlert('success', response.message);
+                AlertHelper.success(response.message);
             },
             error: function(xhr) {
                 if (xhr.status === 422) {
                     let errors = xhr.responseJSON.errors;
                     showValidationErrors(errors);
                 } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                    showAlert('danger', xhr.responseJSON.message);
+                    AlertHelper.error(xhr.responseJSON.message);
                 } else {
-                    showAlert('danger', 'Terjadi kesalahan. Silahkan coba lagi.');
+                    AlertHelper.error('Terjadi kesalahan. Silahkan coba lagi.');
                 }
             }
         });
@@ -197,6 +226,11 @@ $(document).ready(function() {
     
     // Get data for edit harga
     $(document).on('click', '.btn-edit', function() {
+        if (!canEditBarangToko) {
+            AlertHelper.error('Anda tidak memiliki izin untuk mengubah barang per toko.');
+            return;
+        }
+
         var id = $(this).data('id');
         
         resetForm();
@@ -222,7 +256,7 @@ $(document).ready(function() {
                 $('#modalEditHarga').modal('show');
             },
             error: function(xhr) {
-                showAlert('danger', xhr.responseJSON.message || 'Gagal mengambil data.');
+                AlertHelper.error(xhr.responseJSON.message || 'Gagal mengambil data.');
             }
         });
     });
@@ -230,6 +264,11 @@ $(document).ready(function() {
     // Submit form edit harga
     $('#formEditHarga').submit(function(e) {
         e.preventDefault();
+
+        if (!canEditBarangToko) {
+            AlertHelper.error('Anda tidak memiliki izin untuk mengubah barang per toko.');
+            return;
+        }
         
         clearErrors();
         
@@ -254,7 +293,7 @@ $(document).ready(function() {
                 loadBarangTokoData(selectedTokoId);
                 
                 // Show success message
-                showAlert('success', response.message);
+                AlertHelper.success(response.message);
             },
             error: function(xhr) {
                 if (xhr.status === 422) {
@@ -265,7 +304,7 @@ $(document).ready(function() {
                         $('#error-edit_harga_barang_toko').text(errors.harga_barang_toko[0]);
                     }
                 } else {
-                    showAlert('danger', xhr.responseJSON.message || 'Terjadi kesalahan. Silahkan coba lagi.');
+                    AlertHelper.error(xhr.responseJSON.message || 'Terjadi kesalahan. Silahkan coba lagi.');
                 }
             }
         });
@@ -273,17 +312,29 @@ $(document).ready(function() {
     
     // Setup for delete barang from toko
     $(document).on('click', '.btn-delete', function() {
+        if (!canDeleteBarangToko) {
+            AlertHelper.error('Anda tidak memiliki izin untuk menghapus barang per toko.');
+            return;
+        }
+
         var id = $(this).data('id');
         var name = $(this).data('name');
         
-        $('#delete-item-name').text(name);
-        $('#btnDelete').data('id', id);
-        $('#deleteModal').modal('show');
+        AlertHelper.confirmDelete('Hapus Barang dari Toko?', 'Barang "' + name + '" akan dihapus dari toko ini').then((result) => {
+            if (result.isConfirmed) {
+                deleteBarangToko(id);
+            }
+        });
     });
     
     // Process delete barang from toko
-    $('#btnDelete').click(function() {
-        var id = $(this).data('id');
+    function deleteBarangToko(id) {
+        if (!canDeleteBarangToko) {
+            AlertHelper.error('Anda tidak memiliki izin untuk menghapus barang per toko.');
+            return;
+        }
+
+        AlertHelper.loading('Menghapus...', 'Mohon tunggu sebentar');
         
         $.ajax({
             url: '/barang-toko/' + id,
@@ -298,26 +349,21 @@ $(document).ready(function() {
                 'Expires': '0'
             },
             success: function(response) {
-                // Hide modal
-                $('#deleteModal').modal('hide');
-                
                 // Reload data
                 loadBarangTokoData(selectedTokoId);
                 
                 // Show success message
-                showAlert('success', response.message);
+                AlertHelper.success(response.message);
             },
             error: function(xhr) {
-                $('#deleteModal').modal('hide');
-                
                 if (xhr.responseJSON && xhr.responseJSON.message) {
-                    showAlert('danger', xhr.responseJSON.message);
+                    AlertHelper.error(xhr.responseJSON.message);
                 } else {
-                    showAlert('danger', 'Gagal menghapus data.');
+                    AlertHelper.error('Gagal menghapus data.');
                 }
             }
         });
-    });
+    }
     
     // Reset form
     function resetForm() {
@@ -343,24 +389,5 @@ $(document).ready(function() {
     // Format currency
     function formatRupiah(number) {
         return new Intl.NumberFormat('id-ID').format(number);
-    }
-    
-    // Show alert message
-    function showAlert(type, message) {
-        var alert = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
-        
-        $('#alert-container').html(alert);
-        
-        // Auto close alert after 5 seconds
-        setTimeout(function() {
-            $('.alert').alert('close');
-        }, 5000);
     }
 });

@@ -15,7 +15,7 @@
             </li>
 
             <!-- Master Data -->
-            @can('manage-master-data')
+            @canany(['manage-master-data', 'view-barang', 'view-toko', 'view-customer'])
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-database"></i>
@@ -25,47 +25,47 @@
                     </p>
                 </a>
                 <ul class="nav nav-treeview">
+                    @can('view-barang')
                     <li class="nav-item">
                         <a href="{{ route('barang.index') }}" class="nav-link {{ ($activemenu == 'barang')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Data Barang</p>
                         </a>
                     </li>
+                    @endcan
+                    
+                    @can('view-toko')
                     <li class="nav-item">
                         <a href="{{ route('toko.index') }}" class="nav-link {{ ($activemenu == 'toko')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Data Toko</p>
                         </a>
                     </li>
+                    @endcan
+                    
+                    @can('view-barang-toko')
                     <li class="nav-item">
                         <a href="{{ route('barang-toko.index') }}" class="nav-link {{ ($activemenu == 'barang-toko')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Barang per Toko</p>
                         </a>
                     </li>
+                    @endcan
+                    
+                    @can('view-customer')
                     <li class="nav-item">
                         <a href="{{ route('customer.index') }}" class="nav-link {{ ($activemenu == 'customer')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Data Customer</p>
                         </a>
                     </li>
+                    @endcan
                 </ul>
             </li>
-            @endcan
-
-            <!-- Data Barang for Karyawan (who can't access full Master Data) -->
-            @cannot('manage-master-data')
-                @can('view-barang')
-                <li class="nav-item">
-                    <a href="{{ route('barang.index') }}" class="nav-link {{ ($activemenu == 'barang')? 'active' : '' }}">
-                        <i class="nav-icon fas fa-box"></i>
-                        <p>Data Barang</p>
-                    </a>
-                </li>
-                @endcan
-            @endcannot
+            @endcanany
 
             <!-- Transaksi -->
+            @canany(['view-pengiriman', 'view-retur', 'view-pemesanan'])
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['pengiriman', 'retur', 'pemesanan']))? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ (in_array($activemenu, ['pengiriman', 'retur', 'pemesanan']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-exchange-alt"></i>
@@ -75,134 +75,49 @@
                     </p>
                 </a>
                 <ul class="nav nav-treeview">
+                    @can('view-pengiriman')
                     <li class="nav-item">
                         <a href="{{ route('pengiriman.index') }}" class="nav-link {{ ($activemenu == 'pengiriman')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Pengiriman Barang</p>
                         </a>
                     </li>
+                    @endcan
+                    
+                    @can('view-retur')
                     <li class="nav-item">
                         <a href="{{ route('retur.index') }}" class="nav-link {{ ($activemenu == 'retur')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Retur Barang</p>
                         </a>
                     </li>
+                    @endcan
+                    
+                    @can('view-pemesanan')
                     <li class="nav-item">
                         <a href="{{ route('pemesanan.index') }}" class="nav-link {{ ($activemenu == 'pemesanan')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Pemesanan</p>
                         </a>
                     </li>
+                    @endcan
                 </ul>
             </li>
-
-            <!-- Analytics (Full Access for admin/ketua) -->
-            @can('view-analytics')
-            <li class="nav-item has-treeview {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'menu-open' : '' }}">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['analytics', 'analytics.partner-performance', 'analytics.inventory-optimization', 'analytics.product-velocity', 'analytics.profitability-analysis']))? 'active' : '' }}">
-                    <i class="nav-icon fas fa-brain"></i>
-                    <p>
-                        Report
-                        <i class="right fas fa-angle-left"></i>
-                    </p>
-                </a>
-                <ul class="nav nav-treeview">
-                    <li class="nav-item">
-                        <a href="{{ route('analytics.partner-performance.index') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Partner Performance</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('analytics.inventory-optimization.index') }}" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')?'active': ''}}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Inventory Optimization</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('analytics.product-velocity.index') }}" class="nav-link {{ ($activemenu == 'analytics.product-velocity')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>Product Velocity</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('analytics.profitability-analysis.index') }}" class="nav-link {{ ($activemenu == 'analytics.profitability-analysis')? 'active' : '' }}">
-                            <i class="far fa-circle nav-icon"></i>
-                            <p>True Profitability</p>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-            @endcan
-
-            <!-- Report (Partner Performance Only for AP) -->
-            @cannot('view-analytics')
-                @can('view-partner-performance')
-                <li class="nav-item has-treeview {{ ($activemenu == 'analytics.partner-performance')? 'menu-open' : '' }}">
-                    <a href="#" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
-                        <i class="nav-icon fas fa-brain"></i>
-                        <p>
-                            Report
-                            <i class="right fas fa-angle-left"></i>
-                        </p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="{{ route('analytics.partner-performance.index') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Partner Performance</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                @endcan
-            @endcannot
-
-            <!-- Report (Inventory Optimization Only for FRN) -->
-            @cannot('view-analytics')
-                @can('view-inventory-optimization')
-                <li class="nav-item has-treeview {{ ($activemenu == 'analytics.inventory-optimization')? 'menu-open' : '' }}">
-                    <a href="#" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')? 'active' : '' }}">
-                        <i class="nav-icon fas fa-brain"></i>
-                        <p>
-                            Report
-                            <i class="right fas fa-angle-left"></i>
-                        </p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="{{ route('analytics.inventory-optimization.index') }}" class="nav-link {{ ($activemenu == 'analytics.inventory-optimization')? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Inventory Optimization</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                @endcan
-            @endcannot
-            
-            <!-- Market Map -->
-            @can('view-market-map')
-            <li class="nav-item">
-                <a href="{{ route('market-map.index') }}" class="nav-link {{ ($activemenu == 'market-map')? 'active' : '' }}">
-                    <i class="nav-icon fas fa-map-marked-alt"></i>
-                    <p>Market Map</p>
-                </a>
-            </li>
-            @endcan
+            @endcanany
 
             <!-- Follow Up Pelanggan -->
+            @can('view-follow-up')
             <li class="nav-item">
                 <a href="{{ route('follow-up-pelanggan.index') }}" class="nav-link {{ ($activemenu == 'follow-up-pelanggan')? 'active' : '' }}">
                     <i class="nav-icon fas fa-envelope-open-text"></i>
                     <p>Follow Up Pelanggan</p>
                 </a>
             </li>
-
-            <!-- Sistem Pengaturan (Full Access for Admin) -->
-            @can('manage-users')
-            <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'market-map-settings', 'partner-performance-settings', 'seasonal-inventory-settings']))? 'menu-open' : '' }}">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['user', 'market-map-settings', 'partner-performance-settings', 'seasonal-inventory-settings']))? 'active' : '' }}">
+            @endcan
+            <!-- Manajemen User -->
+            @canany(['manage-users', 'manage-notification-settings', 'view-eoq-setting', 'view-zscore-setting'])
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting']))? 'menu-open' : '' }}">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-users-cog"></i>
                     <p>
                         Sistem Pengaturan
@@ -210,85 +125,49 @@
                     </p>
                 </a>
                 <ul class="nav nav-treeview">
+                    @can('manage-users')
                     <li class="nav-item">
                         <a href="{{ route('user.index') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Manajemen User</p>
                         </a>
                     </li>
+                    @endcan
+                    @can('manage-users')
                     <li class="nav-item">
-                        <a href="{{ route('market-map-settings.index') }}" class="nav-link {{ ($activemenu == 'market-map-settings')? 'active' : '' }}">
+                        <a href="{{ route('role.index') }}" class="nav-link {{ ($activemenu == 'role')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Pengaturan Market Map</p>
+                            <p>Manajemen Role</p>
                         </a>
                     </li>
+                    @endcan
+                    @can('manage-notification-settings')
                     <li class="nav-item">
-                        <a href="{{ route('partner-performance-settings.index') }}" class="nav-link {{ ($activemenu == 'partner-performance-settings')? 'active' : '' }}">
+                        <a href="{{ route('notification-settings.index') }}" class="nav-link {{ ($activemenu == 'notification-settings')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Pengaturan Partner Performance</p>
+                            <p>Pengaturan Notifikasi</p>
                         </a>
                     </li>
+                    @endcan
+                    @can('view-eoq-setting')
                     <li class="nav-item">
-                        <a href="{{ route('seasonal-inventory-settings.index') }}" class="nav-link {{ ($activemenu == 'seasonal-inventory-settings')? 'active' : '' }}">
+                        <a href="{{ route('eoq-setting.index') }}" class="nav-link {{ ($activemenu == 'eoq-setting')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
-                            <p>Pengaturan Seasonal Inventory</p>
+                            <p>Setting EOQ</p>
                         </a>
                     </li>
+                    @endcan
+                    @can('view-zscore-setting')
+                    <li class="nav-item">
+                        <a href="{{ route('zscore-setting.index') }}" class="nav-link {{ ($activemenu == 'zscore-setting')? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>Setting Z-Score</p>
+                        </a>
+                    </li>
+                    @endcan
                 </ul>
             </li>
-            @endcan
-
-            <!-- Sistem Pengaturan (Partner Performance Only for AP) -->
-            @cannot('manage-users')
-                @can('manage-partner-performance-settings')
-                <li class="nav-item has-treeview {{ ($activemenu == 'partner-performance-settings')? 'menu-open' : '' }}">
-                    <a href="#" class="nav-link {{ ($activemenu == 'partner-performance-settings')? 'active' : '' }}">
-                        <i class="nav-icon fas fa-users-cog"></i>
-                        <p>
-                            Sistem Pengaturan
-                            <i class="right fas fa-angle-left"></i>
-                        </p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="{{ route('partner-performance-settings.index') }}" class="nav-link {{ ($activemenu == 'partner-performance-settings')? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Pengaturan Partner Performance</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                @endcan
-            @endcannot
-
-            <!-- Sistem Pengaturan (User & Market Map for FRN) -->
-            @cannot('manage-users')
-                @can('manage-users-and-market-map')
-                <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'market-map-settings']))? 'menu-open' : '' }}">
-                    <a href="#" class="nav-link {{ (in_array($activemenu, ['user', 'market-map-settings']))? 'active' : '' }}">
-                        <i class="nav-icon fas fa-users-cog"></i>
-                        <p>
-                            Sistem Pengaturan
-                            <i class="right fas fa-angle-left"></i>
-                        </p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="{{ route('user.index') }}" class="nav-link {{ ($activemenu == 'user')? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Manajemen User</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('market-map-settings.index') }}" class="nav-link {{ ($activemenu == 'market-map-settings')? 'active' : '' }}">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Pengaturan Market Map</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                @endcan
-            @endcannot
+            @endcanany
 
         </ul>
     </nav>
