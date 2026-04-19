@@ -8,8 +8,8 @@
     <!-- Main Card -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title"> Data User
-                <i class=></i> 
+            <h3 class="card-title">
+                {{-- <i class="fas fa-users"></i> Data User --}}
             </h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-primary" id="btnTambahUser">
@@ -64,7 +64,7 @@
                                         <option value="{{ $role->role_id }}">{{ $role->nama_role }}</option>
                                     @endforeach
                                 </select>
-                                <small class="text-muted">Hanya Ketua dan Karyawan yang dapat ditambahkan</small>
+                                <small class="text-muted">Semua role kecuali Admin dapat dipilih. Buat role baru di Manajemen Role.</small>
                                 <div class="invalid-feedback" id="error-role_id"></div>
                             </div>
                             <div class="form-group">

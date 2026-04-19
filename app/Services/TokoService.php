@@ -8,19 +8,29 @@ use Illuminate\Support\Facades\Log;
 
 class TokoService
 {
-    /**
-     * Store new toko with interactive map coordinates
-     *
-     * @param array $data
-     * @return array
-     */
+
     public static function store(array $data): array
     {
         try {
+            if (empty($data[Toko::FIELD_LATITUDE]) || empty($data[Toko::FIELD_LONGITUDE])) {
+                return [
+                    'success' => false,
+                    'status_code' => 422,
+                    'message' => 'Koordinat GPS wajib diisi. Silakan pilih lokasi pada peta.'
+                ];
+            }
+
             $latitude = (float) $data[Toko::FIELD_LATITUDE];
             $longitude = (float) $data[Toko::FIELD_LONGITUDE];
 
-            // Validate coordinates are in Malang region
+            if (abs($latitude) > 90 || abs($longitude) > 180) {
+                return [
+                    'success' => false,
+                    'status_code' => 422,
+                    'message' => 'Koordinat tidak valid. Latitude harus antara -90 sampai 90, Longitude harus antara -180 sampai 180.'
+                ];
+            }
+
             if (!GeocodingService::isInMalangRegion($latitude, $longitude)) {
                 return [
                     'success' => false,
@@ -33,9 +43,6 @@ class TokoService
                 ];
             }
 
-            Log::info("Storing toko with interactive map coordinates: {$data[Toko::FIELD_NAMA_TOKO]} - Lat: {$latitude}, Lng: {$longitude}");
-
-            // Create toko
             $toko = new Toko();
             $toko->{Toko::FIELD_TOKO_ID} = $data[Toko::FIELD_TOKO_ID];
             $toko->{Toko::FIELD_NAMA_TOKO} = $data[Toko::FIELD_NAMA_TOKO];
@@ -46,23 +53,23 @@ class TokoService
             $toko->{Toko::FIELD_WILAYAH_KOTA_KABUPATEN} = $data[Toko::FIELD_WILAYAH_KOTA_KABUPATEN];
             $toko->{Toko::FIELD_NOMER_TELPON} = $data[Toko::FIELD_NOMER_TELPON];
             $toko->{Toko::FIELD_IS_ACTIVE} = true;
-
-            // Set coordinates from interactive map
             $toko->{Toko::FIELD_LATITUDE} = $latitude;
             $toko->{Toko::FIELD_LONGITUDE} = $longitude;
 
-            // Set geocoding metadata
             self::setInteractiveMapMetadata($toko);
 
-            // Optional: Reverse geocoding
-            $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
-            if ($reverseResult) {
-                $toko->{Toko::FIELD_ALAMAT_LENGKAP_GEOCODING} = $reverseResult['formatted_address'];
+            try {
+                $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
+                if ($reverseResult && isset($reverseResult['formatted_address'])) {
+                    $toko->{Toko::FIELD_ALAMAT_LENGKAP_GEOCODING} = $reverseResult['formatted_address'];
+                }
+            } catch (\Exception $e) {
+
             }
 
             $toko->save();
-
-            Log::info("Toko berhasil disimpan dengan koordinat interaktif: {$toko->{Toko::FIELD_TOKO_ID}} - ({$latitude}, {$longitude})");
+            
+            TokoCacheService::clearAllCache();
 
             return [
                 'success' => true,
@@ -72,9 +79,23 @@ class TokoService
                 'coordinate_info' => self::buildCoordinateInfo($latitude, $longitude, false)
             ];
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                return [
+                    'success' => false,
+                    'status_code' => 422,
+                    'message' => 'ID Toko sudah digunakan. Silakan generate ID baru.'
+                ];
+            }
+            
+            return [
+                'success' => false,
+                'status_code' => 500,
+                'message' => 'Terjadi kesalahan database. Silakan coba lagi.'
+            ];
+            
         } catch (\Exception $e) {
-            Log::error('Error saving toko with interactive map coordinates: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Error saving toko: ' . $e->getMessage());
 
             return [
                 'success' => false,
@@ -84,20 +105,12 @@ class TokoService
         }
     }
 
-    /**
-     * Update toko with interactive map support
-     *
-     * @param Toko $toko
-     * @param array $data
-     * @return array
-     */
     public static function update(Toko $toko, array $data): array
     {
         try {
             $latitude = (float) $data[Toko::FIELD_LATITUDE];
             $longitude = (float) $data[Toko::FIELD_LONGITUDE];
 
-            // Validate coordinates are in Malang region
             if (!GeocodingService::isInMalangRegion($latitude, $longitude)) {
                 return [
                     'success' => false,
@@ -110,13 +123,11 @@ class TokoService
                 ];
             }
 
-            // Check if coordinates changed
             $coordinatesChanged = (
                 $toko->{Toko::FIELD_LATITUDE} != $latitude ||
                 $toko->{Toko::FIELD_LONGITUDE} != $longitude
             );
 
-            // Update toko data
             $toko->{Toko::FIELD_NAMA_TOKO} = $data[Toko::FIELD_NAMA_TOKO];
             $toko->{Toko::FIELD_PEMILIK} = $data[Toko::FIELD_PEMILIK];
             $toko->{Toko::FIELD_ALAMAT} = $data[Toko::FIELD_ALAMAT];
@@ -124,25 +135,24 @@ class TokoService
             $toko->{Toko::FIELD_WILAYAH_KELURAHAN} = $data[Toko::FIELD_WILAYAH_KELURAHAN];
             $toko->{Toko::FIELD_WILAYAH_KOTA_KABUPATEN} = $data[Toko::FIELD_WILAYAH_KOTA_KABUPATEN];
             $toko->{Toko::FIELD_NOMER_TELPON} = $data[Toko::FIELD_NOMER_TELPON];
-
-            // Update coordinates
             $toko->{Toko::FIELD_LATITUDE} = $latitude;
             $toko->{Toko::FIELD_LONGITUDE} = $longitude;
 
-            // Update geocoding metadata if coordinates changed
             if ($coordinatesChanged) {
                 self::setInteractiveMapMetadata($toko);
 
-                // Optional: Reverse geocoding
-                $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
-                if ($reverseResult) {
-                    $toko->{Toko::FIELD_ALAMAT_LENGKAP_GEOCODING} = $reverseResult['formatted_address'];
+                try {
+                    $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
+                    if ($reverseResult && isset($reverseResult['formatted_address'])) {
+                        $toko->{Toko::FIELD_ALAMAT_LENGKAP_GEOCODING} = $reverseResult['formatted_address'];
+                    }
+                } catch (\Exception $e) {
                 }
-
-                Log::info("Koordinat toko {$toko->{Toko::FIELD_TOKO_ID}} diperbarui melalui interactive map: ({$latitude}, {$longitude})");
             }
 
             $toko->save();
+            
+            TokoCacheService::clearTokoCache($toko->{Toko::FIELD_TOKO_ID});
 
             $responseMessage = 'Data toko berhasil diperbarui';
             if ($coordinatesChanged) {
@@ -158,7 +168,7 @@ class TokoService
             ];
 
         } catch (\Exception $e) {
-            Log::error('Error updating toko with interactive map: ' . $e->getMessage());
+            Log::error('Error updating toko: ' . $e->getMessage());
 
             return [
                 'success' => false,
@@ -168,16 +178,13 @@ class TokoService
         }
     }
 
-    /**
-     * Delete toko
-     *
-     * @param Toko $toko
-     * @return array
-     */
     public static function destroy(Toko $toko): array
     {
         try {
+            $tokoId = $toko->{Toko::FIELD_TOKO_ID};
             $toko->delete();
+            
+            TokoCacheService::clearTokoCache($tokoId);
 
             return [
                 'success' => true,
@@ -202,244 +209,12 @@ class TokoService
         }
     }
 
-    /**
-     * Preview geocoding for address
-     *
-     * @param string $address
-     * @return array
-     */
-    public static function previewGeocode(string $address, $detectedKelurahan = null): array
-    {
-        try {
-            Log::info("Preview geocoding for: {$address}");
-            if ($detectedKelurahan) {
-                Log::info("With detected kelurahan: " . json_encode($detectedKelurahan));
-            }
-
-            $geocodeResult = GeocodingService::geocodeAddress($address, $detectedKelurahan);
-
-            if ($geocodeResult) {
-                $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
-
-                // Extract match score for transparency
-                $matchScore = $geocodeResult['match_score'] ?? null;
-                $parsedAddress = $geocodeResult['parsed_address'] ?? null;
-
-                // Build provider info with match score
-                $providerInfo = $geocodeResult['provider'];
-                if ($matchScore !== null) {
-                    $providerInfo .= " (match: {$matchScore}%)";
-                }
-
-                return [
-                    'success' => true,
-                    'status_code' => 200,
-                    'message' => 'Koordinat berhasil ditemukan',
-                    'geocode_info' => [
-                        'latitude' => $geocodeResult['latitude'],
-                        'longitude' => $geocodeResult['longitude'],
-                        'formatted_address' => $geocodeResult['formatted_address'],
-                        'provider' => $geocodeResult['provider'],
-                        'provider_display' => $providerInfo,
-                        'accuracy' => $geocodeResult['accuracy'],
-                        'confidence' => $geocodeResult['confidence'] ?? 0,
-                        'match_score' => $matchScore,
-                        'quality' => $qualityCheck['quality'],
-                        'quality_score' => $qualityCheck['score'],
-                        'quality_badge' => TokoHelper::getQualityBadge($qualityCheck['quality']),
-                        'in_malang_region' => GeocodingService::isInMalangRegion($geocodeResult['latitude'], $geocodeResult['longitude']),
-                        'region_status' => GeocodingService::isInMalangRegion($geocodeResult['latitude'], $geocodeResult['longitude'])
-                            ? '✓ Dalam wilayah Malang'
-                            : '⚠ Di luar wilayah Malang',
-                        'recommendations' => $qualityCheck['recommendations'] ?? [],
-                        'jalan_id' => $geocodeResult['jalan_id'] ?? null,
-                        'kelurahan_id' => $geocodeResult['kelurahan_id'] ?? null,
-                        'kelurahan_name' => $geocodeResult['kelurahan_name'] ?? null,
-                        'kecamatan' => $geocodeResult['kecamatan'] ?? null,
-                        'parsed_address' => $parsedAddress
-                    ]
-                ];
-            }
-
-            return [
-                'success' => false,
-                'status_code' => 404,
-                'message' => 'Koordinat tidak dapat ditemukan untuk alamat tersebut'
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Error preview geocoding: ' . $e->getMessage());
-
-            return [
-                'success' => false,
-                'status_code' => 500,
-                'message' => 'Terjadi kesalahan saat melakukan preview geocoding'
-            ];
-        }
-    }
-
-    /**
-     * Geocode existing toko
-     *
-     * @param Toko $toko
-     * @param string $address
-     * @return array
-     */
-    public static function geocodeToko(Toko $toko, string $address): array
-    {
-        try {
-            Log::info("Manual geocoding for toko {$toko->{Toko::FIELD_TOKO_ID}}: {$address}");
-
-            $geocodeResult = GeocodingService::geocodeAddress($address);
-
-            if ($geocodeResult) {
-                $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
-
-                // Update toko coordinates
-                $toko->{Toko::FIELD_LATITUDE} = $geocodeResult['latitude'];
-                $toko->{Toko::FIELD_LONGITUDE} = $geocodeResult['longitude'];
-                $toko->{Toko::FIELD_ALAMAT_LENGKAP_GEOCODING} = $geocodeResult['formatted_address'];
-                $toko->{Toko::FIELD_GEOCODING_PROVIDER} = $geocodeResult['provider'];
-                $toko->{Toko::FIELD_GEOCODING_ACCURACY} = $geocodeResult['accuracy'];
-                $toko->{Toko::FIELD_GEOCODING_CONFIDENCE} = $geocodeResult['confidence'] ?? null;
-                $toko->{Toko::FIELD_GEOCODING_QUALITY} = $qualityCheck['quality'];
-                $toko->{Toko::FIELD_GEOCODING_SCORE} = $qualityCheck['score'];
-                $toko->save();
-
-                $message = "Koordinat toko berhasil diperbarui";
-                if ($qualityCheck['quality'] === 'excellent' || $qualityCheck['quality'] === 'good') {
-                    $message .= " dengan akurasi tinggi";
-                } elseif (in_array($qualityCheck['quality'], ['fair', 'poor'])) {
-                    $message .= " (perlu verifikasi manual)";
-                }
-
-                return [
-                    'success' => true,
-                    'status_code' => 200,
-                    'message' => $message,
-                    'data' => [
-                        'toko_id' => $toko->{Toko::FIELD_TOKO_ID},
-                        'nama_toko' => $toko->{Toko::FIELD_NAMA_TOKO},
-                        'latitude' => $toko->{Toko::FIELD_LATITUDE},
-                        'longitude' => $toko->{Toko::FIELD_LONGITUDE},
-                        'formatted_address' => $toko->{Toko::FIELD_ALAMAT_LENGKAP_GEOCODING},
-                        'provider' => $toko->{Toko::FIELD_GEOCODING_PROVIDER},
-                        'accuracy' => $toko->{Toko::FIELD_GEOCODING_ACCURACY},
-                        'quality' => $toko->{Toko::FIELD_GEOCODING_QUALITY},
-                        'quality_score' => $toko->{Toko::FIELD_GEOCODING_SCORE}
-                    ],
-                    'geocode_info' => $geocodeResult,
-                    'quality_check' => $qualityCheck
-                ];
-            }
-
-            return [
-                'success' => false,
-                'status_code' => 404,
-                'message' => 'Tidak dapat menemukan koordinat untuk alamat tersebut'
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Error geocoding toko: ' . $e->getMessage());
-
-            return [
-                'success' => false,
-                'status_code' => 500,
-                'message' => 'Terjadi kesalahan saat melakukan geocoding'
-            ];
-        }
-    }
-
-    /**
-     * Batch geocoding for tokos without coordinates or low quality
-     *
-     * @return array
-     */
-    public static function batchGeocodeToko(): array
-    {
-        try {
-            $tokosToGeocode = Toko::needsRegeocoding()->get();
-
-            if ($tokosToGeocode->isEmpty()) {
-                return [
-                    'success' => true,
-                    'status_code' => 200,
-                    'status' => 'info',
-                    'message' => 'Semua toko sudah memiliki koordinat GPS berkualitas baik',
-                    'summary' => [
-                        'total_processed' => 0,
-                        'success_count' => 0,
-                        'failed_count' => 0,
-                        'improved_count' => 0
-                    ]
-                ];
-            }
-
-            Log::info("Starting batch geocoding for {$tokosToGeocode->count()} tokos");
-
-            $successCount = 0;
-            $failedCount = 0;
-            $improvedCount = 0;
-            $results = [];
-
-            foreach ($tokosToGeocode as $toko) {
-                $result = self::processBatchGeocodeItem($toko);
-                $results[] = $result;
-
-                if ($result['status'] === 'success') {
-                    $successCount++;
-                    if ($result['improved']) {
-                        $improvedCount++;
-                    }
-                } else {
-                    $failedCount++;
-                }
-
-                // Delay to avoid rate limiting
-                usleep(600000); // 0.6 second delay
-            }
-
-            Log::info("Batch geocoding completed. Success: {$successCount}, Failed: {$failedCount}, Improved: {$improvedCount}");
-
-            return [
-                'success' => true,
-                'status_code' => 200,
-                'message' => "Batch geocoding selesai. Berhasil: {$successCount}, Gagal: {$failedCount}, Ditingkatkan: {$improvedCount}",
-                'summary' => [
-                    'total_processed' => count($tokosToGeocode),
-                    'success_count' => $successCount,
-                    'failed_count' => $failedCount,
-                    'improved_count' => $improvedCount,
-                    'success_rate' => round(($successCount / count($tokosToGeocode)) * 100, 1)
-                ],
-                'results' => $results
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Error batch geocoding: ' . $e->getMessage());
-
-            return [
-                'success' => false,
-                'status_code' => 500,
-                'message' => 'Terjadi kesalahan saat melakukan batch geocoding'
-            ];
-        }
-    }
-
-    /**
-     * Validate map coordinates
-     *
-     * @param float $latitude
-     * @param float $longitude
-     * @return array
-     */
     public static function validateMapCoordinates(float $latitude, float $longitude): array
     {
         try {
             $inMalangRegion = GeocodingService::isInMalangRegion($latitude, $longitude);
             $inIndonesia = GeocodingService::isInIndonesia($latitude, $longitude);
 
-            // Reverse geocoding
             $reverseResult = GeocodingService::reverseGeocode($latitude, $longitude);
 
             return [
@@ -468,12 +243,6 @@ class TokoService
         }
     }
 
-    /**
-     * Get coordinate details for a toko
-     *
-     * @param Toko $toko
-     * @return array
-     */
     public static function getCoordinateDetails(Toko $toko): array
     {
         try {
@@ -528,11 +297,6 @@ class TokoService
         }
     }
 
-    /**
-     * Validate all coordinates
-     *
-     * @return array
-     */
     public static function validateAllCoordinates(): array
     {
         try {
@@ -548,20 +312,17 @@ class TokoService
             foreach ($tokos as $toko) {
                 $issues = [];
 
-                // Check coordinate validity
                 if (abs($toko->{Toko::FIELD_LATITUDE}) > 90 || abs($toko->{Toko::FIELD_LONGITUDE}) > 180) {
                     $issues[] = 'Invalid coordinate range';
                 } else {
                     $results['valid_coordinates']++;
                 }
 
-                // Check if in Indonesia
                 if (!GeocodingService::isInIndonesia($toko->{Toko::FIELD_LATITUDE}, $toko->{Toko::FIELD_LONGITUDE})) {
                     $issues[] = 'Outside Indonesia';
                     $results['outside_indonesia']++;
                 }
 
-                // Check if in Malang region
                 if (GeocodingService::isInMalangRegion($toko->{Toko::FIELD_LATITUDE}, $toko->{Toko::FIELD_LONGITUDE})) {
                     $results['in_malang_region']++;
                 } else {
@@ -596,16 +357,11 @@ class TokoService
         }
     }
 
-    /**
-     * Get geocoding statistics
-     *
-     * @return array
-     */
     public static function getGeocodingStats(): array
     {
         try {
             $serviceStats = GeocodingService::getGeocodingStats();
-            $tokoStats = self::buildTokoStats();
+            $tokoStats = TokoCacheService::getGeocodingStats();
 
             return [
                 'success' => true,
@@ -626,14 +382,6 @@ class TokoService
         }
     }
 
-    // ===== PRIVATE HELPER METHODS =====
-
-    /**
-     * Set interactive map metadata for toko
-     *
-     * @param Toko $toko
-     * @return void
-     */
     private static function setInteractiveMapMetadata(Toko $toko): void
     {
         $toko->{Toko::FIELD_GEOCODING_PROVIDER} = 'interactive_map';
@@ -643,14 +391,6 @@ class TokoService
         $toko->{Toko::FIELD_GEOCODING_SCORE} = 100;
     }
 
-    /**
-     * Build coordinate info response
-     *
-     * @param float $latitude
-     * @param float $longitude
-     * @param bool $coordinatesChanged
-     * @return array
-     */
     private static function buildCoordinateInfo(float $latitude, float $longitude, bool $coordinatesChanged): array
     {
         return [
@@ -665,65 +405,6 @@ class TokoService
         ];
     }
 
-    /**
-     * Process single batch geocode item
-     *
-     * @param Toko $toko
-     * @return array
-     */
-    private static function processBatchGeocodeItem(Toko $toko): array
-    {
-        $fullAddress = trim($toko->{Toko::FIELD_ALAMAT} . ', ' .
-                      $toko->{Toko::FIELD_WILAYAH_KELURAHAN} . ', ' .
-                      $toko->{Toko::FIELD_WILAYAH_KECAMATAN} . ', ' .
-                      $toko->{Toko::FIELD_WILAYAH_KOTA_KABUPATEN} . ', Jawa Timur, Indonesia');
-
-        Log::info("Batch geocoding: {$toko->{Toko::FIELD_TOKO_ID}} - {$toko->{Toko::FIELD_NAMA_TOKO}}");
-
-        $oldQuality = $toko->{Toko::FIELD_GEOCODING_QUALITY};
-        $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
-
-        if ($geocodeResult) {
-            $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
-
-            $toko->{Toko::FIELD_LATITUDE} = $geocodeResult['latitude'];
-            $toko->{Toko::FIELD_LONGITUDE} = $geocodeResult['longitude'];
-            $toko->{Toko::FIELD_ALAMAT_LENGKAP_GEOCODING} = $geocodeResult['formatted_address'];
-            $toko->{Toko::FIELD_GEOCODING_PROVIDER} = $geocodeResult['provider'];
-            $toko->{Toko::FIELD_GEOCODING_ACCURACY} = $geocodeResult['accuracy'];
-            $toko->{Toko::FIELD_GEOCODING_CONFIDENCE} = $geocodeResult['confidence'] ?? null;
-            $toko->{Toko::FIELD_GEOCODING_QUALITY} = $qualityCheck['quality'];
-            $toko->{Toko::FIELD_GEOCODING_SCORE} = $qualityCheck['score'];
-            $toko->save();
-
-            return [
-                'toko_id' => $toko->{Toko::FIELD_TOKO_ID},
-                'nama_toko' => $toko->{Toko::FIELD_NAMA_TOKO},
-                'status' => 'success',
-                'coordinates' => [$geocodeResult['latitude'], $geocodeResult['longitude']],
-                'provider' => $geocodeResult['provider'],
-                'quality' => $qualityCheck['quality'],
-                'quality_score' => $qualityCheck['score'],
-                'old_quality' => $oldQuality,
-                'improved' => $oldQuality && $qualityCheck['quality'] !== $oldQuality
-            ];
-        }
-
-        return [
-            'toko_id' => $toko->{Toko::FIELD_TOKO_ID},
-            'nama_toko' => $toko->{Toko::FIELD_NAMA_TOKO},
-            'status' => 'failed',
-            'coordinates' => null,
-            'old_quality' => $oldQuality,
-            'improved' => false
-        ];
-    }
-
-    /**
-     * Build toko statistics
-     *
-     * @return array
-     */
     private static function buildTokoStats(): array
     {
         return [
@@ -739,43 +420,26 @@ class TokoService
                 'failed' => Toko::where(Toko::FIELD_GEOCODING_QUALITY, 'failed')->orWhereNull(Toko::FIELD_GEOCODING_QUALITY)->count()
             ],
             'provider_distribution' => [
-                'internal_database' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'internal_database')->count(),
-                'google_maps' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'google_maps')->count(),
-                'locationiq' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'locationiq')->count(),
-                'opencage' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'opencage')->count(),
-                'mapbox' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'mapbox')->count(),
-                'here' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'here')->count(),
                 'nominatim' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'nominatim')->count(),
-                'fallback' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'LIKE', '%fallback%')->count(),
                 'interactive_map' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'interactive_map')->count(),
-                'failed' => Toko::where(Toko::FIELD_GEOCODING_PROVIDER, 'failed')->orWhereNull(Toko::FIELD_GEOCODING_PROVIDER)->count()
+                'unknown' => Toko::whereNull(Toko::FIELD_GEOCODING_PROVIDER)->count()
             ],
             'average_quality_score' => round(Toko::whereNotNull(Toko::FIELD_GEOCODING_SCORE)->avg(Toko::FIELD_GEOCODING_SCORE) ?? 0, 1),
             'in_malang_region' => Toko::inMalangRegion()->count()
         ];
     }
 
-    /**
-     * Get geocoding recommendations based on stats
-     *
-     * @param array $stats
-     * @return array
-     */
     private static function getGeocodingRecommendations(array $stats): array
     {
         $recommendations = [];
 
         if ($stats['without_coordinates'] > 0) {
-            $recommendations[] = "Ada {$stats['without_coordinates']} toko tanpa koordinat GPS. Jalankan Batch Geocoding untuk mendapatkan koordinat.";
+            $recommendations[] = "Ada {$stats['without_coordinates']} toko tanpa koordinat GPS. Gunakan interactive map untuk menambahkan koordinat.";
         }
 
         $lowQualityCount = $stats['quality_distribution']['poor'] + $stats['quality_distribution']['very_poor'] + $stats['quality_distribution']['failed'];
         if ($lowQualityCount > 0) {
-            $recommendations[] = "Ada {$lowQualityCount} toko dengan kualitas geocoding rendah. Pertimbangkan untuk melakukan geocoding ulang.";
-        }
-
-        if ($stats['provider_distribution']['failed'] > $stats['total_toko'] * 0.1) {
-            $recommendations[] = "Tingkat kegagalan geocoding tinggi. Periksa konfigurasi API geocoding.";
+            $recommendations[] = "Ada {$lowQualityCount} toko dengan kualitas geocoding rendah. Pertimbangkan untuk memperbarui koordinat menggunakan interactive map.";
         }
 
         $outsideMalang = $stats['total_toko'] - $stats['in_malang_region'];

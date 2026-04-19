@@ -51,7 +51,7 @@ class Toko extends Model
         self::FIELD_WILAYAH_KELURAHAN,
         self::FIELD_WILAYAH_KOTA_KABUPATEN,
         self::FIELD_NOMER_TELPON,
-        self::FIELD_JALAN_ID,
+        // self::FIELD_JALAN_ID, // Removed - field doesn't exist in database
         self::FIELD_LATITUDE,
         self::FIELD_LONGITUDE,
         self::FIELD_IS_ACTIVE,
@@ -93,10 +93,6 @@ class Toko extends Model
         });
     }
 
-    public function jalan()
-    {
-        return $this->belongsTo(Jalan::class, self::FIELD_JALAN_ID);
-    }
 
     public function barangToko()
     {
@@ -347,39 +343,6 @@ class Toko extends Model
             ->get();
     }
 
-    public function refreshGeocode()
-    {
-        try {
-            $fullAddress = $this->geocoding_address;
-            $geocodeResult = GeocodingService::geocodeAddress($fullAddress);
-            
-            if ($geocodeResult) {
-                $qualityCheck = GeocodingService::validateGeocodeQuality($geocodeResult);
-                
-                $this->{self::FIELD_LATITUDE} = $geocodeResult['latitude'];
-                $this->{self::FIELD_LONGITUDE} = $geocodeResult['longitude'];
-                $this->{self::FIELD_ALAMAT_LENGKAP_GEOCODING} = $geocodeResult['formatted_address'];
-                $this->{self::FIELD_GEOCODING_PROVIDER} = $geocodeResult['provider'];
-                $this->{self::FIELD_GEOCODING_ACCURACY} = $geocodeResult['accuracy'];
-                $this->{self::FIELD_GEOCODING_CONFIDENCE} = $geocodeResult['confidence'] ?? null;
-                $this->{self::FIELD_GEOCODING_QUALITY} = $qualityCheck['quality'];
-                $this->{self::FIELD_GEOCODING_SCORE} = $qualityCheck['score'];
-                $this->{self::FIELD_GEOCODING_LAST_UPDATED} = now();
-                $this->save();
-                
-                return [
-                    'success' => true,
-                    'geocode_result' => $geocodeResult,
-                    'quality_check' => $qualityCheck
-                ];
-            }
-            
-            return ['success' => false, 'message' => 'Geocoding failed'];
-            
-        } catch (\Exception $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
 
     public function getGoogleMapsUrlAttribute()
     {
@@ -471,20 +434,11 @@ class Toko extends Model
                 $quality = 'fair';
                 
                 switch ($toko->{self::FIELD_GEOCODING_PROVIDER}) {
-                    case 'internal_database':
+                    case 'interactive_map':
                         $quality = 'excellent';
                         break;
-                    case 'google_maps':
-                        $quality = 'good';
-                        break;
-                    case 'locationiq':
-                    case 'opencage':
-                        $quality = 'good';
-                        break;
                     case 'nominatim':
-                    case 'mapbox':
-                    case 'here':
-                        $quality = 'fair';
+                        $quality = 'good';
                         break;
                     default:
                         $quality = 'poor';

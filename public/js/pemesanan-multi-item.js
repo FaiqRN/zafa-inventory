@@ -1,6 +1,5 @@
 // Multi-Item Pemesanan JavaScript
 $(document).ready(function () {
-    let itemsData = []; // Array untuk menyimpan semua items
     let itemCounter = 0;
     let barangList = []; // Data barang dari server
     let barangLoaded = false; // Flag untuk track apakah data sudah loaded
@@ -11,8 +10,7 @@ $(document).ready(function () {
             url: '/barang/list',
             method: 'GET',
             success: function (response) {
-                console.log('Barang data loaded:', response);
-                if (response.status === 'success' && response.data) {
+                if (response.status === 'success' && Array.isArray(response.data)) {
                     barangList = response.data.map(function (item) {
                         return {
                             id: item.barang_id,
@@ -24,14 +22,13 @@ $(document).ready(function () {
                         };
                     });
                     barangLoaded = true;
-                    console.log('Total barang loaded:', barangList.length);
                 } else {
-                    console.error('Invalid response format:', response);
+                    barangList = [];
+                    barangLoaded = false;
                 }
             },
-            error: function (xhr, status, error) {
-                console.error('Error loading barang:', error);
-                console.error('Response:', xhr.responseText);
+            error: function () {
+                barangList = [];
                 barangLoaded = false;
             }
         });
@@ -51,14 +48,12 @@ $(document).ready(function () {
 
         // Loop through barangList dari API
         if (barangList && barangList.length > 0) {
-            console.log('Using barangList from AJAX');
             barangList.forEach(function (barang) {
                 const displayText = `${barang.kode} - ${barang.nama} (Stok: ${barang.stok})`;
                 barangOptions += `<option value="${barang.id}" data-harga="${barang.harga}" data-stok="${barang.stok}" data-nama="${barang.nama}">${displayText}</option>`;
             });
         } else {
             // Fallback: ambil dari hidden select yang berisi data dari blade
-            console.log('Using fallback from blade template');
             $('#barang_fallback option').each(function () {
                 if ($(this).val()) {
                     barangOptions += `<option value="${$(this).val()}" 
@@ -115,6 +110,10 @@ $(document).ready(function () {
 
     // Add new item row
     function addItemRow() {
+        if ($('#items-container .empty-item-placeholder').length) {
+            $('#items-container').empty();
+        }
+
         itemCounter++;
         const newRow = generateItemRow(itemCounter);
         $('#items-container').append(newRow);
@@ -125,9 +124,6 @@ $(document).ready(function () {
     $(document).on('click', '.btn-remove-item', function () {
         const index = $(this).data('index');
         $(`.item-row[data-index="${index}"]`).remove();
-
-        // Remove from itemsData
-        itemsData = itemsData.filter(item => item.index !== index);
 
         calculateTotal();
         updateItemsCount();
@@ -197,12 +193,15 @@ $(document).ready(function () {
         const count = $('.item-row').length;
         if (count === 0) {
             $('#items-container').html(`
-                <div class="alert alert-info text-center">
+                <div class="alert alert-info text-center empty-item-placeholder">
                     <i class="fas fa-info-circle"></i> Belum ada barang yang ditambahkan. 
                     Klik tombol "Tambah Barang" untuk menambah item pesanan.
                 </div>
             `);
+            return;
         }
+
+        $('#items-container .empty-item-placeholder').remove();
     }
 
     // Add item button click
@@ -211,14 +210,15 @@ $(document).ready(function () {
     });
 
     // Collect items data untuk submit
-    function collectItemsData() {
+    function collectItemsData(showAlert = true) {
         const items = [];
         let isValid = true;
 
         $('.item-row').each(function () {
             const index = $(this).data('index');
             const barangId = $(`.barang-select[data-index="${index}"]`).val();
-            const barangNama = $(`.barang-select[data-index="${index}"] option:selected`).text();
+            const selectedBarang = $(`.barang-select[data-index="${index}"] option:selected`);
+            const barangNama = selectedBarang.data('nama') || selectedBarang.text();
             const jumlah = $(`.jumlah-input[data-index="${index}"]`).val();
             const hargaSatuan = $(`.harga-satuan[data-index="${index}"]`).val();
             const subtotal = $(`.subtotal-value[data-index="${index}"]`).val();
@@ -238,22 +238,26 @@ $(document).ready(function () {
         });
 
         if (!isValid) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Data Tidak Lengkap',
-                text: 'Pastikan semua barang telah dipilih dan jumlah telah diisi!',
-                confirmButtonColor: '#dc3545'
-            });
+            if (showAlert) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Data Tidak Lengkap',
+                    text: 'Pastikan semua barang telah dipilih dan jumlah telah diisi!',
+                    confirmButtonColor: '#dc3545'
+                });
+            }
             return null;
         }
 
         if (items.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Tidak Ada Barang',
-                text: 'Harap tambahkan minimal 1 barang!',
-                confirmButtonColor: '#ffc107'
-            });
+            if (showAlert) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Tidak Ada Barang',
+                    text: 'Harap tambahkan minimal 1 barang!',
+                    confirmButtonColor: '#ffc107'
+                });
+            }
             return null;
         }
 
@@ -264,7 +268,7 @@ $(document).ready(function () {
     window.updateSummaryMultiItem = function () {
         const namaPemesan = $('#nama_pemesan').val() || '-';
         const noTelp = $('#no_telp_pemesan').val() || '-';
-        const items = collectItemsData();
+        const items = collectItemsData(false);
 
         $('#summary-nama').text(namaPemesan);
         $('#summary-telp').text(noTelp);
@@ -300,7 +304,7 @@ $(document).ready(function () {
 
     // Validate step 2 (items)
     window.validateStep2 = function () {
-        const items = collectItemsData();
+        const items = collectItemsData(true);
         if (!items || items.length === 0) {
             return false;
         }
@@ -328,8 +332,7 @@ $(document).ready(function () {
     $('#btnTambahPemesanan').click(function () {
         // Reload barang data jika belum loaded atau kosong
         if (!barangLoaded || barangList.length === 0) {
-            console.log('Reloading barang data...');
-            loadBarangData().done(function() {
+            loadBarangData().always(function () {
                 $('#items-container').empty();
                 itemCounter = 0;
                 addItemRow();

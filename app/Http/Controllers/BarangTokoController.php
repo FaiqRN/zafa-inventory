@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\MasterData\BarangTokoHelper;
-use App\Models\Barang;
-use App\Models\Toko;
-use App\Models\BarangToko;
+use App\Helpers\MasterData\barangToko\BarangTokoHelper;
+use App\Helpers\MasterData\barangToko\BarangTokoOperationHelper;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class BarangTokoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('can:manage-master-data');
+        $this->middleware('can:view-barang-toko')->only(['index', 'getBarangToko']);
+        $this->middleware('can:create-barang-toko')->only(['getAvailableBarang', 'store']);
+        $this->middleware('can:edit-barang-toko')->only(['edit', 'update']);
+        $this->middleware('can:delete-barang-toko')->only(['destroy']);
     }
-    /**
-     * Display a listing of the resource.
-     */
+
     public function index()
     {
         $toko = BarangTokoHelper::getAllTokoOrdered();
@@ -32,12 +33,6 @@ class BarangTokoController extends Controller
         ]);
     }
 
-    /**
-     * Get list of barang that are available for a specific toko
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function getAvailableBarang(Request $request)
     {
         $tokoId = $request->toko_id;
@@ -53,12 +48,6 @@ class BarangTokoController extends Controller
         ->header('Expires', '0');
     }
 
-    /**
-     * Get list of barang-toko for a specific toko
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function getBarangToko(Request $request)
     {
         $tokoId = $request->toko_id;
@@ -81,12 +70,6 @@ class BarangTokoController extends Controller
         ->header('Expires', '0');
     }
 
-    /**
-     * Get details of a barang-toko for editing
-     *
-     * @param  string  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function edit($id)
     {
         $barangToko = BarangTokoHelper::getBarangTokoById($id);
@@ -107,61 +90,33 @@ class BarangTokoController extends Controller
         ->header('Expires', '0');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function store(Request $request)
     {
-        // Validasi input
-        $validator = Validator::make(
-            $request->all(), 
-            BarangTokoHelper::validateBarangTokoData($request->all())
-        );
+        try {
+            $barangToko = BarangTokoOperationHelper::storeBarangToko([
+                'toko_id' => $request->toko_id,
+                'barang_id' => $request->barang_id,
+                'harga_barang_toko' => $request->harga_barang_toko,
+                'user_create' => $this->resolveCurrentUsername(),
+            ]);
 
-        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data barang per toko berhasil ditambahkan',
+                'data' => $barangToko
+            ])
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+        } catch (ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $e->errors()
             ], 422);
         }
-
-        // Check if barang already exists for this toko
-        if (BarangTokoHelper::isBarangExistsForToko($request->toko_id, $request->barang_id)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Barang ini sudah terdaftar untuk toko yang dipilih'
-            ], 422);
-        }
-
-        // Create new barang-toko
-        $barangToko = BarangTokoHelper::createBarangToko([
-            'toko_id' => $request->toko_id,
-            'barang_id' => $request->barang_id,
-            'harga_barang_toko' => $request->harga_barang_toko,
-            'user_create' => auth()->user()->username ?? null,
-        ]);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data barang per toko berhasil ditambahkan',
-            'data' => $barangToko
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  string  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function update(Request $request, $id)
     {
         $barangToko = BarangTokoHelper::getBarangTokoById($id);
@@ -173,42 +128,29 @@ class BarangTokoController extends Controller
             ], 404);
         }
 
-        // Validasi input
-        $validator = Validator::make(
-            $request->all(), 
-            BarangTokoHelper::validateBarangTokoData($request->all(), true)
-        );
+        try {
+            $barangToko = BarangTokoOperationHelper::updateBarangTokoData($barangToko, [
+                'harga_barang_toko' => $request->harga_barang_toko,
+                'user_update' => $this->resolveCurrentUsername(),
+            ]);
 
-        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data barang per toko berhasil diperbarui',
+                'data' => $barangToko
+            ])
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+        } catch (ValidationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $e->errors()
             ], 422);
         }
-
-        // Update data barang-toko
-        $barangToko = BarangTokoHelper::updateBarangToko($barangToko, [
-            'harga_barang_toko' => $request->harga_barang_toko,
-            'user_update' => auth()->user()->username ?? null,
-        ]);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data barang per toko berhasil diperbarui',
-            'data' => $barangToko
-        ])
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-        ->header('Pragma', 'no-cache')
-        ->header('Expires', '0');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  string  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function destroy($id)
     {
         $barangToko = BarangTokoHelper::getBarangTokoById($id);
@@ -220,8 +162,7 @@ class BarangTokoController extends Controller
             ], 404);
         }
 
-        // Delete barang-toko relation
-        BarangTokoHelper::deleteBarangToko($barangToko);
+        BarangTokoOperationHelper::deleteBarangTokoData($barangToko);
 
         return response()->json([
             'status' => 'success',
@@ -230,5 +171,20 @@ class BarangTokoController extends Controller
         ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
         ->header('Pragma', 'no-cache')
         ->header('Expires', '0');
+    }
+
+    private function resolveCurrentUsername(): ?string
+    {
+        $authIdentifier = Auth::id();
+
+        if ($authIdentifier === null) {
+            return null;
+        }
+
+        $username = User::query()
+            ->where(User::FIELD_USERNAME, (string) $authIdentifier)
+            ->value(User::FIELD_USERNAME);
+
+        return $username !== null ? (string) $username : null;
     }
 }

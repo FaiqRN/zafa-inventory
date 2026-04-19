@@ -1,278 +1,215 @@
-# ZafaSys - Inventory Management Made Easy
+# ZafaSys
 
-![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
-![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+ZafaSys adalah aplikasi manajemen operasional distribusi berbasis Laravel untuk mengelola data master, transaksi, follow up pelanggan via WhatsApp, dan optimasi inventori (EOQ, Safety Stock, ROP) secara terpusat.
 
-> **Solusi All-in-One untuk pengelolaan bisnis yang lebih cerdas**
+## Fitur Utama
 
-ZafaSys adalah sistem manajemen inventory dan CRM terintegrasi yang dirancang khusus untuk bisnis Zafa Potato. Kelola pelanggan, pemesanan, dan stok dengan analitik pintar dalam satu platform untuk pengambilan keputusan yang lebih tepat berbasis data.
+- Autentikasi, session timeout, dan proteksi akses berbasis middleware.
+- Manajemen role dan permission menggunakan Spatie Permission.
+- Master data: Barang, Toko (dengan koordinat/geocoding), Customer, Barang Toko.
+- Transaksi: Pemesanan, Pengiriman, dan Retur.
+- Follow up pelanggan dengan integrasi WhatsApp (Wablas).
+- Dashboard Inventory Optimization dan Partner Performance.
+- Pengaturan EOQ dan Z-score per toko/barang.
+- Pengaturan notifikasi dan utilitas cache refresh untuk performa.
+- Otomasi terjadwal untuk sinkronisasi follow up dan data aktif Z-score.
 
-## 🎯 Tentang Proyek
+## Stack Teknologi
 
-ZafaSys dikembangkan untuk membantu bisnis Zafa Kering Kentang dalam mengelola operasional bisnis secara efisien, mulai dari manajemen inventory, analisis performa penjualan, hingga optimalisasi strategi bisnis melalui data-driven insights.
+- PHP 8.5.5+
+- Laravel 13
+- MySQL/MariaDB (direkomendasikan), atau SQLite untuk pengembangan sederhana
+- Vite 8 + Tailwind CSS 4
+- Laravel AdminLTE
+- Spatie Laravel Permission
+- Yajra DataTables
+- Laravel Excel (Maatwebsite)
+- Redis client (predis/phpredis) tersedia opsional
 
-## ✨ Fitur Utama
+## Prasyarat
 
-### 🏪 POS (Point of Sale)
-Sistem pencatatan transaksi penjualan real-time dengan fitur:
-- **Master Data**: Kelola data barang, toko, dan customer
-- **Manajemen Stok**: Atur ketersediaan barang per toko dan harga
-- **Transaksi**: Pemesanan, pengiriman, dan retur barang
-- **Data Customer**: Sistem CRM terintegrasi
+Pastikan perangkat pengembangan sudah memiliki:
 
-### 📊 Sales Report
-Laporan penjualan komprehensif dengan visualisasi data:
-- **Laporan Pemesanan**: Analisis transaksi berdasarkan rentang waktu
-- **Laporan Per Toko**: Perbandingan performa antar cabang
-- **Export Data**: Unduh laporan dalam format PDF/Excel
+- PHP sesuai requirement `composer.json`
+- Composer 2+
+- Node.js 20+ dan npm 10+
+- Database server (MySQL/MariaDB direkomendasikan)
+- Ekstensi PHP yang umum untuk Laravel (mbstring, openssl, pdo, tokenizer, xml, ctype, json)
 
-### 🔍 CRM Analytics
-Dashboard analitik canggih untuk business intelligence:
-- **Analytics Dashboard**: Metrik kinerja bisnis real-time
-- **Partner Performance**: Analisis performa mitra berdasarkan grade
-- **Inventory Optimization**: Rekomendasi pengelolaan stok optimal dengan algoritma cerdas
-- **Product Velocity**: Analisis kecepatan perputaran produk (slow mover hingga hot sellers)
-- **True Profitability**: Kalkulasi profit bersih dengan COGS, logistics, dan opportunity cost
+## Instalasi Cepat
 
-### 🗺️ Market Map
-Visualisasi distribusi toko berbasis geografis:
-- **Peta Interaktif**: Lokasi dan performa toko pada peta
-- **Analisis Ekspansi**: Data-driven planning untuk cabang baru
-- **Performance Mapping**: Visualisasi performa per lokasi
-
-### 👥 Follow Up
-Sistem manajemen komunikasi pelanggan:
-- **Scheduled Follow-up**: Jadwal komunikasi tindak lanjut
-- **Customer Engagement**: Maintenance loyalitas pelanggan
-- **Sales Pipeline**: Tracking prospek dan konversi
-
-## 🛠 Teknologi
-
-- **Backend**: Laravel 10.x
-- **Frontend**: Blade Templates + Custom JavaScript
-- **Styling**: Custom CSS dengan animasi interaktif
-- **Database**: MySQL
-- **Maps**: Leaflet.js / Google Maps API
-- **Charts**: Chart.js untuk visualisasi data
-- **Authentication**: Laravel Auth
-
-## 📋 Persyaratan Sistem
-
-- PHP >= 8.1
-- Composer
-- Node.js >= 16.x
-- MySQL >= 8.0
-- Git
-
-## 🚀 Instalasi
-
-### 1. Clone Repository
+1. Clone repository lalu masuk ke folder proyek.
+2. Install dependency backend:
 
 ```bash
-git clone https://github.com/FaiqRN/zafa-inventory.git
-cd zafa-inventory
-```
-
-### 2. Install Dependencies
-
-```bash
-# Install PHP dependencies
 composer install
-
-# Install Node.js dependencies (jika ada)
-npm install
 ```
 
-### 3. Environment Setup
+3. Salin file environment:
 
 ```bash
-# Copy environment file
 cp .env.example .env
+```
 
-# Generate application key
+4. Isi konfigurasi utama di `.env` (database, URL aplikasi, dan integrasi pihak ketiga).
+5. Generate app key:
+
+```bash
 php artisan key:generate
 ```
 
-### 4. Database Configuration
-
-Edit file `.env`:
-
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=zafasys_inventory
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-### 5. Database Migration
+6. Jalankan migrasi dan seeder dasar:
 
 ```bash
-# Run migrations
-php artisan migrate
-
-# Seed database dengan data sample
-php artisan db:seed
+php artisan migrate --seed
 ```
 
-### 6. Storage Link
+7. Install dependency frontend:
 
 ```bash
-# Create symbolic link untuk storage
+npm install
+```
+
+8. Jalankan Vite (development) atau build aset produksi:
+
+```bash
+npm run dev
+# atau
+npm run build
+```
+
+9. Buat symbolic link storage publik:
+
+```bash
 php artisan storage:link
 ```
 
-### 7. Run Application
+10. Jalankan aplikasi:
 
 ```bash
-# Start development server
 php artisan serve
 ```
 
-Akses aplikasi di `http://localhost:8000`
+## Alternatif Script Siap Pakai
 
-## 📱 Video Demo
-
-### Video Demo
-[![Demo ZafaSys](https://img.youtube.com/vi/DqcifhglA-s/0.jpg)](https://www.youtube.com/watch?v=DqcifhglA-s)
-
-## 🎮 Penggunaan
-
-### Login Default
-
-Sistem akan memiliki user default setelah seeding:
-
-- **Admin/User**: 
-  - Email: `User1`
-  - Password: `User123`
-
-### Menu Utama
-
-1. **Master Data**
-   - Data Barang
-   - Data Toko  
-   - Barang Per Toko
-   - Data Customer
-
-2. **Transaksi**
-   - Pemesanan
-   - Pengiriman Barang
-   - Retur Barang
-
-3. **Laporan**
-   - Laporan Pemesanan
-   - Laporan Per Toko
-
-4. **Smart Analytics**
-   - Analytics Dashboard
-   - Partner Performance
-   - Inventory Optimization
-   - Product Velocity
-   - True Profitability
-
-5. **Market Map**
-   - Visualisasi geografis toko
-
-6. **Follow Up**
-   - Manajemen komunikasi pelanggan
-
-## 🔧 Konfigurasi
-
-### Maps API
-
-Untuk fitur Market Map, tambahkan API key pada `.env`:
-
-```env
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-```
-
-### Email Configuration
-
-Untuk notifikasi email:
-
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@zafasys.com
-MAIL_FROM_NAME="ZafaSys"
-```
-
-## 📊 Business Context
-
-### Zafa Potato Business
-ZafaSys dikembangkan untuk mendukung bisnis **Zafa Kering Kentang**:
-- 🛒 **Beli Produk**: [Shopee Zafa Potato](https://shopee.co.id/tirtomulyo_coffee)
-- 🤝 **Jadi Mitra**: [WhatsApp](https://api.whatsapp.com/send/?phone=6282121441930)
-- 📱 **Instagram**: [@zafaapotato_](https://www.instagram.com/zafaapotato_/)
-
-### Target Users
-- Pemilik bisnis retail/distributor
-- Manager toko dan cabang
-- Tim sales dan marketing
-- Operator gudang dan inventory
-
-## 🧪 Testing
+Project ini menyediakan script Composer:
 
 ```bash
-# Run all tests
-php artisan test
-
-# Run specific test
-php artisan test tests/Feature/InventoryTest.php
-
-# Generate test coverage
-php artisan test --coverage
+composer run setup
+composer run dev
 ```
 
-## 🤝 Kontribusi
+- `setup` akan menjalankan install, generate key, migrate, install npm, dan build aset.
+- `dev` akan menjalankan server, queue listener, log tail (`pail`), dan Vite secara paralel.
 
-Kami menyambut kontribusi untuk pengembangan ZafaSys:
+## Konfigurasi Environment Penting
 
-1. Fork repository
-2. Buat feature branch (`git checkout -b feature/NewFeature`)
-3. Commit changes (`git commit -m 'Add NewFeature'`)
-4. Push branch (`git push origin feature/NewFeature`)
-5. Create Pull Request
+Berikut variabel `.env` yang umum dipakai:
 
-### Development Guidelines
+| Kategori | Variabel |
+| --- | --- |
+| Aplikasi | `APP_NAME`, `APP_ENV`, `APP_DEBUG`, `APP_URL` |
+| Database | `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` |
+| Session/Cache/Queue | `SESSION_DRIVER`, `SESSION_LIFETIME`, `CACHE_STORE`, `QUEUE_CONNECTION` |
+| Redis (opsional) | `REDIS_CLIENT`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` |
+| WhatsApp Wablas | `WABLAS_API_URL`, `WABLAS_TOKEN`, `WABLAS_DEVICE_ID`, `APP_ADMIN_PHONE` |
+| Follow up upload | `MAX_IMAGE_SIZE`, `ALLOWED_IMAGE_FORMATS` |
+| Maps/Geocoding | `GOOGLE_MAPS_API_KEY`, `GEOCODING_USER_AGENT`, `GEOCODING_TIMEOUT` |
 
-- Ikuti PSR-12 coding standards
-- Tulis dokumentasi untuk fitur baru
-- Pastikan semua tests passing
-- Update CHANGELOG.md
+Catatan:
 
-## 👥 Tim Pengembang
+- Jangan commit token/secret produksi ke repository.
+- Untuk fitur follow up WhatsApp, `WABLAS_TOKEN` wajib terisi.
 
-- **Faiq Ramzy Nabighah** - *Lead Developer* - [@FaiqRN](https://github.com/FaiqRN)
-- **Annisa Prissilya** - *Programmer* - [@AnnisaPrisil](https://github.com/AnnisaPrisil)
-- **Khoirul Hidayah** - *Programmer* - [@KhoirulHidayah](https://github.com/KhoirulHidayah)
+## Seeder Awal dan Akun Default
 
-## 🙏 Acknowledgments
+Seeder default (`DatabaseSeeder`) menjalankan:
 
-- Laravel Framework
-- Chart.js untuk visualisasi data
-- Leaflet.js untuk mapping
-- Bootstrap untuk UI components
-- Komunitas open source
+- `RoleSeeder`
+- `UserSeeder`
+- `MigrateRolesToSpatieSeeder`
+- `BarangSeeder`
 
-## 📞 Support
+Akun admin default dari seeder:
 
-Butuh bantuan atau ingin bergabung sebagai mitra bisnis?
+- Username: `admin`
+- Password: `admin123`
 
-- 📧 **Email**: zafapotatokitchen@gmail.com
-- 💬 **WhatsApp**: [+62 821-2144-1930](https://api.whatsapp.com/send/?phone=6282121441930)
-- 🛒 **Beli Produk**: [Shopee](https://shopee.co.id/tirtomulyo_coffee)
-- 📱 **Follow Instagram**: [@zafaapotato_](https://www.instagram.com/zafaapotato_/)
+Segera ubah password setelah login pertama.
 
----
+Seeder tambahan (opsional) tersedia di folder `database/seeders` seperti `TokoSeeder`, `PengirimanSeeder`, `SsZscoreSettingSeeder`, dan lainnya.
 
-⭐ **Suka ngemil? Beli produknya, suka jualan? Gabung jadi reseller dan nikmati untungnya!**
+## Scheduler dan Otomasi
 
-💡 *ZafaSys - Inventory Management Made Easy*
+Aplikasi memiliki beberapa pekerjaan terjadwal (misalnya sinkronisasi status follow up, cleanup data, health check, dan sinkronisasi pasangan aktif Z-score).
+
+Untuk menjalankan scheduler:
+
+```bash
+php artisan schedule:work
+```
+
+Atau gunakan cron (Linux):
+
+```bash
+* * * * * php /path/to/project/artisan schedule:run >> /dev/null 2>&1
+```
+
+Timezone scheduler diset ke `Asia/Jakarta`.
+
+## Perintah Artisan Penting
+
+Contoh command operasional yang tersedia:
+
+```bash
+php artisan followup:sync-status --days=7 --status=sent --limit=100
+php artisan followup:cleanup --days=90
+php artisan whatsapp:debug --check-config
+php artisan whatsapp:debug --check-device
+php artisan zscore:sync-active-pairs --days=180
+php artisan cache:refresh-barang
+php artisan cache:refresh-toko
+php artisan cache:refresh-pengiriman
+php artisan cache:refresh-retur
+php artisan login:cleanup --days=7
+php artisan user:diagnose admin
+php artisan user:fix-admin admin
+```
+
+## Pengujian
+
+Jalankan test dengan:
+
+```bash
+php artisan test
+```
+
+Atau via Composer script:
+
+```bash
+composer test
+```
+
+## Struktur Singkat Modul
+
+- `app/Http/Controllers`: alur request fitur utama.
+- `app/Services`: logika bisnis dan integrasi (termasuk perhitungan dashboard).
+- `app/Helpers`: helper domain/master data.
+- `app/Console/Commands`: command maintenance dan operasional.
+- `resources/views`: antarmuka berbasis Blade.
+- `routes/web.php`: definisi route web aplikasi.
+
+## Troubleshooting Singkat
+
+- Menu tidak muncul sesuai role:
+	- Jalankan `php artisan user:diagnose admin` dan `php artisan user:fix-admin admin`.
+- Follow up WhatsApp gagal:
+	- Cek `WABLAS_TOKEN` dan jalankan `php artisan whatsapp:debug --check-config`.
+- Data dashboard belum muncul:
+	- Pastikan data transaksi cukup, setting EOQ/Z-score ada, lalu coba `php artisan zscore:sync-active-pairs`.
+- Perubahan aset tidak ter-update:
+	- Jalankan ulang `npm run dev` atau `npm run build`.
+
+## Lisensi
+
+Mengikuti lisensi proyek pada repository ini.

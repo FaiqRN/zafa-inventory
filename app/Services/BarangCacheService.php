@@ -9,44 +9,75 @@ use App\Models\Retur;
 use App\Helpers\MasterData\barang\BarangStokHelper;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class BarangCacheService
 {
-    // Cache keys
     const CACHE_KEY_ALL_BARANG = 'barang:all';
     const CACHE_KEY_BARANG_DETAIL = 'barang:detail:';
     const CACHE_KEY_STOCK_SUMMARY = 'barang:stock_summary';
     
-    // Cache TTL (dalam detik)
-    const CACHE_TTL_LIST = 3600;      // 1 jam untuk list
-    const CACHE_TTL_DETAIL = 1800;    // 30 menit untuk detail
-    const CACHE_TTL_STOCK = 900;      // 15 menit untuk stock (lebih sering berubah)
+    const CACHE_TTL_LIST = 3600;
+    const CACHE_TTL_DETAIL = 1800;
+    const CACHE_TTL_STOCK = 900;
 
-    /**
-     * Get all barang dengan caching
-     * Optimized: Single query dengan eager loading + batch calculation
-     *
-     * @return \Illuminate\Support\Collection
-     */
+    private static function isIncompleteObject($value): bool
+    {
+        return is_object($value) && get_class($value) === '__PHP_Incomplete_Class';
+    }
+
+    private static function rememberWithFallback(string $key, int $ttl, callable $callback)
+    {
+        try {
+            $cachedValue = Cache::get($key);
+
+            if ($cachedValue !== null) {
+                if (self::isIncompleteObject($cachedValue)) {
+                    Log::warning('Incomplete object found in cache, regenerating value', [
+                        'cache_key' => $key,
+                    ]);
+                    Cache::forget($key);
+                } else {
+                    return $cachedValue;
+                }
+            }
+
+            $freshValue = $callback();
+
+            try {
+                Cache::put($key, $freshValue, $ttl);
+            } catch (Throwable $e) {
+                Log::warning('Cache write failed, returning fresh value without caching', [
+                    'cache_key' => $key,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return $freshValue;
+        } catch (Throwable $e) {
+            Log::warning('Cache read failed, using direct query fallback', [
+                'cache_key' => $key,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $callback();
+        }
+    }
+
+
     public static function getAllBarang()
     {
-        return Cache::remember(self::CACHE_KEY_ALL_BARANG, self::CACHE_TTL_LIST, function () {
+        return self::rememberWithFallback(self::CACHE_KEY_ALL_BARANG, self::CACHE_TTL_LIST, function () {
             return self::fetchAllBarangOptimized();
         });
     }
 
-    /**
-     * Fetch all barang dengan optimized query
-     * Menghindari N+1 problem dengan batch calculation
-     *
-     * @return \Illuminate\Support\Collection
-     */
     private static function fetchAllBarangOptimized()
     {
-        // 1. Get all barang dalam satu query
         $barangList = Barang::select([
-            'barang_id', 'barang_kode', 'nama_barang', 
-            'harga_awal_barang', 'stok', 'satuan', 'keterangan'
+            'barang_id', 'barang_kode', 'nama_barang',
+            'harga_awal_barang', 'satuan', 'shelf_life', 'keterangan'
         ])->orderBy('barang_kode', 'asc')->get();
 
         if ($barangList->isEmpty()) {
@@ -55,7 +86,6 @@ class BarangCacheService
 
         $barangIds = $barangList->pluck('barang_id')->toArray();
 
-        // 2. Batch query untuk FIFO stock (sisa_stok)
         $fifoStocks = DB::table('barang_stok')
             ->select('barang_id', DB::raw('SUM(sisa_stok) as total_tersedia'))
             ->whereIn('barang_id', $barangIds)
@@ -63,7 +93,6 @@ class BarangCacheService
             ->pluck('total_tersedia', 'barang_id')
             ->toArray();
 
-        // 3. Batch query untuk Pemesanan (processed orders)
         $pemesananOut = Pemesanan::select('barang_id', DB::raw('SUM(jumlah_pesanan) as total'))
             ->whereIn('barang_id', $barangIds)
             ->whereIn('status_pemesanan', ['diproses', 'dikirim', 'selesai'])
@@ -71,21 +100,18 @@ class BarangCacheService
             ->pluck('total', 'barang_id')
             ->toArray();
 
-        // 4. Batch query untuk Pengiriman
         $pengirimanOut = Pengiriman::select('barang_id', DB::raw('SUM(jumlah_kirim) as total'))
             ->whereIn('barang_id', $barangIds)
             ->groupBy('barang_id')
             ->pluck('total', 'barang_id')
             ->toArray();
 
-        // 5. Batch query untuk Retur
         $returIn = Retur::select('barang_id', DB::raw('SUM(jumlah_retur) as total'))
             ->whereIn('barang_id', $barangIds)
             ->groupBy('barang_id')
             ->pluck('total', 'barang_id')
             ->toArray();
 
-        // 6. Calculate stock untuk setiap barang
         return $barangList->map(function ($barang) use ($fifoStocks, $pemesananOut, $pengirimanOut, $returIn) {
             $barangId = $barang->barang_id;
             
@@ -96,24 +122,19 @@ class BarangCacheService
 
             $availableStock = max(0, $fifoStock - $pesananOut - $kirimOut + $retIn);
             
+            $barang->stok = $fifoStock;
             $barang->available_stock = $availableStock;
-            $barang->stock_status = self::getStockStatus($availableStock, $barang->stok ?? 0);
+            $barang->stock_status = self::getStockStatus($availableStock, $fifoStock);
             
             return $barang;
         });
     }
 
-    /**
-     * Get single barang dengan caching
-     *
-     * @param string $barangId
-     * @return \App\Models\Barang|null
-     */
     public static function getBarangById($barangId)
     {
         $cacheKey = self::CACHE_KEY_BARANG_DETAIL . $barangId;
         
-        return Cache::remember($cacheKey, self::CACHE_TTL_DETAIL, function () use ($barangId) {
+        return self::rememberWithFallback($cacheKey, self::CACHE_TTL_DETAIL, function () use ($barangId) {
             $barang = Barang::find($barangId);
             
             if ($barang) {
@@ -127,12 +148,6 @@ class BarangCacheService
         });
     }
 
-    /**
-     * Calculate stock details untuk single barang
-     *
-     * @param string $barangId
-     * @return array
-     */
     private static function calculateStockDetails($barangId)
     {
         $barang = Barang::find($barangId);
@@ -149,8 +164,8 @@ class BarangCacheService
             ];
         }
 
-        $baseStock = $barang->stok ?? 0;
-        $fifoStock = BarangStokHelper::getStokTersedia($barangId);
+        $baseStock = BarangStokHelper::getStokTersedia($barangId);
+        $fifoStock = $baseStock;
 
         $pemesananOut = Pemesanan::where('barang_id', $barangId)
             ->whereIn('status_pemesanan', ['diproses', 'dikirim', 'selesai'])
@@ -175,13 +190,6 @@ class BarangCacheService
         ];
     }
 
-    /**
-     * Get stock status
-     *
-     * @param int $availableStock
-     * @param int $baseStock
-     * @return string
-     */
     private static function getStockStatus($availableStock, $baseStock)
     {
         if ($availableStock <= 0) {
@@ -197,44 +205,43 @@ class BarangCacheService
         return 'sufficient';
     }
 
-    /**
-     * Clear all barang cache
-     * Panggil ini saat ada perubahan data barang
-     */
     public static function clearAllCache()
     {
-        Cache::forget(self::CACHE_KEY_ALL_BARANG);
-        Cache::forget(self::CACHE_KEY_STOCK_SUMMARY);
+        try {
+            Cache::forget(self::CACHE_KEY_ALL_BARANG);
+            Cache::forget(self::CACHE_KEY_STOCK_SUMMARY);
+        } catch (Throwable $e) {
+            Log::warning('Cache clear failed for barang cache keys', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
-    /**
-     * Clear cache untuk specific barang
-     *
-     * @param string $barangId
-     */
     public static function clearBarangCache($barangId)
     {
-        Cache::forget(self::CACHE_KEY_BARANG_DETAIL . $barangId);
-        Cache::forget(self::CACHE_KEY_ALL_BARANG); // Refresh list juga
+        try {
+            Cache::forget(self::CACHE_KEY_BARANG_DETAIL . $barangId);
+            Cache::forget(self::CACHE_KEY_ALL_BARANG);
+        } catch (Throwable $e) {
+            Log::warning('Cache clear failed for barang detail cache key', [
+                'barang_id' => $barangId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
-    /**
-     * Clear cache yang terkait stock
-     * Panggil saat ada transaksi (pemesanan, pengiriman, retur)
-     */
     public static function clearStockRelatedCache()
     {
-        Cache::forget(self::CACHE_KEY_ALL_BARANG);
-        Cache::forget(self::CACHE_KEY_STOCK_SUMMARY);
-        
-        // Clear semua detail cache (gunakan tags jika pakai Redis)
-        // Untuk file/database cache, perlu clear manual atau gunakan prefix pattern
+        try {
+            Cache::forget(self::CACHE_KEY_ALL_BARANG);
+            Cache::forget(self::CACHE_KEY_STOCK_SUMMARY);
+        } catch (Throwable $e) {
+            Log::warning('Cache clear failed for stock related cache keys', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
-    /**
-     * Refresh cache secara manual
-     * Bisa dipanggil via artisan command atau scheduled job
-     */
     public static function refreshCache()
     {
         self::clearAllCache();

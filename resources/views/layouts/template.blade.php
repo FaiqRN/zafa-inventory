@@ -6,11 +6,11 @@
   <title>{{config('app.name','ZafaSys')}}</title>
 
   <!-- Favicon ZafaSys - Multiple Sizes for Better Display -->
-  <link rel="icon" type="image/png" sizes="16x16" href="{{asset('adminlte/dist/img/zafalogo.png')}}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{{asset('adminlte/dist/img/zafalogo.png')}}">
-  <link rel="icon" type="image/png" sizes="48x48" href="{{asset('adminlte/dist/img/zafalogo.png')}}">
-  <link rel="shortcut icon" href="{{asset('adminlte/dist/img/zafalogo.png')}}">
-  <link rel="apple-touch-icon" href="{{asset('adminlte/dist/img/zafalogo.png')}}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{asset('adminlte/dist/img/Zlogo.png')}}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{asset('adminlte/dist/img/Zlogo.png')}}">
+  <link rel="icon" type="image/png" sizes="48x48" href="{{asset('adminlte/dist/img/Zlogo.png')}}">
+  <link rel="shortcut icon" href="{{asset('adminlte/dist/img/Zlogo.png')}}">
+  <link rel="apple-touch-icon" href="{{asset('adminlte/dist/img/Zlogo.png')}}">
 
   <meta name="csrf-token" content="{{csrf_token()}}">
 
@@ -28,6 +28,8 @@
   <link rel="stylesheet" href="{{asset('adminlte/plugins/datatables-buttons/css/buttons.bootstrap4.min.css')}}">
   <!-- SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <!-- Alert Helper Styles -->
+  <link rel="stylesheet" href="{{asset('css/alert-styles.css')}}">
   <!-- Theme style -->
   <link rel="stylesheet" href="{{asset('adminlte/dist/css/adminlte.min.css')}}">
   <!-- ZafaSys Responsive Styles -->
@@ -114,6 +116,9 @@
       transition: all 0.25s ease !important;
       font-weight: 500 !important;
       font-size: 0.95rem !important;
+      cursor: pointer !important;
+      position: relative !important;
+      z-index: 1 !important;
     }
 
     .nav-sidebar .nav-item > .nav-link:hover {
@@ -130,11 +135,36 @@
       box-shadow: 0 2px 8px rgba(255,193,7,0.3) !important;
     }
 
+    /* Parent menu with dropdown indicator */
+    .nav-sidebar .has-treeview > .nav-link {
+      position: relative !important;
+    }
+
+    .nav-sidebar .has-treeview > .nav-link .right {
+      position: absolute !important;
+      right: 16px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      transition: transform 0.3s ease !important;
+      font-size: 0.9rem !important;
+    }
+
+    /* Rotate arrow when menu is open */
+    .nav-sidebar .has-treeview.menu-open > .nav-link .right {
+      transform: translateY(-50%) rotate(-90deg) !important;
+    }
+
     /* Sidebar Sub-menu - Better Spacing & Layout */
     .nav-treeview {
       padding-left: 0 !important;
       margin-top: 4px !important;
       margin-bottom: 4px !important;
+      display: none; /* Hidden by default */
+    }
+
+    /* Show submenu when parent is open */
+    .nav-item.menu-open > .nav-treeview {
+      display: block !important;
     }
 
     .nav-treeview > .nav-item > .nav-link {
@@ -150,6 +180,9 @@
       word-wrap: break-word !important;
       display: flex !important;
       align-items: center !important;
+      cursor: pointer !important;
+      position: relative !important;
+      z-index: 1 !important;
     }
 
     .nav-treeview > .nav-item > .nav-link:hover {
@@ -188,35 +221,39 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
     }
 
-    /* ========================================
-       FIXED: Pushmenu Button (Hamburger) 
+     /* ========================================
+       FIXED: Pushmenu Button
        dengan Z-Index dan Positioning Tinggi
        ======================================== */
     .navbar-nav .nav-link[data-widget="pushmenu"] {
       color: var(--zafa-dark) !important;
-      background-color: var(--zafa-yellow) !important;
+      background: transparent !important;
       font-size: 1.4rem !important;
-      padding: 12px 18px !important;
-      border-radius: 10px !important;
-      transition: all 0.3s ease !important;
-      border: 3px solid var(--zafa-orange) !important;
-      box-shadow: 0 2px 8px rgba(255,193,7,0.4) !important;
+      padding: 4px 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      transition: color 0.2s ease, transform 0.2s ease !important;
+      box-shadow: none !important;
+      appearance: none !important;
+      -webkit-appearance: none !important;
       margin-right: 10px !important;
-      /* CRITICAL FIX: Z-index tinggi agar selalu di depan */
       position: relative !important;
+      left: 8px !important;
       z-index: 9999 !important;
       cursor: pointer !important;
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
+      width: 38px !important;
+      height: 38px !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     .navbar-nav .nav-link[data-widget="pushmenu"]:hover {
-      color: white !important;
-      background-color: var(--zafa-orange) !important;
-      transform: scale(1.1) rotate(90deg) !important;
-      border-color: var(--zafa-dark) !important;
-      box-shadow: 0 4px 12px rgba(255,152,0,0.5) !important;
+      color: var(--zafa-orange) !important;
+      background: transparent !important;
+      transform: scale(1.05) !important;
     }
 
     .navbar-nav .nav-link[data-widget="pushmenu"]:active {
@@ -224,10 +261,22 @@
     }
 
     .navbar-nav .nav-link[data-widget="pushmenu"] i {
-      font-size: 1.3rem !important;
+      font-size: 1.15rem !important;
       font-weight: 900 !important;
       display: block !important;
-      pointer-events: none !important; /* Icon tidak mengganggu click event */
+      pointer-events: none !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      color: var(--zafa-dark) !important;
+    }
+
+    /* CRITICAL: Ensure icon is always visible in all states */
+    body.sidebar-mini.sidebar-collapse .navbar-nav .nav-link[data-widget="pushmenu"] i,
+    body.sidebar-mini .navbar-nav .nav-link[data-widget="pushmenu"] i,
+    body .navbar-nav .nav-link[data-widget="pushmenu"] i {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     /* FIX: Ensure navbar items tidak overlap dengan pushmenu button */
@@ -251,6 +300,8 @@
       transition: all 0.25s ease !important;
       padding: 8px 12px !important;
       border-radius: 8px !important;
+      position: relative !important;
+      z-index: 1 !important;
     }
 
     .navbar-nav .nav-link:hover {
@@ -258,14 +309,24 @@
       background-color: rgba(255, 152, 0, 0.1) !important;
     }
 
-    /* Fullscreen Button */
+    /* Fullscreen Button - Always Visible */
     .navbar-nav .nav-link[data-widget="fullscreen"] {
       color: var(--zafa-dark) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
     }
 
     .navbar-nav .nav-link[data-widget="fullscreen"]:hover {
       color: var(--zafa-orange) !important;
       background-color: rgba(255, 152, 0, 0.1) !important;
+    }
+
+    .navbar-nav .nav-link[data-widget="fullscreen"] i {
+      display: block !important;
     }
 
     /* User Dropdown */
@@ -414,6 +475,14 @@
 
     .nav-sidebar .nav-link .nav-icon {
       transition: all 0.25s ease !important;
+      margin-right: 10px !important;
+    }
+
+    /* Ensure dropdown menus are clickable */
+    .nav-sidebar .has-treeview > .nav-link,
+    .nav-treeview .nav-link {
+      pointer-events: auto !important;
+      user-select: none !important;
     }
 
     /* Content Wrapper */
@@ -490,13 +559,49 @@
     }
 
     .nav-sidebar .nav-item.menu-open > .nav-link .right {
-      transform: rotate(-90deg) !important;
+      transform: translateY(-50%) rotate(-90deg) !important;
     }
 
     /* Mobile Responsive */
     @media (max-width: 767.98px) {
       .main-sidebar {
         width: 250px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        z-index: 1050 !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s ease-in-out !important;
+      }
+
+      /* Show sidebar when not collapsed */
+      body:not(.sidebar-collapse) .main-sidebar,
+      body.sidebar-open .main-sidebar {
+        transform: translateX(0) !important;
+      }
+
+      /* Content wrapper full width on mobile */
+      .content-wrapper,
+      .main-footer {
+        margin-left: 0 !important;
+      }
+
+      /* Sidebar overlay */
+      .sidebar-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background: rgba(0, 0, 0, 0.5) !important;
+        z-index: 1040 !important;
+        display: block !important;
+      }
+
+      /* Hide overlay when sidebar collapsed */
+      body.sidebar-collapse .sidebar-overlay {
+        display: none !important;
       }
       
       .nav-treeview > .nav-item > .nav-link {
@@ -508,43 +613,144 @@
       .navbar-nav .nav-link[data-widget="pushmenu"] {
         z-index: 10000 !important;
       }
+
+      /* CRITICAL: Ensure dropdown menus work on mobile */
+      .nav-sidebar .has-treeview > .nav-link {
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+      }
+
+      .nav-treeview {
+        pointer-events: auto !important;
+      }
+
+      .nav-treeview > .nav-item > .nav-link {
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+      }
+
+      /* MOBILE: Ensure sidebar completely hidden when collapsed */
+      body.sidebar-collapse .main-sidebar,
+      body.sidebar-mini.sidebar-collapse .main-sidebar {
+        transform: translateX(-100%) !important;
+        width: 250px !important;
+        visibility: hidden !important;
+      }
+
+      /* MOBILE: Show sidebar when opened */
+      body:not(.sidebar-collapse) .main-sidebar,
+      body.sidebar-open .main-sidebar {
+        transform: translateX(0) !important;
+        visibility: visible !important;
+      }
+
+      /* MOBILE: Hide any floating submenu */
+      .nav-treeview {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        box-shadow: none !important;
+        background: transparent !important;
+      }
     }
 
-    /* Sidebar Collapsed State - ENHANCED FIX */
-    .sidebar-mini.sidebar-collapse .main-sidebar {
-      width: 4.6rem !important;
-    }
+    /* Sidebar Collapsed State - DESKTOP ONLY */
+    @media (min-width: 768px) {
+      .sidebar-mini.sidebar-collapse .main-sidebar {
+        width: 4.6rem !important;
+      }
 
-    .sidebar-mini.sidebar-collapse .nav-sidebar .nav-link p,
-    .sidebar-mini.sidebar-collapse .brand-text {
-      display: none !important;
-    }
+      .sidebar-mini.sidebar-collapse .nav-sidebar > .nav-item > .nav-link p,
+      .sidebar-mini.sidebar-collapse .brand-text {
+        display: none !important;
+      }
 
-    .sidebar-mini.sidebar-collapse .nav-sidebar .nav-link {
-      width: calc(4.6rem - 0.5rem) !important;
-      text-align: center !important;
-      padding: 0.8rem 0 !important;
-      margin: 0.25rem auto !important;
-    }
+      .sidebar-mini.sidebar-collapse .nav-sidebar > .nav-item > .nav-link {
+        width: calc(4.6rem - 0.5rem) !important;
+        text-align: center !important;
+        padding: 0.8rem 0 !important;
+        margin: 0.25rem auto !important;
+      }
 
-    .sidebar-mini.sidebar-collapse .nav-sidebar .nav-link .nav-icon {
-      margin-right: 0 !important;
-      font-size: 1.2rem !important;
-    }
+      .sidebar-mini.sidebar-collapse .nav-sidebar > .nav-item > .nav-link .nav-icon {
+        margin-right: 0 !important;
+        font-size: 1.2rem !important;
+      }
 
-    .sidebar-mini.sidebar-collapse .nav-treeview {
-      display: none !important;
-    }
+      /* Hide submenu in collapsed state by default */
+      .sidebar-mini.sidebar-collapse .nav-treeview {
+        display: none !important;
+      }
 
-    .sidebar-mini.sidebar-collapse .brand-link {
-      justify-content: center !important;
-      padding: 0.8rem 0 !important;
-    }
+      /* FLOATING SUBMENU ON HOVER - Show with proper styling */
+      .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-treeview {
+        display: block !important;
+        position: fixed !important;
+        left: 4.6rem !important;
+        background: #ffffff !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+        border-radius: 8px !important;
+        padding: 8px 0 !important;
+        min-width: 220px !important;
+        z-index: 1060 !important;
+        border: 1px solid #e0e0e0 !important;
+      }
 
-    .sidebar-mini.sidebar-collapse .brand-image {
-      margin-right: 0 !important;
-      width: 50px !important;
-      height: 50px !important;
+      /* CRITICAL: Show text labels in floating submenu */
+      .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-treeview .nav-link p {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-left: 0 !important;
+        white-space: nowrap !important;
+      }
+
+      /* Submenu item styling in floating mode */
+      .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-treeview .nav-link {
+        display: flex !important;
+        align-items: center !important;
+        width: auto !important;
+        padding: 10px 20px !important;
+        margin: 2px 8px !important;
+        text-align: left !important;
+        color: #333 !important;
+        border-radius: 4px !important;
+      }
+
+      .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-treeview .nav-link:hover {
+        background-color: #f5f5f5 !important;
+        color: var(--zafa-turquoise, #17a2b8) !important;
+      }
+
+      .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-treeview .nav-icon {
+        margin-right: 10px !important;
+        font-size: 0.6rem !important;
+        color: var(--zafa-turquoise, #17a2b8) !important;
+      }
+
+      /* Keep submenu visible when hovering over it */
+      .sidebar-mini.sidebar-collapse .nav-treeview:hover {
+        display: block !important;
+      }
+
+      /* Hide arrow in collapsed state */
+      .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview > .nav-link .right {
+        display: none !important;
+      }
+
+      .sidebar-mini.sidebar-collapse .brand-link {
+        justify-content: center !important;
+        padding: 0.8rem 0 !important;
+      }
+
+      .sidebar-mini.sidebar-collapse .brand-image {
+        margin-right: 0 !important;
+        width: 50px !important;
+        height: 50px !important;
+      }
     }
 
     /* CRITICAL FIX: Ensure pushmenu always clickable in all states */
@@ -554,6 +760,25 @@
       visibility: visible !important;
       display: inline-flex !important;
       z-index: 99999 !important;
+      opacity: 1 !important;
+    }
+
+    /* CRITICAL: Icon inside pushmenu must always be visible */
+    body.sidebar-mini.sidebar-collapse .navbar-nav .nav-link[data-widget="pushmenu"] i,
+    body.sidebar-mini .navbar-nav .nav-link[data-widget="pushmenu"] i,
+    body .navbar-nav .nav-link[data-widget="pushmenu"] i,
+    .navbar-nav .nav-link[data-widget="pushmenu"] i.pushmenu-icon {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      font-size: 1.3rem !important;
+      color: var(--zafa-dark) !important;
+    }
+
+    /* Prevent any CSS from hiding the icon */
+    .navbar-nav .nav-link[data-widget="pushmenu"] * {
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     /* Prevent any overlay from blocking pushmenu */
@@ -561,11 +786,32 @@
       z-index: 10000 !important;
       position: relative !important;
     }
+
+    /* Ensure all menu items are clickable */
+    .nav-sidebar .nav-item,
+    .nav-sidebar .nav-link {
+      pointer-events: auto !important;
+    }
   </style>
 
   @stack('css')
+  @stack('styles')
 </head>
 <body class="hold-transition sidebar-mini">
+<!-- Flash Messages Meta Tags for AlertHelper -->
+@if(session('alert_success'))
+    <meta name="flash-success" content="{{ session('alert_success') }}">
+@endif
+@if(session('alert_error'))
+    <meta name="flash-error" content="{{ session('alert_error') }}">
+@endif
+@if(session('alert_warning'))
+    <meta name="flash-warning" content="{{ session('alert_warning') }}">
+@endif
+@if(session('alert_info'))
+    <meta name="flash-info" content="{{ session('alert_info') }}">
+@endif
+
 <!-- Site wrapper -->
 <div class="wrapper">
   <!-- Navbar -->
@@ -576,7 +822,7 @@
   <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
     <a href="{{url('/')}}" class="brand-link">
-      <img src="{{asset('adminlte/dist/img/zafalogo.png')}}" alt="Zafa Logo" class="brand-image img-circle elevation-3" style="opacity: .9">
+      <img src="{{asset('adminlte/dist/img/Zlogo.png')}}" alt="Zafa Logo" class="brand-image img-circle elevation-3" style="opacity: .9">
       <span class="brand-text font-weight-light">ZafaSys</span>
     </a>
 
@@ -621,6 +867,8 @@
 <script src="{{asset('adminlte/plugins/datatables-buttons/js/buttons.colvis.min.js')}}"></script>
 <!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Alert Helper JS -->
+<script src="{{asset('js/alert-helper.js')}}"></script>
 <!-- Chart JS -->
 <script src="{{asset('adminlte/plugins/chart.js/Chart.min.js')}}"></script>
 <!-- AdminLTE App -->
@@ -637,61 +885,288 @@
 </script>
 
 <script>
-  // CRITICAL FIX: Force pushmenu to work properly
+    // MOBILE RESPONSIVE FIX
   $(document).ready(function() {
-    // Ensure pushmenu button is always clickable
-    $('[data-widget="pushmenu"]').css({
-      'pointer-events': 'auto',
-      'z-index': '99999',
-      'position': 'relative'
-    });
-
-    // Add extra click handler to ensure it works
-    $('[data-widget="pushmenu"]').on('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
+    // CRITICAL FIX: Force pushmenu icon to be visible
+    function ensurePushmenuVisible() {
+      var $pushmenu = $('[data-widget="pushmenu"]');
+      var $icon = $pushmenu.find('i.pushmenu-icon');
       
-      // Toggle sidebar manually if AdminLTE doesn't work
-      if ($('body').hasClass('sidebar-collapse')) {
-        $('body').removeClass('sidebar-collapse');
-      } else {
-        $('body').addClass('sidebar-collapse');
+      $pushmenu.css({
+        'pointer-events': 'auto',
+        'z-index': '99999',
+        'position': 'relative',
+        'display': 'inline-flex',
+        'visibility': 'visible',
+        'opacity': '1'
+      });
+      
+      if ($icon.length === 0) {
+        $pushmenu.html('<i class="fas fa-chevron-left pushmenu-icon" style="display: block !important; visibility: visible !important; opacity: 1 !important; font-size: 1.3rem !important;"></i>');
+        $icon = $pushmenu.find('i.pushmenu-icon');
       }
-    });
+
+      $icon.css({
+        'display': 'block',
+        'visibility': 'visible',
+        'opacity': '1',
+        'font-size': '1.3rem'
+      });
+      
+      syncPushmenuIcon();
+    }
+
+    function syncPushmenuIcon() {
+      var $pushmenu = $('[data-widget="pushmenu"]');
+      var $icon = $pushmenu.find('i.pushmenu-icon');
+
+      if ($icon.length === 0) {
+        return;
+      }
+
+      var isCollapsed = $('body').hasClass('sidebar-collapse');
+      $icon.removeClass('fa-chevron-left fa-chevron-right')
+           .addClass(isCollapsed ? 'fa-chevron-right' : 'fa-chevron-left');
+    }
+    
+    // Run immediately
+    ensurePushmenuVisible();
+    
+    // Run after a short delay to override any conflicting CSS
+    setTimeout(ensurePushmenuVisible, 100);
+    setTimeout(ensurePushmenuVisible, 500);
+
+    // Mobile detection
+    function isMobile() {
+      return window.innerWidth < 768;
+    }
+
+    // Check if sidebar is collapsed
+    function isSidebarCollapsed() {
+      return $('body').hasClass('sidebar-collapse');
+    }
 
     // RESPONSIVE: Auto-collapse sidebar on mobile
     function handleResponsive() {
-      if (window.innerWidth < 768) {
-        $('body').addClass('sidebar-collapse');
-        $('body').addClass('sidebar-closed');
+      if (isMobile()) {
+        // On mobile, start with collapsed sidebar
+        if (!$('body').hasClass('sidebar-collapse')) {
+          $('body').addClass('sidebar-collapse sidebar-closed sidebar-mini');
+        }
+      } else {
+        // On desktop, remove mobile-specific classes
+        $('body').removeClass('sidebar-closed');
       }
+
+      syncPushmenuIcon();
     }
     
     // Run on load
     handleResponsive();
     
-    // Run on resize
+    // Run on resize with debounce
+    let resizeTimer;
     $(window).on('resize', function() {
-      handleResponsive();
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(handleResponsive, 250);
     });
 
-    // Close sidebar when clicking outside on mobile
-    $(document).on('click', function(e) {
-      if (window.innerWidth < 768) {
-        if (!$(e.target).closest('.main-sidebar').length && 
-            !$(e.target).closest('[data-widget="pushmenu"]').length) {
-          if (!$('body').hasClass('sidebar-collapse')) {
-            $('body').addClass('sidebar-collapse');
+    // Enhanced pushmenu click handler for mobile
+    $('[data-widget="pushmenu"]').on('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (isMobile()) {
+        // Mobile behavior: toggle with overlay
+        if ($('body').hasClass('sidebar-collapse')) {
+          $('body').removeClass('sidebar-collapse');
+          $('body').addClass('sidebar-open');
+          // Add overlay
+          if (!$('.sidebar-overlay').length) {
+            $('<div class="sidebar-overlay"></div>').appendTo('body');
           }
+        } else {
+          $('body').addClass('sidebar-collapse');
+          $('body').removeClass('sidebar-open');
+          $('.sidebar-overlay').remove();
+        }
+      } else {
+        // Desktop behavior: normal toggle
+        $('body').toggleClass('sidebar-collapse');
+        
+        // CRITICAL FIX: Close all dropdowns when collapsing sidebar
+        if ($('body').hasClass('sidebar-collapse')) {
+          $('.nav-sidebar .has-treeview.menu-open').removeClass('menu-open');
+          $('.nav-treeview').slideUp(200);
+        }
+      }
+
+      syncPushmenuIcon();
+    });
+
+    // Close sidebar when clicking overlay on mobile
+    $(document).on('click', '.sidebar-overlay', function() {
+      $('body').addClass('sidebar-collapse');
+      $('body').removeClass('sidebar-open');
+      $(this).remove();
+    });
+
+    // Close sidebar when clicking outside on mobile (but not on menu items)
+    $(document).on('click', function(e) {
+      if (isMobile() && !$('body').hasClass('sidebar-collapse')) {
+        if (!$(e.target).closest('.main-sidebar').length &&
+            !$(e.target).closest('[data-widget="pushmenu"]').length) {
+          $('body').addClass('sidebar-collapse');
+          $('body').removeClass('sidebar-open');
+          $('.sidebar-overlay').remove();
         }
       }
     });
+
+    // CRITICAL FIX: Handle dropdown menu clicks in sidebar
+    // Prevent sidebar from closing when clicking dropdown menu
+    $('.main-sidebar').on('click', function(e) {
+      e.stopPropagation();
+    });
+
+    // CRITICAL FIX: Initialize AdminLTE Treeview for dropdown menus
+    // This ensures dropdown menus work properly
+    if ($.fn.Treeview) {
+      $('[data-widget="treeview"]').Treeview('init');
+    }
+
+    // ENHANCED: Manual treeview toggle for better control
+    $('.nav-sidebar .has-treeview > a').on('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      var $parent = $(this).parent();
+      var $treeview = $parent.find('> .nav-treeview');
+      
+      // CRITICAL FIX: Don't allow dropdown in collapsed mode on desktop
+      if (!isMobile() && isSidebarCollapsed()) {
+        // Expand sidebar first, then open menu
+        $('body').removeClass('sidebar-collapse');
+        
+        // Wait for sidebar animation, then open menu
+        setTimeout(function() {
+          if (!$parent.hasClass('menu-open')) {
+            // Close other open menus
+            $('.nav-sidebar .has-treeview.menu-open').not($parent).each(function() {
+              $(this).removeClass('menu-open');
+              $(this).find('> .nav-treeview').slideUp(300);
+            });
+            
+            // Open clicked menu
+            $parent.addClass('menu-open');
+            $treeview.slideDown(300);
+          }
+        }, 300);
+        return;
+      }
+      
+      // Toggle menu-open class
+      if ($parent.hasClass('menu-open')) {
+        $parent.removeClass('menu-open');
+        $treeview.slideUp(300);
+      } else {
+        // Close other open menus (accordion behavior)
+        $('.nav-sidebar .has-treeview.menu-open').not($parent).each(function() {
+          $(this).removeClass('menu-open');
+          $(this).find('> .nav-treeview').slideUp(300);
+        });
+        
+        // Open clicked menu
+        $parent.addClass('menu-open');
+        $treeview.slideDown(300);
+      }
+    });
+
+    // Prevent submenu links from toggling parent menu
+    $('.nav-treeview .nav-link').on('click', function(e) {
+      e.stopPropagation();
+      // Allow normal navigation
+    });
+
+    // CRITICAL FIX: Hover behavior for collapsed sidebar on desktop
+    if (!isMobile()) {
+      console.log('Setting up hover behavior for collapsed sidebar');
+      
+      // Remove any existing hover handlers first
+      $('.sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview').off('mouseenter mouseleave');
+      
+      // Add new hover handlers with event delegation
+      $(document).on('mouseenter', '.sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview', function() {
+        if (!$('body').hasClass('sidebar-collapse')) return;
+        
+        console.log('Hovering over menu item in collapsed mode');
+        
+        var $this = $(this);
+        var $submenu = $this.find('> .nav-treeview');
+        var offset = $this.offset();
+        
+        console.log('Submenu found:', $submenu.length);
+        console.log('Offset:', offset);
+        
+        // Show submenu as floating menu
+        $submenu.css({
+          'position': 'fixed',
+          'left': '4.6rem',
+          'top': offset.top + 'px',
+          'background': 'white',
+          'box-shadow': '0 4px 20px rgba(0,0,0,0.2)',
+          'border-radius': '8px',
+          'padding': '8px 0',
+          'min-width': '220px',
+          'z-index': '1060',
+          'display': 'block',
+          'border': '1px solid #e0e0e0'
+        });
+        
+        console.log('Submenu displayed');
+        
+        // Adjust submenu links styling for floating mode
+        $submenu.find('.nav-link').css({
+          'padding': '10px 20px',
+          'margin': '2px 8px',
+          'white-space': 'nowrap'
+        });
+      });
+      
+      $(document).on('mouseleave', '.sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview', function() {
+        if (!$('body').hasClass('sidebar-collapse')) return;
+        
+        console.log('Mouse leaving menu item');
+        
+        var $submenu = $(this).find('> .nav-treeview');
+        
+        // Delay hiding to allow moving mouse to submenu
+        setTimeout(function() {
+          if (!$submenu.is(':hover')) {
+            console.log('Hiding submenu');
+            $submenu.css('display', 'none');
+          }
+        }, 100);
+      });
+      
+      // Keep submenu visible when hovering over it
+      $(document).on('mouseenter', '.sidebar-mini.sidebar-collapse .nav-treeview', function() {
+        console.log('Hovering over submenu');
+        $(this).css('display', 'block');
+      });
+      
+      $(document).on('mouseleave', '.sidebar-mini.sidebar-collapse .nav-treeview', function() {
+        console.log('Mouse leaving submenu');
+        $(this).css('display', 'none');
+      });
+    }
 
     // Make DataTables responsive by default
     if ($.fn.DataTable) {
       $.extend(true, $.fn.dataTable.defaults, {
         responsive: true,
         autoWidth: false,
+        scrollX: true,
         language: {
           search: "Cari:",
           lengthMenu: "Tampilkan _MENU_ data",
@@ -708,10 +1183,16 @@
         }
       });
     }
+
+    // Fix touch events on mobile
+    if ('ontouchstart' in window) {
+      $('body').addClass('touch-device');
+    }
   });
 </script>
 
 @stack('js')
+@stack('scripts')
 <script>
   if (window.history.replaceState) {
       window.history.replaceState(null, null, window.location.href);

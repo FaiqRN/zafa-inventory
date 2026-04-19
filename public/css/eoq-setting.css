@@ -1,0 +1,322 @@
+/**
+ * ZafaSys - EOQ Setting Styles
+ * Custom styling for EOQ parameter configuration
+ */
+
+/* Card styling */
+.card-primary.card-outline {
+    border-top: 3px solid #007bff;
+}
+
+.card-warning.card-outline {
+    border-top: 3px solid #ffc107;
+}
+
+.card-success.card-outline {
+    border-top: 3px solid #28a745;
+}
+
+/* Table styling */
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Button group styling */
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Modal styling */
+.modal-header.bg-primary,
+.modal-header.bg-warning,
+.modal-header.bg-success {
+    color: white;
+}
+
+.modal-header .close {
+    color: white;
+    opacity: 0.8;
+}
+
+.modal-header .close:hover {
+    opacity: 1;
+}
+
+/* Form styling */
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Alert styling */
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+
+/* Total row styling */
+tfoot tr {
+    font-weight: 600;
+}
+
+tfoot th {
+    border-top: 2px solid #dee2e6;
+}
+
+/* Empty state styling */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #dee2e6;
+}
+
+.empty-state-text {
+    font-size: 1rem;
+    margin: 0;
+    color: #6c757d;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* Badge styling for override */
+.text-warning {
+    color: #ffc107 !important;
+}
+
+/* Search wrapper styling */
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-label {
+    font-weight: 500;
+    margin-bottom: 0;
+    white-space: nowrap;
+    min-width: 40px;
+}
+
+.search-wrapper .form-control {
+    flex: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .card-header h3.card-title {
+        font-size: 0.95rem;
+    }
+    
+    .card-tools .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .table {
+        font-size: 0.85rem;
+    }
+    
+    .btn-group-sm > .btn {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.75rem;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+    
+    .empty-state-icon {
+        font-size: 2rem;
+    }
+    
+    .empty-state-text {
+        font-size: 0.9rem;
+    }
+}
+
+/* Select2 styling */
+.select2-container--bootstrap4 .select2-selection {
+    border-color: #ced4da;
+}
+
+.select2-container--bootstrap4.select2-container--focus .select2-selection {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Loading state */
+.fa-spinner {
+    animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Icon colors */
+.text-primary {
+    color: #007bff !important;
+}
+
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+/* Card tools button styling */
+.card-tools .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.card-tools .btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+/* Table action buttons */
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    color: white;
+}
+
+/* Override button styling */
+.btn-xs {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #212529;
+}
+
+/* Section visibility */
+#toko-biaya-section,
+#barang-biaya-section {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Required field indicator */
+.text-danger {
+    color: #dc3545 !important;
+}
+
+/* Help text */
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+/* Table responsive wrapper */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Sticky table header on mobile */
+@media (max-width: 767.98px) {
+    .table-wrapper {
+        margin: 0 -0.5rem;
+    }
+    
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+    }
+}
+
+/* Print styles */
+@media print {
+    .card-tools,
+    .btn,
+    .breadcrumb,
+    .alert,
+    .search-wrapper {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+    }
+    
+    .empty-state {
+        display: none !important;
+    }
+}

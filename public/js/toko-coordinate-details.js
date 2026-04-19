@@ -1,27 +1,12 @@
-/**
- * Coordinate Details Modal Functions
- * Task 14: Add coordinate details modal untuk validation
- * Requirements: 7.2, 7.3, 7.4
- */
-
-/**
- * Show coordinate details modal for a toko
- * 
- * @param {string} tokoId - The toko ID to show details for
- */
 function showCoordinateDetailsModal(tokoId) {
     console.log('📍 [COORDINATE DETAILS] Loading details for toko:', tokoId);
 
-    // Show modal
     $('#coordinateDetailsModal').modal('show');
-
-    // Show loading state
     $('#coordinateDetailsLoading').show();
     $('#coordinateDetailsContent').hide();
     $('#coordinateDetailsError').hide();
     $('#btnFixCoordinates').hide();
 
-    // Fetch coordinate details from API
     $.ajax({
         url: `/toko/${tokoId}/coordinate-details`,
         type: 'GET',
@@ -45,11 +30,6 @@ function showCoordinateDetailsModal(tokoId) {
     });
 }
 
-/**
- * Display coordinate details in the modal
- * 
- * @param {object} data - Coordinate details data from API
- */
 function displayCoordinateDetails(data) {
     console.log('📊 [COORDINATE DETAILS] Displaying data:', data);
 
@@ -58,12 +38,10 @@ function displayCoordinateDetails(data) {
     $('#coordinateDetailsContent').show();
     $('#coordinateDetailsError').hide();
 
-    // Populate toko info
     $('#detail-nama-toko').text(data.toko_info.nama_toko);
     $('#detail-pemilik').text(data.toko_info.pemilik || '-');
     $('#detail-alamat').text(data.toko_info.alamat);
 
-    // Populate coordinates
     if (data.coordinates.has_coordinates) {
         const lat = parseFloat(data.coordinates.latitude).toFixed(6);
         const lng = parseFloat(data.coordinates.longitude).toFixed(6);
@@ -71,7 +49,6 @@ function displayCoordinateDetails(data) {
         $('#detail-latitude').text(lat);
         $('#detail-longitude').text(lng);
 
-        // Google Maps link
         const googleMapsUrl = data.validation.google_maps_url ||
             `https://www.google.com/maps?q=${lat},${lng}`;
         $('#detail-google-maps-link').attr('href', googleMapsUrl);
@@ -81,39 +58,29 @@ function displayCoordinateDetails(data) {
         $('#detail-google-maps-link').hide();
     }
 
-    // Populate geocoding quality info
     const provider = data.geocoding_info.provider || 'unknown';
     const accuracy = data.geocoding_info.accuracy || 'unknown';
     const qualityScore = data.geocoding_info.quality_score || 0;
     const confidence = data.geocoding_info.confidence || 0;
 
-    // Provider badge
     let providerBadgeClass = 'badge-secondary';
     let providerText = provider;
 
     if (provider === 'interactive_map') {
         providerBadgeClass = 'badge-success';
         providerText = 'Peta Interaktif (Manual)';
-    } else if (provider === 'google_maps') {
-        providerBadgeClass = 'badge-primary';
-        providerText = 'Google Maps API';
-    } else if (provider === 'locationiq') {
-        providerBadgeClass = 'badge-info';
-        providerText = 'LocationIQ API';
     } else if (provider === 'nominatim') {
-        providerBadgeClass = 'badge-warning';
-        providerText = 'Nominatim OSM';
-    } else if (provider === 'internal_street_database') {
-        providerBadgeClass = 'badge-success';
-        providerText = 'Database Jalan (Street Level)';
-    } else if (provider === 'internal_database') {
+        providerBadgeClass = 'badge-primary';
+        providerText = 'Nominatim API';
+    } else if (provider === 'overpass') {
         providerBadgeClass = 'badge-info';
-        providerText = 'Database Kelurahan (Area Level)';
+        providerText = 'Overpass API';
+    } else {
+        providerText = provider.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
     $('#detail-provider').removeClass().addClass(`badge ${providerBadgeClass}`).text(providerText);
 
-    // Accuracy badge
     let accuracyBadgeClass = 'badge-secondary';
     let accuracyText = accuracy;
 
@@ -133,7 +100,6 @@ function displayCoordinateDetails(data) {
 
     $('#detail-accuracy').removeClass().addClass(`badge ${accuracyBadgeClass}`).text(accuracyText);
 
-    // Quality score badge
     let qualityBadgeClass = 'badge-secondary';
     let qualityText = `${qualityScore}/100`;
 
@@ -153,7 +119,6 @@ function displayCoordinateDetails(data) {
 
     $('#detail-quality-score').removeClass().addClass(`badge badge-lg ${qualityBadgeClass}`).text(qualityText);
 
-    // Confidence badge
     const confidencePercent = (confidence * 100).toFixed(1);
     let confidenceBadgeClass = 'badge-secondary';
 
@@ -169,12 +134,10 @@ function displayCoordinateDetails(data) {
 
     $('#detail-confidence').removeClass().addClass(`badge ${confidenceBadgeClass}`).text(`${confidencePercent}%`);
 
-    // Location validation
     if (data.validation) {
         const inMalangRegion = data.validation.in_malang_region;
         const distance = data.validation.distance_from_malang_center;
 
-        // Region status
         if (inMalangRegion) {
             $('#detail-region-status').html('<span class="badge badge-success"><i class="fas fa-check-circle"></i> Dalam Wilayah Malang</span>');
             $('#detail-out-of-region-warning').hide();
@@ -183,7 +146,6 @@ function displayCoordinateDetails(data) {
             $('#detail-out-of-region-warning').show();
         }
 
-        // Distance from Malang center
         if (distance !== undefined && distance !== null) {
             $('#detail-distance').text(`${distance.toFixed(2)} km`);
         } else {
@@ -191,7 +153,6 @@ function displayCoordinateDetails(data) {
         }
     }
 
-    // Tolerance check display (if available)
     if (data.tolerance_check) {
         const toleranceHtml = data.tolerance_check.within_tolerance
             ? `<span class="badge badge-success">
@@ -203,7 +164,6 @@ function displayCoordinateDetails(data) {
                  Melebihi Toleransi (${data.tolerance_check.distance_meters}m, maks: ${data.tolerance_check.max_tolerance_meters}m)
                </span>`;
 
-        // Find or create tolerance status element
         let $toleranceElement = $('#detail-tolerance-status');
         if ($toleranceElement.length === 0) {
             $('#detail-confidence').parent().after(`
@@ -219,7 +179,6 @@ function displayCoordinateDetails(data) {
         $toleranceElement.html(toleranceHtml).show();
     }
 
-    // Show warnings for low quality coordinates
     if (qualityScore < 70) {
         $('#detail-low-quality-warning').show();
         $('#btnFixCoordinates').show().data('toko-id', data.toko_info.toko_id);
@@ -231,11 +190,6 @@ function displayCoordinateDetails(data) {
     console.log('✅ [COORDINATE DETAILS] Details displayed successfully');
 }
 
-/**
- * Show error message in coordinate details modal
- * 
- * @param {string} message - Error message to display
- */
 function showCoordinateDetailsError(message) {
     $('#coordinateDetailsLoading').hide();
     $('#coordinateDetailsContent').hide();
@@ -244,24 +198,17 @@ function showCoordinateDetailsError(message) {
     $('#btnFixCoordinates').hide();
 }
 
-/**
- * Handle "Perbaiki Koordinat" button click
- * Opens the edit modal for the toko to fix coordinates
- */
+
 $(document).on('click', '#btnFixCoordinates', function () {
     const tokoId = $(this).data('toko-id');
 
     console.log('🔧 [COORDINATE DETAILS] Fix coordinates requested for toko:', tokoId);
 
-    // Close coordinate details modal
     $('#coordinateDetailsModal').modal('hide');
 
-    // Open edit modal
-    // Trigger the edit button click for this toko
     $(`.btn-edit[data-id="${tokoId}"]`).trigger('click');
 });
 
-// Export functions for use in toko.js
 if (typeof window !== 'undefined') {
     window.showCoordinateDetailsModal = showCoordinateDetailsModal;
     window.displayCoordinateDetails = displayCoordinateDetails;

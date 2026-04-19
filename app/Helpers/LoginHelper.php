@@ -7,14 +7,7 @@ use App\Models\User;
 
 class LoginHelper
 {
-    /**
-     * Log user login activity
-     *
-     * @param int $userId
-     * @param string $message
-     * @param array $metadata
-     * @return void
-     */
+
     public static function logLogin(int $userId, string $message, array $metadata = []): void
     {
         try {
@@ -43,14 +36,6 @@ class LoginHelper
         }
     }
 
-    /**
-     * Log user logout activity
-     *
-     * @param int $userId
-     * @param string $message
-     * @param array $metadata
-     * @return void
-     */
     public static function logLogout(int $userId, string $message, array $metadata = []): void
     {
         try {

@@ -286,7 +286,6 @@ class TokoSeeder extends Seeder
         ];
 
         foreach ($toko as &$item) {
-            $item['jalan_id'] = null;
             $item['catatan_lokasi'] = null;
             $item['alamat_lengkap_geocoding'] = null;
             $item['geocoding_provider'] = 'interactive_map';

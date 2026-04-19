@@ -1,0 +1,142 @@
+/**
+ * ZafaSys Alert Styles
+ * Custom styling for SweetAlert2 to match application theme
+ */
+
+/* Toast notifications styling */
+.swal2-popup.colored-toast {
+    font-size: 0.95rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.swal2-popup.colored-toast .swal2-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Success toast */
+.swal2-popup.swal2-toast.swal2-icon-success {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.swal2-popup.swal2-toast.swal2-icon-success .swal2-title {
+    color: #155724;
+}
+
+/* Error toast */
+.swal2-popup.swal2-toast.swal2-icon-error {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.swal2-popup.swal2-toast.swal2-icon-error .swal2-title {
+    color: #721c24;
+}
+
+/* Warning toast */
+.swal2-popup.swal2-toast.swal2-icon-warning {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.swal2-popup.swal2-toast.swal2-icon-warning .swal2-title {
+    color: #856404;
+}
+
+/* Info toast */
+.swal2-popup.swal2-toast.swal2-icon-info {
+    background-color: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+}
+
+.swal2-popup.swal2-toast.swal2-icon-info .swal2-title {
+    color: #0c5460;
+}
+
+/* Center modal styling */
+.swal2-popup:not(.swal2-toast) {
+    border-radius: 12px;
+    padding: 2rem;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.swal2-popup:not(.swal2-toast) .swal2-html-container {
+    font-size: 1rem;
+    color: #666;
+}
+
+/* Button styling */
+.swal2-confirm {
+    border-radius: 6px;
+    padding: 0.5rem 2rem;
+    font-weight: 600;
+}
+
+.swal2-cancel {
+    border-radius: 6px;
+    padding: 0.5rem 2rem;
+    font-weight: 600;
+}
+
+/* Progress bar styling */
+.swal2-popup .progress {
+    height: 25px;
+    border-radius: 6px;
+    background-color: #e9ecef;
+    overflow: hidden;
+}
+
+.swal2-popup .progress-bar {
+    background-color: #28a745;
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: width 0.3s ease;
+}
+
+/* Loading spinner color */
+.swal2-loader {
+    border-color: #28a745 transparent #28a745 transparent;
+}
+
+/* Timer progress bar */
+.swal2-timer-progress-bar {
+    background: rgba(40, 167, 69, 0.8);
+}
+
+/* Icon sizing for toast */
+.swal2-toast .swal2-icon {
+    width: 2em;
+    height: 2em;
+    margin: 0 0.5em 0 0;
+}
+
+/* Animation improvements */
+.swal2-show {
+    animation: swal2-show 0.3s;
+}
+
+.swal2-hide {
+    animation: swal2-hide 0.15s forwards;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .swal2-popup:not(.swal2-toast) {
+        width: 90%;
+        padding: 1.5rem;
+    }
+    
+    .swal2-popup:not(.swal2-toast) .swal2-title {
+        font-size: 1.25rem;
+    }
+}

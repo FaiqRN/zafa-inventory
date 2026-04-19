@@ -48,7 +48,6 @@ class LoginController extends Controller
     {
         $username = $request->input('username');
         $password = $request->input('password');
-        $remember = $request->boolean('remember');
 
         // Check if account is locked
         if (LoginAttempt::isLocked($username)) {
@@ -80,9 +79,22 @@ class LoginController extends Controller
         }
 
         // Attempt authentication
-        if (Auth::attempt($credentials, $remember)) {
+        if (Auth::attempt($credentials, false)) {
             // Get authenticated user
-            $user = Auth::user();
+            $authIdentifier = Auth::id();
+            $user = $authIdentifier !== null
+                ? User::query()->where(User::FIELD_USERNAME, (string) $authIdentifier)->first()
+                : null;
+
+            if (!$user) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()
+                    ->withErrors(['username' => 'Terjadi kesalahan sesi login. Silakan coba lagi.'])
+                    ->onlyInput('username');
+            }
 
             // Clear rate limiter on success
             RateLimiter::clear($rateLimitKey);
@@ -111,7 +123,6 @@ class LoginController extends Controller
                 [
                     'ip' => $request->ip(),
                     'user_agent' => $request->userAgent(),
-                    'remember' => $remember,
                 ]
             );
 
@@ -183,16 +194,14 @@ class LoginController extends Controller
      *
      * @param User $user
      * @param int $expiresInMinutes
-     * @param bool $remember
      * @return string
      */
-    public static function generateLoginToken(User $user, int $expiresInMinutes = 60, bool $remember = false): string
+    public static function generateLoginToken(User $user, int $expiresInMinutes = 60): string
     {
         // Create data array
         $data = [
             'user_id' => $user->user_id,
             'expires_at' => now()->addMinutes($expiresInMinutes)->toDateTimeString(),
-            'remember' => $remember,
         ];
 
         // Encrypt data
@@ -277,8 +286,7 @@ class LoginController extends Controller
             Cache::put($usedTokenKey, true, now()->addDays(7));
 
             // Login user
-            $remember = $data['remember'] ?? false;
-            Auth::login($user, $remember);
+            Auth::login($user, false);
 
             // Regenerate session
             session()->regenerate();
@@ -296,7 +304,6 @@ class LoginController extends Controller
                 [
                     'ip' => $request->ip(),
                     'user_agent' => $request->userAgent(),
-                    'remember' => $remember,
                     'token_login' => true,
                 ]
             );

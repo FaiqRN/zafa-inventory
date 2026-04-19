@@ -7,6 +7,7 @@ use App\Models\Pengiriman;
 use App\Models\Toko;
 use App\Models\Barang;
 use App\Models\BarangToko;
+use App\Services\ReturCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
@@ -14,12 +15,17 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ReturExport;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Gate;
 
 class ReturController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    public function __construct()
+    {
+        $this->middleware('can:view-retur')->only(['index', 'getData', 'show']);
+        $this->middleware('can:create-retur')->only(['store']);
+    }
+
+
     public function index()
     {
         $toko = Toko::orderBy('nama_toko', 'asc')->get();
@@ -34,31 +40,49 @@ class ReturController extends Controller
         ]);
     }
 
-    /**
-     * Get retur data for DataTables - menampilkan semua pengiriman yang terkirim.
-     */
     public function getData(Request $request)
     {
-        // Ambil semua pengiriman dengan status terkirim
+        $returSummary = Retur::query()
+            ->select('nomer_pengiriman')
+            ->selectRaw('MAX(tanggal_retur) as tanggal_retur_terbaru')
+            ->groupBy('nomer_pengiriman');
+
         $query = Pengiriman::with(['toko'])
-            ->select('nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 'status')
-            ->where('status', 'terkirim')
-            ->groupBy('nomer_pengiriman', 'tanggal_pengiriman', 'toko_id', 'status');
+            ->leftJoinSub($returSummary, 'retur_summary', function ($join) {
+                $join->on('pengiriman.nomer_pengiriman', '=', 'retur_summary.nomer_pengiriman');
+            })
+            ->select(
+                'pengiriman.nomer_pengiriman',
+                'pengiriman.tanggal_pengiriman',
+                'pengiriman.toko_id',
+                'pengiriman.status',
+                'retur_summary.tanggal_retur_terbaru'
+            )
+            ->where('pengiriman.status', 'terkirim')
+            ->groupBy(
+                'pengiriman.nomer_pengiriman',
+                'pengiriman.tanggal_pengiriman',
+                'pengiriman.toko_id',
+                'pengiriman.status',
+                'retur_summary.tanggal_retur_terbaru'
+            );
     
-        // Filter by toko_id if provided
         if ($request->has('toko_id') && !empty($request->toko_id)) {
-            $query->where('toko_id', $request->toko_id);
+            $query->where('pengiriman.toko_id', $request->toko_id);
         }
     
-        // Filter by date if provided
         if ($request->has('date') && !empty($request->date)) {
-            $query->whereDate('tanggal_pengiriman', $request->date);
+            $query->whereDate('pengiriman.tanggal_pengiriman', $request->date);
         }
-    
-        $query->orderBy('tanggal_pengiriman', 'desc')
-              ->orderBy('nomer_pengiriman', 'desc');
+
+        $query->orderByRaw('CASE WHEN retur_summary.tanggal_retur_terbaru IS NULL THEN 0 ELSE 1 END ASC')
+              ->orderByDesc('retur_summary.tanggal_retur_terbaru')
+              ->orderByDesc('pengiriman.tanggal_pengiriman')
+              ->orderByDesc('pengiriman.nomer_pengiriman');
         
-        return DataTables::of($query)
+        $pengirimanData = $query->get();
+        
+        return DataTables::of($pengirimanData)
             ->addIndexColumn()
             ->addColumn('toko_nama', function($row) {
                 return $row->toko->nama_toko;
@@ -67,10 +91,8 @@ class ReturController extends Controller
                 return Carbon::parse($row->tanggal_pengiriman)->format('d/m/Y');
             })
             ->addColumn('tanggal_retur', function($row) {
-                // Cek apakah sudah ada data retur
-                $retur = Retur::where('nomer_pengiriman', $row->nomer_pengiriman)->first();
-                if ($retur) {
-                    return Carbon::parse($retur->tanggal_retur)->format('d/m/Y');
+                if (!empty($row->tanggal_retur_terbaru)) {
+                    return Carbon::parse($row->tanggal_retur_terbaru)->format('d/m/Y');
                 }
                 return '<span class="badge badge-warning">Belum Diisi</span>';
             })
@@ -84,13 +106,8 @@ class ReturController extends Controller
     }
 
 
-
-    /**
-     * Store or update retur data for a pengiriman.
-     */
     public function store(Request $request)
     {
-        // Validasi input
         $validator = Validator::make($request->all(), [
             'nomer_pengiriman' => 'required|string',
             'items' => 'required|array|min:1',
@@ -112,7 +129,6 @@ class ReturController extends Controller
         try {
             $nomerPengiriman = $request->nomer_pengiriman;
             
-            // Cek apakah data retur sudah di-lock
             $existingRetur = Retur::where('nomer_pengiriman', $nomerPengiriman)
                 ->where('is_locked', true)
                 ->first();
@@ -124,18 +140,21 @@ class ReturController extends Controller
                 ], 422);
             }
             
-            // Hapus data retur lama untuk nomer pengiriman ini (jika belum locked)
             Retur::where('nomer_pengiriman', $nomerPengiriman)->delete();
             
-            // Simpan data retur baru
+            $pengirimanIds = collect($request->items)->pluck('pengiriman_id')->toArray();
+            $pengirimanList = Pengiriman::with(['barang'])
+                ->whereIn('pengiriman_id', $pengirimanIds)
+                ->get()
+                ->keyBy('pengiriman_id');
+            
             foreach ($request->items as $item) {
-                $pengiriman = Pengiriman::with(['barang'])->find($item['pengiriman_id']);
+                $pengiriman = $pengirimanList->get($item['pengiriman_id']);
                 
                 if (!$pengiriman) {
                     continue;
                 }
                 
-                // Validasi jumlah retur tidak melebihi jumlah kirim
                 if ($item['jumlah_retur'] > $pengiriman->jumlah_kirim) {
                     return response()->json([
                         'status' => 'error',
@@ -143,20 +162,23 @@ class ReturController extends Controller
                     ], 422);
                 }
                 
-                // Ambil harga awal barang
+                if ($item['jumlah_retur'] > 0 && $item['kondisi'] === 'Tidak Ada Retur') {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Jika jumlah retur lebih dari 0, kondisi tidak boleh "Tidak Ada Retur" untuk barang ' . $pengiriman->barang->nama_barang
+                    ], 422);
+                }
+                
                 $hargaAwalBarang = $pengiriman->barang->harga_awal_barang ?? 0;
                 
-                // Hitung total terjual dan hasil
                 $totalTerjual = $pengiriman->jumlah_kirim - $item['jumlah_retur'];
                 $hasil = $totalTerjual * $hargaAwalBarang;
                 
-                // Simpan data retur
                 $retur = new Retur();
                 $retur->pengiriman_id = $pengiriman->pengiriman_id;
                 $retur->toko_id = $pengiriman->toko_id;
                 $retur->barang_id = $pengiriman->barang_id;
                 $retur->nomer_pengiriman = $pengiriman->nomer_pengiriman;
-                $retur->tanggal_pengiriman = $pengiriman->tanggal_pengiriman;
                 $retur->tanggal_retur = $item['tanggal_retur'];
                 $retur->harga_awal_barang = $hargaAwalBarang;
                 $retur->jumlah_kirim = $pengiriman->jumlah_kirim;
@@ -165,9 +187,11 @@ class ReturController extends Controller
                 $retur->hasil = $hasil;
                 $retur->kondisi = $item['kondisi'];
                 $retur->keterangan = $item['keterangan'] ?? null;
-                $retur->is_locked = true; // Set locked setelah disimpan
+                $retur->is_locked = true;
                 $retur->save();
             }
+            
+            ReturCacheService::clearReturCache($nomerPengiriman);
 
             return response()->json([
                 'status' => 'success',
@@ -182,15 +206,8 @@ class ReturController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  string  $nomerPengiriman
-     * @return \Illuminate\Http\Response
-     */
     public function show($nomerPengiriman)
     {
-        // Ambil data pengiriman
         $pengiriman = Pengiriman::with(['toko', 'barang'])
             ->where('nomer_pengiriman', $nomerPengiriman)
             ->get();
@@ -199,95 +216,16 @@ class ReturController extends Controller
             abort(404, 'Data pengiriman tidak ditemukan');
         }
         
-        // Ambil data retur jika sudah ada
-        $returData = Retur::where('nomer_pengiriman', $nomerPengiriman)->get();
+        $returData = ReturCacheService::getReturByNomer($nomerPengiriman);
         
-        // Cek apakah data retur sudah di-lock
         $isLocked = $returData->where('is_locked', true)->isNotEmpty();
         
         return view('retur.show_ajax', [
             'pengiriman' => $pengiriman,
             'returData' => $returData,
             'nomerPengiriman' => $nomerPengiriman,
-            'isLocked' => $isLocked
+            'isLocked' => $isLocked,
+            'canCreateRetur' => Gate::allows('create-retur'),
         ]);
-    }
-
-
-
-/**
-     * Export retur data to Excel/CSV.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function export(Request $request)
-    {
-        try {
-            // Log that we entered the export function
-            Log::info('=== EXPORT FUNCTION CALLED ===');
-            Log::info('Request URL: ' . $request->fullUrl());
-            Log::info('Request method: ' . $request->method());
-            Log::info('Request all params: ', $request->all());
-            
-            // Collect filter parameters
-            $filters = [
-                'toko_id' => $request->input('toko_id'),
-                'barang_id' => $request->input('barang_id'),
-                'date' => $request->input('date'),
-            ];
-            
-            // Log filters for debugging
-            Log::info('Export filters:', $filters);
-            
-            // Get filename with date
-            $date = date('Y-m-d_His');
-            $filename = 'retur_barang_' . $date;
-            
-            // Check if we have data first
-            $query = Retur::with(['toko', 'barang']);
-            if (!empty($filters['toko_id'])) {
-                $query->where('toko_id', $filters['toko_id']);
-            }
-            if (!empty($filters['barang_id'])) {
-                $query->where('barang_id', $filters['barang_id']);
-            }
-            if (!empty($filters['date'])) {
-                $query->whereDate('tanggal_retur', $filters['date']);
-            }
-            
-            $dataCount = $query->count();
-            Log::info('Data count before export: ' . $dataCount);
-            
-            // Create export instance
-            $export = new ReturExport($filters);
-            
-            // Export based on format
-            if ($request->has('format') && $request->format == 'csv') {
-                Log::info('Exporting as CSV');
-                return Excel::download($export, $filename . '.csv', \Maatwebsite\Excel\Excel::CSV, [
-                    'Content-Type' => 'text/csv',
-                ]);
-            } else {
-                Log::info('Exporting as XLSX');
-                return Excel::download($export, $filename . '.xlsx', \Maatwebsite\Excel\Excel::XLSX, [
-                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Error in export: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
-            
-            // For AJAX requests, return JSON
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Terjadi kesalahan saat export data: ' . $e->getMessage()
-                ], 500);
-            }
-            
-            // For non-AJAX requests, redirect back with error
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat export data: ' . $e->getMessage());
-        }
     }
 }

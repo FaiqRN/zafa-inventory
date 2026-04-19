@@ -1,0 +1,149 @@
+/*
+ * Pengiriman mobile-specific styles.
+ * Scoped to .pengiriman-page to avoid cross-page side effects.
+ */
+
+@media (max-width: 767.98px) {
+    .pengiriman-page .card-header {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+    }
+
+    .pengiriman-page .card-title {
+        margin-bottom: 0;
+    }
+
+    .pengiriman-page .card-tools {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 0.5rem;
+        float: none;
+        margin-top: 0;
+    }
+
+    .pengiriman-page .card-tools .btn {
+        width: 100%;
+        margin-right: 0 !important;
+    }
+
+    .pengiriman-page .row.mb-3,
+    .pengiriman-page .dataTables_wrapper .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .pengiriman-page .row.mb-3 > [class*="col-"],
+    .pengiriman-page .dataTables_wrapper .row > [class*="col-"] {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .pengiriman-page .pengiriman-table-wrap {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pengiriman-page .dataTables_wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pengiriman-page #table_pengiriman {
+        min-width: 860px;
+        table-layout: auto !important;
+    }
+
+    .pengiriman-page #table_pengiriman th,
+    .pengiriman-page #table_pengiriman td {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        vertical-align: top !important;
+    }
+
+    /* Keep first column normal; only action column stays fixed while scrolling. */
+    .pengiriman-page #table_pengiriman th:first-child,
+    .pengiriman-page #table_pengiriman td:first-child {
+        position: static !important;
+        left: auto !important;
+        z-index: auto !important;
+    }
+
+    .pengiriman-page #table_pengiriman th:last-child,
+    .pengiriman-page #table_pengiriman td:last-child {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 3 !important;
+        min-width: 140px;
+        background: #ffffff !important;
+        box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.35);
+    }
+
+    .pengiriman-page #table_pengiriman thead th:last-child {
+        z-index: 4 !important;
+        background: #f8f9fa !important;
+    }
+
+    .pengiriman-page #table_pengiriman td:last-child .d-flex {
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: 0.25rem;
+    }
+
+    .pengiriman-page .dataTables_wrapper .dataTables_filter,
+    .pengiriman-page .dataTables_wrapper .dataTables_length {
+        text-align: left !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    .pengiriman-page .dataTables_wrapper .dataTables_filter label,
+    .pengiriman-page .dataTables_wrapper .dataTables_length label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .pengiriman-page .dataTables_wrapper .dataTables_filter input,
+    .pengiriman-page .dataTables_wrapper .dataTables_length select {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-top: 0.35rem;
+    }
+
+    .pengiriman-page .dataTables_wrapper .dataTables_length select {
+        width: auto !important;
+        min-width: 90px;
+        margin-top: 0 !important;
+    }
+
+    .pengiriman-page .dataTables_wrapper .dataTables_filter input {
+        margin-top: 0 !important;
+    }
+
+    .pengiriman-page .dataTables_wrapper .dataTables_paginate,
+    .pengiriman-page .dataTables_wrapper .dataTables_info {
+        text-align: left !important;
+    }
+
+    .pengiriman-page .dtr-details {
+        width: 100%;
+    }
+
+    .pengiriman-page .dtr-details li {
+        border-bottom: 1px dashed #e9ecef;
+        padding: 0.45rem 0 !important;
+    }
+
+    .pengiriman-page .dtr-details li:last-child {
+        border-bottom: none;
+    }
+}

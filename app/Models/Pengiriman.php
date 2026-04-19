@@ -15,6 +15,7 @@ class Pengiriman extends Model
     public const FIELD_BARANG_ID = 'barang_id';
     public const FIELD_NOMER_PENGIRIMAN = 'nomer_pengiriman';
     public const FIELD_TANGGAL_PENGIRIMAN = 'tanggal_pengiriman';
+    public const FIELD_TANGGAL_TERIMA = 'tanggal_terima';
     public const FIELD_JUMLAH_KIRIM = 'jumlah_kirim';
     public const FIELD_STATUS = 'status';
     public const FIELD_CREATED_AT = 'created_at';
@@ -33,6 +34,7 @@ class Pengiriman extends Model
         self::FIELD_BARANG_ID,
         self::FIELD_NOMER_PENGIRIMAN,
         self::FIELD_TANGGAL_PENGIRIMAN,
+        self::FIELD_TANGGAL_TERIMA,
         self::FIELD_JUMLAH_KIRIM,
         self::FIELD_STATUS,
         self::FIELD_USER_CREATE,
@@ -41,6 +43,7 @@ class Pengiriman extends Model
 
     protected $casts = [
         self::FIELD_TANGGAL_PENGIRIMAN => 'date',
+        self::FIELD_TANGGAL_TERIMA => 'date',
         self::FIELD_JUMLAH_KIRIM => 'integer',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
@@ -61,8 +64,18 @@ class Pengiriman extends Model
         return $this->hasMany(Retur::class, Retur::FIELD_PENGIRIMAN_ID, self::FIELD_PENGIRIMAN_ID);
     }
 
+    public function barangToko()
+    {
+        return $this->hasOne(BarangToko::class, BarangToko::FIELD_BARANG_ID, self::FIELD_BARANG_ID)
+            ->where(BarangToko::FIELD_TOKO_ID, $this->{self::FIELD_TOKO_ID});
+    }
+
     public function getHargaBarangTokoAttribute()
     {
+        if ($this->relationLoaded('barangToko')) {
+            return $this->barangToko ? $this->barangToko->{BarangToko::FIELD_HARGA_BARANG_TOKO} : 0;
+        }
+        
         $barangToko = BarangToko::where(BarangToko::FIELD_TOKO_ID, $this->{self::FIELD_TOKO_ID})
                                 ->where(BarangToko::FIELD_BARANG_ID, $this->{self::FIELD_BARANG_ID})
                                 ->first();

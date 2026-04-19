@@ -2,25 +2,22 @@
 
 @section('content')
 <div class="container-fluid">
-    <!-- Alert Container -->
-    <div id="alert-container"></div>
-
     <!-- Main Card -->
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">
-                <i class=></i> 
+                {{-- <i class="fas fa-store"></i> Data Toko --}}
             </h3>
             <div class="card-tools">
+                @can('create-toko')
                 <button type="button" class="btn btn-primary" id="btnTambah">
                     <i class="fas fa-plus"></i> Tambah Toko
                 </button>
+                @endcan
             </div>
         </div>
         
         <div class="card-body">
-            <div id="alert-container"></div>
-            
             <!-- Improved Table with Fixed Layout -->
             <div class="table-responsive">
                 <table id="table-toko" class="table table-bordered table-striped table-hover">
@@ -56,7 +53,7 @@
     </div>
 </div>
 
-<!-- Enhanced Modal Tambah/Edit Toko dengan Kelurahan Auto-Zoom -->
+<!-- Modal Tambah/Edit Toko -->
 <div class="modal fade" id="modalToko" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
@@ -86,7 +83,7 @@
                                 <label for="toko_id">
                                     <i class="fas fa-barcode"></i> ID Toko
                                 </label>
-                                <input type="text" class="form-control" id="toko_id" name="toko_id" readonly style="background-color: #f8f9fa;">
+                                <input type="text" class="form-control" id="toko_id" name="toko_id" style="background-color: #f8f9fa;">
                                 <div class="invalid-feedback" id="error-toko_id"></div>
                             </div>
                             
@@ -114,36 +111,28 @@
                                 </div>
                             </div>
                             
-                            <!-- Alamat Detail dengan Smart Indonesian Format Detection -->
+                            <!-- Alamat Detail -->
                             <div class="form-group">
                                 <label for="alamat">
                                     <i class="fas fa-map-marker-alt"></i> Alamat Detail *
-                                    <small class="text-muted">(Gunakan format standar Indonesia untuk deteksi otomatis)</small>
+                                    <small class="text-muted">(Ketik untuk mencari dengan autocomplete)</small>
                                 </label>
-                                <textarea class="form-control" id="alamat" name="alamat" rows="3" required 
-                                          placeholder="Contoh: Jl. Ahmad Yani No. 20, Polowijen, Kec. Blimbing, Kota Malang"></textarea>
+                                <div style="position: relative;">
+                                    <textarea class="form-control" id="alamat" name="alamat" rows="3" required 
+                                              placeholder="Ketik alamat untuk mencari... (min. 3 karakter)"></textarea>
+                                    <!-- Suggestions dropdown will appear here -->
+                                </div>
                                 <small class="form-text text-muted">
-                                    <i class="fas fa-magic text-primary"></i> 
-                                    <strong>Format Indonesia:</strong> Jl. [nama jalan] No. [nomor], [Kelurahan], Kec. [Kecamatan], Kota [Kota]
+                                    <i class="fas fa-search text-primary"></i> 
+                                    Ketik minimal 3 karakter untuk melihat saran alamat 
                                 </small>
                                 <div class="invalid-feedback" id="error-alamat"></div>
-                                
-                                <!-- Address Search Status dengan Design yang Lebih Baik -->
-                                <div id="addressSearchStatus" class="mt-2" style="display: none;">
-                                    <!-- Dynamic search status will be shown here -->
-                                </div>
-                                
-                                <!-- Detected Kelurahan Info Display -->
-                                <div id="detectedKelurahanInfo" class="mt-2" style="display: none;">
-                                    <!-- Dynamic kelurahan detection info will be shown here -->
-                                </div>
                             </div>
                             
-                            <!-- Wilayah dengan Kelurahan Auto-Zoom Feature -->
+                            <!-- Wilayah -->
                             <div class="form-group">
                                 <label for="wilayah_kota_id">
                                     <i class="fas fa-city"></i> Kota/Kabupaten *
-                                    <small class="text-muted">(Akan terisi otomatis dari alamat)</small>
                                 </label>
                                 <select class="form-control" id="wilayah_kota_id" required>
                                     <option value="">-- Pilih Kota/Kabupaten --</option>
@@ -157,7 +146,6 @@
                                     <div class="form-group">
                                         <label for="wilayah_kecamatan_id">
                                             <i class="fas fa-building"></i> Kecamatan *
-                                            <small class="text-muted">(Auto-fill)</small>
                                         </label>
                                         <select class="form-control" id="wilayah_kecamatan_id" required disabled>
                                             <option value="">-- Pilih Kecamatan --</option>
@@ -170,7 +158,6 @@
                                     <div class="form-group">
                                         <label for="wilayah_kelurahan_id">
                                             <i class="fas fa-home"></i> Kelurahan *
-                                            <small class="text-muted">(Auto-fill)</small>
                                         </label>
                                         <select class="form-control" id="wilayah_kelurahan_id" required disabled>
                                             <option value="">-- Pilih Kelurahan --</option>
@@ -191,11 +178,11 @@
                                 <div class="invalid-feedback" id="error-nomer_telpon"></div>
                             </div>
 
-                            <!-- Koordinat Display dengan Enhanced UI -->
+                            <!-- Koordinat Display -->
                             <div class="form-group">
                                 <label>
                                     <i class="fas fa-crosshairs"></i> Koordinat GPS *
-                                    <small class="text-muted">(Pilih lokasi di peta untuk presisi tinggi)</small>
+                                    <small class="text-muted">(Pilih dari autocomplete atau klik di peta)</small>
                                 </label>
                                 <div class="input-group">
                                     <div class="input-group-prepend">
@@ -217,12 +204,11 @@
                             </div>
                         </div>
                         
-                        <!-- Interactive Map Column dengan Kelurahan Auto-Zoom -->
+                        <!-- Interactive Map Column -->
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="mb-3">
                                     <i class="fas fa-map"></i> Peta Interaktif
-                                    <span class="badge badge-success ml-2">AUTO-DETECT!</span>
                                 </label>
                                 <div class="map-container" style="border: 2px solid #dee2e6; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                                     <div id="interactiveMap" style="height: 450px; width: 100%;">
@@ -244,47 +230,11 @@
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">
                         <i class="fas fa-times"></i> Batal
                     </button>
-                    <button type="button" class="btn btn-warning" id="btnValidateLocation" style="display: none;">
-                        <i class="fas fa-check-circle"></i> Validasi Lokasi
-                    </button>
                     <button type="submit" class="btn btn-primary" id="btnSimpan">
                         <i class="fas fa-save"></i> Simpan Toko
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Konfirmasi Hapus -->
-<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle text-warning"></i> Konfirmasi Hapus
-                </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Apakah Anda yakin ingin menghapus toko ini?</p>
-                <div class="alert alert-warning">
-                    <strong id="delete-item-name"></strong>
-                </div>
-                <small class="text-muted">
-                    <i class="fas fa-info-circle"></i> Data yang dihapus tidak dapat dikembalikan
-                </small>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Batal
-                </button>
-                <button type="button" class="btn btn-danger" id="btnDelete">
-                    <i class="fas fa-trash"></i> Hapus
-                </button>
-            </div>
         </div>
     </div>
 </div>
@@ -494,6 +444,15 @@
     padding: 0.6rem 0.5rem;
 }
 
+/* Alamat column - allow text wrapping */
+#table-toko td:nth-child(4) {
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+    line-height: 1.4;
+    max-width: 250px;
+}
+
 #table-toko .btn-group-sm > .btn {
     padding: 0.25rem 0.4rem;
     font-size: 0.8rem;
@@ -517,39 +476,10 @@
     line-height: 1.4;
 }
 
-/* Enhanced marker styles */
-.custom-marker {
-    background-color: #dc3545;
-    border: 3px solid #fff;
-    border-radius: 50%;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-}
-
-/* Preview marker styles with enhanced animation */
-.preview-marker {
-    background-color: #ffc107;
-    border: 3px solid #fff;
-    border-radius: 50%;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-}
-
-/* Enhanced pulse animation for preview marker */
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 15px rgba(255, 193, 7, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
-    }
-}
-
-/* Map status alert styling */
-.alert-sm {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+/* Custom marker icon */
+.custom-marker-icon {
+    background: transparent;
+    border: none;
 }
 
 /* Enhanced coordinate display styling */
@@ -560,31 +490,7 @@
     font-size: 0.95rem;
 }
 
-/* Address search status enhanced styling */
-#addressSearchStatus {
-    border-radius: 0.375rem;
-}
 
-#addressSearchStatus .alert {
-    margin-bottom: 0;
-    border-left: 4px solid;
-}
-
-#addressSearchStatus .alert-info {
-    border-left-color: #17a2b8;
-}
-
-#addressSearchStatus .alert-success {
-    border-left-color: #28a745;
-}
-
-#addressSearchStatus .alert-warning {
-    border-left-color: #ffc107;
-}
-
-#addressSearchStatus .alert-primary {
-    border-left-color: #007bff;
-}
 
 /* Enhanced form styling */
 .form-group label {
@@ -759,6 +665,101 @@
     background-color: #dc3545;
     color: white;
 }
+
+/* ========================================
+   SUGGESTIONS DROPDOWN (NEW)
+   ======================================== */
+.suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: none;
+}
+
+.suggestion-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: #f8f9fa;
+}
+
+.suggestion-name {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 3px;
+}
+
+.suggestion-address {
+    font-size: 0.85rem;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.suggestion-empty {
+    padding: 16px 14px;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Pulse marker animation */
+.pulse-marker {
+    width: 20px;
+    height: 20px;
+    background: #4ade80;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    position: relative;
+    cursor: move; /* Show move cursor */
+}
+
+.pulse-marker::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    background: rgba(74, 222, 128, 0.35);
+    animation: pulse-ring 1.6s ease-out infinite;
+}
+
+/* Draggable marker cursor */
+.leaflet-marker-draggable {
+    cursor: move !important;
+}
+
+.custom-marker-icon {
+    cursor: move !important;
+}
+
+@keyframes pulse-ring {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}
+
+
 </style>
 @endpush
 
@@ -770,9 +771,16 @@
     } else {
         console.error('❌ Leaflet library failed to load!');
     }
+
+    window.tokoPermissions = {
+        canCreate: @json(auth()->check() && auth()->user()->can('create-toko')),
+        canEdit: @json(auth()->check() && auth()->user()->can('edit-toko')),
+        canDelete: @json(auth()->check() && auth()->user()->can('delete-toko'))
+    };
 </script>
 
 <script src="{{ asset('js/toko-coordinate-details.js') }}?v={{ time() }}"></script>
-<script src="{{ asset('js/toko.js') }}?v={{ time() }}"></script>
+<!-- NEW: Use simplified Nominatim version -->
+<script src="{{ asset('js/toko-new.js') }}?v={{ time() }}"></script>
 <script src="{{ asset('js/toko-coordinate-details-handler.js') }}?v={{ time() }}"></script>
 @endpush

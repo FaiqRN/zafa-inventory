@@ -98,10 +98,18 @@ class UserController extends Controller
         }
 
         try {
-            $currentUser = Auth::user();
+            $currentUser = $this->resolveAuthenticatedUser();
+
+            if (!$currentUser) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Sesi tidak valid, silakan login kembali'
+                ], 401);
+            }
+
             $user = UserHelper::createUser(
                 $request->all(),
-                $currentUser->{User::FIELD_USERNAME}
+                (string) $currentUser->{User::FIELD_USERNAME}
             );
 
             return response()->json([
@@ -150,11 +158,19 @@ class UserController extends Controller
         }
 
         try {
-            $currentUser = Auth::user();
+            $currentUser = $this->resolveAuthenticatedUser();
+
+            if (!$currentUser) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Sesi tidak valid, silakan login kembali'
+                ], 401);
+            }
+
             $user = UserHelper::updateUser(
                 $user,
                 $request->all(),
-                $currentUser->{User::FIELD_USERNAME}
+                (string) $currentUser->{User::FIELD_USERNAME}
             );
 
             return response()->json([
@@ -187,8 +203,18 @@ class UserController extends Controller
             ], 404);
         }
 
+        $currentUser = $this->resolveAuthenticatedUser();
+        $currentUserId = $currentUser ? $currentUser->{User::FIELD_USER_ID} : null;
+
+        if ($currentUserId === null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sesi tidak valid, silakan login kembali'
+            ], 401);
+        }
+
         // Prevent deleting currently logged in user
-        if ($user->{User::FIELD_USER_ID} === Auth::user()->{User::FIELD_USER_ID}) {
+        if ((string) $user->{User::FIELD_USER_ID} === (string) $currentUserId) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Tidak dapat menghapus user yang sedang login'
@@ -211,5 +237,18 @@ class UserController extends Controller
                 'message' => 'Gagal menghapus user: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function resolveAuthenticatedUser(): ?User
+    {
+        $authIdentifier = Auth::id();
+
+        if ($authIdentifier === null) {
+            return null;
+        }
+
+        return User::query()
+            ->where(User::FIELD_USERNAME, (string) $authIdentifier)
+            ->first();
     }
 }

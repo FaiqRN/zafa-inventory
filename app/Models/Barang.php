@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Barang extends Model
@@ -14,8 +15,8 @@ class Barang extends Model
     public const FIELD_BARANG_KODE = 'barang_kode';
     public const FIELD_NAMA_BARANG = 'nama_barang';
     public const FIELD_HARGA_AWAL_BARANG = 'harga_awal_barang';
-    public const FIELD_STOK = 'stok';
     public const FIELD_SATUAN = 'satuan';
+    public const FIELD_SHELF_LIFE = 'shelf_life';
     public const FIELD_KETERANGAN = 'keterangan';
     public const FIELD_CREATED_AT = 'created_at';
     public const FIELD_UPDATED_AT = 'updated_at';
@@ -28,9 +29,6 @@ class Barang extends Model
     public $incrementing = false;
     public $timestamps = true;
 
-    /**
-     * Boot method untuk auto-generate barang_id
-     */
     protected static function boot()
     {
         parent::boot();
@@ -42,15 +40,10 @@ class Barang extends Model
         });
     }
 
-    /**
-     * Generate barang_id dengan format BRG0000001
-     *
-     * @return string
-     */
     public static function generateBarangId(): string
     {
         $prefix = 'BRG';
-        $padLength = 7; // Total 10 karakter: BRG + 7 digit
+        $padLength = 7;
 
         $lastBarang = self::where(self::FIELD_BARANG_ID, 'like', $prefix . '%')
             ->orderByRaw('CAST(SUBSTRING(' . self::FIELD_BARANG_ID . ', 4) AS UNSIGNED) DESC')
@@ -72,19 +65,45 @@ class Barang extends Model
         self::FIELD_BARANG_KODE,
         self::FIELD_NAMA_BARANG,
         self::FIELD_HARGA_AWAL_BARANG,
-        self::FIELD_STOK,
         self::FIELD_SATUAN,
+        self::FIELD_SHELF_LIFE,
         self::FIELD_KETERANGAN,
         self::FIELD_USER_CREATE,
         self::FIELD_USER_UPDATE,
     ];
 
+    /**
+     * Accessor: menghitung stok dari tabel barang_stok (SUM sisa_stok)
+     */
+    protected $appends = ['stok'];
+
     protected $casts = [
-        self::FIELD_STOK => 'integer',
         self::FIELD_HARGA_AWAL_BARANG => 'decimal:2',
+        self::FIELD_SHELF_LIFE => 'integer',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
     ];
+
+    /**
+     * Accessor untuk stok - dihitung dari SUM(sisa_stok) di barang_stok
+     */
+    public function getStokAttribute($value = null): int
+    {
+        if (array_key_exists('stok', $this->attributes)) {
+            return (int) ($this->attributes['stok'] ?? 0);
+        }
+
+        if ($this->relationLoaded('barangStok')) {
+            return (int) $this->barangStok->sum(BarangStok::FIELD_SISA_STOK);
+        }
+
+        return (int) $this->barangStok()->sum(BarangStok::FIELD_SISA_STOK);
+    }
+
+    public function scopeWithStok(Builder $query): Builder
+    {
+        return $query->withSum('barangStok as stok', BarangStok::FIELD_SISA_STOK);
+    }
 
     public function barangToko()
     {
@@ -119,7 +138,6 @@ class Barang extends Model
     
     public static function generateBarangKode()
     {
-        // Get last barang ordered by kode
         $lastBarang = self::orderBy(self::FIELD_BARANG_KODE, 'desc')
                           ->first();
         
@@ -140,15 +158,12 @@ class Barang extends Model
         return $prefix . $nextNum;
     }
 
-    /**
-     * Get available stock dynamically
-     * This uses BarangHelper to calculate real-time stock
-     *
-     * @return int
-     */
     public function getAvailableStockAttribute()
     {
-        // Avoid circular dependency by checking if helper exists
+        if (isset($this->attributes['available_stock'])) {
+            return $this->attributes['available_stock'];
+        }
+        
         if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
             return \App\Helpers\MasterData\barang\BarangHelper::calculateAvailableStock($this->barang_id);
         }
@@ -156,13 +171,13 @@ class Barang extends Model
         return $this->stok ?? 0;
     }
 
-    /**
-     * Get stock status (sufficient, low_stock, out_of_stock)
-     *
-     * @return string
-     */
+
     public function getStockStatusAttribute()
     {
+        if (isset($this->attributes['stock_status'])) {
+            return $this->attributes['stock_status'];
+        }
+        
         $availableStock = $this->available_stock;
         $baseStock = $this->stok ?? 0;
         
@@ -179,13 +194,12 @@ class Barang extends Model
         return 'sufficient';
     }
 
-    /**
-     * Get detailed stock breakdown
-     *
-     * @return array
-     */
     public function getStockDetailsAttribute()
     {
+        if (isset($this->attributes['stock_details'])) {
+            return $this->attributes['stock_details'];
+        }
+        
         if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
             return \App\Helpers\MasterData\barang\BarangHelper::getStockDetails($this->barang_id);
         }

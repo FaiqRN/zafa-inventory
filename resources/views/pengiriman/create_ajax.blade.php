@@ -104,11 +104,7 @@ $(document).ready(function() {
         
         // Validasi minimal 1 barang
         if ($('#barang-rows tr').length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Perhatian',
-                text: 'Minimal harus ada 1 barang'
-            });
+            AlertHelper.warning('Perhatian', 'Minimal harus ada 1 barang', false);
             return false;
         }
 
@@ -135,21 +131,13 @@ $(document).ready(function() {
 
         // Validasi jika ada item yang tidak lengkap
         if (hasError) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Perhatian',
-                text: 'Pastikan semua barang dan jumlah sudah terisi dengan benar'
-            });
+            AlertHelper.warning('Perhatian', 'Pastikan semua barang dan jumlah sudah terisi dengan benar', false);
             return false;
         }
 
         // Validasi items tidak kosong
         if (items.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Perhatian',
-                text: 'Minimal harus ada 1 barang yang valid'
-            });
+            AlertHelper.warning('Perhatian', 'Minimal harus ada 1 barang yang valid', false);
             return false;
         }
 
@@ -170,15 +158,7 @@ $(document).ready(function() {
         console.log('Sending items:', items);
 
         // Tampilkan loading
-        Swal.fire({
-            title: 'Menyimpan...',
-            text: 'Mohon tunggu sebentar',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
+        AlertHelper.loading('Menyimpan...', 'Mohon tunggu sebentar');
 
         $.ajax({
             url: $(this).attr('action'),
@@ -189,20 +169,10 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.status === 'success') {
                     $('#myModal').modal('hide');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: response.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    AlertHelper.success('Berhasil!', response.message);
                     dataTable.ajax.reload();
                 } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal',
-                        text: response.message
-                    });
+                    AlertHelper.error('Gagal', response.message);
                 }
             },
             error: function(xhr) {
@@ -214,12 +184,7 @@ $(document).ready(function() {
                 } else if (xhr.responseJSON?.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal Menyimpan!',
-                    html: errorMsg.replace(/\n/g, '<br>'),
-                    confirmButtonText: 'OK'
-                });
+                AlertHelper.error('Gagal Menyimpan!', errorMsg.replace(/\n/g, '<br>'));
             }
         });
     });
@@ -237,22 +202,14 @@ function loadBarangByToko(tokoId) {
             }
         },
         error: function() {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Gagal memuat data barang'
-            });
+            AlertHelper.error('Error', 'Gagal memuat data barang');
         }
     });
 }
 
 function addBarangRow() {
     if (window.pengirimanBarangList.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Perhatian',
-            text: 'Pilih toko terlebih dahulu'
-        });
+        AlertHelper.warning('Perhatian', 'Pilih toko terlebih dahulu', false);
         return;
     }
 
@@ -302,11 +259,7 @@ function updateBarangInfo(select) {
     if (selectedBarangId) {
         const isDuplicate = checkDuplicateBarang(selectedBarangId, row.attr('id'));
         if (isDuplicate) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Duplikasi Barang',
-                text: 'Barang ini sudah dipilih. Silakan pilih barang lain.'
-            });
+            AlertHelper.warning('Duplikasi Barang', 'Barang ini sudah dipilih. Silakan pilih barang lain.', false);
             $(select).val('');
             row.find('.satuan-input').val('');
             row.find('.harga-input').val('');
@@ -333,25 +286,10 @@ function checkDuplicateBarang(barangId, currentRowId) {
 }
 
 function removeBarangRow(index) {
-    Swal.fire({
-        title: 'Hapus Barang?',
-        text: 'Barang ini akan dihapus dari daftar',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Ya, Hapus',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
+    AlertHelper.confirmDelete('Hapus Barang?', 'Barang ini akan dihapus dari daftar').then((result) => {
         if (result.isConfirmed) {
             $(`#row-${index}`).remove();
-            Swal.fire({
-                icon: 'success',
-                title: 'Terhapus!',
-                text: 'Barang berhasil dihapus',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            AlertHelper.success('Terhapus!', 'Barang berhasil dihapus');
         }
     });
 }

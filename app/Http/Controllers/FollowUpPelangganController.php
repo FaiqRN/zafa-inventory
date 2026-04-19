@@ -16,6 +16,25 @@ use Carbon\Carbon;
 
 class FollowUpPelangganController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('can:view-follow-up')->only([
+            'index',
+            'getFilteredCustomers',
+            'getHistory',
+            'getDeviceStatus',
+        ]);
+        $this->middleware('can:create-follow-up')->only([
+            'sendFollowUp',
+            'uploadImage',
+        ]);
+        $this->middleware('can:edit-follow-up')->only([
+            'testWhatsAppConnection',
+            'debugDatabase',
+        ]);
+    }
+
     /**
      * Display the follow up pelanggan page
      */
@@ -1383,6 +1402,10 @@ class FollowUpPelangganController extends Controller
      */
     public function debugDatabase()
     {
+        if (!app()->environment(['local', 'testing'])) {
+            abort(404);
+        }
+
         try {
             $debug = [];
             
@@ -1452,11 +1475,18 @@ class FollowUpPelangganController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            return response()->json([
+            $errorPayload = [
                 'status' => 'error',
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], 500);
+                'message' => app()->environment('local')
+                    ? $e->getMessage()
+                    : 'Terjadi kesalahan saat debug database.'
+            ];
+
+            if (app()->environment('local')) {
+                $errorPayload['trace'] = $e->getTraceAsString();
+            }
+
+            return response()->json($errorPayload, 500);
         }
     }
 }

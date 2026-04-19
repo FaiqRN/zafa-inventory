@@ -10,13 +10,7 @@ use Illuminate\Support\Str;
 
 class BarangHelper
 {
-    /**
-     * Calculate available stock for a specific barang
-     * Formula: Base Stock - (Pemesanan Processed + Pengiriman) + Retur
-     *
-     * @param string $barangId
-     * @return int
-     */
+
     public static function calculateAvailableStock($barangId)
     {
         $barang = Barang::find($barangId);
@@ -25,34 +19,23 @@ class BarangHelper
             return 0;
         }
 
-        // Use FIFO system - get stok tersedia from BarangStokHelper
         $stokTersedia = BarangStokHelper::getStokTersedia($barangId);
 
-        // Stock out from Pemesanan (only processed orders)
         $pemesananOut = Pemesanan::where(Pemesanan::FIELD_BARANG_ID, $barangId)
             ->whereIn(Pemesanan::FIELD_STATUS_PEMESANAN, ['diproses', 'dikirim', 'selesai'])
             ->sum(Pemesanan::FIELD_JUMLAH_PESANAN);
 
-        // Stock out from Pengiriman
         $pengirimanOut = Pengiriman::where(Pengiriman::FIELD_BARANG_ID, $barangId)
             ->sum(Pengiriman::FIELD_JUMLAH_KIRIM);
 
-        // Stock in from Retur
         $returIn = Retur::where(Retur::FIELD_BARANG_ID, $barangId)
             ->sum(Retur::FIELD_JUMLAH_RETUR);
 
-        // Calculate available stock
         $availableStock = $stokTersedia - $pemesananOut - $pengirimanOut + $returIn;
 
-        return max(0, $availableStock); // Ensure non-negative
+        return max(0, $availableStock); 
     }
 
-    /**
-     * Get detailed stock breakdown for a specific barang
-     *
-     * @param string $barangId
-     * @return array
-     */
     public static function getStockDetails($barangId)
     {
         $barang = Barang::find($barangId);
@@ -100,75 +83,37 @@ class BarangHelper
         ];
     }
 
-    /**
-     * Get stock summary for all active barang
-     *
-     * @return \Illuminate\Support\Collection
-     */
     public static function getStockSummary()
     {
-        $barangList = Barang::all();
+        $barangList = \App\Services\BarangCacheService::getAllBarang();
 
         return $barangList->map(function ($barang) {
-            $stockDetails = self::getStockDetails($barang->barang_id);
-            
             return [
                 'barang_id' => $barang->barang_id,
                 'barang_kode' => $barang->barang_kode,
                 'nama_barang' => $barang->nama_barang,
                 'satuan' => $barang->satuan,
-                'base_stock' => $stockDetails['base_stock'],
-                'available_stock' => $stockDetails['available_stock'],
-                'stock_status' => $stockDetails['stock_status']
+                'base_stock' => $barang->stok,
+                'available_stock' => $barang->available_stock,
+                'stock_status' => $barang->stock_status
             ];
         });
     }
 
-    /**
-     * Get all active barang with stock information
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public static function getActiveBarang()
     {
-        $barangList = Barang::orderBy(Barang::FIELD_BARANG_KODE, 'asc')
-            ->get();
-
-        return $barangList->map(function ($barang) {
-            $stockDetails = self::getStockDetails($barang->barang_id);
-            $barang->available_stock = $stockDetails['available_stock'];
-            $barang->stock_status = $stockDetails['stock_status'];
-            return $barang;
-        });
+        return \App\Services\BarangCacheService::getAllBarang();
     }
 
-    /**
-     * Get barang with low stock (below threshold)
-     *
-     * @param int $threshold
-     * @return \Illuminate\Support\Collection
-     */
     public static function getBarangWithLowStock($threshold = 10)
     {
-        $barangList = Barang::all();
+        $barangList = \App\Services\BarangCacheService::getAllBarang();
 
         return $barangList->filter(function ($barang) use ($threshold) {
-            $availableStock = self::calculateAvailableStock($barang->barang_id);
-            return $availableStock > 0 && $availableStock <= $threshold;
-        })->map(function ($barang) {
-            $stockDetails = self::getStockDetails($barang->barang_id);
-            $barang->available_stock = $stockDetails['available_stock'];
-            $barang->stock_status = $stockDetails['stock_status'];
-            return $barang;
+            return $barang->available_stock > 0 && $barang->available_stock <= $threshold;
         });
     }
 
-    /**
-     * Get single barang by ID with stock details
-     *
-     * @param string $barangId
-     * @return \App\Models\Barang|null
-     */
     public static function getBarangById($barangId)
     {
         $barang = Barang::where(Barang::FIELD_BARANG_ID, $barangId)
@@ -184,13 +129,6 @@ class BarangHelper
         return $barang;
     }
 
-    /**
-     * Validate if stock is available for a given quantity
-     *
-     * @param string $barangId
-     * @param int $quantity
-     * @return array
-     */
     public static function validateStockAvailability($barangId, $quantity)
     {
         $availableStock = self::calculateAvailableStock($barangId);
@@ -203,17 +141,11 @@ class BarangHelper
         ];
     }
 
-    /**
-     * Generate unique barang ID dengan format BRG0000001
-     *
-     * @return string
-     */
     public static function generateUniqueBarangId()
     {
         $prefix = 'BRG';
-        $padLength = 7; // Total 10 karakter: BRG + 7 digit
+        $padLength = 7; 
 
-        // Cari ID terakhir dengan format BRG + angka
         $lastBarang = Barang::where(Barang::FIELD_BARANG_ID, 'like', $prefix . '%')
             ->whereRaw("SUBSTRING(barang_id, 4) REGEXP '^[0-9]+$'")
             ->orderByRaw('CAST(SUBSTRING(barang_id, 4) AS UNSIGNED) DESC')
@@ -230,13 +162,6 @@ class BarangHelper
         return $prefix . str_pad($nextNumber, $padLength, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Validate barang kode uniqueness
-     *
-     * @param string $kode
-     * @param string|null $excludeId
-     * @return bool
-     */
     public static function validateBarangKode($kode, $excludeId = null)
     {
         $query = Barang::where(Barang::FIELD_BARANG_KODE, $kode);
@@ -248,20 +173,12 @@ class BarangHelper
         return !$query->exists();
     }
 
-    /**
-     * Get stock status based on available stock
-     *
-     * @param int $availableStock
-     * @param int $baseStock
-     * @return string
-     */
     private static function getStockStatus($availableStock, $baseStock)
     {
         if ($availableStock <= 0) {
             return 'out_of_stock';
         }
 
-        // Low stock if available is less than 20% of base stock or less than 10 units
         $lowStockThreshold = max(10, $baseStock * 0.2);
         
         if ($availableStock <= $lowStockThreshold) {
@@ -271,11 +188,6 @@ class BarangHelper
         return 'sufficient';
     }
 
-    /**
-     * Get cache headers for no-cache responses
-     *
-     * @return array
-     */
     public static function getNoCacheHeaders()
     {
         return [
@@ -285,12 +197,6 @@ class BarangHelper
         ];
     }
 
-    /**
-     * Get stock batch summary for display in UI
-     *
-     * @param string $barangId
-     * @return array
-     */
     public static function getStockBatchSummary($barangId)
     {
         $batches = BarangStokHelper::getDetailBatch($barangId);

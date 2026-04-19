@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Helpers\LoginHelper;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,10 @@ class LogoutController extends Controller
     public function logout(Request $request): RedirectResponse
     {
         // Get current authenticated user data before logout
-        $user = Auth::user();
+        $authIdentifier = Auth::id();
+        $user = $authIdentifier !== null
+            ? User::query()->where(User::FIELD_USERNAME, (string) $authIdentifier)->first()
+            : null;
         $userId = $user ? $user->user_id : null;
         $name = $user ? $user->firstname . ' ' . $user->lastname : 'Unknown';
         $email = $user ? $user->email : 'unknown@example.com';

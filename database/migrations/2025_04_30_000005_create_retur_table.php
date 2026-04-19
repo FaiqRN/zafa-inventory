@@ -19,7 +19,6 @@ class CreateReturTable extends Migration
             $table->string('toko_id', 10);
             $table->string('barang_id', 10);
             $table->string('nomer_pengiriman', 50);
-            $table->date('tanggal_pengiriman');
             $table->date('tanggal_retur');
             $table->decimal('harga_awal_barang', 10, 2);
             $table->integer('jumlah_kirim');
@@ -52,7 +51,7 @@ class CreateReturTable extends Migration
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->string('user_create')->nullable();
             $table->string('user_update')->nullable();
-                  
+
             $table->charset = 'utf8mb4';
             $table->collation = 'utf8mb4_general_ci';
         });

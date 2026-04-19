@@ -25,11 +25,15 @@ class ProfileController extends Controller
     /**
      * Menampilkan halaman profile user
      *
-     * @return \Illuminate\Contracts\Support\Renderable
+        * @return \Illuminate\Contracts\Support\Renderable|\Illuminate\Http\RedirectResponse
      */
     public function index()
     {
-        $user = Auth::user();
+        $user = $this->resolveAuthenticatedUser();
+
+        if (!$user) {
+            return redirect()->route('login');
+        }
         
         // Buat objek breadcrumb yang sesuai
         $breadcrumb = new stdClass();
@@ -42,11 +46,15 @@ class ProfileController extends Controller
     /**
      * Menampilkan form edit profile
      *
-     * @return \Illuminate\Contracts\Support\Renderable
+        * @return \Illuminate\Contracts\Support\Renderable|\Illuminate\Http\RedirectResponse
      */
     public function edit()
     {
-        $user = Auth::user();
+        $user = $this->resolveAuthenticatedUser();
+
+        if (!$user) {
+            return redirect()->route('login');
+        }
         
         // Buat objek breadcrumb yang sesuai
         $breadcrumb = new stdClass();
@@ -64,7 +72,14 @@ class ProfileController extends Controller
      */
     public function update(Request $request)
     {
-        $userId = Auth::user()->{User::FIELD_USER_ID};
+        $currentUser = $this->resolveAuthenticatedUser();
+
+        if (!$currentUser) {
+            return redirect()->route('login')
+                ->with('error', 'Sesi tidak valid, silakan login kembali.');
+        }
+
+        $userId = $currentUser->{User::FIELD_USER_ID};
         
         // Validasi input menggunakan ProfileHelper
         $validator = Validator::make(
@@ -138,7 +153,12 @@ class ProfileController extends Controller
                 ->withInput();
         }
 
-        $currentUser = Auth::user();
+        $currentUser = $this->resolveAuthenticatedUser();
+
+        if (!$currentUser) {
+            return redirect()->route('login')
+                ->with('error', 'Sesi tidak valid, silakan login kembali.');
+        }
         
         // Cek password lama
         if (!Hash::check($request->current_password, $currentUser->{User::FIELD_PASSWORD})) {
@@ -155,5 +175,18 @@ class ProfileController extends Controller
 
         return redirect()->route('profile')
             ->with('success', 'Password berhasil diperbarui');
+    }
+
+    private function resolveAuthenticatedUser(): ?User
+    {
+        $authIdentifier = Auth::id();
+
+        if ($authIdentifier === null) {
+            return null;
+        }
+
+        return User::query()
+            ->where(User::FIELD_USERNAME, (string) $authIdentifier)
+            ->first();
     }
 }

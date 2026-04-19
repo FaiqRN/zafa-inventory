@@ -16,6 +16,23 @@
 html, body {
   overflow-x: hidden;
   max-width: 100%;
+  position: relative;
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media screen and (max-width: 767.98px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* ========================================
@@ -91,12 +108,21 @@ html {
 .table-responsive {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  margin: 0 -15px;
+  padding: 0 15px;
 }
 
 @media (max-width: 767.98px) {
   /* DataTables wrapper */
   .dataTables_wrapper {
-    overflow-x: auto;
+    overflow-x: visible !important;
+    width: 100% !important;
+  }
+
+  /* Table container */
+  .dataTables_wrapper .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
   
   /* Table cells */
@@ -104,18 +130,38 @@ html {
     padding: 8px 10px !important;
     font-size: 0.85rem !important;
     white-space: nowrap;
+    vertical-align: middle !important;
+  }
+
+  /* First column (usually checkbox or number) */
+  .table td:first-child,
+  .table th:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    background-color: white !important;
+    z-index: 10 !important;
+  }
+
+  /* Last column (usually actions) */
+  .table td:last-child,
+  .table th:last-child {
+    position: sticky !important;
+    right: 0 !important;
+    background-color: white !important;
+    z-index: 10 !important;
   }
   
   /* Action buttons in tables */
   .table .btn-group {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 3px;
   }
   
   .table .btn-sm {
     padding: 4px 8px !important;
     font-size: 0.75rem !important;
+    white-space: nowrap !important;
   }
   
   /* DataTables info and pagination */
@@ -133,11 +179,13 @@ html {
   .dataTables_paginate .pagination {
     justify-content: center !important;
     flex-wrap: wrap;
+    margin: 0 !important;
   }
   
   .dataTables_paginate .page-link {
     padding: 6px 10px !important;
     font-size: 0.8rem !important;
+    margin: 2px !important;
   }
   
   /* DataTables length and filter */
@@ -145,11 +193,21 @@ html {
     text-align: center !important;
     margin-bottom: 10px !important;
   }
+
+  .dataTables_length label,
+  .dataTables_filter label {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 5px !important;
+  }
   
   .dataTables_length select,
   .dataTables_filter input {
-    width: auto !important;
+    width: 100% !important;
+    max-width: 200px !important;
     display: inline-block !important;
+    margin: 0 !important;
   }
   
   /* Stack DataTables controls on mobile */
@@ -162,6 +220,21 @@ html {
     max-width: 100% !important;
     flex: 0 0 100% !important;
     margin-bottom: 10px;
+  }
+
+  /* DataTables buttons */
+  .dt-buttons {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .dt-buttons .btn {
+    font-size: 0.75rem !important;
+    padding: 6px 10px !important;
+    margin: 0 !important;
   }
 }
 
@@ -303,34 +376,70 @@ html {
 @media (max-width: 767.98px) {
   .main-sidebar {
     position: fixed !important;
-    z-index: 1040 !important;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 1050 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease-in-out !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
-  
-  .sidebar-open .main-sidebar {
-    transform: translateX(0);
+
+  /* Show sidebar when open */
+  body:not(.sidebar-collapse) .main-sidebar,
+  body.sidebar-open .main-sidebar {
+    transform: translateX(0) !important;
+    box-shadow: 2px 0 20px rgba(0,0,0,0.3) !important;
   }
-  
+
   /* Sidebar overlay */
-  .sidebar-open::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1039;
+  .sidebar-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 1040 !important;
+    display: block !important;
+    animation: fadeIn 0.3s ease-in-out !important;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Hide overlay when sidebar collapsed */
+  body.sidebar-collapse .sidebar-overlay {
+    display: none !important;
   }
   
   /* Sidebar menu items */
   .nav-sidebar .nav-item > .nav-link {
     padding: 12px 15px !important;
+    font-size: 0.95rem !important;
   }
   
   .nav-treeview > .nav-item > .nav-link {
     padding: 10px 15px 10px 40px !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* Ensure sidebar scrolls properly */
+  .sidebar {
+    height: calc(100vh - 85px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Brand link */
+  .brand-link {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1051 !important;
+    background-color: var(--zafa-light) !important;
   }
 }
 
@@ -341,6 +450,17 @@ html {
 @media (max-width: 767.98px) {
   .main-header.navbar {
     padding: 0 10px !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1030 !important;
+  }
+
+  /* Adjust content wrapper for fixed header */
+  .content-wrapper {
+    margin-top: 57px !important;
+    padding-top: 10px !important;
   }
   
   .navbar-nav .nav-link {
@@ -351,6 +471,8 @@ html {
   .navbar-nav .nav-link[data-widget="pushmenu"] {
     padding: 10px 14px !important;
     font-size: 1.2rem !important;
+    position: relative !important;
+    z-index: 10001 !important;
   }
   
   /* User dropdown */
@@ -358,6 +480,14 @@ html {
     position: absolute !important;
     right: 0 !important;
     left: auto !important;
+    min-width: 200px !important;
+  }
+
+  /* User name text - hide on very small screens */
+  @media (max-width: 575.98px) {
+    .navbar-nav .nav-link span {
+      display: none !important;
+    }
   }
 }
 
@@ -371,12 +501,18 @@ html {
     padding: 10px 15px !important;
     text-align: center !important;
     font-size: 0.85rem !important;
+    position: relative !important;
   }
   
   .main-footer .float-right {
     float: none !important;
     display: block !important;
     margin-top: 5px !important;
+  }
+
+  .main-footer div {
+    display: block !important;
+    width: 100% !important;
   }
 }
 
@@ -683,7 +819,42 @@ html {
   .btn:active,
   .nav-link:active {
     opacity: 0.8;
+    background-color: rgba(0, 0, 0, 0.05) !important;
   }
+
+  /* Improve scrolling on touch devices */
+  .table-responsive,
+  .sidebar,
+  .modal-body {
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Prevent double-tap zoom */
+  * {
+    touch-action: manipulation !important;
+  }
+
+  /* Allow scrolling on specific elements */
+  .table-responsive,
+  .sidebar,
+  .modal-body,
+  textarea,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    touch-action: auto !important;
+  }
+}
+
+/* Touch device class for additional styling */
+.touch-device .btn,
+.touch-device .nav-link,
+.touch-device a {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+.touch-device .main-sidebar {
+  -webkit-overflow-scrolling: touch !important;
 }
 
 /* ========================================
@@ -1481,5 +1652,272 @@ html {
   
   .login-card-body .form-control {
     font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+}
+
+
+/* ========================================
+   SIDEBAR DROPDOWN MENU FIX
+   ======================================== */
+
+/* Ensure dropdown menus are clickable on all devices */
+.nav-sidebar .has-treeview > .nav-link {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+}
+
+.nav-treeview {
+  pointer-events: auto !important;
+}
+
+.nav-treeview > .nav-item > .nav-link {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+/* Mobile specific dropdown fixes */
+@media (max-width: 767.98px) {
+  /* Ensure dropdown parent is touchable */
+  .nav-sidebar .has-treeview > .nav-link {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Ensure submenu items are touchable */
+  .nav-treeview > .nav-item > .nav-link {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Show submenu with animation */
+  .nav-item.menu-open > .nav-treeview {
+    display: block !important;
+    animation: slideDown 0.3s ease-out !important;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Improve touch feedback for menu items */
+  .nav-sidebar .nav-link:active {
+    opacity: 0.8 !important;
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Ensure arrow icon is visible and rotates */
+  .nav-sidebar .has-treeview > .nav-link .right {
+    display: inline-block !important;
+    transition: transform 0.3s ease !important;
+  }
+
+  .nav-sidebar .has-treeview.menu-open > .nav-link .right {
+    transform: rotate(-90deg) !important;
+  }
+}
+
+/* Desktop dropdown behavior */
+@media (min-width: 768px) {
+  /* Smooth transition for dropdown */
+  .nav-treeview {
+    transition: all 0.3s ease !important;
+  }
+
+  /* Hover effect for parent menu */
+  .nav-sidebar .has-treeview > .nav-link:hover {
+    cursor: pointer !important;
+  }
+}
+
+
+/* ========================================
+   SIDEBAR COLLAPSED MODE - DROPDOWN FIX
+   ======================================== */
+
+/* Desktop collapsed sidebar - floating submenu on hover */
+@media (min-width: 768px) {
+  /* Ensure parent menu item is hoverable */
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview {
+    position: relative !important;
+  }
+
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview > .nav-link {
+    cursor: pointer !important;
+  }
+
+  /* Hide text labels in main sidebar nav only (not in submenu) */
+  .sidebar-mini.sidebar-collapse .nav-sidebar > .nav-item > .nav-link p {
+    display: none !important;
+  }
+
+  /* Floating submenu styling */
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview > .nav-treeview {
+    display: none !important;
+    position: fixed !important;
+    left: 4.6rem !important;
+    background: white !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+    border-radius: 8px !important;
+    padding: 8px 0 !important;
+    min-width: 220px !important;
+    z-index: 1060 !important;
+    border: 1px solid #e0e0e0 !important;
+  }
+
+  /* Show on hover - handled by JavaScript for better control */
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-treeview {
+    display: block !important;
+  }
+
+  /* CRITICAL: Show text labels in floating submenu */
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-treeview .nav-link p,
+  .sidebar-mini.sidebar-collapse .nav-treeview > .nav-item > .nav-link p {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin-left: 0 !important;
+    white-space: nowrap !important;
+    color: #333 !important;
+  }
+
+  /* Submenu items in floating mode */
+  .sidebar-mini.sidebar-collapse .nav-treeview > .nav-item > .nav-link {
+    display: flex !important;
+    align-items: center !important;
+    width: auto !important;
+    padding: 10px 20px !important;
+    margin: 2px 8px !important;
+    white-space: nowrap !important;
+    font-size: 0.9rem !important;
+    text-align: left !important;
+    color: #333 !important;
+    border-radius: 4px !important;
+  }
+
+  .sidebar-mini.sidebar-collapse .nav-treeview > .nav-item > .nav-link .nav-icon {
+    margin-right: 10px !important;
+    font-size: 0.6rem !important;
+    color: var(--zafa-turquoise, #17a2b8) !important;
+  }
+
+  .sidebar-mini.sidebar-collapse .nav-treeview > .nav-item > .nav-link:hover {
+    background-color: #f5f5f5 !important;
+    color: var(--zafa-turquoise) !important;
+    transform: none !important;
+  }
+
+  /* Keep submenu visible when hovering over it */
+  .sidebar-mini.sidebar-collapse .nav-treeview:hover {
+    display: block !important;
+  }
+
+  /* Hide arrow in collapsed mode */
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview > .nav-link .right {
+    display: none !important;
+  }
+
+  /* Add indicator for dropdown in collapsed mode */
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview > .nav-link::after {
+    content: '\f105';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    opacity: 0.5;
+  }
+
+  /* Highlight parent when hovering */
+  .sidebar-mini.sidebar-collapse .nav-sidebar .has-treeview:hover > .nav-link {
+    background-color: rgba(255, 193, 7, 0.2) !important;
+  }
+}
+
+/* Prevent submenu from showing in collapsed mode by default - DESKTOP ONLY */
+@media (min-width: 768px) {
+  .sidebar-mini.sidebar-collapse .nav-treeview {
+    display: none !important;
+  }
+}
+
+/* Expanded sidebar - normal behavior */
+.sidebar-mini:not(.sidebar-collapse) .nav-treeview {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  box-shadow: none !important;
+  border: none !important;
+  min-width: auto !important;
+}
+
+/* ========================================
+   MOBILE SIDEBAR COLLAPSED - CRITICAL FIX
+   ======================================== */
+
+@media (max-width: 767.98px) {
+  /* MOBILE: Completely hide sidebar when collapsed */
+  body.sidebar-collapse .main-sidebar,
+  body.sidebar-mini.sidebar-collapse .main-sidebar {
+    transform: translateX(-100%) !important;
+    width: 250px !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* MOBILE: Show sidebar when not collapsed */
+  body:not(.sidebar-collapse) .main-sidebar,
+  body.sidebar-open .main-sidebar {
+    transform: translateX(0) !important;
+    width: 250px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* MOBILE: Reset any floating submenu styles */
+  .nav-treeview {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* MOBILE: Submenu items should show text properly */
+  .nav-treeview > .nav-item > .nav-link {
+    display: flex !important;
+    align-items: center !important;
+    padding-left: 40px !important;
+  }
+
+  .nav-treeview > .nav-item > .nav-link .nav-icon {
+    margin-right: 10px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .nav-treeview > .nav-item > .nav-link p {
+    display: inline-block !important;
+    margin: 0 !important;
+    white-space: normal !important;
+  }
+
+  /* Ensure text in nav links is visible on mobile */
+  .nav-sidebar .nav-link p {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
 }
