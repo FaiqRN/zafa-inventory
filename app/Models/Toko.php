@@ -36,6 +36,7 @@ class Toko extends Model
     public const FIELD_UPDATED_AT = 'updated_at';
     public const FIELD_USER_CREATE = 'user_create';
     public const FIELD_USER_UPDATE = 'user_update';
+    public const FIELD_MIN_INTERVAL_KIRIM_HARI = 'min_interval_kirim_hari';
 
     protected $table = self::TABLE;
     protected $primaryKey = self::FIELD_TOKO_ID;
@@ -65,6 +66,7 @@ class Toko extends Model
         self::FIELD_GEOCODING_LAST_UPDATED,
         self::FIELD_USER_CREATE,
         self::FIELD_USER_UPDATE,
+        self::FIELD_MIN_INTERVAL_KIRIM_HARI,
     ];
 
     protected $casts = [
@@ -74,6 +76,7 @@ class Toko extends Model
         self::FIELD_GEOCODING_CONFIDENCE => 'decimal:3',
         self::FIELD_GEOCODING_SCORE => 'decimal:2',
         self::FIELD_GEOCODING_LAST_UPDATED => 'datetime',
+        self::FIELD_MIN_INTERVAL_KIRIM_HARI => 'integer',
     ];
 
     protected static function boot()

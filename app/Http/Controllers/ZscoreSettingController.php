@@ -20,7 +20,7 @@ class ZscoreSettingController extends Controller
         $this->middleware('auth');
         $this->middleware('can:view-zscore-setting')->only(['index', 'getData', 'getBarangByToko']);
         $this->middleware('can:create-zscore-setting')->only(['store']);
-        $this->middleware('can:edit-zscore-setting')->only(['edit', 'update']);
+        $this->middleware('can:edit-zscore-setting')->only(['edit', 'update', 'setActive']);
         $this->middleware('can:delete-zscore-setting')->only(['destroy']);
     }
 
@@ -87,31 +87,35 @@ class ZscoreSettingController extends Controller
                 ->first();
 
             if ($existing) {
-                $response = [
+                return response()->json([
                     'success' => false,
                     'message' => 'Service level ' . $request->service_level . '% sudah ada untuk toko dan barang ini'
-                ];
-                $status = 400;
-            } else {
-                $data = Zscore::create([
-                    Zscore::FIELD_TOKO_ID => $request->toko_id,
-                    Zscore::FIELD_BARANG_ID => $request->barang_id,
-                    Zscore::FIELD_LABEL => $request->label,
-                    Zscore::FIELD_SERVICE_LEVEL => $request->service_level,
-                    Zscore::FIELD_Z_SCORE => $request->z_score,
-                    Zscore::FIELD_KETERANGAN => $request->keterangan,
-                    Zscore::FIELD_USER_CREATE => $this->resolveCurrentUsername(),
-                ]);
-
-                $response = [
-                    'success' => true,
-                    'message' => 'Z-Score berhasil ditambahkan',
-                    'data' => $data
-                ];
-                $status = 200;
+                ], 400);
             }
 
-            return response()->json($response, $status);
+            // FIX #3: Jika belum ada baris is_active=true untuk pasangan ini,
+            // baris baru ini otomatis dijadikan aktif.
+            $hasActive = Zscore::forToko($request->toko_id)
+                ->forBarang($request->barang_id)
+                ->where(Zscore::FIELD_IS_ACTIVE, true)
+                ->exists();
+
+            $data = Zscore::create([
+                Zscore::FIELD_TOKO_ID       => $request->toko_id,
+                Zscore::FIELD_BARANG_ID     => $request->barang_id,
+                Zscore::FIELD_LABEL         => $request->label,
+                Zscore::FIELD_SERVICE_LEVEL => $request->service_level,
+                Zscore::FIELD_Z_SCORE       => $request->z_score,
+                Zscore::FIELD_KETERANGAN    => $request->keterangan,
+                Zscore::FIELD_IS_ACTIVE     => !$hasActive, // jadi aktif jika belum ada yang aktif
+                Zscore::FIELD_USER_CREATE   => $this->resolveCurrentUsername(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Z-Score berhasil ditambahkan' . (!$hasActive ? ' dan dijadikan aktif' : ''),
+                'data' => $data
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -135,7 +139,7 @@ class ZscoreSettingController extends Controller
             $data = Zscore::forToko($request->toko_id)
                 ->forBarang($request->barang_id)
                 ->findOrFail($id);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $data
@@ -178,29 +182,25 @@ class ZscoreSettingController extends Controller
             }
 
             if ($hasDuplicate) {
-                $response = [
+                return response()->json([
                     'success' => false,
                     'message' => 'Service level ' . $request->service_level . '% sudah ada untuk toko dan barang ini'
-                ];
-                $status = 400;
-            } else {
-                $data->update([
-                    Zscore::FIELD_LABEL => $request->label,
-                    Zscore::FIELD_SERVICE_LEVEL => $request->service_level,
-                    Zscore::FIELD_Z_SCORE => $request->z_score,
-                    Zscore::FIELD_KETERANGAN => $request->keterangan,
-                    Zscore::FIELD_USER_UPDATE => $this->resolveCurrentUsername(),
-                ]);
-
-                $response = [
-                    'success' => true,
-                    'message' => 'Z-Score berhasil diperbarui',
-                    'data' => $data
-                ];
-                $status = 200;
+                ], 400);
             }
 
-            return response()->json($response, $status);
+            $data->update([
+                Zscore::FIELD_LABEL         => $request->label,
+                Zscore::FIELD_SERVICE_LEVEL => $request->service_level,
+                Zscore::FIELD_Z_SCORE       => $request->z_score,
+                Zscore::FIELD_KETERANGAN    => $request->keterangan,
+                Zscore::FIELD_USER_UPDATE   => $this->resolveCurrentUsername(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Z-Score berhasil diperbarui',
+                'data' => $data
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -224,7 +224,24 @@ class ZscoreSettingController extends Controller
             $data = Zscore::forToko($request->toko_id)
                 ->forBarang($request->barang_id)
                 ->findOrFail($id);
-            $data->delete();
+
+            // FIX #3: Jika baris yang dihapus adalah yang aktif,
+            // otomatis aktifkan baris dengan service_level tertinggi berikutnya
+            // (sebagai fallback yang aman).
+            if ($data->{Zscore::FIELD_IS_ACTIVE}) {
+                $data->delete();
+
+                $nextActive = Zscore::forToko($request->toko_id)
+                    ->forBarang($request->barang_id)
+                    ->orderByDesc(Zscore::FIELD_SERVICE_LEVEL)
+                    ->first();
+
+                if ($nextActive) {
+                    $nextActive->update([Zscore::FIELD_IS_ACTIVE => true]);
+                }
+            } else {
+                $data->delete();
+            }
 
             return response()->json([
                 'success' => true,
@@ -234,6 +251,42 @@ class ZscoreSettingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menghapus data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * FIX #3: Endpoint baru untuk memilih service level aktif per pasangan toko-barang.
+     * Route: POST /zscore-setting/{id}/set-active
+     */
+    public function setActive(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'toko_id' => 'required|exists:toko,toko_id',
+            'barang_id' => 'required|exists:barang,barang_id',
+        ]);
+
+        if (!$this->isBarangMappedToToko($request->toko_id, $request->barang_id)) {
+            return $this->invalidTokoBarangResponse();
+        }
+
+        try {
+            $data = Zscore::forToko($request->toko_id)
+                ->forBarang($request->barang_id)
+                ->findOrFail($id);
+
+            $data->setAsActive();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service level ' . $data->{Zscore::FIELD_SERVICE_LEVEL} . '% ('
+                    . $data->{Zscore::FIELD_LABEL} . ') dijadikan aktif untuk perhitungan SS',
+                'data' => $data->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah status aktif: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -261,6 +314,10 @@ class ZscoreSettingController extends Controller
             'data' => $barangList,
         ]);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // PRIVATE HELPERS
+    // ──────────────────────────────────────────────────────────────────────────
 
     private function isBarangMappedToToko(string $tokoId, string $barangId): bool
     {

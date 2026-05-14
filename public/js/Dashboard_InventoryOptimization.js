@@ -207,56 +207,8 @@
                 ? '<div class="inv-rec-note" style="font-weight:600;color:#dc2626;">Segera kirim!</div>'
                 : '';
 
-            // ── Konteks tambahan ─────────────────────────────────────────
-            var interval   = parseFloat(item.interval_kirim) || 0;
-            var qKirim     = parseInt(item.q_kirim_result)   || 0;
-            var stokAktual = parseInt(item.stok_aktual)      || 0;
-            var rop        = parseInt(item.rop_result)       || 0;
-
-            // Estimasi kebutuhan bulanan = Q × (30 / interval)
-            var estBulanan = interval > 0 ? Math.round(qKirim * (30 / interval))  : 0;
-            var estTahunan = interval > 0 ? Math.round(qKirim * (365 / interval)) : 0;
-            var freqBulanan = interval > 0 ? (30 / interval).toFixed(1) : '–';
-
-            // Sisa stok dalam hari
-            var avgJual  = parseFloat(item.avg_jual_harian) || 0;
-            var sisaHari = (avgJual > 0 && stokAktual > 0) ? Math.round(stokAktual / avgJual) : null;
-
-            var sisaHariHtml = '';
-            if (sisaHari !== null) {
-                var sisaCls = sisaHari <= 7
-                    ? 'color:#dc2626;font-weight:600;'
-                    : sisaHari <= 14 ? 'color:#d97706;font-weight:600;' : 'color:#16a34a;';
-                sisaHariHtml = '<div class="inv-rec-note" style="' + sisaCls + '">'
-                    + 'Stok habis ±' + sisaHari + ' hari lagi</div>';
-            }
-
-            var stokStatusHtml = stokAktual > 0
-                ? '<div class="inv-rec-note" style="color:#6b7280;">Stok saat ini: '
-                    + stokAktual + ' unit (ROP: ' + rop + ')</div>'
-                : '';
-
-            // Kotak estimasi bulanan/tahunan
-            var konteksHtml = '';
-            if (interval > 0 && qKirim > 0) {
-                konteksHtml = '<div class="inv-konteks-box">'
-                    + '<div class="inv-konteks-row">'
-                    + '<span class="inv-konteks-label"><i class="fas fa-box"></i></span>'
-                    + '<span class="inv-konteks-val">'
-                    + qKirim + ' unit &nbsp;/&nbsp; setiap ' + interval + ' hari'
-                    + '</span>'
-                    + '</div>'
-                    + '<div class="inv-konteks-row">'
-                    + '<span class="inv-konteks-label"><i class="far fa-calendar-alt"></i></span>'
-                    + '<span class="inv-konteks-val"><strong>' + estBulanan + ' unit</strong>'
-                    + ' &nbsp;(' + freqBulanan + '× kirim)</span>'
-                    + '</div>'
-                    + '<div class="inv-konteks-row">'
-                    + '<span class="inv-konteks-label"><i class="fas fa-chart-line"></i></span>'
-                    + '<span class="inv-konteks-val">' + estTahunan + ' unit</span>'
-                    + '</div>'
-                    + '</div>';
-            }
+            var interval = parseFloat(item.interval_kirim) || 0;
+            var qKirim   = parseInt(item.q_kirim_result)   || 0;
 
             return '<div class="inv-produk-item">'
 
@@ -290,14 +242,6 @@
                 + flagNote + kritisNote
                 + '</div>'
                 + '</div>'
-
-                // Konteks estimasi
-                + konteksHtml
-
-                // Stok & sisa hari
-                + (stokStatusHtml || sisaHariHtml
-                    ? '<div style="padding:4px 0 2px;">' + stokStatusHtml + sisaHariHtml + '</div>'
-                    : '')
 
                 + '</div>';
         }).join('');
@@ -490,22 +434,27 @@
         });
     }
 
-    function updateSummary() {
+    function updateSummary(grouped) {
         var totalKombinasi = 0, totalKritis = 0, totalFlag = 0, totalWarn = 0, totalOk = 0;
 
-        invData.forEach(function (item) {
-            totalKombinasi++;
-            if (item.is_below_rop)    totalKritis++;
-            if (item.shelf_life_flag) totalFlag++;
-            if (item.is_below_rop || item.shelf_life_flag) totalWarn++;
-            else totalOk++;
+        // FIX: iterasi dari grouped (data yang sudah diproses), bukan invData global
+        // agar angka summary selalu sinkron dengan state peta saat ini
+        Object.keys(grouped).forEach(function (tokoKey) {
+            var items = grouped[tokoKey] || [];
+            items.forEach(function (item) {
+                totalKombinasi++;
+                if (item.is_below_rop)    totalKritis++;
+                if (item.shelf_life_flag) totalFlag++;
+                if (item.is_below_rop || item.shelf_life_flag) totalWarn++;
+                else totalOk++;
+            });
         });
 
-        setTextIfExists('inv-m-kombinasi', totalKombinasi);
-        setTextIfExists('inv-m-kritis', totalKritis);
-        setTextIfExists('inv-m-flag', totalFlag);
-        setTextIfExists('inv-warn-count', totalWarn + ' perlu perhatian');
-        setTextIfExists('inv-ok-count', totalOk + ' aman');
+        setTextIfExists('inv-m-kombinasi',  totalKombinasi);
+        setTextIfExists('inv-m-kritis',     totalKritis);
+        setTextIfExists('inv-m-flag',       totalFlag);
+        setTextIfExists('inv-warn-count',   totalWarn + ' perlu perhatian');
+        setTextIfExists('inv-ok-count',     totalOk + ' aman');
     }
 
     function getValidTokos() {

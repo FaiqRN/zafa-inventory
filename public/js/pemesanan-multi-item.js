@@ -239,7 +239,7 @@ $(document).ready(function () {
 
         if (!isValid) {
             if (showAlert) {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Data Tidak Lengkap',
                     text: 'Pastikan semua barang telah dipilih dan jumlah telah diisi!',
@@ -251,7 +251,7 @@ $(document).ready(function () {
 
         if (items.length === 0) {
             if (showAlert) {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'warning',
                     title: 'Tidak Ada Barang',
                     text: 'Harap tambahkan minimal 1 barang!',

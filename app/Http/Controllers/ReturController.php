@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Retur;
 use App\Models\Pengiriman;
 use App\Models\Toko;
-use App\Models\Barang;
 use App\Models\BarangToko;
 use App\Services\ReturCacheService;
 use Illuminate\Http\Request;
@@ -112,7 +111,8 @@ class ReturController extends Controller
             'nomer_pengiriman' => 'required|string',
             'items' => 'required|array|min:1',
             'items.*.pengiriman_id' => 'required|exists:pengiriman,pengiriman_id',
-            'items.*.tanggal_retur' => 'required|date',
+            'tanggal_retur' => 'nullable|date',
+            'items.*.tanggal_retur' => 'nullable|date',
             'items.*.jumlah_retur' => 'required|integer|min:0',
             'items.*.kondisi' => 'required|string|max:50',
             'items.*.keterangan' => 'nullable|string'
@@ -123,6 +123,21 @@ class ReturController extends Controller
                 'status' => 'error',
                 'message' => 'Validasi gagal',
                 'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $globalTanggalRetur = $request->input('tanggal_retur');
+        $missingTanggalRetur = collect($request->items)->contains(function ($item) use ($globalTanggalRetur) {
+            return empty($globalTanggalRetur) && empty($item['tanggal_retur']);
+        });
+
+        if ($missingTanggalRetur) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => [
+                    'tanggal_retur' => ['Tanggal retur wajib diisi.']
+                ]
             ], 422);
         }
 
@@ -147,6 +162,21 @@ class ReturController extends Controller
                 ->whereIn('pengiriman_id', $pengirimanIds)
                 ->get()
                 ->keyBy('pengiriman_id');
+
+            $hargaBarangTokoMap = BarangToko::whereIn(
+                    BarangToko::FIELD_TOKO_ID,
+                    $pengirimanList->pluck(Pengiriman::FIELD_TOKO_ID)->unique()->values()
+                )
+                ->whereIn(
+                    BarangToko::FIELD_BARANG_ID,
+                    $pengirimanList->pluck(Pengiriman::FIELD_BARANG_ID)->unique()->values()
+                )
+                ->get()
+                ->mapWithKeys(function ($barangToko) {
+                    $key = $barangToko->{BarangToko::FIELD_TOKO_ID} . '|' . $barangToko->{BarangToko::FIELD_BARANG_ID};
+
+                    return [$key => (float) ($barangToko->{BarangToko::FIELD_HARGA_BARANG_TOKO} ?? 0)];
+                });
             
             foreach ($request->items as $item) {
                 $pengiriman = $pengirimanList->get($item['pengiriman_id']);
@@ -168,19 +198,37 @@ class ReturController extends Controller
                         'message' => 'Jika jumlah retur lebih dari 0, kondisi tidak boleh "Tidak Ada Retur" untuk barang ' . $pengiriman->barang->nama_barang
                     ], 422);
                 }
-                
-                $hargaAwalBarang = $pengiriman->barang->harga_awal_barang ?? 0;
+
+                $hargaMapKey = $pengiriman->toko_id . '|' . $pengiriman->barang_id;
+                if (!$hargaBarangTokoMap->has($hargaMapKey)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Harga toko untuk barang ' . $pengiriman->barang->nama_barang . ' belum tersedia di data barang_toko'
+                    ], 422);
+                }
+
+                $hargaBarangToko = (float) $hargaBarangTokoMap->get($hargaMapKey, 0);
+
+                $tanggalRetur = !empty($item['tanggal_retur'])
+                    ? $item['tanggal_retur']
+                    : $globalTanggalRetur;
+                if (empty($tanggalRetur)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Tanggal retur wajib diisi untuk semua barang'
+                    ], 422);
+                }
                 
                 $totalTerjual = $pengiriman->jumlah_kirim - $item['jumlah_retur'];
-                $hasil = $totalTerjual * $hargaAwalBarang;
+                $hasil = $totalTerjual * $hargaBarangToko;
                 
                 $retur = new Retur();
                 $retur->pengiriman_id = $pengiriman->pengiriman_id;
                 $retur->toko_id = $pengiriman->toko_id;
                 $retur->barang_id = $pengiriman->barang_id;
                 $retur->nomer_pengiriman = $pengiriman->nomer_pengiriman;
-                $retur->tanggal_retur = $item['tanggal_retur'];
-                $retur->harga_awal_barang = $hargaAwalBarang;
+                $retur->tanggal_retur = $tanggalRetur;
+                $retur->harga_awal_barang = $hargaBarangToko;
                 $retur->jumlah_kirim = $pengiriman->jumlah_kirim;
                 $retur->jumlah_retur = $item['jumlah_retur'];
                 $retur->total_terjual = $totalTerjual;
@@ -190,8 +238,6 @@ class ReturController extends Controller
                 $retur->is_locked = true;
                 $retur->save();
             }
-            
-            ReturCacheService::clearReturCache($nomerPengiriman);
 
             return response()->json([
                 'status' => 'success',
@@ -219,12 +265,18 @@ class ReturController extends Controller
         $returData = ReturCacheService::getReturByNomer($nomerPengiriman);
         
         $isLocked = $returData->where('is_locked', true)->isNotEmpty();
+
+        $tokoId = $pengiriman->first()->{Pengiriman::FIELD_TOKO_ID};
+        $hargaBarangTokoMap = BarangToko::where(BarangToko::FIELD_TOKO_ID, $tokoId)
+            ->whereIn(BarangToko::FIELD_BARANG_ID, $pengiriman->pluck(Pengiriman::FIELD_BARANG_ID)->unique()->values())
+            ->pluck(BarangToko::FIELD_HARGA_BARANG_TOKO, BarangToko::FIELD_BARANG_ID);
         
         return view('retur.show_ajax', [
             'pengiriman' => $pengiriman,
             'returData' => $returData,
             'nomerPengiriman' => $nomerPengiriman,
             'isLocked' => $isLocked,
+            'hargaBarangTokoMap' => $hargaBarangTokoMap,
             'canCreateRetur' => Gate::allows('create-retur'),
         ]);
     }

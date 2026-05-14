@@ -87,20 +87,20 @@ $(function() {
             },
             success: function(response) {
                 if (response.status === 'success') {
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'success',
                         title: 'Berhasil!',
                         text: response.message
                     });
                     refreshData();
                 } else if (response.status === 'info') {
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'info',
                         title: 'Informasi',
                         text: response.message
                     });
                 } else {
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'error',
                         title: 'Gagal!',
                         text: response.message
@@ -108,7 +108,7 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Gagal!',
                     text: xhr.responseJSON?.message || 'Terjadi kesalahan saat menyinkronkan data'
@@ -148,14 +148,14 @@ $(function() {
             success: function(response) {
                 if (response.status === 'success') {
                     $('#modalImport').modal('hide');
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'success',
                         title: 'Berhasil!',
                         text: response.message
                     });
                     refreshData();
                 } else {
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'error',
                         title: 'Gagal!',
                         text: response.message
@@ -163,7 +163,7 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Gagal!',
                     text: xhr.responseJSON?.message || 'Terjadi kesalahan saat mengimpor data'
@@ -198,7 +198,7 @@ $(function() {
                     $('#modalCustomerLabel').text('Edit Data Customer');
                     $('#modalCustomer').modal('show');
                 } else {
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'error',
                         title: 'Gagal!',
                         text: response.message
@@ -206,7 +206,7 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Gagal!',
                     text: xhr.responseJSON?.message || 'Terjadi kesalahan saat mengambil data'
@@ -219,7 +219,7 @@ $(function() {
     $(document).on('click', '.btn-delete', function() {
         var id = $(this).data('id');
         
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Apakah Anda yakin?',
             text: "Data customer akan dihapus!",
             icon: 'warning',
@@ -240,14 +240,14 @@ $(function() {
                     },
                     success: function(response) {
                         if (response.status === 'success') {
-                            Swal.fire({
+                            AlertHelper.fire({
                                 icon: 'success',
                                 title: 'Berhasil!',
                                 text: response.message
                             });
                             refreshData();
                         } else {
-                            Swal.fire({
+                            AlertHelper.fire({
                                 icon: 'error',
                                 title: 'Gagal!',
                                 text: response.message
@@ -255,7 +255,7 @@ $(function() {
                         }
                     },
                     error: function(xhr) {
-                        Swal.fire({
+                        AlertHelper.fire({
                             icon: 'error',
                             title: 'Gagal!',
                             text: xhr.responseJSON?.message || 'Terjadi kesalahan saat menghapus data'
@@ -289,14 +289,14 @@ $(function() {
             success: function(response) {
                 if (response.status === 'success') {
                     $('#modalCustomer').modal('hide');
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'success',
                         title: 'Berhasil!',
                         text: response.message
                     });
                     refreshData();
                 } else {
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'error',
                         title: 'Gagal!',
                         text: response.message
@@ -304,7 +304,7 @@ $(function() {
                 }
             },
             error: function(xhr) {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Gagal!',
                     text: xhr.responseJSON?.message || 'Terjadi kesalahan saat menyimpan data'

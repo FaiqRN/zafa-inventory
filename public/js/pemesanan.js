@@ -8,7 +8,7 @@ $(document).ready(function () {
     const canDeletePemesanan = !!pemesananPermissions.delete;
 
     function showPermissionDeniedMessage(message) {
-        Swal.fire('Akses Ditolak', message, 'warning');
+        AlertHelper.fire('Akses Ditolak', message, 'warning');
     }
 
     function canSubmitCurrentForm() {
@@ -191,7 +191,7 @@ $(document).ready(function () {
 
                 const total = parseFloat($('#total').val()) || 0;
                 if (total <= 0) {
-                    Swal.fire('Perhatian', 'Total harga harus lebih dari 0', 'warning');
+                    AlertHelper.fire('Perhatian', 'Total harga harus lebih dari 0', 'warning');
                     isValid = false;
                 }
             }
@@ -309,12 +309,12 @@ $(document).ready(function () {
 
         if (jumlah > 0) {
             if (jumlah > stok) {
-                warningEl.text(`⚠️ Stok tidak mencukupi! Tersedia: ${stok} pcs`)
+                warningEl.text(`âš ï¸ Stok tidak mencukupi! Tersedia: ${stok} pcs`)
                     .removeClass('text-success')
                     .addClass('text-danger');
                 $('#jumlah_pesanan').addClass('is-invalid');
             } else {
-                warningEl.text(`✓ Stok tersedia: ${stok - jumlah} pcs tersisa`)
+                warningEl.text(`âœ“ Stok tersedia: ${stok - jumlah} pcs tersisa`)
                     .removeClass('text-danger')
                     .addClass('text-success');
                 $('#jumlah_pesanan').removeClass('is-invalid');
@@ -364,7 +364,7 @@ $(document).ready(function () {
                 $('#no_pemesanan').val(nomorPemesanan);
             },
             error: function (xhr) {
-                Swal.fire('Error', 'Gagal mengambil nomor pemesanan', 'error');
+                AlertHelper.fire('Error', 'Gagal mengambil nomor pemesanan', 'error');
             }
         });
 
@@ -469,7 +469,7 @@ $(document).ready(function () {
             },
             error: function (xhr) {
                 const response = xhr.responseJSON;
-                Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+                AlertHelper.fire('Error', response.message || 'Terjadi kesalahan', 'error');
             }
         });
     });
@@ -538,12 +538,12 @@ $(document).ready(function () {
         }
 
         if (!isValid) {
-            Swal.fire('Perhatian', 'Mohon lengkapi semua field yang wajib diisi', 'warning');
+            AlertHelper.fire('Perhatian', 'Mohon lengkapi semua field yang wajib diisi', 'warning');
             return false;
         }
 
         // Show loading
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Menyimpan...',
             text: 'Mohon tunggu sebentar',
             allowOutsideClick: false,
@@ -559,7 +559,7 @@ $(document).ready(function () {
             data: $(this).serialize(),
             success: function (response) {
                 $('#modalPemesanan').modal('hide');
-                Swal.fire('Sukses', response.message, 'success');
+                AlertHelper.fire('Sukses', response.message, 'success');
                 table.ajax.reload();
             },
             error: function (xhr) {
@@ -573,9 +573,9 @@ $(document).ready(function () {
                             $(`#error-${field}`).text(messages[0]);
                         }
                     });
-                    Swal.fire('Error', 'Terdapat kesalahan pada form. Mohon periksa kembali.', 'error');
+                    AlertHelper.fire('Error', 'Terdapat kesalahan pada form. Mohon periksa kembali.', 'error');
                 } else {
-                    Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+                    AlertHelper.fire('Error', response.message || 'Terjadi kesalahan', 'error');
                 }
             }
         });
@@ -635,7 +635,7 @@ $(document).ready(function () {
             },
             error: function (xhr) {
                 const response = xhr.responseJSON;
-                Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+                AlertHelper.fire('Error', response.message || 'Terjadi kesalahan', 'error');
             }
         });
     });
@@ -662,12 +662,12 @@ $(document).ready(function () {
                 },
                 success: function (response) {
                     $('#deleteModal').modal('hide');
-                    Swal.fire('Sukses', response.message, 'success');
+                    AlertHelper.fire('Sukses', response.message, 'success');
                     table.ajax.reload();
                 },
                 error: function (xhr) {
                     const response = xhr.responseJSON;
-                    Swal.fire('Error', response.message || 'Terjadi kesalahan', 'error');
+                    AlertHelper.fire('Error', response.message || 'Terjadi kesalahan', 'error');
                 }
             });
         });

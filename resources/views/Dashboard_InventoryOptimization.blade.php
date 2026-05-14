@@ -11,11 +11,52 @@
 @section('content')
 
 {{-- METRIC SUMMARY --}}
+{{--
+    FIX: Tambah 4 metric card yang sebelumnya dicari oleh updateSummary() di JS
+    tapi tidak ada elemen HTML-nya, sehingga setTextIfExists() selalu skip
+    dan counter summary tidak pernah ter-update saat auto-refresh.
+    Nilai server-side render ({{ }}) sebagai initial value,
+    lalu JS update via setTextIfExists() saat auto-refresh berjalan.
+--}}
 <div class="inv-metric-grid">
     <div class="inv-metric-card">
         <div class="inv-metric-label">Total toko mitra</div>
         <div class="inv-metric-value" id="inv-m-total-toko">{{ count($tokosGeo) }}</div>
-        <div class="inv-metric-sub">aktif bulan ini</div>
+        <div class="inv-metric-sub">aktif</div>
+    </div>
+
+    <div class="inv-metric-card">
+        <div class="inv-metric-label">Total kombinasi produk</div>
+        <div class="inv-metric-value" id="inv-m-kombinasi">{{ count($rekomendasiData) }}</div>
+        <div class="inv-metric-sub">produk × toko</div>
+    </div>
+
+    <div class="inv-metric-card inv-metric-card--danger">
+        <div class="inv-metric-label">Di bawah ROP</div>
+        <div class="inv-metric-value" id="inv-m-kritis">
+            {{ collect($rekomendasiData)->where('is_below_rop', true)->count() }}
+        </div>
+        <div class="inv-metric-sub" id="inv-warn-count">
+            {{ collect($rekomendasiData)->where('is_below_rop', true)->count() }} perlu perhatian
+        </div>
+    </div>
+
+    <div class="inv-metric-card inv-metric-card--warn">
+        <div class="inv-metric-label">Shelf life flag</div>
+        <div class="inv-metric-value" id="inv-m-flag">
+            {{ collect($rekomendasiData)->where('shelf_life_flag', true)->count() }}
+        </div>
+        <div class="inv-metric-sub">interval > batas aman</div>
+    </div>
+
+    <div class="inv-metric-card inv-metric-card--ok">
+        <div class="inv-metric-label">Stok aman</div>
+        <div class="inv-metric-value" id="inv-m-ok">
+            {{ collect($rekomendasiData)->where('is_below_rop', false)->where('shelf_life_flag', false)->count() }}
+        </div>
+        <div class="inv-metric-sub" id="inv-ok-count">
+            {{ collect($rekomendasiData)->where('is_below_rop', false)->where('shelf_life_flag', false)->count() }} aman
+        </div>
     </div>
 </div>
 

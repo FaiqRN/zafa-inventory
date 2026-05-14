@@ -13,7 +13,7 @@ $(document).ready(function() {
 });
 
 function initializeFollowUp() {
-    console.log('🚀 Initializing Follow Up Pelanggan module (FIXED VERSION)');
+    console.log('ðŸš€ Initializing Follow Up Pelanggan module (FIXED VERSION)');
     
     checkDeviceStatus();
     
@@ -27,7 +27,7 @@ function initializeFollowUp() {
     
     deviceCheckInterval = setInterval(checkDeviceStatus, 30000); 
     
-    console.log('✅ Follow Up Pelanggan module initialized (FIXED VERSION)');
+    console.log('âœ… Follow Up Pelanggan module initialized (FIXED VERSION)');
 }
 
 function applyPermissionState() {
@@ -57,15 +57,15 @@ function checkDeviceStatus() {
             if (response && response.status === 'success') {
                 deviceStatus = response.data;
                 updateDeviceStatusUI(deviceStatus);
-                console.log('✅ Device status updated:', deviceStatus);
+                console.log('âœ… Device status updated:', deviceStatus);
             } else {
-                console.warn('⚠️ Invalid device status response:', response);
+                console.warn('âš ï¸ Invalid device status response:', response);
                 deviceStatus = { isConnected: false, message: 'Invalid response' };
                 updateDeviceStatusUI(deviceStatus);
             }
         },
         error: function(xhr, status, error) {
-            console.error('❌ Failed to check device status:', error);
+            console.error('âŒ Failed to check device status:', error);
             
             let errorMessage = 'Connection check failed';
             if (xhr.status === 500) {
@@ -153,14 +153,14 @@ function updateDeviceStatusUI(status) {
             testButton.removeClass('btn-outline-success').addClass('btn-outline-secondary');
         }
         
-        console.warn('⚠️ Device disconnected:', status.message);
+        console.warn('âš ï¸ Device disconnected:', status.message);
     }
     
     updateSendButton();
 }
 
 function showDeviceHelp() {
-    Swal.fire({
+    AlertHelper.fire({
         title: 'WhatsApp Device Help',
         html: `
             <div class="text-left">
@@ -226,7 +226,7 @@ function setupEventListeners() {
         }
         
         if (!deviceStatus || !deviceStatus.isConnected) {
-            Swal.fire({
+            AlertHelper.fire({
                 title: 'WhatsApp Tidak Terhubung',
                 html: `
                     <div class="text-center">
@@ -251,13 +251,13 @@ function setupEventListeners() {
         }
         
         if (!filteredCustomers || filteredCustomers.length === 0) {
-            Swal.fire('❌ Error', 'Tidak ada customer yang dipilih', 'error');
+            AlertHelper.fire('âŒ Error', 'Tidak ada customer yang dipilih', 'error');
             return;
         }
         
         const message = $('#followUpMessage').val().trim();
         if (!message && uploadedImages.length === 0) {
-            Swal.fire('❌ Error', 'Pesan atau gambar harus diisi minimal salah satu', 'error');
+            AlertHelper.fire('âŒ Error', 'Pesan atau gambar harus diisi minimal salah satu', 'error');
             return;
         }
         
@@ -274,7 +274,7 @@ function setupEventListeners() {
         }
         
         if (!deviceStatus || !deviceStatus.isConnected) {
-            Swal.fire('⚠️ Warning', 'WhatsApp device tidak terhubung', 'warning');
+            AlertHelper.fire('âš ï¸ Warning', 'WhatsApp device tidak terhubung', 'warning');
             return;
         }
         
@@ -324,7 +324,7 @@ function testWhatsAppConnection() {
         return;
     }
 
-    Swal.fire({
+    AlertHelper.fire({
         title: 'Testing WhatsApp Connection...',
         html: `
             <div class="text-center">
@@ -348,8 +348,8 @@ function testWhatsAppConnection() {
         timeout: 45000, // Increased timeout
         success: function(response) {
             if (response && response.status === 'success') {
-                Swal.fire({
-                    title: '✅ Test Berhasil!',
+                AlertHelper.fire({
+                    title: 'âœ… Test Berhasil!',
                     html: `
                         <div class="text-center">
                             <p class="text-success mb-3">${response.message}</p>
@@ -368,7 +368,7 @@ function testWhatsAppConnection() {
                     checkDeviceStatus();
                 }, 2000);
             } else {
-                Swal.fire({
+                AlertHelper.fire({
                     title: 'Test Gagal',
                     html: `
                         <div class="text-center">
@@ -396,13 +396,13 @@ function testWhatsAppConnection() {
                 errorMessage = 'Endpoint tidak ditemukan - periksa route';
             }
             
-            Swal.fire({
-                title: '❌ Connection Test Failed',
+            AlertHelper.fire({
+                title: 'âŒ Connection Test Failed',
                 html: `
                     <div class="text-left">
                         <p class="text-danger mb-3"><strong>Error:</strong> ${errorMessage}</p>
                         
-                        <h6>🔧 Troubleshooting Steps:</h6>
+                        <h6>ðŸ”§ Troubleshooting Steps:</h6>
                         <ol class="text-left">
                             <li>Check your .env file configuration</li>
                             <li>Verify WABLAS_TOKEN and WABLAS_SECRET_KEY</li>
@@ -420,7 +420,7 @@ function testWhatsAppConnection() {
                 width: '600px'
             });
             
-            console.error('❌ Test connection failed:', {
+            console.error('âŒ Test connection failed:', {
                 status: xhr.status,
                 statusText: xhr.statusText,
                 error: error,
@@ -488,9 +488,9 @@ function loadFilteredCustomers() {
             if (response && response.status === 'success') {
                 filteredCustomers = response.data || [];
                 displayCustomers(filteredCustomers);
-                console.log(`✅ Loaded ${filteredCustomers.length} customers`);
+                console.log(`âœ… Loaded ${filteredCustomers.length} customers`);
             } else {
-                console.error('❌ Error loading customers:', response);
+                console.error('âŒ Error loading customers:', response);
                 showErrorState('Gagal memuat data customer: ' + (response.message || 'Response tidak valid'));
             }
         },
@@ -510,7 +510,7 @@ function loadFilteredCustomers() {
                 errorMessage = 'Server error (500) - silakan cek log server';
             }
             
-            console.error('❌ AJAX Error:', {
+            console.error('âŒ AJAX Error:', {
                 status: xhr.status,
                 statusText: xhr.statusText,
                 error: error,
@@ -569,7 +569,7 @@ function displayCustomers(customers) {
             `;
             customerList.append(customerItem);
         } catch (error) {
-            console.error('❌ Error rendering customer:', customer, error);
+            console.error('âŒ Error rendering customer:', customer, error);
         }
     });
     
@@ -689,8 +689,8 @@ function sendMassFollowUp() {
     const estimatedTime = Math.ceil(filteredCustomers.length * 3.5); // 3.5 seconds per customer (more realistic)
     const estimatedMinutes = Math.ceil(estimatedTime / 60);
     
-    Swal.fire({
-        title: '📤 Mengirim Follow Up via WhatsApp...',
+    AlertHelper.fire({
+        title: 'ðŸ“¤ Mengirim Follow Up via WhatsApp...',
         html: `
             <div class="text-center">
                 <div class="mb-3">
@@ -748,8 +748,8 @@ function sendMassFollowUp() {
             $('.progress-bar').css('width', '100%');
             
             if (response && response.status === 'success') {
-                Swal.fire({
-                    title: '🎉 Follow Up Berhasil Dikirim!',
+                AlertHelper.fire({
+                    title: 'ðŸŽ‰ Follow Up Berhasil Dikirim!',
                     html: `
                         <div class="text-center">
                             <div class="mb-4">
@@ -813,15 +813,15 @@ function sendMassFollowUp() {
                 loadRiwayatData();
                 $('#previewModal').modal('hide');
             } else {
-                Swal.fire({
-                    title: '❌ Error Pengiriman',
+                AlertHelper.fire({
+                    title: 'âŒ Error Pengiriman',
                     text: response.message || 'Terjadi kesalahan',
                     icon: 'error'
                 });
             }
         },
         error: function(xhr, status, error) {
-            console.error('❌ Send follow up error:', {
+            console.error('âŒ Send follow up error:', {
                 status: xhr.status,
                 statusText: xhr.statusText,
                 error: error,
@@ -847,14 +847,14 @@ function sendMassFollowUp() {
                 errorDetails = 'Periksa konfigurasi .env file dan pastikan device WhatsApp terhubung.';
             }
             
-            Swal.fire({
-                title: '❌ Error Pengiriman WhatsApp',
+            AlertHelper.fire({
+                title: 'âŒ Error Pengiriman WhatsApp',
                 html: `
                     <div class="text-left">
                         <p class="text-danger mb-3"><strong>${errorMessage}</strong></p>
                         ${errorDetails ? `<div class="alert alert-info"><small>${errorDetails}</small></div>` : ''}
                         
-                        <h6 class="mt-4">🔧 Troubleshooting:</h6>
+                        <h6 class="mt-4">ðŸ”§ Troubleshooting:</h6>
                         <ul class="text-left">
                             <li>Periksa koneksi WhatsApp device</li>
                             <li>Validasi token dan secret key Wablas</li>
@@ -868,7 +868,7 @@ function sendMassFollowUp() {
                 width: '600px',
                 footer: `
                     <small class="text-muted">
-                        💡 Tips: Gunakan command <code>php artisan whatsapp:debug</code> untuk troubleshooting
+                        ðŸ’¡ Tips: Gunakan command <code>php artisan whatsapp:debug</code> untuk troubleshooting
                     </small>
                 `
             });
@@ -908,12 +908,12 @@ function showSendResults(results) {
     const successCount = results.filter(r => r.status === 'success').length;
     const failedCount = results.filter(r => r.status === 'failed').length;
     
-    Swal.fire({
-        title: `📊 Detail Hasil Pengiriman WhatsApp`,
+    AlertHelper.fire({
+        title: `ðŸ“Š Detail Hasil Pengiriman WhatsApp`,
         html: `
             <div class="mb-3 text-center">
-                <span class="badge badge-success mr-2">✅ ${successCount} Berhasil</span>
-                <span class="badge badge-danger">❌ ${failedCount} Gagal</span>
+                <span class="badge badge-success mr-2">âœ… ${successCount} Berhasil</span>
+                <span class="badge badge-danger">âŒ ${failedCount} Gagal</span>
             </div>
             ${resultHtml}
         `,
@@ -936,7 +936,7 @@ function resetForm() {
     $('.filter-checkbox').prop('checked', false);
     updateFilters();
     
-    console.log('✅ Form reset successfully');
+    console.log('âœ… Form reset successfully');
 }
 
 function setupImageUpload() {
@@ -1015,7 +1015,7 @@ function handleImageFiles(files) {
                     size: file.size
                 });
                 updateSendButton();
-                console.log(`✅ Image added: ${file.name} (${formatFileSize(file.size)})`);
+                console.log(`âœ… Image added: ${file.name} (${formatFileSize(file.size)})`);
             };
             reader.readAsDataURL(file);
         } else {
@@ -1081,7 +1081,7 @@ function removeImage(index) {
     });
     
     updateSendButton();
-    console.log(`✅ Image removed, ${uploadedImages.length} images remaining`);
+    console.log(`âœ… Image removed, ${uploadedImages.length} images remaining`);
 }
 
 function showFullImage(src) {
@@ -1093,7 +1093,7 @@ function showCustomerDetail(customerIndex) {
     try {
         const customer = filteredCustomers[customerIndex];
         if (!customer) {
-            console.error('❌ Customer not found at index:', customerIndex);
+            console.error('âŒ Customer not found at index:', customerIndex);
             return;
         }
         
@@ -1118,7 +1118,7 @@ function showCustomerDetail(customerIndex) {
         
         $('#customerDetailModal').modal('show');
     } catch (error) {
-        console.error('❌ Error showing customer detail:', error);
+        console.error('âŒ Error showing customer detail:', error);
         showErrorMessage('Terjadi kesalahan saat menampilkan detail customer');
     }
 }
@@ -1135,15 +1135,15 @@ function loadRiwayatData() {
             
             if (response && response.status === 'success') {
                 displayRiwayat(response.data || []);
-                console.log(`✅ Loaded ${response.data?.length || 0} history records`);
+                console.log(`âœ… Loaded ${response.data?.length || 0} history records`);
             } else {
-                console.error('❌ Error loading history:', response);
+                console.error('âŒ Error loading history:', response);
                 displayRiwayat([]);
             }
         },
         error: function(xhr, status, error) {
             hideLoadingState('#riwayatTableBody');
-            console.error('❌ AJAX Error loading history:', error);
+            console.error('âŒ AJAX Error loading history:', error);
             displayRiwayat([]);
         }
     });
@@ -1261,11 +1261,11 @@ function hideLoadingState(element) {
 
 function showErrorMessage(message) {
     if (typeof Swal !== 'undefined') {
-        Swal.fire('❌ Error', message, 'error');
+        AlertHelper.fire('âŒ Error', message, 'error');
     } else {
         alert('Error: ' + message);
     }
-    console.error('❌ Error:', message);
+    console.error('âŒ Error:', message);
 }
 
 function debounce(func, wait) {

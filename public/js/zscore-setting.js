@@ -15,10 +15,7 @@ $(document).ready(function() {
     let selectedBarangId = '';
 
     function setAddButtonDisabled(isDisabled) {
-        if (!canCreateZscore) {
-            return;
-        }
-
+        if (!canCreateZscore) return;
         $('#btn-add-zscore').prop('disabled', isDisabled);
     }
 
@@ -84,9 +81,7 @@ $(document).ready(function() {
             url: `/zscore-setting/barang-by-toko/${tokoId}`,
             method: 'GET',
             success: function(response) {
-                if (!response.success) {
-                    return;
-                }
+                if (!response.success) return;
 
                 const barangSelect = $('#select-barang');
                 response.data.forEach(item => {
@@ -104,10 +99,7 @@ $(document).ready(function() {
         $.ajax({
             url: '/zscore-setting/data',
             method: 'GET',
-            data: {
-                toko_id: tokoId,
-                barang_id: barangId,
-            },
+            data: { toko_id: tokoId, barang_id: barangId },
             success: function(response) {
                 if (response.success) {
                     globalData = response.data;
@@ -115,12 +107,13 @@ $(document).ready(function() {
                     renderZscoreTable(response.data);
                 }
             },
-            error: function(xhr) {
+            error: function() {
                 AlertHelper.error('Gagal memuat data Z-Score');
             }
         });
     }
 
+    // FIX #3: Render tabel dengan kolom "Aktif" dan tombol "Jadikan Aktif"
     function renderZscoreTable(data) {
         const tbody = $('#tbody-zscore');
         tbody.empty();
@@ -128,7 +121,7 @@ $(document).ready(function() {
         if (data.length === 0) {
             tbody.append(`
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
+                    <td colspan="7" class="text-center text-muted py-4">
                         <i class="fas fa-inbox"></i><br>
                         Belum ada data Z-Score
                     </td>
@@ -136,9 +129,25 @@ $(document).ready(function() {
             `);
         } else {
             data.forEach((item, index) => {
-                const keterangan = item.keterangan ? (item.keterangan.length > 40 ? item.keterangan.substring(0, 40) + '...' : item.keterangan) : '-';
+                const keterangan = item.keterangan
+                    ? (item.keterangan.length > 40 ? item.keterangan.substring(0, 40) + '...' : item.keterangan)
+                    : '-';
+
+                // Badge aktif/tidak aktif
+                const activeBadge = item.is_active
+                    ? `<span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Aktif</span>`
+                    : `<span class="badge badge-secondary">Tidak Aktif</span>`;
 
                 let actionButtons = '';
+
+                // FIX #3: Tombol "Jadikan Aktif" hanya muncul jika baris belum aktif dan user punya edit permission
+                if (canEditZscore && !item.is_active) {
+                    actionButtons += `
+                        <button class="btn btn-success btn-set-active-zscore" data-id="${item.id}" title="Jadikan Aktif untuk perhitungan SS">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    `;
+                }
                 if (canEditZscore) {
                     actionButtons += `
                         <button class="btn btn-info btn-edit-zscore" data-id="${item.id}" title="Edit">
@@ -159,15 +168,14 @@ $(document).ready(function() {
                     : '<span class="text-muted">-</span>';
 
                 tbody.append(`
-                    <tr>
+                    <tr class="${item.is_active ? 'table-success' : ''}">
                         <td class="text-center">${index + 1}</td>
                         <td>${item.label}</td>
                         <td class="text-center">${parseFloat(item.service_level).toFixed(2)}</td>
                         <td class="text-right">${parseFloat(item.z_score).toFixed(4)}</td>
+                        <td class="text-center">${activeBadge}</td>
                         <td title="${item.keterangan || '-'}">${keterangan}</td>
-                        <td class="text-center">
-                            ${actionHtml}
-                        </td>
+                        <td class="text-center">${actionHtml}</td>
                     </tr>
                 `);
             });
@@ -176,34 +184,22 @@ $(document).ready(function() {
 
     $(document).on('keyup', '#searchZscore', function() {
         const searchTerm = $(this).val().toLowerCase();
-        filterTable(globalData, searchTerm);
-    });
-
-    function filterTable(data, searchTerm) {
-        const filtered = data.filter(item => {
-            return item.label.toLowerCase().includes(searchTerm) ||
-                   item.z_score.toString().includes(searchTerm) ||
-                   item.service_level.toString().includes(searchTerm) ||
-                   (item.keterangan && item.keterangan.toLowerCase().includes(searchTerm));
-        });
+        const filtered = globalData.filter(item =>
+            item.label.toLowerCase().includes(searchTerm) ||
+            item.z_score.toString().includes(searchTerm) ||
+            item.service_level.toString().includes(searchTerm) ||
+            (item.keterangan && item.keterangan.toLowerCase().includes(searchTerm))
+        );
         renderZscoreTable(filtered);
-    }
+    });
 
     $('#btn-add-zscore').click(function() {
         if (!canCreateZscore) {
             AlertHelper.error('Akses ditolak', 'Anda tidak memiliki izin untuk menambah Z-Score.');
             return;
         }
-
-        if (!selectedTokoId) {
-            AlertHelper.warning('Pilih toko terlebih dahulu');
-            return;
-        }
-
-        if (!selectedBarangId) {
-            AlertHelper.warning('Pilih barang terlebih dahulu');
-            return;
-        }
+        if (!selectedTokoId) { AlertHelper.warning('Pilih toko terlebih dahulu'); return; }
+        if (!selectedBarangId) { AlertHelper.warning('Pilih barang terlebih dahulu'); return; }
 
         $('#modal-title').text('Tambah Z-Score');
         $('#form-zscore')[0].reset();
@@ -218,14 +214,11 @@ $(document).ready(function() {
         }
 
         const id = $(this).data('id');
-        
+
         $.ajax({
             url: `/zscore-setting/${id}/edit`,
             method: 'GET',
-            data: {
-                toko_id: selectedTokoId,
-                barang_id: selectedBarangId,
-            },
+            data: { toko_id: selectedTokoId, barang_id: selectedBarangId },
             success: function(response) {
                 if (response.success) {
                     $('#modal-title').text('Edit Z-Score');
@@ -237,9 +230,49 @@ $(document).ready(function() {
                     $('#modal-zscore').modal('show');
                 }
             },
-            error: function(xhr) {
+            error: function() {
                 AlertHelper.error('Gagal memuat data Z-Score');
             }
+        });
+    });
+
+    // FIX #3: Handler tombol "Jadikan Aktif"
+    $(document).on('click', '.btn-set-active-zscore', function() {
+        if (!canEditZscore) {
+            AlertHelper.error('Akses ditolak', 'Anda tidak memiliki izin untuk mengubah Z-Score.');
+            return;
+        }
+
+        const id = $(this).data('id');
+        const item = globalData.find(d => d.id == id);
+        const label = item ? `${item.label} (${parseFloat(item.service_level).toFixed(2)}%)` : 'Service Level ini';
+
+        AlertHelper.confirm(
+            'Jadikan Service Level Aktif?',
+            `Jadikan ${label} sebagai service level aktif untuk perhitungan Safety Stock?`,
+            'Ya, Jadikan Aktif',
+            'Batal'
+        ).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            $.ajax({
+                url: `/zscore-setting/${id}/set-active`,
+                method: 'POST',
+                data: { toko_id: selectedTokoId, barang_id: selectedBarangId },
+                success: function(response) {
+                    if (response.success) {
+                        AlertHelper.success(response.message);
+                        loadZscoreData(selectedTokoId, selectedBarangId);
+                    } else {
+                        AlertHelper.error(response.message);
+                    }
+                },
+                error: function() {
+                    AlertHelper.error('Gagal mengubah status aktif');
+                }
+            });
         });
     });
 
@@ -252,7 +285,6 @@ $(document).ready(function() {
             AlertHelper.error('Akses ditolak', 'Anda tidak memiliki izin untuk mengubah Z-Score.');
             return;
         }
-
         if (!id && !canCreateZscore) {
             AlertHelper.error('Akses ditolak', 'Anda tidak memiliki izin untuk menambah Z-Score.');
             return;
@@ -261,19 +293,17 @@ $(document).ready(function() {
         const url = id ? `/zscore-setting/${id}` : '/zscore-setting';
         const method = id ? 'PUT' : 'POST';
 
-        const data = {
-            toko_id: selectedTokoId,
-            barang_id: selectedBarangId,
-            label: $('#zscore-label').val(),
-            service_level: $('#zscore-service-level').val(),
-            z_score: $('#zscore-z-score').val(),
-            keterangan: $('#zscore-keterangan').val()
-        };
-
         $.ajax({
             url: url,
             method: method,
-            data: data,
+            data: {
+                toko_id: selectedTokoId,
+                barang_id: selectedBarangId,
+                label: $('#zscore-label').val(),
+                service_level: $('#zscore-service-level').val(),
+                z_score: $('#zscore-z-score').val(),
+                keterangan: $('#zscore-keterangan').val()
+            },
             success: function(response) {
                 if (response.success) {
                     AlertHelper.success(response.message);
@@ -285,8 +315,7 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 if (xhr.status === 400) {
-                    const response = xhr.responseJSON;
-                    AlertHelper.error(response.message || 'Data tidak valid');
+                    AlertHelper.error(xhr.responseJSON?.message || 'Data tidak valid');
                 } else {
                     AlertHelper.error('Gagal menyimpan data');
                 }
@@ -301,15 +330,25 @@ $(document).ready(function() {
         }
 
         const id = $(this).data('id');
-        
-        if (confirm('Anda yakin ingin menghapus Z-Score ini?')) {
+        const item = globalData.find(d => d.id == id);
+
+        // FIX #3: Peringatkan user jika menghapus baris aktif
+        const isActive = item && item.is_active;
+        const confirmMsg = isActive
+            ? 'Anda akan menghapus Z-Score yang sedang AKTIF. Service level lain akan otomatis diaktifkan. Lanjutkan?'
+            : 'Anda yakin ingin menghapus Z-Score ini?';
+
+        const confirmTitle = isActive ? 'Hapus Z-Score Aktif?' : 'Hapus Z-Score?';
+
+        AlertHelper.confirmDelete(confirmTitle, confirmMsg).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
             $.ajax({
                 url: `/zscore-setting/${id}`,
                 method: 'DELETE',
-                data: {
-                    toko_id: selectedTokoId,
-                    barang_id: selectedBarangId,
-                },
+                data: { toko_id: selectedTokoId, barang_id: selectedBarangId },
                 success: function(response) {
                     if (response.success) {
                         AlertHelper.success(response.message);
@@ -318,10 +357,11 @@ $(document).ready(function() {
                         AlertHelper.error(response.message);
                     }
                 },
-                error: function(xhr) {
+                error: function() {
                     AlertHelper.error('Gagal menghapus data');
                 }
             });
-        }
+        });
     });
+
 });

@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Exceptions\RekomendasiCalculationException;
 use App\Models\Barang;
+use App\Models\BarangToko;
 use App\Models\InventoryRekomendasi;
+use App\Models\KonfigurasiSistem;
 use App\Models\Pengiriman;
 use App\Models\Retur;
 use App\Services\DashboardInventoryOptimization\EoqService;
@@ -15,12 +17,13 @@ use Carbon\Carbon;
 
 class RekomendasiService
 {
-    // 70% dari shelf life sebagai batas aman distribusi
-    const SHELF_LIFE_FACTOR = 0.7;
-    const DEFAULT_HARI_OBSERVASI = 365;
-    const MIN_Q_KIRIM_OPERASIONAL = 5;
-    const PACK_SIZE_Q_KIRIM = 5;
+    const SHELF_LIFE_FACTOR               = 0.7;
+    const DEFAULT_HARI_OBSERVASI          = 365;
+    const MIN_Q_KIRIM_OPERASIONAL         = 5;
+    const PACK_SIZE_Q_KIRIM               = 5;
     const DEFAULT_ZSCORE_SYNC_WINDOW_DAYS = 180;
+    // MIN_INTERVAL_KIRIM_HARI tidak lagi hardcoded — nilai dibaca dari konfigurasi_sistem
+    // via KonfigurasiSistem::get(). Fallback default ada di KonfigurasiSistem::DEFAULT_MIN_INTERVAL_KIRIM_HARI.
 
     public function __construct(
         private EoqService $eoqService,
@@ -33,100 +36,76 @@ class RekomendasiService
     // PUBLIC METHODS
     // ──────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Hitung rekomendasi untuk SATU kombinasi toko + barang.
-     *
-     * @param  string $tokoId
-     * @param  string $barangId
-     * @param  int    $hariObservasi
-     * @return array  Hasil lengkap EOQ, SS, ROP, Q_kirim
-     * @throws RekomendasiCalculationException
-     */
     public function hitung(string $tokoId, string $barangId, int $hariObservasi = self::DEFAULT_HARI_OBSERVASI): array
     {
-        // ── Step 1: EOQ ─────────────────────────────────────────────────────
+        // ── Resolve barang_toko_id dari toko_id + barang_id ──────────────────
+        // Dibutuhkan sebagai PK untuk upsert ke inventory_rekomendasi
+        $barangTokoId = $this->resolveBarangTokoId($tokoId, $barangId);
+
+        // ── Step 1: EOQ ──────────────────────────────────────────────────────
         $eoqHasil = $this->eoqService->hitung($tokoId, $barangId, $hariObservasi);
 
-        // ── Step 2: SS ──────────────────────────────────────────────────────
+        // ── Step 2: SS ───────────────────────────────────────────────────────
         $ssHasil = $this->ssService->hitung($tokoId, $barangId, $hariObservasi);
 
-        // ── Step 3: ROP ─────────────────────────────────────────────────────
+        // ── Step 3: ROP ──────────────────────────────────────────────────────
         $ropHasil = $this->ropService->hitung(
             d:        $ssHasil['d'],
             leadTime: $ssHasil['L'],
             ss:       $ssHasil['ss'],
         );
 
-        // ── Step 4: Layer 2 — Rekomendasi Kirim ────────────────────────────
+        // ── Step 4: Layer 2 — Rekomendasi Kirim ─────────────────────────────
         $layer2Hasil = $this->hitungLayer2(
             barangId:        $barangId,
+            tokoId:          $tokoId,
             eoq:             $eoqHasil['eoq'],
             intervalEoqHari: (float) $eoqHasil['T'],
             avgJualHarian:   $ssHasil['d'],
         );
 
-        // ── Step 5: Stok aktual per toko ────────────────────────────────────
+        // ── Step 5: Stok aktual ──────────────────────────────────────────────
         $stokAktual = $this->getStokAktual($tokoId, $barangId);
 
-        // ── Step 6: is_below_rop ────────────────────────────────────────────
+        // ── Step 6: is_below_rop ─────────────────────────────────────────────
         $isBelowRop = $stokAktual <= $ropHasil['rop'] ? 1 : 0;
 
-        // ── Step 7: Susun hasil ─────────────────────────────────────────────
+        // ── Step 7: Susun hasil ──────────────────────────────────────────────
         $hasil = [
+            'barang_toko_id'        => $barangTokoId,
             'toko_id'               => $tokoId,
             'barang_id'             => $barangId,
-
-            // Snapshot parameter
             's_dipakai'             => $eoqHasil['s_dipakai'],
             's_dari_override'       => $eoqHasil['s_dari_override'] ? 1 : 0,
             'h_dipakai'             => $eoqHasil['h_dipakai'],
             'z_dipakai'             => $ssHasil['z_dipakai'],
             'service_level_dipakai' => $ssHasil['service_level_dipakai'],
             'hari_observasi'        => $hariObservasi,
-
-            // Hasil EOQ
             'eoq_result'            => $eoqHasil['eoq'],
             'frekuensi_per_tahun'   => (int) round($eoqHasil['D'] / $eoqHasil['eoq']),
             'interval_eoq_hari'     => $eoqHasil['T'],
-
-            // Hasil SS
             'ss_result'             => $ssHasil['ss'],
-
-            // Hasil ROP
             'rop_result'            => $ropHasil['rop'],
-
-            // Hasil Layer 2
             'shelf_life_days'       => $layer2Hasil['shelf_life_days'],
             'batas_aman_hari'       => $layer2Hasil['batas_aman_hari'],
             'shelf_life_flag'       => $layer2Hasil['shelf_life_flag'],
             'interval_kirim_hari'   => $layer2Hasil['interval_kirim_hari'],
             'avg_jual_harian'       => round($ssHasil['d'], 4),
             'q_kirim_result'        => $layer2Hasil['q_kirim'],
-
-            // Status stok
             'stok_aktual'           => $stokAktual,
             'is_below_rop'          => $isBelowRop,
-
-            // Data historis
             'total_kirim_historis'  => $eoqHasil['total_kirim'],
             'total_retur_historis'  => $eoqHasil['total_retur'],
             'penjualan_aktual'      => $eoqHasil['penjualan_aktual'],
-
             'calculated_at'         => now(),
         ];
 
-        // ── Step 8: Simpan ──────────────────────────────────────────────────
+        // ── Step 8: UPSERT — update jika sudah ada, insert jika belum ────────
         $this->simpan($hasil);
 
         return $hasil;
     }
 
-    /**
-     * Hitung rekomendasi untuk SEMUA kombinasi toko + barang yang aktif.
-     *
-     * @param  int $hariObservasi
-     * @return array{berhasil: int, gagal: int, error: array}
-     */
     public function hitungSemua(int $hariObservasi = self::DEFAULT_HARI_OBSERVASI): array
     {
         $this->sinkronkanZscorePasanganAktif();
@@ -157,9 +136,6 @@ class RekomendasiService
         return compact('berhasil', 'gagal', 'errors');
     }
 
-    /**
-     * Pastikan pasangan aktif toko-barang sudah memiliki baseline default Z-score.
-     */
     private function sinkronkanZscorePasanganAktif(): void
     {
         try {
@@ -184,16 +160,59 @@ class RekomendasiService
     // ──────────────────────────────────────────────────────────────────────────
 
     /**
-     * Hitung Layer 2: Rekomendasi Kirim dengan constraint shelf life.
+     * Resolve barang_toko_id dari kombinasi toko_id + barang_id.
+     *
+     * Digunakan sebagai PK untuk upsert ke inventory_rekomendasi.
+     * Jika kombinasi tidak ditemukan di barang_toko, lempar exception
+     * karena data tidak valid untuk dikalkulasi.
+     *
+     * @throws RekomendasiCalculationException
      */
+    private function resolveBarangTokoId(string $tokoId, string $barangId): string
+    {
+        $barangToko = BarangToko::where('toko_id', $tokoId)
+            ->where('barang_id', $barangId)
+            ->value('barang_toko_id');
+
+        if (!$barangToko) {
+            throw new RekomendasiCalculationException(
+                "Kombinasi toko {$tokoId} dan barang {$barangId} tidak ditemukan di tabel barang_toko. "
+                . 'Pastikan barang sudah terdaftar di toko ini.'
+            );
+        }
+
+        return $barangToko;
+    }
+
+    /**
+     * UPSERT ke inventory_rekomendasi.
+     *
+     * Karena PK = barang_toko_id (bukan autoincrement), kita bisa pakai
+     * updateOrCreate() dengan barang_toko_id sebagai key pencarian.
+     *
+     * Ini menggantikan create() lama yang selalu INSERT baris baru
+     * dan menyebabkan duplikat per kombinasi toko+barang.
+     */
+    private function simpan(array $hasil): void
+    {
+        InventoryRekomendasi::updateOrCreate(
+            // ── Key: identifikasi baris yang sudah ada ───────────────────────
+            [
+                InventoryRekomendasi::FIELD_BARANG_TOKO_ID => $hasil['barang_toko_id'],
+            ],
+            // ── Values: semua kolom yang di-update / di-insert ───────────────
+            $hasil
+        );
+    }
+
     private function hitungLayer2(
         string $barangId,
+        string $tokoId,
         int    $eoq,
         float  $intervalEoqHari,
         float  $avgJualHarian,
     ): array {
-        $barang = Barang::findOrFail($barangId);
-
+        $barang        = Barang::findOrFail($barangId);
         $shelfLifeDays = (int) $barang->{Barang::FIELD_SHELF_LIFE};
 
         if ($shelfLifeDays <= 0) {
@@ -208,14 +227,24 @@ class RekomendasiService
         if ($intervalEoqHari > $batasAman) {
             $shelfLifeFlag = 1;
             $intervalKirim = (float) $batasAman;
-            $qKirimRaw     = $avgJualHarian * $batasAman;
         } else {
             $shelfLifeFlag = 0;
             $intervalKirim = $intervalEoqHari;
-            $qKirimRaw     = $avgJualHarian * $intervalEoqHari;
         }
 
-        $qKirim = $this->normalisasiQKirim($qKirimRaw, $eoq);
+        $minInterval = $this->resolveMinIntervalKirim($tokoId);
+        if ($minInterval > 0 && $intervalKirim < $minInterval) {
+            $intervalKirim = (float) min($minInterval, $batasAman);
+            Log::debug('RekomendasiService::hitungLayer2 min_interval applied', [
+                'toko_id'        => $tokoId,
+                'barang_id'      => $barangId,
+                'min_interval'   => $minInterval,
+                'interval_akhir' => $intervalKirim,
+            ]);
+        }
+
+        $qKirimRaw = $avgJualHarian * $intervalKirim;
+        $qKirim    = $this->normalisasiQKirim($qKirimRaw, $eoq);
 
         return [
             'shelf_life_days'     => $shelfLifeDays,
@@ -226,9 +255,23 @@ class RekomendasiService
         ];
     }
 
-    /**
-     * Normalisasi kuantitas kirim.
-     */
+    private function resolveMinIntervalKirim(string $tokoId): int
+    {
+        // Prioritas 1: override per-toko dari kolom min_interval_kirim_hari di tabel toko
+        $tokoOverride = (int) (\App\Models\Toko::where(\App\Models\Toko::FIELD_TOKO_ID, $tokoId)
+            ->value('min_interval_kirim_hari') ?? 0);
+
+        if ($tokoOverride > 0) {
+            return $tokoOverride;
+        }
+
+        // Prioritas 2: nilai global dari konfigurasi_sistem (dapat diubah via admin)
+        return (int) KonfigurasiSistem::get(
+            KonfigurasiSistem::KEY_MIN_INTERVAL_KIRIM_HARI,
+            KonfigurasiSistem::DEFAULT_MIN_INTERVAL_KIRIM_HARI  // fallback 14
+        );
+    }
+
     private function normalisasiQKirim(float $qKirimRaw, int $eoq): int
     {
         $qKirimRaw = max(0.0, $qKirimRaw);
@@ -242,63 +285,89 @@ class RekomendasiService
         $qPack  = (int) (floor($qDasar / self::PACK_SIZE_Q_KIRIM) * self::PACK_SIZE_Q_KIRIM);
 
         if ($qPack < self::MIN_Q_KIRIM_OPERASIONAL) {
-            return self::MIN_Q_KIRIM_OPERASIONAL;  // ← kembalikan 5
+            return self::MIN_Q_KIRIM_OPERASIONAL;
         }
         return $qPack;
-
     }
 
     /**
-     * Ambil stok aktual barang di toko.
+     * Hitung stok aktual di toko berdasarkan window waktu shelf life produk.
      *
-     * FIX: barang_stok adalah stok gudang produksi (tidak per toko) dan
-     * sisa_stok = 0 semua karena sudah terdistribusi.
-     * Gunakan kalkulasi langsung: total_kirim_ke_toko - total_terjual_di_toko.
+     * FIX: Sebelumnya query tanpa filter tanggal — menghitung semua pengiriman
+     * sepanjang masa. Akibatnya stok bisa negatif atau tidak akurat untuk
+     * produk yang sudah berulang kali dikirim dan diretur.
      *
-     * @return int
+     * Sekarang: window dihitung mundur dari sekarang sejauh (shelf_life_days × 2)
+     * untuk menangkap siklus aktif terakhir. Minimal fallback 90 hari jika
+     * shelf_life tidak ditemukan.
+     *
+     * Rumus: stok_aktual = total_kirim - total_terjual - total_retur
+     * dalam window tersebut.
      */
     private function getStokAktual(string $tokoId, string $barangId): int
     {
-        // Total yang pernah dikirim ke toko ini
+        // Tentukan window berdasarkan shelf_life produk (2 siklus ke belakang)
+        $shelfLifeDays = (int) (\App\Models\Barang::where(\App\Models\Barang::FIELD_BARANG_ID, $barangId)
+            ->value(\App\Models\Barang::FIELD_SHELF_LIFE) ?? 0);
+
+        $windowHari  = $shelfLifeDays > 0 ? $shelfLifeDays * 2 : 90;
+        $cutoffDate  = \Carbon\Carbon::now()->subDays($windowHari)->toDateString();
+
         $totalKirim = (int) Pengiriman::where(Pengiriman::FIELD_TOKO_ID, $tokoId)
             ->where(Pengiriman::FIELD_BARANG_ID, $barangId)
+            ->whereDate(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '>=', $cutoffDate)
             ->sum(Pengiriman::FIELD_JUMLAH_KIRIM);
 
-        // Total yang sudah terjual (dari kolom total_terjual di tabel retur)
         $totalTerjual = (int) Retur::where(Retur::FIELD_TOKO_ID, $tokoId)
             ->where(Retur::FIELD_BARANG_ID, $barangId)
+            ->whereDate(Retur::FIELD_TANGGAL_RETUR, '>=', $cutoffDate)
             ->sum(Retur::FIELD_TOTAL_TERJUAL);
 
-        return max(0, $totalKirim - $totalTerjual);
+        $totalRetur = (int) Retur::where(Retur::FIELD_TOKO_ID, $tokoId)
+            ->where(Retur::FIELD_BARANG_ID, $barangId)
+            ->whereDate(Retur::FIELD_TANGGAL_RETUR, '>=', $cutoffDate)
+            ->sum(Retur::FIELD_JUMLAH_RETUR);
+
+        \Illuminate\Support\Facades\Log::debug('RekomendasiService::getStokAktual', [
+            'toko_id'      => $tokoId,
+            'barang_id'    => $barangId,
+            'window_hari'  => $windowHari,
+            'cutoff'       => $cutoffDate,
+            'total_kirim'  => $totalKirim,
+            'total_jual'   => $totalTerjual,
+            'total_retur'  => $totalRetur,
+            'stok_aktual'  => max(0, $totalKirim - $totalTerjual - $totalRetur),
+        ]);
+
+        return max(0, $totalKirim - $totalTerjual - $totalRetur);
     }
 
     /**
-     * Simpan hasil ke inventory_rekomendasi.
-     * Selalu insert baru — tidak update — agar histori terjaga.
-     */
-    private function simpan(array $hasil): void
-    {
-        InventoryRekomendasi::create($hasil);
-    }
-
-    /**
-     * Ambil semua kombinasi toko-barang yang aktif (ada pengiriman dalam 2 tahun terakhir).
-     * Diperluas dari 1 tahun ke 2 tahun agar mencakup data historis yang ada.
+     * Ambil kombinasi toko+barang aktif dari pengiriman 2 tahun terakhir.
      *
-     * @return array  [['toko_id' => ..., 'barang_id' => ...], ...]
+     * Hanya kombinasi yang terdaftar di barang_toko yang diproses,
+     * karena barang_toko_id dibutuhkan sebagai PK upsert.
      */
     private function getKombinasiAktif(): array
     {
         $cutoff = Carbon::now()->subYears(2);
 
+        // Ambil kombinasi dari pengiriman, lalu filter yang punya barang_toko_id
         return Pengiriman::where(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '>=', $cutoff)
             ->select([Pengiriman::FIELD_TOKO_ID, Pengiriman::FIELD_BARANG_ID])
             ->distinct()
             ->get()
+            ->filter(function ($item) {
+                // Pastikan kombinasi terdaftar di barang_toko
+                return BarangToko::where('toko_id', $item->{Pengiriman::FIELD_TOKO_ID})
+                    ->where('barang_id', $item->{Pengiriman::FIELD_BARANG_ID})
+                    ->exists();
+            })
             ->map(fn($item) => [
                 'toko_id'   => $item->{Pengiriman::FIELD_TOKO_ID},
                 'barang_id' => $item->{Pengiriman::FIELD_BARANG_ID},
             ])
+            ->values()
             ->toArray();
     }
 }

@@ -114,10 +114,11 @@
                 </a>
             </li>
             @endcan
-            <!-- Manajemen User -->
-            @canany(['manage-users', 'manage-notification-settings', 'view-eoq-setting', 'view-zscore-setting'])
-            <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting']))? 'menu-open' : '' }}">
-                <a href="#" class="nav-link {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting']))? 'active' : '' }}">
+
+            <!-- Sistem Pengaturan -->
+            @canany(['manage-users', 'manage-notification-settings', 'view-eoq-setting', 'view-zscore-setting', 'view-config-interval-kirim'])
+            <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting', 'config-interval-kirim']))? 'menu-open' : '' }}">
+                <a href="#" class="nav-link {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting', 'config-interval-kirim']))? 'active' : '' }}">
                     <i class="nav-icon fas fa-users-cog"></i>
                     <p>
                         Sistem Pengaturan
@@ -162,6 +163,14 @@
                         <a href="{{ route('zscore-setting.index') }}" class="nav-link {{ ($activemenu == 'zscore-setting')? 'active' : '' }}">
                             <i class="far fa-circle nav-icon"></i>
                             <p>Setting Z-Score</p>
+                        </a>
+                    </li>
+                    @endcan
+                    @can('view-config-interval-kirim')
+                    <li class="nav-item">
+                        <a href="{{ route('config-interval-kirim.index') }}" class="nav-link {{ ($activemenu == 'config-interval-kirim')? 'active' : '' }}">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>Interval Pengiriman</p>
                         </a>
                     </li>
                     @endcan

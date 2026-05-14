@@ -44,32 +44,13 @@ class StrongPassword implements Rule
      */
     public function passes($attribute, $value)
     {
-        // Check minimum length
-        if (strlen($value) < $this->minLength) {
-            return false;
-        }
+        $hasMinLength = strlen($value) >= $this->minLength;
+        $hasUppercase = !$this->requireUppercase || preg_match('/[A-Z]/', $value) === 1;
+        $hasLowercase = !$this->requireLowercase || preg_match('/[a-z]/', $value) === 1;
+        $hasNumber = !$this->requireNumbers || preg_match('/\d/', $value) === 1;
+        $hasSpecialChar = !$this->requireSpecialChars || preg_match('/[^A-Za-z0-9]/', $value) === 1;
 
-        // Check for uppercase letter
-        if ($this->requireUppercase && !preg_match('/[A-Z]/', $value)) {
-            return false;
-        }
-
-        // Check for lowercase letter
-        if ($this->requireLowercase && !preg_match('/[a-z]/', $value)) {
-            return false;
-        }
-
-        // Check for number
-        if ($this->requireNumbers && !preg_match('/\d/', $value)) {
-            return false;
-        }
-
-        // Check for special character
-        if ($this->requireSpecialChars && !preg_match('/[^A-Za-z0-9]/', $value)) {
-            return false;
-        }
-
-        return true;
+        return $hasMinLength && $hasUppercase && $hasLowercase && $hasNumber && $hasSpecialChar;
     }
 
     /**

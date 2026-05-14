@@ -243,7 +243,7 @@ $(document).ready(function() {
         var userId = $(this).data('id');
         var userName = $(this).data('name');
         
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Konfirmasi Hapus',
             html: `Apakah Anda yakin ingin menghapus user:<br><strong>${userName}</strong>?<br><small class="text-danger">Data user akan dihapus secara permanen.</small>`,
             icon: 'warning',
@@ -256,7 +256,7 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 // Show loading
-                Swal.fire({
+                AlertHelper.fire({
                     title: 'Menghapus...',
                     text: 'Mohon tunggu',
                     allowOutsideClick: false,
@@ -280,7 +280,7 @@ $(document).ready(function() {
                         'Expires': '0'
                     },
                     success: function(response) {
-                        Swal.fire({
+                        AlertHelper.fire({
                             icon: 'success',
                             title: 'Berhasil!',
                             text: response.message,
@@ -290,7 +290,7 @@ $(document).ready(function() {
                         loadUserData();
                     },
                     error: function(xhr) {
-                        Swal.fire({
+                        AlertHelper.fire({
                             icon: 'error',
                             title: 'Gagal!',
                             text: xhr.responseJSON.message || 'Terjadi kesalahan saat menghapus user',

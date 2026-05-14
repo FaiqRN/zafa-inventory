@@ -6,16 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('inventory_rekomendasi', function (Blueprint $table) {
-            $table->id();
+            $table->string('barang_toko_id', 10)->collation('utf8mb4_general_ci')->primary();
 
-            $table->string('toko_id', 10)->charset('utf8mb4')->collation('utf8mb4_general_ci');
-            $table->string('barang_id', 10)->charset('utf8mb4')->collation('utf8mb4_general_ci');
+            $table->string('toko_id', 10)->collation('utf8mb4_general_ci');
+            $table->string('barang_id', 10)->collation('utf8mb4_general_ci');
 
             // Snapshot parameter kalkulasi
             $table->decimal('s_dipakai', 14, 2)->default(0);
@@ -46,43 +43,29 @@ return new class extends Migration
             $table->unsignedInteger('stok_aktual')->default(0);
             $table->boolean('is_below_rop')->default(false);
 
-            // Data historis yang dipakai
+            // Data historis
             $table->unsignedInteger('total_kirim_historis')->default(0);
             $table->unsignedInteger('total_retur_historis')->default(0);
             $table->unsignedInteger('penjualan_aktual')->default(0);
 
-            // Waktu perhitungan
+            // Timestamps
             $table->timestamp('calculated_at')->useCurrent();
-
-            $table->timestamp('created_at')->useCurrent();
-            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->timestamps();
             $table->string('user_create')->nullable();
             $table->string('user_update')->nullable();
 
+            // Foreign keys
+            $table->foreign('barang_toko_id')->references('barang_toko_id')->on('barang_toko')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->foreign('toko_id')->references('toko_id')->on('toko')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->foreign('barang_id')->references('barang_id')->on('barang')->cascadeOnUpdate()->cascadeOnDelete();
+
+            // Indexes
             $table->index(['toko_id', 'barang_id'], 'idx_rekomendasi_toko_barang');
             $table->index('calculated_at', 'idx_rekomendasi_calculated_at');
             $table->index(['barang_id', 'calculated_at'], 'idx_rekomendasi_barang_calculated');
-
-            $table->foreign('toko_id')
-                ->references('toko_id')
-                ->on('toko')
-                ->onUpdate('cascade')
-                ->onDelete('cascade');
-
-            $table->foreign('barang_id')
-                ->references('barang_id')
-                ->on('barang')
-                ->onUpdate('cascade')
-                ->onDelete('cascade');
-
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_general_ci';
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('inventory_rekomendasi');

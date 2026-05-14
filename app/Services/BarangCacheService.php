@@ -232,14 +232,7 @@ class BarangCacheService
 
     public static function clearStockRelatedCache()
     {
-        try {
-            Cache::forget(self::CACHE_KEY_ALL_BARANG);
-            Cache::forget(self::CACHE_KEY_STOCK_SUMMARY);
-        } catch (Throwable $e) {
-            Log::warning('Cache clear failed for stock related cache keys', [
-                'error' => $e->getMessage(),
-            ]);
-        }
+        self::clearAllCache();
     }
 
     public static function refreshCache()

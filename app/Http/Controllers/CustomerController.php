@@ -34,7 +34,7 @@ class CustomerController extends Controller
 
     public function index()
     {
-        return view('customer.index', [
+        return view('Customer.index', [
             'activemenu' => 'customer',
             'breadcrumb' => (object) [
                 'title' => 'Data Customer',

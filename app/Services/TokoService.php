@@ -68,8 +68,6 @@ class TokoService
             }
 
             $toko->save();
-            
-            TokoCacheService::clearAllCache();
 
             return [
                 'success' => true,
@@ -151,8 +149,6 @@ class TokoService
             }
 
             $toko->save();
-            
-            TokoCacheService::clearTokoCache($toko->{Toko::FIELD_TOKO_ID});
 
             $responseMessage = 'Data toko berhasil diperbarui';
             if ($coordinatesChanged) {
@@ -181,10 +177,7 @@ class TokoService
     public static function destroy(Toko $toko): array
     {
         try {
-            $tokoId = $toko->{Toko::FIELD_TOKO_ID};
             $toko->delete();
-            
-            TokoCacheService::clearTokoCache($tokoId);
 
             return [
                 'success' => true,

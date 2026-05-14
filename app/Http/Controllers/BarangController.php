@@ -128,8 +128,6 @@ class BarangController extends Controller
             'keterangan' => $validated['keterangan'] ?? null,
         ]);
 
-        BarangCacheService::clearAllCache();
-
         return $this->successResponse(
             'Data barang berhasil ditambahkan',
             BarangHelper::getBarangById($barangId)
@@ -166,8 +164,6 @@ class BarangController extends Controller
 
         $barang->update($validated);
 
-        BarangCacheService::clearBarangCache($id);
-
         return $this->successResponse(
             'Data barang berhasil diperbarui',
             BarangHelper::getBarangById($id)
@@ -183,8 +179,6 @@ class BarangController extends Controller
         }
 
         $barang->delete();
-
-        BarangCacheService::clearAllCache();
 
         return $this->successResponse('Data barang berhasil dihapus');
     }
@@ -395,8 +389,6 @@ class BarangController extends Controller
         );
 
         if ($result['success']) {
-            BarangCacheService::clearBarangCache($id);
-            
             return $this->successResponse($result['message'], $result['data']);
         }
 

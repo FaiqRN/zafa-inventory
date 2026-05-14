@@ -13,10 +13,12 @@ class SsService
 {
     public const DEFAULT_HARI_OBSERVASI = 365;
 
+    // FIX #3: Default service level diubah dari 95 ke 95 — tetap sama, tapi sekarang
+    // hanya dipakai sebagai fallback jika tidak ada baris is_active=true DAN
+    // tidak ada baris service_level=95 sama sekali.
     private const DEFAULT_SERVICE_LEVEL = 95.00;
     private const DEFAULT_Z_SCORE       = 1.6449;
 
-    // Default lead time operasional Zafa (3–7 hari kerja, tengah = 5)
     private const DEFAULT_LEAD_TIME     = 5.0;
     private const DEFAULT_SIGMA_L       = 1.0;
 
@@ -40,11 +42,8 @@ class SsService
         [$d, $sigmaD] = $this->hitungDemandStats($tokoId, $barangId, $hariObservasi);
 
         // ── 3. Lead time (L) dan σL ─────────────────────────────────────────
-        // PERBAIKAN: gunakan default eksplisit jika tidak ada data tanggal_terima
         [$leadTime, $sigmaL] = $this->hitungLeadTimeStats($tokoId, $barangId, $hariObservasi);
 
-        // Pastikan L dan σL tidak pernah 0 agar SS tidak collapse
-        // Jika L=0 maka komponen L×σd² = 0 dan d²×σL² = 0 → SS = 0 → wrong
         if ($leadTime <= 0) {
             $leadTime = self::DEFAULT_LEAD_TIME;
             Log::warning('SsService: leadTime=0 terdeteksi, pakai default', [
@@ -90,41 +89,67 @@ class SsService
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // PRIVATE METHODS
+    // ──────────────────────────────────────────────────────────────────────────
 
+    /**
+     * FIX #3: Resolusi Z-score sekarang menggunakan is_active=true.
+     *
+     * Urutan prioritas:
+     *   1. Baris dengan is_active=true untuk pasangan toko+barang ini   ← BARU
+     *   2. Fallback ke service_level = DEFAULT_SERVICE_LEVEL (95%) jika tidak ada yang aktif
+     *   3. Fallback ke DEFAULT_Z_SCORE hardcoded jika tidak ada data sama sekali
+     *
+     * Sebelumnya: orderByDesc(service_level)->first() → selalu ambil 99%
+     */
     private function resolveZ(string $tokoId, string $barangId): array
     {
-        $setting = Zscore::where(Zscore::FIELD_TOKO_ID, $tokoId)
+        // Prioritas 1: ambil yang di-set aktif oleh user
+        $active = Zscore::where(Zscore::FIELD_TOKO_ID, $tokoId)
             ->where(Zscore::FIELD_BARANG_ID, $barangId)
-            ->orderByDesc(Zscore::FIELD_SERVICE_LEVEL)
+            ->where(Zscore::FIELD_IS_ACTIVE, true)
             ->first();
 
-        if (!$setting) {
-            Log::warning('SsService: fallback Z-score default', [
+        if ($active) {
+            return [
+                (float) $active->{Zscore::FIELD_Z_SCORE},
+                (float) $active->{Zscore::FIELD_SERVICE_LEVEL},
+            ];
+        }
+
+        // Prioritas 2: fallback ke service level default (95%)
+        $default = Zscore::where(Zscore::FIELD_TOKO_ID, $tokoId)
+            ->where(Zscore::FIELD_BARANG_ID, $barangId)
+            ->where(Zscore::FIELD_SERVICE_LEVEL, self::DEFAULT_SERVICE_LEVEL)
+            ->first();
+
+        if ($default) {
+            Log::info('SsService: tidak ada is_active=true, fallback ke service_level=95%', [
                 'toko_id'   => $tokoId,
                 'barang_id' => $barangId,
             ]);
-            return [self::DEFAULT_Z_SCORE, self::DEFAULT_SERVICE_LEVEL];
+            return [
+                (float) $default->{Zscore::FIELD_Z_SCORE},
+                (float) $default->{Zscore::FIELD_SERVICE_LEVEL},
+            ];
         }
 
-        return [
-            (float) $setting->{Zscore::FIELD_Z_SCORE},
-            (float) $setting->{Zscore::FIELD_SERVICE_LEVEL},
-        ];
+        // Prioritas 3: tidak ada data sama sekali, pakai hardcoded default
+        Log::warning('SsService: fallback Z-score hardcoded default (tidak ada data zscore)', [
+            'toko_id'   => $tokoId,
+            'barang_id' => $barangId,
+        ]);
+        return [self::DEFAULT_Z_SCORE, self::DEFAULT_SERVICE_LEVEL];
     }
 
     /**
      * Hitung d dan σd dari data retur.
-     *
-     * σd diambil dari variasi total_terjual per EVENT pengiriman
-     * (bukan per hari) — lebih representatif untuk pola UMKM periodik.
-     * Untuk n < 2 event: gunakan Poisson approx (σ ≈ √mean).
      */
     private function hitungDemandStats(
         string $tokoId,
         string $barangId,
         int    $hariObservasi
     ): array {
-        // Coba window normal dari sekarang
         $cutoff = Carbon::now()->subDays($hariObservasi)->toDateString();
         $result = $this->queryReturEvents($tokoId, $barangId, $cutoff, $hariObservasi);
 
@@ -132,7 +157,6 @@ class SsService
             return $result;
         }
 
-        // Adaptive fallback: mundur dari tanggal retur terbaru
         $latestTanggal = Retur::where(Retur::FIELD_TOKO_ID, $tokoId)
             ->where(Retur::FIELD_BARANG_ID, $barangId)
             ->max(Retur::FIELD_TANGGAL_RETUR);
@@ -143,9 +167,9 @@ class SsService
                 ->toDateString();
 
             Log::info('SsService: adaptive window demand', [
-                'toko_id'        => $tokoId,
-                'barang_id'      => $barangId,
-                'adaptive_cutoff'=> $adaptiveCutoff,
+                'toko_id'         => $tokoId,
+                'barang_id'       => $barangId,
+                'adaptive_cutoff' => $adaptiveCutoff,
             ]);
 
             $result = $this->queryReturEvents($tokoId, $barangId, $adaptiveCutoff, $hariObservasi);
@@ -157,38 +181,55 @@ class SsService
         return $this->hitungDemandDariPengiriman($tokoId, $barangId, $hariObservasi);
     }
 
-    /**
-     * Query event retur dan hitung [d, sigma_d].
-     * Mengambil nilai per EVENT (bukan groupBy tanggal).
-     */
     private function queryReturEvents(
         string $tokoId,
         string $barangId,
         string $cutoff,
         int    $hariObservasi
     ): ?array {
-        $values = Retur::where(Retur::FIELD_TOKO_ID, $tokoId)
+        $rows = Retur::where(Retur::FIELD_TOKO_ID, $tokoId)
             ->where(Retur::FIELD_BARANG_ID, $barangId)
             ->whereDate(Retur::FIELD_TANGGAL_RETUR, '>=', $cutoff)
             ->where(Retur::FIELD_TOTAL_TERJUAL, '>', 0)
-            ->pluck(Retur::FIELD_TOTAL_TERJUAL)
-            ->map(fn($v) => (float) $v)
-            ->toArray();
+            ->orderBy(Retur::FIELD_TANGGAL_RETUR)
+            ->get([Retur::FIELD_TANGGAL_RETUR, Retur::FIELD_TOTAL_TERJUAL]);
 
-        if (empty($values)) {
+        if ($rows->isEmpty()) {
             return null;
         }
 
-        $total = array_sum($values);
+        $total = $rows->sum(fn($r) => (float) $r->{Retur::FIELD_TOTAL_TERJUAL});
         if ($total <= 0) {
             return null;
         }
 
-        $d      = $total / $hariObservasi;
-        $n      = count($values);
-        $sigmaD = $n >= 2
-            ? $this->standarDeviasi($values)
-            : sqrt($total / $n); // Poisson approximation
+        $n = $rows->count();
+        $d = $total / $hariObservasi;
+
+        // Hitung σd dari daily-rate riil per event (bukan asumsi interval merata)
+        if ($n >= 2) {
+            $windowEnd   = Carbon::now();
+            $dailyRates  = [];
+
+            foreach ($rows as $idx => $row) {
+                $tglEvent = Carbon::parse($row->{Retur::FIELD_TANGGAL_RETUR});
+                $qty      = (float) $row->{Retur::FIELD_TOTAL_TERJUAL};
+
+                // Interval: jarak ke event berikutnya, atau ke batas window untuk event terakhir
+                if ($idx < $n - 1) {
+                    $nextTgl  = Carbon::parse($rows[$idx + 1]->{Retur::FIELD_TANGGAL_RETUR});
+                    $interval = max(1.0, (float) $tglEvent->diffInDays($nextTgl));
+                } else {
+                    $interval = max(1.0, (float) $tglEvent->diffInDays($windowEnd));
+                }
+
+                $dailyRates[] = $qty / $interval;
+            }
+
+            $sigmaD = $this->standarDeviasi($dailyRates);
+        } else {
+            $sigmaD = sqrt($d);
+        }
 
         Log::debug('SsService::queryReturEvents', [
             'toko_id'    => $tokoId,
@@ -197,14 +238,12 @@ class SsService
             'total'      => $total,
             'd'          => round($d, 4),
             'sigma_d'    => round($sigmaD, 4),
+            'mode_sigma' => $n >= 2 ? 'interval_riil' : 'sqrt(d)',
         ]);
 
         return [$d, $sigmaD];
     }
 
-    /**
-     * Fallback demand dari pengiriman (sebelum ada data retur).
-     */
     private function hitungDemandDariPengiriman(
         string $tokoId,
         string $barangId,
@@ -221,7 +260,6 @@ class SsService
             ->toArray();
 
         if (empty($values)) {
-            // Adaptive dari pengiriman terakhir
             $latestKirim = Pengiriman::where(Pengiriman::FIELD_TOKO_ID, $tokoId)
                 ->where(Pengiriman::FIELD_BARANG_ID, $barangId)
                 ->where(Pengiriman::FIELD_STATUS, 'terkirim')
@@ -252,22 +290,27 @@ class SsService
             }
         }
 
-        $total  = array_sum($values);
-        $d      = $total / $hariObservasi;
-        $n      = count($values);
-        $sigmaD = $n >= 2 ? $this->standarDeviasi($values) : sqrt($total / $n);
+        $total           = array_sum($values);
+        $d               = $total / $hariObservasi;
+        $n               = count($values);
+        $avgIntervalHari = $hariObservasi / $n;
+        $sigmaD          = $n >= 2
+            ? $this->standarDeviasi($values) / $avgIntervalHari
+            : sqrt($d);
+
+        Log::debug('SsService::hitungDemandDariPengiriman', [
+            'toko_id'          => $tokoId,
+            'barang_id'        => $barangId,
+            'n_events'         => $n,
+            'total'            => $total,
+            'd'                => round($d, 4),
+            'avg_interval_hari' => round($avgIntervalHari, 4),
+            'sigma_d'          => round($sigmaD, 4),
+        ]);
 
         return [$d, $sigmaD];
     }
 
-    /**
-     * Hitung L dan σL dari selisih tanggal_pengiriman → tanggal_terima.
-     *
-     * PERBAIKAN: Jika tidak ada data tanggal_terima sama sekali,
-     * kembalikan default [5.0, 1.0] secara eksplisit.
-     * Sebelumnya fallback tidak berjalan karena queryLeadTimes()
-     * mengembalikan [] dan kondisi empty tidak ter-trigger dengan benar.
-     */
     private function hitungLeadTimeStats(
         string $tokoId,
         string $barangId,
@@ -277,7 +320,6 @@ class SsService
         $leadTimes = $this->queryLeadTimes($tokoId, $barangId, $cutoff);
 
         if (empty($leadTimes)) {
-            // Adaptive: cari dari pengiriman terakhir yang punya tanggal_terima
             $latestKirim = Pengiriman::where(Pengiriman::FIELD_TOKO_ID, $tokoId)
                 ->where(Pengiriman::FIELD_BARANG_ID, $barangId)
                 ->whereNotNull(Pengiriman::FIELD_TANGGAL_TERIMA)
@@ -291,7 +333,6 @@ class SsService
             }
         }
 
-        // Jika masih kosong (tidak ada tanggal_terima di DB) → pakai default
         if (empty($leadTimes)) {
             return [self::DEFAULT_LEAD_TIME, self::DEFAULT_SIGMA_L];
         }
@@ -301,7 +342,6 @@ class SsService
             ? $this->standarDeviasi($leadTimes)
             : self::DEFAULT_SIGMA_L;
 
-        // Pastikan tidak return 0
         if ($L <= 0) {
             $L = self::DEFAULT_LEAD_TIME;
         }
@@ -312,11 +352,6 @@ class SsService
         return [$L, $sigmaL];
     }
 
-    /**
-     * Query lead time (selisih hari tanggal_kirim → tanggal_terima).
-     *
-     * @return float[]
-     */
     private function queryLeadTimes(
         string $tokoId,
         string $barangId,
@@ -344,12 +379,6 @@ class SsService
             ->toArray();
     }
 
-    /**
-     * Standar deviasi sampel (n-1).
-     *
-     * @param  float[] $values
-     * @return float
-     */
     private function standarDeviasi(array $values): float
     {
         $n = count($values);

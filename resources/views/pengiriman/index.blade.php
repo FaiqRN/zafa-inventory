@@ -108,9 +108,23 @@ let selectedItems = [];
 const canEditPengiriman = @json(auth()->check() && auth()->user()->can('edit-pengiriman'));
 
 function modalAction(url = '') {
-    $('#myModal').load(url, function() {
-        $('#myModal').modal('show');
-    });
+    $.get(url)
+        .done(function(response) {
+            const $modal = $('#myModal');
+            $modal.html(response);
+
+            $modal.find('script').each(function() {
+                const scriptText = this.text || this.textContent || this.innerHTML || '';
+                if (scriptText.trim().length) {
+                    $.globalEval(scriptText);
+                }
+            });
+
+            $modal.modal('show');
+        })
+        .fail(function() {
+            AlertHelper.error('Error', 'Gagal memuat form pengiriman');
+        });
 }
 
 function filterData() {

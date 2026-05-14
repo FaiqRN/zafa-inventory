@@ -354,7 +354,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-Swal.fire({
+AlertHelper.fire({
                         icon: 'success',
                         title: 'Berhasil',
                         text: response.message,
@@ -365,7 +365,7 @@ Swal.fire({
                     $('#modal-catatan').modal('hide');
                     refreshData(currentTab);
                 } else {
-                    Swal.fire({
+                    AlertHelper.fire({
                         icon: 'error',
                         title: 'Gagal',
                         text: response.message
@@ -373,7 +373,7 @@ Swal.fire({
                 }
             },
             error: function(xhr) {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Error',
                     text: 'Terjadi kesalahan saat menyimpan catatan'
@@ -785,7 +785,7 @@ function refreshData(tipe) {
                         break;
                 }
             } else {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Error',
                     text: response.message
@@ -793,7 +793,7 @@ function refreshData(tipe) {
             }
         },
         error: function(xhr) {
-            Swal.fire({
+            AlertHelper.fire({
                 icon: 'error',
                 title: 'Error',
                 text: 'Gagal memuat data'
@@ -852,7 +852,7 @@ function loadDetailData(tipe, id) {
                     window.scrollTo(0, scrollPosition);
                 }, 50);
             } else {
-                Swal.fire({
+                AlertHelper.fire({
                     icon: 'error',
                     title: 'Error',
                     text: response.message || 'Terjadi kesalahan saat memuat data detail'
@@ -861,7 +861,7 @@ function loadDetailData(tipe, id) {
         },
         error: function(xhr) {
             console.error('Error AJAX:', xhr);
-            Swal.fire({
+            AlertHelper.fire({
                 icon: 'error',
                 title: 'Error',
                 text: 'Gagal memuat data detail. Silakan coba lagi.'

@@ -1,0 +1,111 @@
+body {
+  align-items: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 16px 32px;
+}
+
+.container {
+  width: 100%;
+  min-height: auto;
+  display: block;
+  overflow: visible;
+  border-radius: 18px;
+}
+
+.left {
+  position: relative;
+  width: 100%;
+  height: auto;
+  border-radius: 18px 18px 0 0;
+  transform: none !important;
+  transition: none !important;
+}
+
+.right {
+  position: relative;
+  width: 100%;
+  height: auto;
+  transform: none !important;
+  transition: none !important;
+}
+
+.panel-content {
+  position: static;
+  padding: 28px 22px;
+  transform: none !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+.panel-login {
+  display: block;
+}
+
+.panel-forgot {
+  display: none;
+}
+
+.container.is-forgot .panel-login {
+  display: none;
+}
+
+.container.is-forgot .panel-forgot {
+  display: block;
+}
+
+.panel-content img {
+  width: 110px;
+  height: 110px;
+}
+
+.forms {
+  position: static;
+  height: auto;
+  display: block;
+}
+
+.form-panel {
+  position: static;
+  inset: auto;
+  transform: none !important;
+  opacity: 1 !important;
+  pointer-events: auto;
+  padding: 24px 20px 32px;
+  display: none;
+  transition: none !important;
+}
+
+.form-login {
+  display: block;
+}
+
+.container.is-forgot .form-login {
+  display: none;
+}
+
+.container.is-forgot .form-forgot {
+  display: block;
+}
+
+.form-card {
+  max-width: 100%;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+.form-footer {
+  justify-content: center;
+}
+
+.back-link {
+  margin-top: 14px;
+}
+
+.success-state {
+  padding: 0;
+}
+
+.tips-box {
+  margin: 14px 0;
+}

@@ -145,7 +145,7 @@ class EoqService
 
     /**
      * Resolusi nilai H untuk satu barang.
-     * H = harga_pokok × (SUM persentase / 100)
+     * H = SUM(harga_pokok_i × persentase_i / 100)
      *
      * @return float
      */
@@ -162,10 +162,22 @@ class EoqService
             );
         }
 
-        $hargaPokok      = (float) $komponen->first()->{EoqBiayaSimpan::FIELD_HARGA_POKOK};
-        $totalPersentase = (float) $komponen->sum(EoqBiayaSimpan::FIELD_PERSENTASE);
+        $hargaPokokUnik = $komponen
+            ->pluck(EoqBiayaSimpan::FIELD_HARGA_POKOK)
+            ->map(fn($v) => (float) $v)
+            ->unique();
 
-        return $hargaPokok * $totalPersentase / 100;
+        if ($hargaPokokUnik->count() > 1) {
+            throw new EoqCalculationException(
+                "Data biaya simpan tidak konsisten untuk barang {$barangId}: harga_pokok berbeda antar komponen."
+            );
+        }
+
+        return (float) $komponen->sum(function ($row) {
+            return (float) $row->{EoqBiayaSimpan::FIELD_HARGA_POKOK}
+                * (float) $row->{EoqBiayaSimpan::FIELD_PERSENTASE}
+                / 100;
+        });
     }
 
     /**
@@ -212,8 +224,18 @@ class EoqService
         }
 
         // ── Fallback: toko baru yang belum punya data retur ─────────────────
+        // ASUMSI: Untuk toko baru yang belum pernah melakukan retur
+        // (total_terjual = 0), semua unit yang dikirim diasumsikan terjual.
+        // Ini berpotensi overestimate demand — dicatat sebagai limitasi penelitian.
+        // Relevan untuk toko yang baru bergabung dalam sistem konsinyasi
+        // dan belum memiliki histori pengembalian produk.
         if ($penjualanAktual <= 0 && $totalKirim > 0) {
             $penjualanAktual = $totalKirim;
+            Log::info('EoqService::hitungD fallback: toko baru, penjualan diasumsikan = total_kirim', [
+                'toko_id'   => $tokoId,
+                'barang_id' => $barangId,
+                'total_kirim' => $totalKirim,
+            ]);
         }
 
         $penjualanAktual = max(0, $penjualanAktual);

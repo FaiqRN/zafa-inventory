@@ -7,7 +7,6 @@ use App\Models\BarangToko;
 use App\Models\Barang;
 use App\Models\BarangStok;
 use App\Models\User;
-use App\Services\PengirimanCacheService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -16,21 +15,21 @@ class PengirimanHelper
 {
     public static function generateNomerPengiriman()
     {
-        $today = date('Ymd');
+        $today = now()->format('Ymd');
         $prefix = 'PGR';
-        
-        $lastPengiriman = Pengiriman::where(Pengiriman::FIELD_NOMER_PENGIRIMAN, 'like', $prefix . $today . '%')
-            ->orderBy(Pengiriman::FIELD_NOMER_PENGIRIMAN, 'desc')
-            ->first();
-        
-        if (!$lastPengiriman) {
-            return $prefix . $today . '001';
-        }
-        
-        $lastNumber = intval(substr($lastPengiriman->{Pengiriman::FIELD_NOMER_PENGIRIMAN}, -3));
-        $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
-        
-        return $prefix . $today . $newNumber;
+
+        $sequenceStart = strlen($prefix) + 8 + 1;
+        $lastNumber = Pengiriman::where(Pengiriman::FIELD_NOMER_PENGIRIMAN, 'like', $prefix . '%')
+            ->selectRaw(
+                'MAX(CAST(SUBSTRING(' . Pengiriman::FIELD_NOMER_PENGIRIMAN . ', ?) AS UNSIGNED)) as max_suffix',
+                [$sequenceStart]
+            )
+            ->value('max_suffix');
+
+        $nextNumber = $lastNumber ? ((int) $lastNumber + 1) : 1;
+        $sequence = str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+
+        return $prefix . $today . $sequence;
     }
 
     public static function generatePengirimanId()
@@ -88,8 +87,6 @@ class PengirimanHelper
             
             DB::commit();
             
-            PengirimanCacheService::clearAllCache();
-            
             return ['success' => true, 'nomer_pengiriman' => $nomerPengiriman];
             
         } catch (\Exception $e) {
@@ -141,8 +138,6 @@ class PengirimanHelper
             }
             
             DB::commit();
-            
-            PengirimanCacheService::clearPengirimanCache($nomerPengiriman);
             
             Log::info("Status berhasil diupdate");
             return ['success' => true];
@@ -360,13 +355,17 @@ class PengirimanHelper
             ->get();
         
         return $barangToko->map(function($bt) {
+            $hargaBarangToko = (float) ($bt->{BarangToko::FIELD_HARGA_BARANG_TOKO} ?? 0);
+
             return [
                 'barang_id' => $bt->{BarangToko::FIELD_BARANG_ID},
                 'nama_barang' => $bt->barang->{Barang::FIELD_NAMA_BARANG},
                 'satuan' => $bt->barang->{Barang::FIELD_SATUAN},
-                'harga' => $bt->{BarangToko::FIELD_HARGA_BARANG_TOKO},
-                'stok' => $bt->barang->stok, 
+                'harga_barang_toko' => $hargaBarangToko,
+                // Backward compatibility for existing consumers that still read `harga`.
+                'harga' => $hargaBarangToko,
+                'stok' => $bt->barang->stok,
             ];
-        });
+        })->values();
     }
 }

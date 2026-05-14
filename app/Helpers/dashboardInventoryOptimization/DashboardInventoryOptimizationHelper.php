@@ -13,13 +13,6 @@ class DashboardInventoryOptimizationHelper
 {
     public const NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org';
 
-    /**
-     * Default window observasi: 365 hari.
-     *
-     * FIX: Sebelumnya 30 hari — terlalu sempit sehingga tidak menemukan data
-     * historis yang ada di 2025. Dinaikkan ke 365 agar kalkulasi menggunakan
-     * satu tahun penuh data operasional yang tersedia.
-     */
     public const DEFAULT_HARI_OBSERVASI = 365;
 
     /**
@@ -53,16 +46,12 @@ class DashboardInventoryOptimizationHelper
     private static function getRekomendasiData(): array
     {
         if (!Schema::hasTable(InventoryRekomendasi::TABLE)) {
-            Log::warning('Tabel inventory_rekomendasi belum tersedia. Data rekomendasi dashboard dikosongkan.');
+            Log::warning('Tabel inventory_rekomendasi belum tersedia.');
             return [];
         }
 
         $rekomendasiData = self::loadLatestRekomendasiData();
 
-        // Hanya auto-generate jika benar-benar tidak ada data sama sekali.
-        // FIX: Sebelumnya data lama (hari_observasi=30, nilai salah) tetap
-        // di-return karena !empty() langsung return — kode baru tidak pernah jalan.
-        // Setelah TRUNCATE dijalankan, tabel kosong → generate dipicu sekali.
         if (!empty($rekomendasiData)) {
             return $rekomendasiData;
         }
@@ -100,28 +89,30 @@ class DashboardInventoryOptimizationHelper
         }
     }
 
+    /**
+     * Load data rekomendasi terbaru dari DB.
+     *
+     * SIMPLIFIKASI dari versi lama:
+     *   Sebelum : subquery MAX(id) GROUP BY toko_id+barang_id
+     *             → diperlukan karena ada banyak baris duplikat per kombinasi
+     *   Sekarang: langsung SELECT semua baris
+     *             → tidak ada duplikat karena PK = barang_toko_id (1 baris per kombinasi)
+     *
+     * Query jauh lebih ringan dan mudah dibaca.
+     */
     private static function loadLatestRekomendasiData(): array
     {
         if (!Schema::hasTable(InventoryRekomendasi::TABLE)) {
             return [];
         }
 
-        $latestIdsSubquery = InventoryRekomendasi::query()
-            ->selectRaw('MAX(' . InventoryRekomendasi::FIELD_ID . ') as latest_id')
-            ->groupBy(
-                InventoryRekomendasi::FIELD_TOKO_ID,
-                InventoryRekomendasi::FIELD_BARANG_ID
-            );
-
         return InventoryRekomendasi::query()
             ->from(InventoryRekomendasi::TABLE . ' as ir')
-            ->joinSub($latestIdsSubquery, 'latest', function ($join) {
-                $join->on('ir.' . InventoryRekomendasi::FIELD_ID, '=', 'latest.latest_id');
-            })
             ->join(Barang::TABLE . ' as b', 'ir.' . InventoryRekomendasi::FIELD_BARANG_ID, '=', 'b.' . Barang::FIELD_BARANG_ID)
             ->join(Toko::TABLE . ' as t', 'ir.' . InventoryRekomendasi::FIELD_TOKO_ID, '=', 't.' . Toko::FIELD_TOKO_ID)
             ->where('t.' . Toko::FIELD_IS_ACTIVE, true)
             ->select([
+                'ir.' . InventoryRekomendasi::FIELD_BARANG_TOKO_ID . ' as barang_toko_id',
                 'ir.' . InventoryRekomendasi::FIELD_TOKO_ID . ' as toko_id',
                 'ir.' . InventoryRekomendasi::FIELD_BARANG_ID . ' as barang_id',
                 'b.' . Barang::FIELD_NAMA_BARANG . ' as barang_nama',
@@ -141,6 +132,7 @@ class DashboardInventoryOptimizationHelper
                 $intervalKirim = round((float) $item->interval_kirim_hari, 2);
 
                 return [
+                    'barang_toko_id'      => (string) $item->barang_toko_id,
                     'toko_id'             => (string) $item->toko_id,
                     'barang_id'           => (string) $item->barang_id,
                     'barang_nama'         => (string) $item->barang_nama,

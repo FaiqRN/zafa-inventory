@@ -14,15 +14,6 @@ class EoqBiayaPesanGlobalSeeder extends Seeder
     {
         DB::table('eoq_biaya_pesan_global')->insert([
             [
-                'nama_biaya' => 'Biaya transportasi',
-                'nominal'    => 10000,
-                'keterangan' => 'Biaya BBM atau sewa kendaraan per sekali pengiriman',
-                'user_create' => 'admin',
-                'user_update' => null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
                 'nama_biaya' => 'Biaya tenaga packing',
                 'nominal'    => 5000,
                 'keterangan' => 'Upah tenaga packing per order',

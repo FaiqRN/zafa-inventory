@@ -276,14 +276,15 @@ class RoleController extends Controller
         })->values();
 
         $modules = [
-            'Dashboard' => 'dashboard',
-            'Customer' => 'customer',
-            'Pemesanan' => 'pemesanan',
-            'Pengiriman' => 'pengiriman',
-            'Retur' => 'retur',
-            'Follow Up' => 'follow-up',
-            'EOQ Setting' => 'eoq-setting',
-            'Z-Score Setting' => 'zscore-setting',
+            'Dashboard'                        => 'dashboard',
+            'Customer'                         => 'customer',
+            'Pemesanan'                        => 'pemesanan',
+            'Pengiriman'                       => 'pengiriman',
+            'Retur'                            => 'retur',
+            'Follow Up'                        => 'follow-up',
+            'EOQ Setting'                      => 'eoq-setting',
+            'Z-Score Setting'                  => 'zscore-setting',
+            'Konfigurasi Interval Pengiriman' => 'config-interval-kirim',
         ];
 
         foreach ($modules as $label => $module) {
@@ -295,3 +296,4 @@ class RoleController extends Controller
         return $grouped;
     }
 }
+

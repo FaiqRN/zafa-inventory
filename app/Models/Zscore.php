@@ -17,6 +17,11 @@ class Zscore extends Model
     public const FIELD_SERVICE_LEVEL = 'service_level';
     public const FIELD_Z_SCORE = 'z_score';
     public const FIELD_KETERANGAN = 'keterangan';
+    // FIX #3: Kolom is_active untuk menandai service level yang dipilih/aktif per pasangan toko-barang.
+    // Sebelumnya SsService::resolveZ() menggunakan orderByDesc(service_level)->first() sehingga
+    // selalu mengambil service level 99% (tertinggi). Dengan kolom ini, query cukup
+    // where('is_active', true)->first() sehingga user bisa memilih level yang diinginkan.
+    public const FIELD_IS_ACTIVE = 'is_active';
     public const FIELD_CREATED_AT = 'created_at';
     public const FIELD_UPDATED_AT = 'updated_at';
     public const FIELD_USER_CREATE = 'user_create';
@@ -33,6 +38,7 @@ class Zscore extends Model
         self::FIELD_SERVICE_LEVEL,
         self::FIELD_Z_SCORE,
         self::FIELD_KETERANGAN,
+        self::FIELD_IS_ACTIVE,
         self::FIELD_USER_CREATE,
         self::FIELD_USER_UPDATE,
     ];
@@ -40,9 +46,14 @@ class Zscore extends Model
     protected $casts = [
         self::FIELD_SERVICE_LEVEL => 'decimal:2',
         self::FIELD_Z_SCORE => 'decimal:4',
+        self::FIELD_IS_ACTIVE => 'boolean',
         self::FIELD_CREATED_AT => 'datetime',
         self::FIELD_UPDATED_AT => 'datetime',
     ];
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // SCOPES
+    // ──────────────────────────────────────────────────────────────────────────
 
     public function scopeOrderByServiceLevel($query, string $direction = 'asc')
     {
@@ -64,6 +75,16 @@ class Zscore extends Model
         return $query->where(self::FIELD_SERVICE_LEVEL, $serviceLevel);
     }
 
+    /** Scope: hanya baris yang dipilih sebagai aktif */
+    public function scopeActive($query)
+    {
+        return $query->where(self::FIELD_IS_ACTIVE, true);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // RELATIONS
+    // ──────────────────────────────────────────────────────────────────────────
+
     public function toko()
     {
         return $this->belongsTo(Toko::class, self::FIELD_TOKO_ID, Toko::FIELD_TOKO_ID);
@@ -72,5 +93,24 @@ class Zscore extends Model
     public function barang()
     {
         return $this->belongsTo(Barang::class, self::FIELD_BARANG_ID, Barang::FIELD_BARANG_ID);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // HELPERS
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Set baris ini sebagai aktif dan non-aktifkan yang lain dalam pasangan yang sama.
+     * Digunakan oleh ZscoreSettingController::setActive().
+     */
+    public function setAsActive(): void
+    {
+        // Non-aktifkan semua baris untuk pasangan toko-barang ini
+        static::where(self::FIELD_TOKO_ID, $this->{self::FIELD_TOKO_ID})
+            ->where(self::FIELD_BARANG_ID, $this->{self::FIELD_BARANG_ID})
+            ->update([self::FIELD_IS_ACTIVE => false]);
+
+        // Aktifkan baris ini
+        $this->update([self::FIELD_IS_ACTIVE => true]);
     }
 }

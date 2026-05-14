@@ -4,6 +4,8 @@
  * Provides consistent styling and behavior across the application
  */
 
+const swalFire = Swal.fire.bind(Swal);
+
 const AlertHelper = {
     // Default configuration
     config: {
@@ -37,6 +39,37 @@ const AlertHelper = {
         }
 
         config.text = normalizedMessage;
+    },
+
+    /**
+     * Unified SweetAlert trigger.
+     * Supports Swal.fire(config) or Swal.fire(title, message, icon).
+     * @param {Object|string} titleOrConfig
+     * @param {string} message
+     * @param {string} icon
+     */
+    fire(titleOrConfig, message = '', icon = '') {
+        let config = {};
+
+        if (titleOrConfig && typeof titleOrConfig === 'object') {
+            config = { ...titleOrConfig };
+        } else {
+            config.title = titleOrConfig || '';
+            this.setMessage(config, message);
+
+            if (icon) {
+                config.icon = icon;
+            }
+        }
+
+        if (this.config.customClass) {
+            config.customClass = {
+                ...this.config.customClass,
+                ...(config.customClass || {})
+            };
+        }
+
+        return swalFire(config);
     },
 
     /**
@@ -350,3 +383,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Make it globally available
 window.AlertHelper = AlertHelper;
+
+// Route all Swal.fire calls through AlertHelper for consistent styling.
+Swal.fire = function () {
+    return AlertHelper.fire.apply(AlertHelper, arguments);
+};

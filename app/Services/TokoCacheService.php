@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Toko;
+use App\Services\GeocodingService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;

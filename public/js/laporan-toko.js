@@ -62,7 +62,7 @@ $(function() {
         $('#periode-display').text(periodeDisplay);
         
         // Show loading
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Loading...',
             text: 'Sedang mengambil data',
             allowOutsideClick: false,
@@ -106,7 +106,7 @@ $(function() {
                 console.error('Error fetching data:', error);
                 console.error('Response:', xhr.responseText);
                 
-                Swal.fire({
+                AlertHelper.fire({
                     title: 'Error!',
                     text: 'Gagal memuat data. Silakan coba lagi.',
                     icon: 'error'
@@ -283,7 +283,7 @@ $(function() {
         const catatan = $('#catatan').val();
         
         // Show loading
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Menyimpan...',
             text: 'Sedang menyimpan catatan',
             allowOutsideClick: false,
@@ -307,7 +307,7 @@ $(function() {
                 Swal.close();
                 if (response.success) {
                     $('#modalCatatan').modal('hide');
-                    Swal.fire({
+                    AlertHelper.fire({
                         title: 'Berhasil!',
                         text: 'Catatan berhasil disimpan.',
                         icon: 'success',
@@ -321,7 +321,7 @@ $(function() {
                 console.error('Error saving catatan:', error);
                 console.error('Response:', xhr.responseText);
                 
-                Swal.fire({
+                AlertHelper.fire({
                     title: 'Error!',
                     text: 'Gagal menyimpan catatan. Silakan coba lagi.',
                     icon: 'error'
@@ -332,7 +332,7 @@ $(function() {
     
     function showDetailModal(toko_id, nama_toko) {
         // Show loading state
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Loading...',
             text: 'Mengambil data detail toko',
             allowOutsideClick: false,
@@ -734,7 +734,7 @@ $(function() {
                 console.error('Error fetching detail data:', error);
                 console.error('Response:', xhr.responseText);
                 
-                Swal.fire({
+                AlertHelper.fire({
                     title: 'Error!',
                     text: 'Gagal memuat data detail. Silakan coba lagi.',
                     icon: 'error'
@@ -958,7 +958,7 @@ margin-bottom: 20px;
                 
                 <div class="footer">
                     <p>Laporan ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-                    <p>Zafa Distribusi © ${new Date().getFullYear()}</p>
+                    <p>Zafa Distribusi Â© ${new Date().getFullYear()}</p>
                 </div>
                 
                 <script>
@@ -1085,7 +1085,7 @@ margin-bottom: 20px;
                 
                 <div class="footer">
                     <p>Laporan ini dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-                    <p>Zafa Distribusi © ${new Date().getFullYear()}</p>
+                    <p>Zafa Distribusi Â© ${new Date().getFullYear()}</p>
                 </div>
                 
                 <script>
@@ -1183,7 +1183,7 @@ margin-bottom: 20px;
 
     function exportCsv(periode) {
         // Show loading
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Memproses...',
             text: 'Sedang menyiapkan file CSV',
             allowOutsideClick: false,
@@ -1205,7 +1205,7 @@ margin-bottom: 20px;
 
     function exportDetailCsv(toko_id) {
         // Show loading
-        Swal.fire({
+        AlertHelper.fire({
             title: 'Memproses...',
             text: 'Sedang menyiapkan file CSV',
             allowOutsideClick: false,

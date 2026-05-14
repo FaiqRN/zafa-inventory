@@ -265,7 +265,6 @@ class PengirimanCacheService
     public static function clearTokoCache($tokoId)
     {
         self::forgetCacheKey(self::CACHE_KEY_PENGIRIMAN_BY_TOKO . $tokoId);
-        self::clearAllCache();
     }
 
     public static function refreshCache()

@@ -211,8 +211,17 @@ $(document).ready(function() {
         var selectedOption = $(this).find('option:selected');
         if (selectedOption.val()) {
             $('#satuan').val(selectedOption.data('satuan'));
+
+            var hargaBarangToko = Number(selectedOption.data('harga') || 0);
+            if ($('#harga').length) {
+                $('#harga').val(new Intl.NumberFormat('id-ID').format(hargaBarangToko));
+            }
         } else {
             $('#satuan').val('');
+
+            if ($('#harga').length) {
+                $('#harga').val('');
+            }
         }
     });
 
@@ -389,7 +398,7 @@ $(document).ready(function() {
     // Function to get auto-generated nomor pengiriman
     function getNomerPengiriman() {
         $.ajax({
-            url: '/pengiriman/get-nomer',
+            url: '/pengiriman/get_nomer',
             type: 'GET',
             success: function(response) {
                 $('#nomer_pengiriman').val(response.nomer_pengiriman);
@@ -403,21 +412,28 @@ $(document).ready(function() {
     // Function to load barang by toko
     function loadBarangByToko(tokoId) {
         $.ajax({
-            url: '/pengiriman/get-barang-by-toko',
+            url: '/pengiriman/get_barang',
             type: 'GET',
             data: {
                 toko_id: tokoId
             },
             success: function(response) {
                 $('#barang_id').empty().append('<option value="">-- Pilih Barang --</option>');
-                
-                if (response.data.length > 0) {
-                    $.each(response.data, function(index, item) {
+
+                var barangList = Array.isArray(response.data) ? response.data : [];
+
+                if (barangList.length > 0) {
+                    $.each(barangList, function(index, item) {
+                        var parsedHargaBarangToko = Number(item.harga_barang_toko);
+                        var hargaBarangToko = Number.isFinite(parsedHargaBarangToko) ? parsedHargaBarangToko : 0;
+                        var labelBarang = item.barang_kode ? (item.barang_kode + ' - ' + item.nama_barang) : item.nama_barang;
+
                         $('#barang_id').append(
                             $('<option></option>')
                                 .attr('value', item.barang_id)
                                 .attr('data-satuan', item.satuan)
-                                .text(item.barang_kode + ' - ' + item.nama_barang)
+                                .attr('data-harga', hargaBarangToko)
+                                .text(labelBarang)
                         );
                     });
                 } else {

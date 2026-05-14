@@ -11,11 +11,14 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardInventoryOptimizationController;
+use App\Http\Controllers\DashboardPartnerPerformanceController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
 use App\Http\Controllers\FollowUpPelangganController;
 use App\Http\Controllers\EoqSettingController;
+use App\Http\Controllers\ZscoreSettingController;
+use App\Http\Controllers\KonfigurasiIntervalKirimController;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,25 +55,46 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
     Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
     
     // ===============================
-    // DASHBOARD ROUTES 
+    // DASHBOARD ROUTES
     // ===============================
+
+    // Resolver: redirect user ke dashboard yang sesuai dengan permission-nya
     Route::get('/', [DashboardInventoryOptimizationController::class, 'resolveDashboard'])->name('dashboard.index');
     Route::get('/dashboard', [DashboardInventoryOptimizationController::class, 'resolveDashboard'])->name('dashboard');
-    Route::get('/dashboard/inventory-optimization', [DashboardInventoryOptimizationController::class, 'index'])
-        ->middleware('can:view-dashboard-inventory-optimization')
-        ->name('dashboard.inventory-optimization');
-    Route::get('/dashboard/partner-performance', [DashboardInventoryOptimizationController::class, 'partnerPerformance'])
-        ->middleware('can:view-dashboard-partner-performance')
-        ->name('dashboard.partner-performance');
-    Route::post('/dashboard/recalculate', [DashboardInventoryOptimizationController::class, 'recalculate'])
-        ->middleware('can:view-dashboard-inventory-optimization')
-        ->name('dashboard.recalculate');
-    
-    // Dashboard API Routes untuk View Data
-    Route::prefix('dashboard/api')->middleware('can:view-dashboard-inventory-optimization')->group(function() {
-        Route::get('/inventory-optimization/auto-refresh', [DashboardInventoryOptimizationController::class, 'autoRefreshInventoryOptimization'])
-            ->name('dashboard.api.inventory-optimization.auto-refresh');
-    });
+
+    Route::prefix('dashboard')->group(function () {
+
+        // ------------------------------------------
+        // Dashboard: Inventory Optimization
+        // ------------------------------------------
+        Route::middleware('can:view-dashboard-inventory-optimization')->group(function () {
+            Route::get('/inventory-optimization', [DashboardInventoryOptimizationController::class, 'index'])
+                ->name('dashboard.inventory-optimization');
+            Route::post('/inventory-optimization/recalculate', [DashboardInventoryOptimizationController::class, 'recalculate'])
+                ->name('dashboard.inventory-optimization.recalculate');
+
+            // API endpoints Inventory Optimization
+            Route::prefix('api/inventory-optimization')->group(function () {
+                Route::get('/auto-refresh', [DashboardInventoryOptimizationController::class, 'autoRefreshInventoryOptimization'])
+                    ->name('dashboard.api.inventory-optimization.auto-refresh');
+            });
+        });
+
+        // ------------------------------------------
+        // Dashboard: Partner Performance
+        // ------------------------------------------
+        Route::middleware('can:view-dashboard-partner-performance')->group(function () {
+            Route::get('/partner-performance', [DashboardPartnerPerformanceController::class, 'index'])
+                ->name('dashboard.partner-performance');
+
+            // API endpoints Partner Performance
+            // Route::prefix('api/partner-performance')->group(function () {
+            //     Route::get('/...', [DashboardPartnerPerformanceController::class, '...'])
+            //         ->name('dashboard.api.partner-performance...');
+            // });
+        });
+
+    }); // end prefix('dashboard')
 
     // Route profil
     Route::middleware(['auth'])->group(function () {
@@ -282,6 +306,16 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
     });
 
     // ===============================
+    // KONFIGURASI INTERVAL KIRIM ROUTES
+    // ===============================
+    // Catatan: otorisasi ditangani manual di controller (safe terhadap permission yang belum di-seed)
+    Route::group(['prefix' => 'config-interval-kirim', 'middleware' => 'auth'], function () {
+        Route::get('/', [KonfigurasiIntervalKirimController::class, 'index'])->name('config-interval-kirim.index');
+        Route::get('/data', [KonfigurasiIntervalKirimController::class, 'show'])->name('config-interval-kirim.show');
+        Route::put('/', [KonfigurasiIntervalKirimController::class, 'update'])->name('config-interval-kirim.update');
+    });
+
+    // ===============================
     // ZSCORE SETTINGS ROUTES
     // ===============================
     Route::group(['prefix' => 'zscore-setting', 'middleware' => 'can:view-zscore-setting'], function() {
@@ -292,6 +326,7 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
         Route::get('/{id}/edit', [\App\Http\Controllers\ZscoreSettingController::class, 'edit'])->middleware('can:edit-zscore-setting')->name('zscore-setting.edit');
         Route::put('/{id}', [\App\Http\Controllers\ZscoreSettingController::class, 'update'])->middleware('can:edit-zscore-setting')->name('zscore-setting.update');
         Route::delete('/{id}', [\App\Http\Controllers\ZscoreSettingController::class, 'destroy'])->middleware('can:delete-zscore-setting')->name('zscore-setting.destroy');
+        Route::post('/{id}/set-active', [\App\Http\Controllers\ZscoreSettingController::class, 'setActive'])->name('zscore-setting.set-active')->middleware('can:edit-zscore-setting');
     });
 
 });

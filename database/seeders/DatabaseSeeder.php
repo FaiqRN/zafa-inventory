@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             UserSeeder::class,
+            KonfigurasiIntervalKirimSeeder::class,
             MigrateRolesToSpatieSeeder::class,
             // TokoSeeder::class,
             BarangSeeder::class,

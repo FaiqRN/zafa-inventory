@@ -109,10 +109,12 @@ class MigrateRolesToSpatieSeeder extends Seeder
                 $permissions = Permission::where('name', 'not like', '%-user')
                     ->where('name', '!=', 'manage-users')
                     ->where('name', '!=', 'view-dashboard-partner-performance')
+                    ->where('name', '!=', 'update-config-interval-kirim')
                     ->get();
                 $spatieRole->givePermissionTo($permissions);
                 $spatieRole->givePermissionTo('manage-master-data');
                 $spatieRole->givePermissionTo('view-dashboard-inventory-optimization');
+                $spatieRole->givePermissionTo('view-config-interval-kirim');
                 echo "✓ Role '{$spatieRole->name}' mendapat permissions manager (termasuk manage-master-data)\n";
                 continue;
             }

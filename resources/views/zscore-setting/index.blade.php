@@ -12,7 +12,7 @@
 @section('content')
 <div class="container-fluid">
     <div class="row">
-        <div class="col-lg-8 col-md-12 mx-auto">
+        <div class="col-lg-9 col-md-12 mx-auto">
             <div class="card shadow-sm">
                 <div class="card-header">
                     <div class="card-tools">
@@ -23,7 +23,7 @@
                         @endcan
                     </div>
                 </div>
-                
+
                 <div class="card-body p-3">
                     <div class="form-group">
                         <label for="select-toko">Pilih Toko:</label>
@@ -43,33 +43,42 @@
                     </div>
 
                     <div id="zscore-section" style="display: none;">
-                    <div class="search-wrapper mb-3">
-                        <label for="searchZscore" class="search-label">Cari :</label>
-                        <input type="text" class="form-control form-control-sm"
-                               id="searchZscore" placeholder="Cari Z-Score...">
-                    </div>
-                    
-                    <div class="table-wrapper" style="overflow-x: auto;">
-                        <table class="table table-hover table-sm mb-0" style="min-width: 700px;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 40px;" class="text-center">No</th>
-                                    <th style="min-width: 120px; width: 150px;">Label</th>
-                                    <th style="min-width: 120px; width: 140px;" class="text-center">Service Level (%)</th>
-                                    <th style="min-width: 100px; width: 140px;" class="text-right">Z-Score</th>
-                                    <th style="min-width: 200px; width: 250px;">Keterangan</th>
-                                    <th style="min-width: 100px; width: 100px;" class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-zscore">
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">
-                                        <i class="fas fa-spinner fa-spin"></i> Memuat data...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                        {{-- FIX #3: Info banner tentang fitur is_active --}}
+                        <div class="alert alert-warning alert-sm py-2 mb-3">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Perhatian:</strong> Hanya satu service level yang dapat <strong>Aktif</strong> per produk per toko.
+                            Baris yang aktif digunakan untuk menghitung <em>Safety Stock</em>. Klik <i class="fas fa-check text-success"></i> untuk mengaktifkan.
+                        </div>
+
+                        <div class="search-wrapper mb-3">
+                            <label for="searchZscore" class="search-label">Cari :</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   id="searchZscore" placeholder="Cari Z-Score...">
+                        </div>
+
+                        <div class="table-wrapper" style="overflow-x: auto;">
+                            {{-- FIX #3: Tambah kolom "Aktif" --}}
+                            <table class="table table-hover table-sm mb-0" style="min-width: 780px;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center">No</th>
+                                        <th style="min-width: 120px; width: 150px;">Label</th>
+                                        <th style="min-width: 120px; width: 140px;" class="text-center">Service Level (%)</th>
+                                        <th style="min-width: 100px; width: 120px;" class="text-right">Z-Score</th>
+                                        <th style="width: 90px;" class="text-center">Status</th>
+                                        <th style="min-width: 160px; width: 210px;">Keterangan</th>
+                                        <th style="min-width: 120px; width: 130px;" class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-zscore">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="fas fa-spinner fa-spin"></i> Memuat data...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <div id="zscore-empty-state" class="empty-state">
@@ -84,6 +93,11 @@
             <div class="alert alert-info mt-3">
                 <strong>Informasi:</strong> Z-Score adalah nilai statistik yang digunakan untuk menghitung Safety Stock.
                 Semakin tinggi service level, semakin besar Z-Score dan Safety Stock yang dibutuhkan.
+                <ul class="mb-0 mt-2">
+                    <li>Hanya <strong>satu</strong> baris bertanda <span class="badge badge-success">Aktif</span> yang dipakai dalam kalkulasi.</li>
+                    <li>Default: <strong>Standar 95%</strong> (Z = 1.6449) — sesuai praktik umum UMKM consignment.</li>
+                    <li>Gunakan tombol <i class="fas fa-check text-success"></i> untuk mengganti service level aktif.</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -102,7 +116,7 @@
             <form id="form-zscore">
                 <div class="modal-body">
                     <input type="hidden" id="zscore-id" name="id">
-                    
+
                     <div class="form-group">
                         <label for="zscore-label">Label <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="zscore-label" name="label"
@@ -133,10 +147,10 @@
                     <div class="alert alert-info mb-0">
                         <strong>Contoh nilai Z-Score umum:</strong>
                         <ul class="mb-0 mt-2">
-                            <li>90% Service Level → Z-Score = 1.2816</li>
-                            <li>95% Service Level → Z-Score = 1.6449</li>
-                            <li>97% Service Level → Z-Score = 1.8808</li>
-                            <li>99% Service Level → Z-Score = 2.3263</li>
+                            <li>90% → Z = 1.2816</li>
+                            <li>95% → Z = 1.6449 <em>(default aktif)</em></li>
+                            <li>97% → Z = 1.8808</li>
+                            <li>99% → Z = 2.3263</li>
                         </ul>
                     </div>
                 </div>
