@@ -14,6 +14,16 @@
                 </a>
             </li>
 
+            <!-- Analytics Partner Performance -->
+            @can('view-partner-performance')
+            <li class="nav-item">
+                <a href="{{ route('analytics.partner-performance.index') }}" class="nav-link {{ ($activemenu == 'analytics.partner-performance')? 'active' : '' }}">
+                    <i class="nav-icon fas fa-chart-line"></i>
+                    <p>Analytics Partner Performance</p>
+                </a>
+            </li>
+            @endcan
+
             <!-- Master Data -->
             @canany(['manage-master-data', 'view-barang', 'view-toko', 'view-customer'])
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['barang', 'toko', 'barang-toko', 'customer']))? 'menu-open' : '' }}">

@@ -38,6 +38,7 @@ class MigrateRolesToSpatieSeeder extends Seeder
             'view-barang' => 'Lihat Data Barang',
             'view-dashboard-inventory-optimization' => 'Akses Dashboard Inventory Optimization',
             'view-dashboard-partner-performance' => 'Akses Dashboard Partner Performance',
+            'view-partner-performance' => 'Akses Analytics Partner Performance',
         ];
 
         foreach ($specialPermissions as $name => $description) {

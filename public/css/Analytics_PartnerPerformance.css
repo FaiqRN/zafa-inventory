@@ -1,0 +1,332 @@
+:root {
+    --za      : #C98A2E;
+    --za-soft : #FBF2E4;
+    --a : #1F7A4D; --a-bg: #E7F4ED; --a-light: #F2FAF6;
+    --b : #1E607F; --b-bg: #E7F1F6; --b-light: #F1F7FB;
+    --c : #9A6B22; --c-bg: #F9F1E4; --c-light: #FDF8F1;
+    --d : #A7472E; --d-bg: #FBEDE8; --d-light: #FEF6F3;
+}
+
+/* ── Kategori badge/chip ── */
+.kat-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 9px 4px 4px;
+    border-radius:999px;
+    border:1px solid;
+    font-size:11px;
+    font-weight:700;
+    line-height:1;
+}
+.kat-chip-badge {
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    font-size:11px;
+    font-weight:800;
+}
+.kat-chip-icon { font-size:11px; opacity:.85; }
+.kat-chip-label { font-weight:700; letter-spacing:.1px; }
+
+.kat-chip-a { color:var(--a); background:var(--a-light); border-color:#c9e8d8; }
+.kat-chip-b { color:var(--b); background:var(--b-light); border-color:#c7ddeb; }
+.kat-chip-c { color:var(--c); background:var(--c-light); border-color:#eeddbf; }
+.kat-chip-d { color:var(--d); background:var(--d-light); border-color:#f1cfc6; }
+
+.kat-chip-a .kat-chip-badge { background:var(--a); }
+.kat-chip-b .kat-chip-badge { background:var(--b); }
+.kat-chip-c .kat-chip-badge { background:var(--c); }
+.kat-chip-d .kat-chip-badge { background:var(--d); }
+
+/* ── Progress bar tabel ── */
+.prog-wrap { width:80px; height:7px; background:#f0ede8; border-radius:4px; overflow:hidden; display:inline-block; vertical-align:middle; }
+.prog-fill  { height:100%; border-radius:4px; }
+
+/* ── Nomor urut ── */
+.no-box { display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:26px; border-radius:6px; border:1px solid #d9d6cf; background:#f8f7f3; color:#45433f; font-size:12px; font-weight:700; }
+
+/* ── Avatar tabel ── */
+.av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; background:#F8F1E6; border:1px solid var(--za); color:var(--c); }
+
+/* ── Tabel ── */
+#partnerTable { min-width:900px; }
+#partnerTable thead th { font-size:11px; font-weight:700; color:#6f6c65; background:#faf9f2; border-top:none; padding:10px 12px; vertical-align:middle; }
+#partnerTable tbody td { vertical-align:middle; font-size:13px; padding:10px 12px; }
+#partnerTable.table-bordered th,
+#partnerTable.table-bordered td { border-color:#e4dfd3; }
+#partnerTable.table-striped tbody tr:nth-of-type(odd) { background-color:#fcfbf7; }
+#partnerTable tbody tr.partner-row:hover { background-color:#f5f2eb; }
+
+/* ── Filter ── */
+.filter-shell { border:1px solid #ebe8e1; }
+.filter-group label { display:block; margin-bottom:4px; font-size:12px; font-weight:600; color:#66645e; }
+.filter-actions { display:flex; align-items:flex-end; gap:8px; }
+.filter-head { font-size:12px; font-weight:700; color:#2c2c2a; margin-bottom:8px; }
+.filter-shell .card-body { padding-top:10px !important; padding-bottom:10px !important; }
+.filter-shell .form-control-sm { height:31px; font-size:12px; padding:.1rem .45rem; }
+.filter-shell .filter-group label { margin-bottom:3px; font-size:11px; }
+
+/* ── Pagination tabel ── */
+.table-meta-shell { background:#fcfbf7; border-top:1px solid #f0ede8; }
+.table-page-btn {
+    min-width:30px;
+    height:28px;
+    padding:0 10px;
+    border:1px solid #ddd9d1;
+    background:#fff;
+    color:#65625d;
+    border-radius:6px;
+    font-size:11px;
+    font-weight:600;
+}
+.table-page-btn:hover { border-color:#cfc9bc; color:#3f3d38; }
+.table-page-btn.active { background:var(--za-soft); border-color:#e2d1ad; color:#8b5f1f; }
+.table-page-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL DETAIL — 
+═══════════════════════════════════════════════════════════ */
+
+/* Header modal */
+.md-header { padding:20px 24px 16px; border-bottom:1px solid #f0ede8; background:#fff; }
+.md-avatar { width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; flex-shrink:0; }
+.md-name   { font-size:17px; font-weight:700; color:#1a1a18; line-height:1.2; }
+.md-meta   { font-size:12px; color:#888780; margin-top:3px; }
+
+/* Skor Hybrid utama */
+.hybrid-hero {
+    border-radius:16px; padding:20px 24px;
+    margin:20px 24px 0;
+    border:1px solid;
+    position:relative; overflow:hidden;
+}
+.hybrid-hero::before {
+    content:'';
+    position:absolute; top:0; right:0;
+    width:120px; height:120px;
+    border-radius:50%;
+    opacity:.06;
+    background:currentColor;
+    transform:translate(30px,-30px);
+}
+.hybrid-pct   { font-size:52px; font-weight:700; line-height:1; }
+.hybrid-label { font-size:12px; font-weight:600; opacity:.8; margin-top:4px; text-transform:uppercase; letter-spacing:.5px; }
+.hybrid-desc  { font-size:13px; opacity:.85; margin-top:12px; line-height:1.6; }
+
+/* Perhitungan hybrid */
+.calc-strip {
+    background:#f8f7f3; border:1px solid #ebe8e1;
+    border-radius:10px; padding:14px 16px;
+    margin:12px 24px 0; font-size:12px;
+}
+.calc-row    { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.calc-item   { text-align:center; flex:1; min-width:70px; }
+.calc-val    { font-size:18px; font-weight:700; line-height:1.1; }
+.calc-lbl    { font-size:10px; color:#888780; margin-top:2px; }
+.calc-op     { font-size:16px; color:#ccc; font-weight:300; }
+.calc-eq     { font-size:13px; color:#888780; }
+
+/* Section divider */
+.md-section {
+    padding:20px 24px 0;
+}
+.md-section-title {
+    font-size:13px; font-weight:700; color:#1a1a18;
+    margin-bottom:14px;
+    display:flex; align-items:center; gap:8px;
+}
+.md-section-title .icon-circle {
+    width:28px; height:28px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; flex-shrink:0;
+    background:var(--za-soft); color:var(--za);
+}
+
+/* KPI cards grid */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+@media (max-width:768px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+
+.kpi-card {
+    background:#faf9f6; border:1px solid #ede9e1;
+    border-radius:12px; padding:12px 14px;
+    position:relative; overflow:hidden;
+}
+.kpi-card::after {
+    content:'';
+    position:absolute; bottom:0; left:0; right:0;
+    height:3px; border-radius:0 0 12px 12px;
+    background:currentColor; opacity:.25;
+}
+.kpi-card-icon  { font-size:14px; margin-bottom:6px; }
+.kpi-card-label { font-size:10px; color:#888780; font-weight:600; text-transform:uppercase; letter-spacing:.3px; margin-bottom:4px; }
+.kpi-card-val   { font-size:18px; font-weight:700; line-height:1.1; }
+.kpi-card-sub   { font-size:10px; color:#aaa; margin-top:2px; }
+
+/* KPI persen bar — di bawah setiap card */
+.kpi-bar-mini { height:4px; background:#eee; border-radius:2px; overflow:hidden; margin-top:8px; }
+.kpi-bar-mini-fill { height:100%; border-radius:2px; }
+
+/* Bintang rating KPI */
+.kpi-star { color:#E8A020; font-size:10px; }
+
+/* Chart toggle */
+.chart-toggle { display:flex; gap:8px; margin-bottom:12px; }
+.chart-toggle .ctog {
+    padding:5px 14px; border-radius:20px; border:1px solid #e0ddd6;
+    font-size:11px; font-weight:600; cursor:pointer; background:#fff; color:#888780;
+    transition:all .2s;
+}
+.chart-toggle .ctog.active { background:var(--za); border-color:var(--za); color:#fff; }
+
+/* Chart containers */
+.chart-container { position:relative; width:100%; }
+#barChart-wrap { display:none; }
+
+/* ── Smart Info CF ── */
+.smart-info-section {
+    margin:20px 24px 24px;
+    border:1px solid #ebe8e1;
+    border-radius:14px;
+    overflow:hidden;
+}
+.smart-info-header {
+    padding:12px 16px;
+    background:linear-gradient(135deg,#FBF2E4,#F8EDD6);
+    border-bottom:1px solid #ede4d0;
+    display:flex; align-items:center; gap:10px;
+}
+.smart-info-title { font-size:13px; font-weight:700; color:#6B4C1A; }
+.smart-info-sub   { font-size:11px; color:#9A7040; margin-top:1px; }
+
+.sim-card {
+    padding:14px 16px;
+    border-bottom:1px solid #f5f3ee;
+    background:#fff;
+    transition:background .2s;
+}
+.sim-card:last-child { border-bottom:none; }
+.sim-card:hover { background:#faf9f6; }
+
+.sim-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.sim-toko   { font-size:13px; font-weight:700; color:#1a1a18; }
+.sim-badge  {
+    padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+    background:var(--za-soft); color:var(--za); border:1px solid #e8d8b8;
+}
+
+.sim-body   { font-size:12px; color:#5a5852; line-height:1.6; }
+.sim-pill   {
+    display:inline-block; padding:2px 8px; border-radius:6px;
+    font-size:11px; font-weight:600; margin:2px 3px 2px 0;
+    background:#f3f0ea; color:#5a5852;
+}
+.sim-pill.green  { background:#E7F4ED; color:#1F7A4D; }
+.sim-pill.amber  { background:#FBF2E4; color:#9A6B22; }
+.sim-pill.blue   { background:#E7F1F6; color:#1E607F; }
+
+.prod-row   { display:flex; align-items:center; gap:8px; margin-top:6px; padding:6px 10px; background:#f8f7f3; border-radius:8px; }
+.prod-icon  { width:24px; height:24px; border-radius:6px; background:var(--za-soft); display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--za); flex-shrink:0; }
+.prod-name  { font-size:12px; font-weight:600; color:#2c2c2a; flex:1; }
+.prod-stat  { font-size:11px; color:#888780; }
+
+/* Rek cards bawah halaman */
+.rek-head-note {
+    font-size:11px;
+    color:#8a877f;
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+.rek-live-dot {
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#2f9a64;
+    box-shadow:0 0 0 0 rgba(47,154,100,.35);
+    animation:rekPulse 1.8s infinite;
+}
+@keyframes rekPulse {
+    0% { box-shadow:0 0 0 0 rgba(47,154,100,.35); }
+    70% { box-shadow:0 0 0 8px rgba(47,154,100,0); }
+    100% { box-shadow:0 0 0 0 rgba(47,154,100,0); }
+}
+
+.rcard {
+    border-radius:12px;
+    padding:14px 14px 12px;
+    border:1px solid;
+    position:relative;
+    overflow:hidden;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.rcard-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.rcard-kat { font-size:10px; font-weight:700; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
+.rcard-kmark {
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    font-size:10px;
+    font-weight:800;
+}
+.rcard-title { font-size:12px; font-weight:700; color:#3b3934; margin-top:5px; }
+
+.rcard-ring {
+    --ring-color:#333;
+    --ring-pct:0;
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:conic-gradient(var(--ring-color) calc(var(--ring-pct) * 1%), rgba(255,255,255,.35) 0);
+    position:relative;
+    flex-shrink:0;
+}
+.rcard-ring::after {
+    content:'';
+    position:absolute;
+    inset:5px;
+    border-radius:50%;
+    background:#fff;
+}
+.rcard-ring span { position:relative; z-index:1; font-size:10px; font-weight:700; color:#444; }
+
+.rcard-main .val { font-size:24px; font-weight:700; line-height:1.05; }
+.rcard-main .val small { font-size:12px; font-weight:600; }
+.rcard-main .sub { font-size:10px; opacity:.85; margin-top:2px; }
+
+.rcard-bar { height:6px; border-radius:999px; background:rgba(255,255,255,.6); overflow:hidden; }
+.rcard-bar-fill { height:100%; border-radius:999px; }
+
+.rcard-action { font-size:11px; font-weight:700; line-height:1.45; }
+.rcard-desc { font-size:10px; opacity:.9; line-height:1.45; }
+
+.rcard-tags { display:flex; flex-wrap:wrap; gap:5px; }
+.rcard-tag {
+    display:inline-flex;
+    align-items:center;
+    padding:2px 7px;
+    border-radius:999px;
+    background:rgba(255,255,255,.7);
+    border:1px solid rgba(255,255,255,.8);
+    font-size:10px;
+    font-weight:600;
+}
+
+.rcard-a { background:var(--a-bg); border-color:var(--a); }
+.rcard-b { background:var(--b-bg); border-color:var(--b); }
+.rcard-c { background:var(--c-bg); border-color:var(--c); }
+.rcard-d { background:var(--d-bg); border-color:var(--d); }

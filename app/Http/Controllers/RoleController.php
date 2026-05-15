@@ -263,6 +263,10 @@ class RoleController extends Controller
             return \in_array($perm->name, ['manage-master-data', 'manage-users', 'manage-notification-settings']);
         })->values();
 
+        $grouped['Analytics'] = $permissions->filter(function ($perm) {
+            return \in_array($perm->name, ['view-partner-performance']);
+        })->values();
+
         $grouped['Barang'] = $permissions->filter(function ($perm) {
             return \preg_match('/-barang$/', $perm->name);
         })->values();
@@ -285,6 +289,7 @@ class RoleController extends Controller
             'EOQ Setting'                      => 'eoq-setting',
             'Z-Score Setting'                  => 'zscore-setting',
             'Konfigurasi Interval Pengiriman' => 'config-interval-kirim',
+            'Partner Performance'              => 'partner-performance',
         ];
 
         foreach ($modules as $label => $module) {

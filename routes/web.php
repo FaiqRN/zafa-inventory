@@ -12,6 +12,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardInventoryOptimizationController;
 use App\Http\Controllers\DashboardPartnerPerformanceController;
+use App\Http\Controllers\PartnerPerformanceController;
 use App\Http\Controllers\PemesananController;
 use App\Http\Controllers\BarangTokoController;
 use App\Http\Controllers\PengirimanController;
@@ -86,15 +87,47 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
         Route::middleware('can:view-dashboard-partner-performance')->group(function () {
             Route::get('/partner-performance', [DashboardPartnerPerformanceController::class, 'index'])
                 ->name('dashboard.partner-performance');
-
-            // API endpoints Partner Performance
-            // Route::prefix('api/partner-performance')->group(function () {
-            //     Route::get('/...', [DashboardPartnerPerformanceController::class, '...'])
-            //         ->name('dashboard.api.partner-performance...');
-            // });
+        Route::get('/statistik', [DashboardPartnerPerformanceController::class, 'getStatistikRingkasan']);
+        Route::get('/grafik-pengiriman', [DashboardPartnerPerformanceController::class, 'getGrafikPengiriman']);
+        Route::get('/barang-analysis', [DashboardPartnerPerformanceController::class, 'getBarangLakuTidakLaku'])
+            ->name('dashboard.api.barang-analysis');
+        Route::get('/transaksi-terbaru', [DashboardPartnerPerformanceController::class, 'getTransaksiTerbaru']);
+        Route::get('/toko-retur-terbanyak', [DashboardPartnerPerformanceController::class, 'getTokoReturTerbanyak']);
         });
+    });
 
-    }); // end prefix('dashboard')
+    // ===============================
+    // ANALYTICS ROUTES - CORE 4 MODULES ONLY
+    // ===============================
+    Route::prefix('analytics')->name('analytics.')->group(function () {
+        // ===== ANALYTICS 1: PARTNER PERFORMANCE (admin/ketua/AP) =====
+        Route::prefix('partner-performance')->name('partner-performance.')->middleware('can:view-partner-performance')->group(function () {
+            Route::get('/', [PartnerPerformanceController::class, 'index'])->name('index');
+            Route::get('/dashboard', [PartnerPerformanceController::class, 'dashboard'])->name('dashboard');
+            
+            // API Routes
+            Route::get('/api/data', [PartnerPerformanceController::class, 'getData'])
+                ->name('api.data');
+            Route::get('/api/trends', [PartnerPerformanceController::class, 'getTrends'])
+                ->name('api.trends');
+            Route::get('/api/statistics', [PartnerPerformanceController::class, 'getStatistics'])
+                ->name('api.statistics');
+            Route::get('/api/search', [PartnerPerformanceController::class, 'searchPartners'])
+                ->name('api.search');
+            
+            // Partner Actions
+            Route::get('/history/{partnerId}', [PartnerPerformanceController::class, 'getPartnerHistory'])
+                ->name('history');
+            Route::post('/alert/{partnerId}', [PartnerPerformanceController::class, 'sendPartnerAlert'])
+                ->name('alert');
+            Route::post('/bulk-alerts', [PartnerPerformanceController::class, 'sendBulkAlerts'])
+                ->name('bulk-alerts');
+            
+            // Export & Reports
+            Route::post('/generate-report', [PartnerPerformanceController::class, 'generateReport'])
+                ->name('generate-report');
+        });
+    });
 
     // Route profil
     Route::middleware(['auth'])->group(function () {
