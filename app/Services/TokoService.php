@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\AuditHelper;
 use App\Models\Toko;
 use App\Helpers\MasterData\Toko\TokoHelper;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +44,8 @@ class TokoService
                 ];
             }
 
+            $currentUser = AuditHelper::currentUsername();
+
             $toko = new Toko();
             $toko->{Toko::FIELD_TOKO_ID} = $data[Toko::FIELD_TOKO_ID];
             $toko->{Toko::FIELD_NAMA_TOKO} = $data[Toko::FIELD_NAMA_TOKO];
@@ -55,6 +58,8 @@ class TokoService
             $toko->{Toko::FIELD_IS_ACTIVE} = true;
             $toko->{Toko::FIELD_LATITUDE} = $latitude;
             $toko->{Toko::FIELD_LONGITUDE} = $longitude;
+            $toko->{Toko::FIELD_USER_CREATE} = $currentUser;
+            $toko->{Toko::FIELD_USER_UPDATE} = $currentUser;
 
             self::setInteractiveMapMetadata($toko);
 
@@ -147,6 +152,8 @@ class TokoService
                 } catch (\Exception $e) {
                 }
             }
+
+            $toko->{Toko::FIELD_USER_UPDATE} = AuditHelper::currentUsername();
 
             $toko->save();
 

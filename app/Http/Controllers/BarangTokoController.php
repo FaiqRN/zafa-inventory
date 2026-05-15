@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AuditHelper;
 use App\Helpers\MasterData\barangToko\BarangTokoHelper;
 use App\Helpers\MasterData\barangToko\BarangTokoOperationHelper;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class BarangTokoController extends Controller
@@ -97,7 +96,7 @@ class BarangTokoController extends Controller
                 'toko_id' => $request->toko_id,
                 'barang_id' => $request->barang_id,
                 'harga_barang_toko' => $request->harga_barang_toko,
-                'user_create' => $this->resolveCurrentUsername(),
+                'user_create' => AuditHelper::currentUsername(),
             ]);
 
             return response()->json([
@@ -131,7 +130,7 @@ class BarangTokoController extends Controller
         try {
             $barangToko = BarangTokoOperationHelper::updateBarangTokoData($barangToko, [
                 'harga_barang_toko' => $request->harga_barang_toko,
-                'user_update' => $this->resolveCurrentUsername(),
+                'user_update' => AuditHelper::currentUsername(),
             ]);
 
             return response()->json([
@@ -173,18 +172,4 @@ class BarangTokoController extends Controller
         ->header('Expires', '0');
     }
 
-    private function resolveCurrentUsername(): ?string
-    {
-        $authIdentifier = Auth::id();
-
-        if ($authIdentifier === null) {
-            return null;
-        }
-
-        $username = User::query()
-            ->where(User::FIELD_USERNAME, (string) $authIdentifier)
-            ->value(User::FIELD_USERNAME);
-
-        return $username !== null ? (string) $username : null;
-    }
 }

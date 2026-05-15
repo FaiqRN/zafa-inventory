@@ -2,14 +2,13 @@
 
 namespace App\Helpers\MasterData\pengiriman;
 
+use App\Helpers\AuditHelper;
 use App\Models\Pengiriman;
 use App\Models\BarangToko;
 use App\Models\Barang;
 use App\Models\BarangStok;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 
 class PengirimanHelper
 {
@@ -59,7 +58,7 @@ class PengirimanHelper
         
         try {
             $nomerPengiriman = self::generateNomerPengiriman();
-            $userId = self::resolveCurrentUserId();
+            $currentUser = AuditHelper::currentUsername();
             
             foreach ($data['items'] as $item) {
                 $pengirimanId = self::generatePengirimanId();
@@ -80,8 +79,8 @@ class PengirimanHelper
                     Pengiriman::FIELD_TANGGAL_PENGIRIMAN => $data['tanggal_pengiriman'],
                     Pengiriman::FIELD_JUMLAH_KIRIM => $item['jumlah'],
                     Pengiriman::FIELD_STATUS => 'proses',
-                    Pengiriman::FIELD_USER_CREATE => $userId,
-                    Pengiriman::FIELD_USER_UPDATE => $userId,
+                    Pengiriman::FIELD_USER_CREATE => $currentUser,
+                    Pengiriman::FIELD_USER_UPDATE => $currentUser,
                 ]);
             }
             
@@ -133,7 +132,7 @@ class PengirimanHelper
                 $pengiriman->update([
                     Pengiriman::FIELD_STATUS => $newStatus,
                     Pengiriman::FIELD_TANGGAL_TERIMA => $tanggalTerima,
-                    Pengiriman::FIELD_USER_UPDATE => self::resolveCurrentUserId(),
+                    Pengiriman::FIELD_USER_UPDATE => AuditHelper::currentUsername(),
                 ]);
             }
             
@@ -233,7 +232,7 @@ class PengirimanHelper
             
             $batch->update([
                 BarangStok::FIELD_SISA_STOK => $sisaStok - $deduct,
-                BarangStok::FIELD_USER_UPDATE => self::resolveCurrentUserId(),
+                BarangStok::FIELD_USER_UPDATE => AuditHelper::currentUsername(),
             ]);
             
             $remaining -= $deduct;
@@ -266,7 +265,7 @@ class PengirimanHelper
             
             $batch->update([
                 BarangStok::FIELD_SISA_STOK => $sisaStok + $jumlah,
-                BarangStok::FIELD_USER_UPDATE => self::resolveCurrentUserId(),
+                BarangStok::FIELD_USER_UPDATE => AuditHelper::currentUsername(),
             ]);
             
             Log::info("FIFO Restore - Batch dikembalikan", [
@@ -275,33 +274,6 @@ class PengirimanHelper
                 'new_sisa' => $sisaStok + $jumlah
             ]);
         }
-    }
-
-    private static function resolveCurrentUserId(): string
-    {
-        static $resolved = false;
-        static $resolvedUserId = 'SYSTEM';
-
-        if ($resolved) {
-            return $resolvedUserId;
-        }
-
-        $resolved = true;
-        $authIdentifier = Auth::id();
-
-        if ($authIdentifier === null) {
-            return $resolvedUserId;
-        }
-
-        $userId = User::query()
-            ->where(User::FIELD_USERNAME, (string) $authIdentifier)
-            ->value(User::FIELD_USER_ID);
-
-        if ($userId !== null) {
-            $resolvedUserId = (string) $userId;
-        }
-
-        return $resolvedUserId;
     }
 
     public static function getPengirimanByNomer($nomerPengiriman)

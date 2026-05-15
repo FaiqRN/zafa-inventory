@@ -296,8 +296,8 @@ class TokoSeeder extends Seeder
             $item['geocoding_last_updated'] = now();
             $item['created_at'] = now();
             $item['updated_at'] = now();
-            $item['user_create'] = null;
-            $item['user_update'] = null;
+            $item['user_create'] = 'system';
+            $item['user_update'] = 'system';
         }
 
         DB::table('toko')->insert($toko);

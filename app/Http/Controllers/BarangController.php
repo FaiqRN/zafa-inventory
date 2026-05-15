@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Barang;
+use App\Helpers\AuditHelper;
 use App\Helpers\MasterData\barang\BarangHelper;
 use App\Helpers\MasterData\barang\BarangStokHelper;
 use App\Services\BarangCacheService;
@@ -118,6 +119,8 @@ class BarangController extends Controller
 
         $barangId = BarangHelper::generateUniqueBarangId();
 
+        $currentUser = AuditHelper::currentUsername();
+
         $barang = Barang::create([
             'barang_id' => $barangId,
             'barang_kode' => $validated['barang_kode'],
@@ -126,6 +129,8 @@ class BarangController extends Controller
             'satuan' => $validated['satuan'],
             'shelf_life' => $validated['shelf_life'],
             'keterangan' => $validated['keterangan'] ?? null,
+            'user_create' => $currentUser,
+            'user_update' => $currentUser,
         ]);
 
         return $this->successResponse(
@@ -161,6 +166,8 @@ class BarangController extends Controller
             'shelf_life' => 'required|integer|min:1',
             'keterangan' => 'nullable|string|max:255',
         ]);
+
+        $validated['user_update'] = AuditHelper::currentUsername();
 
         $barang->update($validated);
 

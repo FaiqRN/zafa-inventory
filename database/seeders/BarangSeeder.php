@@ -20,6 +20,8 @@ class BarangSeeder extends Seeder
                 'keterangan' => 'Varian kering kentang lebar dengan bumbu pedas manis yang lezat',
                 'created_at' => now(),
                 'updated_at' => now(),
+                'user_create' => 'system',
+                'user_update' => 'system',
             ],
             [
                 'barang_id' => 'BRG0000002',
@@ -31,6 +33,8 @@ class BarangSeeder extends Seeder
                 'keterangan' => 'Varian kering kentang lebar dipadukan dengan potongan tempe yang dibumbui pedas manis yang lezat',
                 'created_at' => now(),
                 'updated_at' => now(),
+                'user_create' => 'system',
+                'user_update' => 'system',
             ],
             [
                 'barang_id' => 'BRG0000003',
@@ -42,6 +46,8 @@ class BarangSeeder extends Seeder
                 'keterangan' => 'Varian kering kentang dengan potongan lebar yang gurih original',
                 'created_at' => now(),
                 'updated_at' => now(),
+                'user_create' => 'system',
+                'user_update' => 'system',
             ],
             [
                 'barang_id' => 'BRG0000004',
@@ -53,6 +59,8 @@ class BarangSeeder extends Seeder
                 'keterangan' => 'Varian kering kentang dengan potongan memanjang dipadukan dengan ikan teri yang gurih dipadukan dengan bumbu pedas manis yang lezat',
                 'created_at' => now(),
                 'updated_at' => now(),
+                'user_create' => 'system',
+                'user_update' => 'system',
             ],
             [
                 'barang_id' => 'BRG0000005',
@@ -64,6 +72,8 @@ class BarangSeeder extends Seeder
                 'keterangan' => 'Varian ikan teri dan kacang yang manis gurih dipadukan dengan bumbu pedas manis yang lezat',
                 'created_at' => now(),
                 'updated_at' => now(),
+                'user_create' => 'system',
+                'user_update' => 'system',
             ],
         ];
 

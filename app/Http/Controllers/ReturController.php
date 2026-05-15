@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AuditHelper;
 use App\Models\Retur;
 use App\Models\Pengiriman;
 use App\Models\Toko;
@@ -141,6 +142,7 @@ class ReturController extends Controller
 
         try {
             $nomerPengiriman = $request->nomer_pengiriman;
+            $currentUser = AuditHelper::currentUsername();
             
             $existingRetur = Retur::where('nomer_pengiriman', $nomerPengiriman)
                 ->where('is_locked', true)
@@ -234,6 +236,8 @@ class ReturController extends Controller
                 $retur->kondisi = $item['kondisi'];
                 $retur->keterangan = $item['keterangan'] ?? null;
                 $retur->is_locked = true;
+                $retur->user_create = $currentUser;
+                $retur->user_update = $currentUser;
                 $retur->save();
             }
 
