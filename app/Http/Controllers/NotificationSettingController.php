@@ -12,10 +12,10 @@ class NotificationSettingController extends Controller
 
 
     private const DEFAULT_SETTINGS = [
-        'stock_threshold' => 0,           
-        'pending_return_days' => 12,      
-        'return_deadline_days' => 14,     
-        'check_interval' => 60,           
+        'stock_threshold' => 0,
+        'pending_return_days' => 12,
+        'return_deadline_days' => 14,
+        'check_interval' => 60,
     ];
 
     public function index()

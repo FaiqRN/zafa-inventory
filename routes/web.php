@@ -300,7 +300,9 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
     // ===============================
     // NOTIFICATION ROUTES (Real-time, no database)
     // ===============================
-    Route::get('/notifications/get', [\App\Http\Controllers\NotificationController::class, 'getNotifications'])->name('notifications.get');
+    Route::get('/notifications/get', [\App\Http\Controllers\NotificationController::class, 'getNotifications'])
+        ->middleware('can:view-notifications')
+        ->name('notifications.get');
 
     // ===============================
     // NOTIFICATION SETTINGS ROUTES

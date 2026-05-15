@@ -35,6 +35,7 @@ class MigrateRolesToSpatieSeeder extends Seeder
             'manage-master-data' => 'Akses penuh Master Data',
             'manage-users' => 'Akses penuh User Management',
             'manage-notification-settings' => 'Akses Pengaturan Notifikasi',
+            'view-notifications' => 'Lihat Notifikasi',
             'view-barang' => 'Lihat Data Barang',
             'view-dashboard-inventory-optimization' => 'Akses Dashboard Inventory Optimization',
             'view-dashboard-partner-performance' => 'Akses Dashboard Partner Performance',

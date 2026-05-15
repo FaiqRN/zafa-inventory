@@ -24,7 +24,7 @@ class DashboardPartnerPerformanceHelper
         return view('Dashboard_PartnerPerformance', [
             'activemenu' => 'dashboard',
             'breadcrumb' => (object) [
-                'title' => 'Dashboard CRM Zafa Potato',
+                'title' => 'Dashboard Partner Performance',
                 'list' => ['Home', 'Dashboard'],
             ],
         ]);

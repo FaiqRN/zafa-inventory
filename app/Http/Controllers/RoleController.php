@@ -260,7 +260,7 @@ class RoleController extends Controller
         $grouped = [];
 
         $grouped['Special'] = $permissions->filter(function ($perm) {
-            return \in_array($perm->name, ['manage-master-data', 'manage-users', 'manage-notification-settings']);
+            return \in_array($perm->name, ['manage-master-data', 'manage-users', 'manage-notification-settings', 'view-notifications']);
         })->values();
 
         $grouped['Analytics'] = $permissions->filter(function ($perm) {

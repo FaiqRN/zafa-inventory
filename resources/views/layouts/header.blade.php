@@ -12,39 +12,41 @@
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
-        <!-- Notifications Dropdown Menu -->
-        <li class="nav-item dropdown" id="notificationNavItem">
-            <a class="nav-link position-relative" data-toggle="dropdown" href="#" id="notificationDropdown">
-                <i class="far fa-bell" id="notificationBellIcon"></i>
-                <span class="badge badge-danger notification-badge-custom" id="notificationCount" style="display: none;">0</span>
-            </a>
-            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right p-0" style="width: 360px; max-height: 450px; overflow: hidden;">
-                <!-- Header -->
-                <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-bottom">
-                    <span class="font-weight-bold"><i class="fas fa-bell mr-1"></i> Notifikasi</span>
-                    <button type="button" class="btn btn-sm btn-link text-primary p-0" id="markAllReadBtn" title="Tandai Semua Dibaca">
-                        <i class="fas fa-check-double"></i> Tandai Dibaca
-                    </button>
+        @can('view-notifications')
+            <!-- Notifications Dropdown Menu -->
+            <li class="nav-item dropdown" id="notificationNavItem">
+                <a class="nav-link position-relative" data-toggle="dropdown" href="#" id="notificationDropdown">
+                    <i class="far fa-bell" id="notificationBellIcon"></i>
+                    <span class="badge badge-danger notification-badge-custom" id="notificationCount" style="display: none;">0</span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right p-0" style="width: 360px; max-height: 450px; overflow: hidden;">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-light border-bottom">
+                        <span class="font-weight-bold"><i class="fas fa-bell mr-1"></i> Notifikasi</span>
+                        <button type="button" class="btn btn-sm btn-link text-primary p-0" id="markAllReadBtn" title="Tandai Semua Dibaca">
+                            <i class="fas fa-check-double"></i> Tandai Dibaca
+                        </button>
+                    </div>
+                    
+                    <!-- Loading state -->
+                    <div id="notificationLoading" class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="text-muted mb-0 mt-2">Memuat...</p>
+                    </div>
+                    
+                    <!-- Notification items (scrollable) -->
+                    <div id="notificationList" style="display: none; max-height: 350px; overflow-y: auto;">
+                        <!-- Dynamic content will be loaded here -->
+                    </div>
+                    
+                    <!-- Empty state -->
+                    <div id="notificationEmpty" class="text-center py-5" style="display: none;">
+                        <i class="far fa-check-circle fa-3x text-success mb-3"></i>
+                        <p class="text-muted mb-0">Semua aman! Tidak ada notifikasi.</p>
+                    </div>
                 </div>
-                
-                <!-- Loading state -->
-                <div id="notificationLoading" class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                    <p class="text-muted mb-0 mt-2">Memuat...</p>
-                </div>
-                
-                <!-- Notification items (scrollable) -->
-                <div id="notificationList" style="display: none; max-height: 350px; overflow-y: auto;">
-                    <!-- Dynamic content will be loaded here -->
-                </div>
-                
-                <!-- Empty state -->
-                <div id="notificationEmpty" class="text-center py-5" style="display: none;">
-                    <i class="far fa-check-circle fa-3x text-success mb-3"></i>
-                    <p class="text-muted mb-0">Semua aman! Tidak ada notifikasi.</p>
-                </div>
-            </div>
-        </li>
+            </li>
+        @endcan
         @if(Auth::check())
             <li class="nav-item dropdown">
                 <a class="nav-link" data-toggle="dropdown" href="#">
@@ -87,6 +89,7 @@
     </ul>
 </nav>
 
+@can('view-notifications')
 <!-- Notification Scripts (Using LocalStorage) -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -401,3 +404,4 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #dc3545 !important;
 }
 </style>
+@endcan
