@@ -22,7 +22,7 @@ class MigrateRolesToSpatieSeeder extends Seeder
 
         foreach ($oldRoles as $oldRole) {
             $spatieRole = SpatieRole::firstOrCreate([
-                'name' => $oldRole->nama_role,
+                'name'       => $oldRole->nama_role,
                 'guard_name' => 'web'
             ]);
 
@@ -31,15 +31,18 @@ class MigrateRolesToSpatieSeeder extends Seeder
             echo "✓ Role '{$oldRole->nama_role}' berhasil dibuat/ditemukan\n";
         }
 
+        // ── Special / non-CRUD permissions ───────────────────────────────────
         $specialPermissions = [
-            'manage-master-data' => 'Akses penuh Master Data',
-            'manage-users' => 'Akses penuh User Management',
-            'manage-notification-settings' => 'Akses Pengaturan Notifikasi',
-            'view-notifications' => 'Lihat Notifikasi',
-            'view-barang' => 'Lihat Data Barang',
+            'manage-master-data'                    => 'Akses penuh Master Data',
+            'manage-users'                          => 'Akses penuh User Management',
+            'manage-notification-settings'          => 'Akses Pengaturan Notifikasi',
+            'view-notifications'                    => 'Lihat Notifikasi',
+            'view-barang'                           => 'Lihat Data Barang',
             'view-dashboard-inventory-optimization' => 'Akses Dashboard Inventory Optimization',
-            'view-dashboard-partner-performance' => 'Akses Dashboard Partner Performance',
-            'view-partner-performance' => 'Akses Analytics Partner Performance',
+            'view-dashboard-partner-performance'    => 'Akses Dashboard Partner Performance',
+            'view-partner-performance'              => 'Akses Analytics Partner Performance',
+            'view-config-interval-kirim'            => 'Lihat Konfigurasi Interval Pengiriman',
+            'update-config-interval-kirim'          => 'Update Konfigurasi Interval Pengiriman',
         ];
 
         foreach ($specialPermissions as $name => $description) {
@@ -49,18 +52,19 @@ class MigrateRolesToSpatieSeeder extends Seeder
             echo "✓ Permission '{$name}' berhasil dibuat\n";
         }
 
+        // ── CRUD module permissions ───────────────────────────────────────────
         $modules = [
-            'dashboard' => 'Dashboard',
-            'user' => 'User Management',
-            'barang' => 'Barang',
-            'barang-toko' => 'Barang Toko',
-            'toko' => 'Toko',
-            'customer' => 'Customer',
-            'pemesanan' => 'Pemesanan',
-            'pengiriman' => 'Pengiriman',
-            'retur' => 'Retur',
-            'follow-up' => 'Follow Up Pelanggan',
-            'eoq-setting' => 'EOQ Setting',
+            'dashboard'      => 'Dashboard',
+            'user'           => 'User Management',
+            'barang'         => 'Barang',
+            'barang-toko'    => 'Barang Toko',
+            'toko'           => 'Toko',
+            'customer'       => 'Customer',
+            'pemesanan'      => 'Pemesanan',
+            'pengiriman'     => 'Pengiriman',
+            'retur'          => 'Retur',
+            'follow-up'      => 'Follow Up Pelanggan',
+            'eoq-setting'    => 'EOQ Setting',
             'zscore-setting' => 'Z-Score Setting',
         ];
 
@@ -69,7 +73,7 @@ class MigrateRolesToSpatieSeeder extends Seeder
         foreach ($modules as $module => $label) {
             foreach ($actions as $action) {
                 Permission::firstOrCreate([
-                    'name' => "{$action}-{$module}",
+                    'name'       => "{$action}-{$module}",
                     'guard_name' => 'web'
                 ]);
             }
@@ -96,50 +100,102 @@ class MigrateRolesToSpatieSeeder extends Seeder
         echo "\n✓ Migrasi selesai!\n";
     }
 
-    private function assignPermissionsByRole($roleMapping)
+    private function assignPermissionsByRole($roleMapping): void
     {
         foreach ($roleMapping as $spatieRole) {
             $roleName = strtolower($spatieRole->name);
 
+            // ── Admin: akses penuh ke semua permission ────────────────────────
             if (\in_array($roleName, ['admin', 'superadmin', 'administrator'])) {
-                $spatieRole->givePermissionTo(Permission::all());
-                echo "✓ Role '{$spatieRole->name}' mendapat semua permissions (termasuk manage-master-data dan manage-users)\n";
+                $spatieRole->syncPermissions(Permission::all());
+                echo "✓ Role '{$spatieRole->name}' mendapat semua permissions (Full Access)\n";
                 continue;
             }
 
+            // ── Ketua ─────────────────────────────────────────────────────────
+            // Dashboard : Partner Performance
+            // Menu      : barang, toko, customer, pengiriman, follow-up, retur,
+            //             pemesanan, barang-toko
+            // Tidak dapat: eoq-setting, zscore-setting, config-interval-kirim,
+            //              manage-users, manage-master-data, inventory-optimization
             if (\in_array($roleName, ['ketua', 'manager', 'kepala'])) {
-                $permissions = Permission::where('name', 'not like', '%-user')
-                    ->where('name', '!=', 'manage-users')
-                    ->where('name', '!=', 'view-dashboard-partner-performance')
-                    ->where('name', '!=', 'update-config-interval-kirim')
-                    ->get();
-                $spatieRole->givePermissionTo($permissions);
-                $spatieRole->givePermissionTo('manage-master-data');
-                $spatieRole->givePermissionTo('view-dashboard-inventory-optimization');
-                $spatieRole->givePermissionTo('view-config-interval-kirim');
-                echo "✓ Role '{$spatieRole->name}' mendapat permissions manager (termasuk manage-master-data)\n";
-                continue;
-            }
-
-            if (\in_array($roleName, ['karyawan', 'staff', 'pegawai'])) {
-                $permissions = Permission::whereIn('name', [
+                $allowed = [
+                    // Barang
+                    'view-barang', 'create-barang', 'edit-barang', 'delete-barang',
+                    // Toko
+                    'view-toko', 'create-toko', 'edit-toko', 'delete-toko',
+                    // Customer
+                    'view-customer', 'create-customer', 'edit-customer', 'delete-customer',
+                    // Pengiriman
+                    'view-pengiriman', 'create-pengiriman', 'edit-pengiriman', 'delete-pengiriman',
+                    // Follow Up
+                    'view-follow-up', 'create-follow-up', 'edit-follow-up', 'delete-follow-up',
+                    // Retur
+                    'view-retur', 'create-retur', 'edit-retur', 'delete-retur',
+                    // Pemesanan
+                    'view-pemesanan', 'create-pemesanan', 'edit-pemesanan', 'delete-pemesanan',
+                    // Barang Toko
+                    'view-barang-toko', 'create-barang-toko', 'edit-barang-toko', 'delete-barang-toko',
+                    // Dashboard Partner Performance
                     'view-dashboard-partner-performance',
-                    'view-barang', 'view-barang-toko', 'view-toko',
-                    'view-customer', 'create-customer', 'edit-customer',
-                    'view-pemesanan', 'create-pemesanan', 'edit-pemesanan',
-                    'view-pengiriman', 'create-pengiriman', 'edit-pengiriman',
-                    'view-retur', 'create-retur',
-                    'view-follow-up', 'create-follow-up', 'edit-follow-up',
-                    'view-eoq-setting',
-                    'view-zscore-setting',
-                ])->get();
-                $spatieRole->givePermissionTo($permissions);
-                echo "✓ Role '{$spatieRole->name}' mendapat permissions staff\n";
+                    // Dashboard (CRUD)
+                    'view-dashboard', 'create-dashboard', 'edit-dashboard', 'delete-dashboard',
+                ];
+
+                $spatieRole->syncPermissions(
+                    Permission::whereIn('name', $allowed)->get()
+                );
+                echo "✓ Role '{$spatieRole->name}' → akses menu operasional + Dashboard Partner Performance\n";
                 continue;
             }
 
+            // ── Karyawan ──────────────────────────────────────────────────────
+            // Dashboard : Inventory Optimization
+            // Menu      : barang, toko, customer, pengiriman, follow-up,
+            //             zscore-setting, config-interval-kirim, eoq-setting,
+            //             retur, pemesanan, barang-toko
+            // Tidak dapat: view-partner-performance, dashboard partner performance,
+            //              manage-users, manage-master-data
+            if (\in_array($roleName, ['karyawan', 'staff', 'pegawai'])) {
+                $allowed = [
+                    // Barang
+                    'view-barang', 'create-barang', 'edit-barang', 'delete-barang',
+                    // Toko
+                    'view-toko', 'create-toko', 'edit-toko', 'delete-toko',
+                    // Customer
+                    'view-customer', 'create-customer', 'edit-customer', 'delete-customer',
+                    // Pengiriman
+                    'view-pengiriman', 'create-pengiriman', 'edit-pengiriman', 'delete-pengiriman',
+                    // Follow Up
+                    'view-follow-up', 'create-follow-up', 'edit-follow-up', 'delete-follow-up',
+                    // Z-Score Setting
+                    'view-zscore-setting', 'create-zscore-setting', 'edit-zscore-setting', 'delete-zscore-setting',
+                    // Konfigurasi Interval Kirim
+                    'view-config-interval-kirim', 'update-config-interval-kirim',
+                    // EOQ Setting
+                    'view-eoq-setting', 'create-eoq-setting', 'edit-eoq-setting', 'delete-eoq-setting',
+                    // Retur
+                    'view-retur', 'create-retur', 'edit-retur', 'delete-retur',
+                    // Pemesanan
+                    'view-pemesanan', 'create-pemesanan', 'edit-pemesanan', 'delete-pemesanan',
+                    // Barang Toko
+                    'view-barang-toko', 'create-barang-toko', 'edit-barang-toko', 'delete-barang-toko',
+                    // Dashboard Inventory Optimization
+                    'view-dashboard-inventory-optimization',
+                    // Dashboard (CRUD)
+                    'view-dashboard', 'create-dashboard', 'edit-dashboard', 'delete-dashboard',
+                ];
+
+                $spatieRole->syncPermissions(
+                    Permission::whereIn('name', $allowed)->get()
+                );
+                echo "✓ Role '{$spatieRole->name}' → akses menu operasional + Dashboard Inventory Optimization\n";
+                continue;
+            }
+
+            // ── Default: view-only ────────────────────────────────────────────
             $permissions = Permission::where('name', 'like', 'view-%')->get();
-            $spatieRole->givePermissionTo($permissions);
+            $spatieRole->syncPermissions($permissions);
             echo "✓ Role '{$spatieRole->name}' mendapat permissions view only\n";
         }
     }
