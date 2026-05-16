@@ -27,10 +27,10 @@ class DashboardMonitorController extends Controller
         ];
 
         return view('DashboardMonitor', [
-            'activemenu' => 'dashboard-monitor',
+            'activemenu' => 'dashboard',
             'breadcrumb' => (object) [
                 'title' => 'Dashboard Monitor',
-                'list'  => ['Home', 'Dashboard Monitor'],
+                'list'  => ['Home', 'Dashboard'],
             ],
             'stats' => $stats,
         ]);

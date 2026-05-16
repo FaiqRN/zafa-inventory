@@ -10,8 +10,6 @@
 <section class="content">
     <div class="container-fluid">
 
-
-
         {{-- ===== TODAY BADGE ===== --}}
         <div class="mb-3">
             <span class="badge badge-pill px-3 py-2" style="background:#FFC107; color:#4A2511; font-size:.9rem;">
