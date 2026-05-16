@@ -155,7 +155,7 @@
         body.innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat...</p>';
         if(typeof $ !== 'undefined') $('#modal-detail').modal('show');
 
-        fetch(`${SHOW_URL}/${id}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        fetch(SHOW_URL.replace('__ID__', id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(r => r.json())
             .then(({ data: r }) => {
                 const jsonBlock = (obj) => {

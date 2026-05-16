@@ -169,7 +169,7 @@
 <script>
 window.DASHBOARD_MONITOR_CONFIG = {
     baseUrl:        @json(route('dashboard-monitor.data')),
-    showUrl:        @json(url('dashboard-monitor')),
+    showUrl:        @json(route('dashboard-monitor.show', ['id' => '__ID__'])),
     modUrl:         @json(route('dashboard-monitor.modules')),
     truncUrl:       @json(route('dashboard-monitor.truncate')),
     logInfoUrl:     @json(route('dashboard-monitor.laravel-log.info')),
