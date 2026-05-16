@@ -138,6 +138,8 @@ class MigrateRolesToSpatieSeeder extends Seeder
                     'view-pemesanan', 'create-pemesanan', 'edit-pemesanan', 'delete-pemesanan',
                     // Barang Toko
                     'view-barang-toko', 'create-barang-toko', 'edit-barang-toko', 'delete-barang-toko',
+                    //analytics partner performance
+                    'view-partner-performance',
                     // Dashboard Partner Performance
                     'view-dashboard-partner-performance',
                     // Dashboard (CRUD)
