@@ -9,6 +9,7 @@ use App\Helpers\RoleHelper;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\Models\Permission;
 use App\Models\Role as OldRole;
+use App\Helpers\DashboardMonitorLogger;
 use stdClass;
 
 class RoleController extends Controller
@@ -114,6 +115,8 @@ class RoleController extends Controller
 
             app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
+            DashboardMonitorLogger::create('Role', "Tambah role {$request->name}", ['name' => $request->name, 'permissions' => $request->permissions], $request);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Role berhasil ditambahkan',
@@ -183,6 +186,8 @@ class RoleController extends Controller
 
             app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
+            DashboardMonitorLogger::update('Role', "Ubah role {$request->name}", ['old_name' => $role->getOriginal('name')], ['name' => $request->name, 'permissions' => $request->permissions], $request);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Role berhasil diperbarui',
@@ -240,6 +245,8 @@ class RoleController extends Controller
             DB::commit();
 
             app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+            DashboardMonitorLogger::delete('Role', "Hapus role {$role->name} (digunakan oleh {$role->users_count} user)", ['name' => $role->name, 'users_count' => $role->users_count]);
 
             return response()->json([
                 'status' => 'success',
@@ -301,4 +308,5 @@ class RoleController extends Controller
         return $grouped;
     }
 }
+
 

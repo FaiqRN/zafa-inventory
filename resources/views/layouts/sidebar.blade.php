@@ -124,7 +124,6 @@
                 </a>
             </li>
             @endcan
-
             <!-- Sistem Pengaturan -->
             @canany(['manage-users', 'manage-notification-settings', 'view-eoq-setting', 'view-zscore-setting', 'view-config-interval-kirim'])
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting', 'config-interval-kirim']))? 'menu-open' : '' }}">

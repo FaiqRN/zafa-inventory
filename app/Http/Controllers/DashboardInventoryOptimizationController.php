@@ -32,6 +32,8 @@ class DashboardInventoryOptimizationController extends Controller
 
         if (!$user) {
             $targetRoute = 'login';
+        } elseif ($user->hasAnyRole(['Admin', 'admin', 'Superadmin', 'superadmin', 'Administrator', 'administrator'])) {
+            $targetRoute = 'dashboard-monitor.index';
         } elseif (Gate::forUser($user)->allows('view-dashboard-inventory-optimization')) {
             $targetRoute = 'dashboard.inventory-optimization';
         } elseif (Gate::forUser($user)->allows('view-dashboard-partner-performance')) {

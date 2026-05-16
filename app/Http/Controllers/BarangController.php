@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Barang;
 use App\Helpers\AuditHelper;
+use App\Helpers\DashboardMonitorLogger;
 use App\Helpers\MasterData\barang\BarangHelper;
 use App\Helpers\MasterData\barang\BarangStokHelper;
 use App\Services\BarangCacheService;
@@ -133,6 +134,8 @@ class BarangController extends Controller
             'user_update' => $currentUser,
         ]);
 
+        DashboardMonitorLogger::create('Barang', "Tambah barang {$validated['barang_kode']} - {$validated['nama_barang']}", $barang->toArray(), $request);
+
         return $this->successResponse(
             'Data barang berhasil ditambahkan',
             BarangHelper::getBarangById($barangId)
@@ -171,19 +174,23 @@ class BarangController extends Controller
 
         $barang->update($validated);
 
+        DashboardMonitorLogger::update('Barang', "Ubah barang {$validated['barang_kode']} - {$validated['nama_barang']}", $barang->toArray(), $validated, $request);
+
         return $this->successResponse(
             'Data barang berhasil diperbarui',
             BarangHelper::getBarangById($id)
         );
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $barang = Barang::where('barang_id', $id)->first();
         
         if (!$barang) {
             return $this->errorResponse('Data barang tidak ditemukan', 404);
         }
+
+        DashboardMonitorLogger::delete('Barang', "Hapus barang {$barang->barang_kode} - {$barang->nama_barang}", $barang->toArray(), $request);
 
         $barang->delete();
 
@@ -287,6 +294,12 @@ class BarangController extends Controller
 
             DB::commit();
 
+            DashboardMonitorLogger::create('Stok Barang', "Tambah stok {$validated['stok']} untuk barang ID {$validated['barang_id']}", [
+                'barang_id' => $validated['barang_id'],
+                'stok' => $validated['stok'],
+                'tanggal' => $validated['tanggal_stock_barang'],
+            ], $request);
+
             BarangCacheService::clearBarangCache($validated['barang_id']);
 
             $stokData = DB::table('barang_stok')
@@ -360,6 +373,12 @@ class BarangController extends Controller
 
             DB::commit();
 
+            DashboardMonitorLogger::update('Stok Barang', "Ubah stok (ID stok: {$id}) dari {$oldStok} menjadi {$validated['stok']}", 
+                ['old_stok' => $oldStok], 
+                ['new_stok' => $validated['stok'], 'barang_id' => $validated['barang_id']], 
+                $request
+            );
+
             BarangCacheService::clearBarangCache($validated['barang_id']);
 
             return $this->jsonResponse([
@@ -396,6 +415,12 @@ class BarangController extends Controller
         );
 
         if ($result['success']) {
+            DashboardMonitorLogger::create('Stok Barang', "Penambahan stok sebanyak {$validated['jumlah']} untuk barang ID {$id}", [
+                'barang_id' => $id,
+                'jumlah' => $validated['jumlah'],
+                'tanggal' => $validated['tanggal'],
+            ], $request);
+
             return $this->successResponse($result['message'], $result['data']);
         }
 
@@ -403,3 +428,4 @@ class BarangController extends Controller
     }
 
 }
+

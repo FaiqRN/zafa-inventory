@@ -43,6 +43,8 @@ class MigrateRolesToSpatieSeeder extends Seeder
             'view-partner-performance'              => 'Akses Analytics Partner Performance',
             'view-config-interval-kirim'            => 'Lihat Konfigurasi Interval Pengiriman',
             'update-config-interval-kirim'          => 'Update Konfigurasi Interval Pengiriman',
+            'view-dashboard-monitor'                => 'Lihat Dashboard Monitor',
+            'truncate-dashboard-monitor'            => 'Truncate Semua Dashboard Monitor',
         ];
 
         foreach ($specialPermissions as $name => $description) {

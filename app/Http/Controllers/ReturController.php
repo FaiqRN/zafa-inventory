@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\AuditHelper;
+use App\Helpers\DashboardMonitorLogger;
 use App\Models\Retur;
 use App\Models\Pengiriman;
 use App\Models\Toko;
@@ -241,6 +242,8 @@ class ReturController extends Controller
                 $retur->save();
             }
 
+            DashboardMonitorLogger::create('Retur', "Tambah retur pengiriman {$nomerPengiriman}", ['nomer_pengiriman' => $nomerPengiriman, 'total_items' => count($request->items)], $request);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Data retur berhasil disimpan dan dikunci'
@@ -283,3 +286,4 @@ class ReturController extends Controller
         ]);
     }
 }
+

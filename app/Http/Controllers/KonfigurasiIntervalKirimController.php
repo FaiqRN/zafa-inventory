@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission;
+use App\Helpers\DashboardMonitorLogger;
 use stdClass;
 
 class KonfigurasiIntervalKirimController extends Controller
@@ -139,6 +140,8 @@ class KonfigurasiIntervalKirimController extends Controller
                 ]);
             }
 
+            DashboardMonitorLogger::update('Konfigurasi Interval Kirim', "Update interval pengiriman menjadi {$request->nilai} hari", null, ['nilai' => (int) $request->nilai], $request);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Konfigurasi interval pengiriman berhasil diperbarui.',
@@ -155,3 +158,4 @@ class KonfigurasiIntervalKirimController extends Controller
         }
     }
 }
+

@@ -1,0 +1,21 @@
+#tbl-logs thead th { background: #fafafa; font-size: .82rem; }
+#tbl-logs tbody td { font-size: .85rem; vertical-align: middle; }
+.badge-action { font-size: .78rem; letter-spacing: .5px; }
+.page-item.active .page-link {
+    background: var(--zafa-yellow);
+    border-color: var(--zafa-yellow);
+    color: #4A2511;
+    font-weight: 700;
+}
+.page-link { color: var(--zafa-orange); }
+.page-link:hover { background: var(--zafa-cream); color: var(--zafa-orange); }
+pre.json-block {
+    background: #f4f4f4;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: .78rem;
+    max-height: 260px;
+    overflow-y: auto;
+}
+.gap-1 { gap: .25rem; }
+.gap-2 { gap: .5rem; }

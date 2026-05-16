@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\DashboardMonitorLogger;
 use stdClass;
 
 class UserController extends Controller
@@ -112,6 +113,8 @@ class UserController extends Controller
                 (string) $currentUser->{User::FIELD_USERNAME}
             );
 
+            DashboardMonitorLogger::create('User', "Tambah user {$user->username}", ['username' => $user->username, 'role' => $request->role_id ?? null], $request);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'User berhasil ditambahkan',
@@ -167,11 +170,14 @@ class UserController extends Controller
                 ], 401);
             }
 
+            $oldData = $user->toArray();
             $user = UserHelper::updateUser(
                 $user,
                 $request->all(),
                 (string) $currentUser->{User::FIELD_USERNAME}
             );
+
+            DashboardMonitorLogger::update('User', "Ubah user {$user->username}", $oldData, $user->toArray(), $request);
 
             return response()->json([
                 'status' => 'success',
@@ -222,6 +228,8 @@ class UserController extends Controller
         }
 
         try {
+            DashboardMonitorLogger::delete('User', "Hapus user {$user->username}", $user->toArray());
+
             UserHelper::deleteUser($user);
 
             return response()->json([
@@ -252,3 +260,4 @@ class UserController extends Controller
             ->first();
     }
 }
+

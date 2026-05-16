@@ -106,6 +106,22 @@ class Kernel extends ConsoleKernel
                  });
 
         // ========================================
+        // DASHBOARD MONITOR AUTO CLEANUP
+        // ========================================
+
+        // Hapus log yang lebih tua dari 30 hari, setiap hari jam 03:30
+        $schedule->command('dashboard-monitor:clean --days=30')
+                 ->dailyAt('03:30')
+                 ->withoutOverlapping()
+                 ->description('Auto cleanup dashboard monitor logs (>30 hari)')
+                 ->onSuccess(function () {
+                     Log::info('dashboard-monitor:clean completed successfully');
+                 })
+                 ->onFailure(function () {
+                     Log::error('dashboard-monitor:clean failed');
+                 });
+
+        // ========================================
         // AUTOMATED FOLLOW UP CAMPAIGNS (Optional)
         // ========================================
 

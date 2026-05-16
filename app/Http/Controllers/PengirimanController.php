@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
+use App\Helpers\DashboardMonitorLogger;
 use Carbon\Carbon;
 
 class PengirimanController extends Controller
@@ -148,6 +149,8 @@ class PengirimanController extends Controller
         $result = PengirimanHelper::createPengiriman($request->all());
         
         if ($result['success']) {
+            DashboardMonitorLogger::create('Pengiriman', "Tambah pengiriman {$result['nomer_pengiriman']}", $request->except('_token'), $request);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Pengiriman berhasil ditambahkan',
@@ -193,6 +196,8 @@ class PengirimanController extends Controller
         $result = PengirimanHelper::updateStatus($nomerPengiriman, $request->status);
         
         if ($result['success']) {
+            DashboardMonitorLogger::update('Pengiriman', "Update status pengiriman {$nomerPengiriman} menjadi {$request->status}", ['nomer_pengiriman' => $nomerPengiriman], ['status' => $request->status], $request);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Status berhasil diupdate'
@@ -218,3 +223,4 @@ class PengirimanController extends Controller
         ]);
     }
 }
+

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
+use App\Helpers\DashboardMonitorLogger;
 use Carbon\Carbon;
 
 class PemesananController extends Controller
@@ -317,6 +318,8 @@ private function validatePemesanan($data, $previousStatus = null)
             }
             
             DB::commit();
+
+            DashboardMonitorLogger::create('Pemesanan', "Tambah pemesanan {$nomorPemesanan} ({$request->nama_pemesan})", ['nomor_pemesanan' => $nomorPemesanan, 'total_items' => count($items)], $request);
             
             return response()->json([
                 'status' => 'success',
@@ -484,6 +487,8 @@ public function update(Request $request, $id)
     }
     
     $pemesanan->save();
+
+    DashboardMonitorLogger::update('Pemesanan', "Ubah pemesanan {$pemesanan->nomor_pemesanan} ({$pemesanan->nama_pemesan})", ['old_barang' => $oldBarangId, 'old_jumlah' => $oldJumlah], $request->except('_token'), $request);
     
     return response()->json([
         'status' => 'success',
@@ -512,6 +517,8 @@ public function update(Request $request, $id)
             );
         }
         
+        DashboardMonitorLogger::delete('Pemesanan', "Hapus pemesanan {$pemesanan->nomor_pemesanan} ({$pemesanan->nama_pemesan})", $pemesanan->toArray());
+        
         $pemesanan->delete();
         
         return response()->json([
@@ -520,3 +527,4 @@ public function update(Request $request, $id)
         ]);
     }
 }
+

@@ -10,6 +10,7 @@ use App\Models\Zscore;
 use App\Models\Toko;
 use App\Models\Barang;
 use App\Models\BarangToko;
+use App\Helpers\DashboardMonitorLogger;
 
 class ZscoreSettingController extends Controller
 {
@@ -111,6 +112,8 @@ class ZscoreSettingController extends Controller
                 Zscore::FIELD_USER_CREATE   => $this->resolveCurrentUsername(),
             ]);
 
+            DashboardMonitorLogger::create('Z-Score Setting', "Tambah Z-Score SL {$request->service_level}% (label: {$request->label})", $data->toArray(), $request);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Z-Score berhasil ditambahkan' . (!$hasActive ? ' dan dijadikan aktif' : ''),
@@ -188,6 +191,7 @@ class ZscoreSettingController extends Controller
                 ], 400);
             }
 
+            $oldData = $data->toArray();
             $data->update([
                 Zscore::FIELD_LABEL         => $request->label,
                 Zscore::FIELD_SERVICE_LEVEL => $request->service_level,
@@ -195,6 +199,8 @@ class ZscoreSettingController extends Controller
                 Zscore::FIELD_KETERANGAN    => $request->keterangan,
                 Zscore::FIELD_USER_UPDATE   => $this->resolveCurrentUsername(),
             ]);
+
+            DashboardMonitorLogger::update('Z-Score Setting', "Ubah Z-Score SL {$request->service_level}%", $oldData, $data->toArray(), $request);
 
             return response()->json([
                 'success' => true,
@@ -228,6 +234,8 @@ class ZscoreSettingController extends Controller
             // FIX #3: Jika baris yang dihapus adalah yang aktif,
             // otomatis aktifkan baris dengan service_level tertinggi berikutnya
             // (sebagai fallback yang aman).
+            DashboardMonitorLogger::delete('Z-Score Setting', "Hapus Z-Score SL {$data->service_level}% (label: {$data->label})", $data->toArray(), $request);
+
             if ($data->{Zscore::FIELD_IS_ACTIVE}) {
                 $data->delete();
 
@@ -276,6 +284,8 @@ class ZscoreSettingController extends Controller
                 ->findOrFail($id);
 
             $data->setAsActive();
+
+            DashboardMonitorLogger::update('Z-Score Setting', "Set aktif Z-Score SL {$data->service_level}% (label: {$data->label})", null, $data->fresh()->toArray(), $request);
 
             return response()->json([
                 'success' => true,

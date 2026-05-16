@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use App\Models\FollowUp;
 use App\Models\Pemesanan;
 use App\Models\Customer;
+use App\Helpers\DashboardMonitorLogger;
 use Carbon\Carbon;
 
 class FollowUpPelangganController extends Controller
@@ -379,6 +380,14 @@ class FollowUpPelangganController extends Controller
             }
 
             Log::info("WhatsApp broadcast completed. Success: {$successCount}, Failed: {$failedCount}");
+
+            DashboardMonitorLogger::create('Follow Up', "Broadcast {$targetType} ke {$successCount} customer (gagal: {$failedCount})", [
+                'target_type' => $targetType,
+                'total' => count($customers),
+                'success' => $successCount,
+                'failed' => $failedCount,
+                'images' => count($imageUrls),
+            ], $request);
 
             return response()->json([
                 'status' => 'success',
@@ -1490,3 +1499,4 @@ class FollowUpPelangganController extends Controller
         }
     }
 }
+

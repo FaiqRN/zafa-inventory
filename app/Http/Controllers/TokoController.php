@@ -9,6 +9,7 @@ use App\Services\NominatimService;
 use App\Services\OverpassService;
 use App\Helpers\MasterData\Toko\TokoHelper;
 use App\Helpers\MasterData\Toko\WilayahHelper;
+use App\Helpers\DashboardMonitorLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -151,6 +152,8 @@ class TokoController extends Controller
             );
         }
 
+        DashboardMonitorLogger::create('Toko', "Tambah toko {$result['data']->nama_toko}", $result['data']->toArray(), $request);
+
         return $this->jsonSuccessWithNoCache([
             'status' => 'success',
             'message' => $result['message'],
@@ -205,6 +208,7 @@ class TokoController extends Controller
             return $this->jsonValidationError($validator);
         }
 
+        $oldData = $toko->toArray();
         $result = TokoService::update($toko, $request->all());
 
         if (!$result['success']) {
@@ -215,6 +219,8 @@ class TokoController extends Controller
             );
         }
 
+        DashboardMonitorLogger::update('Toko', "Ubah toko {$result['data']->nama_toko}", $oldData, $result['data']->toArray(), $request);
+
         return $this->jsonSuccessWithNoCache([
             'status' => 'success',
             'message' => $result['message'],
@@ -223,13 +229,15 @@ class TokoController extends Controller
         ]);
     }
 
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $toko = Toko::find($id);
 
         if (!$toko) {
             return $this->jsonNotFound('Data toko tidak ditemukan');
         }
+
+        DashboardMonitorLogger::delete('Toko', "Hapus toko {$toko->nama_toko}", $toko->toArray(), $request);
 
         $result = TokoService::destroy($toko);
 
@@ -469,3 +477,4 @@ class TokoController extends Controller
         }
     }
 }
+

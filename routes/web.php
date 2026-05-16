@@ -20,6 +20,7 @@ use App\Http\Controllers\FollowUpPelangganController;
 use App\Http\Controllers\EoqSettingController;
 use App\Http\Controllers\ZscoreSettingController;
 use App\Http\Controllers\KonfigurasiIntervalKirimController;
+use App\Http\Controllers\DashboardMonitorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -362,6 +363,17 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
         Route::put('/{id}', [\App\Http\Controllers\ZscoreSettingController::class, 'update'])->middleware('can:edit-zscore-setting')->name('zscore-setting.update');
         Route::delete('/{id}', [\App\Http\Controllers\ZscoreSettingController::class, 'destroy'])->middleware('can:delete-zscore-setting')->name('zscore-setting.destroy');
         Route::post('/{id}/set-active', [\App\Http\Controllers\ZscoreSettingController::class, 'setActive'])->name('zscore-setting.set-active')->middleware('can:edit-zscore-setting');
+    });
+
+    // ===============================
+    // DASHBOARD MONITOR
+    // ===============================
+    Route::group(['prefix' => 'dashboard-monitor', 'middleware' => ['role:Admin|admin|Superadmin|superadmin|Administrator|administrator']], function () {
+        Route::get('/', [DashboardMonitorController::class, 'index'])->name('dashboard-monitor.index');
+        Route::get('/data', [DashboardMonitorController::class, 'getData'])->name('dashboard-monitor.data');
+        Route::get('/modules', [DashboardMonitorController::class, 'modules'])->name('dashboard-monitor.modules');
+        Route::get('/{id}', [DashboardMonitorController::class, 'show'])->name('dashboard-monitor.show');
+        Route::post('/truncate', [DashboardMonitorController::class, 'truncate'])->name('dashboard-monitor.truncate');
     });
 
 });

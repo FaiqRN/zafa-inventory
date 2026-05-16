@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\AuditHelper;
 use App\Helpers\MasterData\barangToko\BarangTokoHelper;
 use App\Helpers\MasterData\barangToko\BarangTokoOperationHelper;
+use App\Helpers\DashboardMonitorLogger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -99,6 +100,8 @@ class BarangTokoController extends Controller
                 'user_create' => AuditHelper::currentUsername(),
             ]);
 
+            DashboardMonitorLogger::create('Barang Toko', "Tambah barang toko (toko: {$request->toko_id}, barang: {$request->barang_id})", $barangToko->toArray(), $request);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Data barang per toko berhasil ditambahkan',
@@ -128,10 +131,13 @@ class BarangTokoController extends Controller
         }
 
         try {
+            $oldData = $barangToko->toArray();
             $barangToko = BarangTokoOperationHelper::updateBarangTokoData($barangToko, [
                 'harga_barang_toko' => $request->harga_barang_toko,
                 'user_update' => AuditHelper::currentUsername(),
             ]);
+
+            DashboardMonitorLogger::update('Barang Toko', "Ubah harga barang toko ID {$id}", $oldData, $barangToko->toArray(), $request);
 
             return response()->json([
                 'status' => 'success',
@@ -161,6 +167,8 @@ class BarangTokoController extends Controller
             ], 404);
         }
 
+        DashboardMonitorLogger::delete('Barang Toko', "Hapus barang toko ID {$id}", $barangToko->toArray());
+
         BarangTokoOperationHelper::deleteBarangTokoData($barangToko);
 
         return response()->json([
@@ -173,3 +181,4 @@ class BarangTokoController extends Controller
     }
 
 }
+

@@ -11,6 +11,7 @@ use App\Models\EoqBiayaPesanToko;
 use App\Models\EoqBiayaSimpan;
 use App\Models\Toko;
 use App\Models\Barang;
+use App\Helpers\DashboardMonitorLogger;
 
 class EoqSettingController extends Controller
 {
@@ -100,6 +101,8 @@ class EoqSettingController extends Controller
                 EoqBiayaPesanGlobal::FIELD_USER_CREATE => Auth::id(),
             ]);
 
+            DashboardMonitorLogger::create('EOQ Biaya Pesan Global', "Tambah biaya pesan: {$request->nama_biaya}", $data->toArray(), $request);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Biaya pesan berhasil ditambahkan',
@@ -140,12 +143,15 @@ class EoqSettingController extends Controller
 
         try {
             $data = EoqBiayaPesanGlobal::findOrFail($id);
+            $oldData = $data->toArray();
             $data->update([
                 EoqBiayaPesanGlobal::FIELD_NAMA_BIAYA => $request->nama_biaya,
                 EoqBiayaPesanGlobal::FIELD_NOMINAL => $request->nominal,
                 EoqBiayaPesanGlobal::FIELD_KETERANGAN => $request->keterangan,
                 EoqBiayaPesanGlobal::FIELD_USER_UPDATE => Auth::id(),
             ]);
+
+            DashboardMonitorLogger::update('EOQ Biaya Pesan Global', "Ubah biaya pesan: {$request->nama_biaya}", $oldData, $data->toArray(), $request);
 
             return response()->json([
                 'success' => true,
@@ -164,6 +170,7 @@ class EoqSettingController extends Controller
     {
         try {
             $data = EoqBiayaPesanGlobal::findOrFail($id);
+            DashboardMonitorLogger::delete('EOQ Biaya Pesan Global', "Hapus biaya pesan: {$data->nama_biaya}", $data->toArray());
             $data->delete();
 
             return response()->json([
@@ -254,6 +261,8 @@ class EoqSettingController extends Controller
                 ]
             );
 
+            DashboardMonitorLogger::create('EOQ Biaya Pesan Toko', "Override biaya pesan toko {$request->toko_id}: {$request->nama_biaya}", $data->toArray(), $request);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Override biaya pesan berhasil disimpan',
@@ -271,6 +280,7 @@ class EoqSettingController extends Controller
     {
         try {
             $data = EoqBiayaPesanToko::findOrFail($id);
+            DashboardMonitorLogger::delete('EOQ Biaya Pesan Toko', "Hapus override biaya pesan toko ID {$id}", $data->toArray());
             $data->delete();
 
             return response()->json([
@@ -335,6 +345,8 @@ class EoqSettingController extends Controller
                 EoqBiayaSimpan::FIELD_USER_CREATE => Auth::id(),
             ]);
 
+            DashboardMonitorLogger::create('EOQ Biaya Simpan', "Tambah komponen biaya simpan: {$request->nama_komponen}", $data->toArray(), $request);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Komponen biaya simpan berhasil ditambahkan',
@@ -376,6 +388,7 @@ class EoqSettingController extends Controller
 
         try {
             $data = EoqBiayaSimpan::findOrFail($id);
+            $oldData = $data->toArray();
             $data->update([
                 EoqBiayaSimpan::FIELD_HARGA_POKOK => $request->harga_pokok,
                 EoqBiayaSimpan::FIELD_NAMA_KOMPONEN => $request->nama_komponen,
@@ -383,6 +396,8 @@ class EoqSettingController extends Controller
                 EoqBiayaSimpan::FIELD_KETERANGAN => $request->keterangan,
                 EoqBiayaSimpan::FIELD_USER_UPDATE => Auth::id(),
             ]);
+
+            DashboardMonitorLogger::update('EOQ Biaya Simpan', "Ubah komponen biaya simpan: {$request->nama_komponen}", $oldData, $data->toArray(), $request);
 
             return response()->json([
                 'success' => true,
@@ -401,6 +416,7 @@ class EoqSettingController extends Controller
     {
         try {
             $data = EoqBiayaSimpan::findOrFail($id);
+            DashboardMonitorLogger::delete('EOQ Biaya Simpan', "Hapus komponen biaya simpan: {$data->nama_komponen}", $data->toArray());
             $data->delete();
 
             return response()->json([
@@ -415,3 +431,4 @@ class EoqSettingController extends Controller
         }
     }
 }
+

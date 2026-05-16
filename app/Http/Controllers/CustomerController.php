@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\SimpleCustomerImporter;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\DashboardMonitorLogger;
 
 class CustomerController extends Controller
 {
@@ -137,6 +138,8 @@ class CustomerController extends Controller
 
         try {
             $customer = Customer::create($request->all());
+
+            DashboardMonitorLogger::create('Customer', "Tambah customer {$customer->nama}", $customer->toArray(), $request);
             
             return response()->json([
                 'status' => 'success',
@@ -197,7 +200,10 @@ class CustomerController extends Controller
         }
 
         try {
+            $oldData = $customer->toArray();
             $customer->update($request->all());
+
+            DashboardMonitorLogger::update('Customer', "Ubah customer {$customer->nama}", $oldData, $customer->toArray(), $request);
             
             return response()->json([
                 'status' => 'success',
@@ -225,6 +231,8 @@ class CustomerController extends Controller
         }
 
         try {
+            DashboardMonitorLogger::delete('Customer', "Hapus customer {$customer->nama}", $customer->toArray());
+
             $customer->delete();
             
             return response()->json([
@@ -295,6 +303,8 @@ class CustomerController extends Controller
             if ($updated > 0) {
                 $message .= " dan memperbarui {$updated} data yang sudah ada";
             }
+
+            DashboardMonitorLogger::create('Customer', "Import customer: {$inserted} baru, {$updated} diperbarui", ['processed' => $processed, 'inserted' => $inserted, 'updated' => $updated], $request);
             
             return response()->json([
                 'status' => 'success',
@@ -359,6 +369,8 @@ class CustomerController extends Controller
                 $inserted++;
             }
 
+            DashboardMonitorLogger::create('Customer', "Sinkronisasi {$inserted} customer dari pemesanan", ['inserted' => $inserted]);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Berhasil menyinkronkan ' . $inserted . ' data customer baru dari pemesanan',
@@ -374,3 +386,4 @@ class CustomerController extends Controller
         }
     }
 }
+
