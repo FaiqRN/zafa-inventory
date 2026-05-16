@@ -121,6 +121,18 @@ class Kernel extends ConsoleKernel
                      Log::error('dashboard-monitor:clean failed');
                  });
 
+        // Bersihkan isi laravel.log setiap bulan (tanggal 1, jam 04:00)
+        $schedule->command('laravel-log:clean')
+                 ->monthlyOn(1, '04:00')
+                 ->withoutOverlapping()
+                 ->description('Automatic monthly cleanup laravel.log')
+                 ->onSuccess(function () {
+                     Log::info('laravel-log:clean completed successfully');
+                 })
+                 ->onFailure(function () {
+                     Log::error('laravel-log:clean failed');
+                 });
+
         // ========================================
         // AUTOMATED FOLLOW UP CAMPAIGNS (Optional)
         // ========================================

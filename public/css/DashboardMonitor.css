@@ -19,3 +19,34 @@ pre.json-block {
 }
 .gap-1 { gap: .25rem; }
 .gap-2 { gap: .5rem; }
+
+/* ── Laravel Log Panel ──────────────────────────────────────── */
+.card-laravel-log .card-header {
+    background: linear-gradient(90deg, #e8f4fd 0%, #f0f9ff 100%);
+    border-bottom: 1px solid #bee3f8;
+}
+.card-laravel-log .card-body {
+    background: #f8fdff;
+}
+.log-info-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d1e9f5;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: .82rem;
+    color: #444;
+    white-space: nowrap;
+}
+.log-info-chip strong {
+    margin-left: 4px;
+    color: #2c6fa8;
+}
+#btn-export-log {
+    transition: transform .15s;
+}
+#btn-export-log:hover {
+    transform: translateY(-1px);
+}
+

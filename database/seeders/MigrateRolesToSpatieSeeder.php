@@ -45,6 +45,8 @@ class MigrateRolesToSpatieSeeder extends Seeder
             'update-config-interval-kirim'          => 'Update Konfigurasi Interval Pengiriman',
             'view-dashboard-monitor'                => 'Lihat Dashboard Monitor',
             'truncate-dashboard-monitor'            => 'Truncate Semua Dashboard Monitor',
+            'export-laravel-log'                    => 'Export File laravel.log',
+            'truncate-laravel-log'                  => 'Truncate / Kosongkan laravel.log',
         ];
 
         foreach ($specialPermissions as $name => $description) {

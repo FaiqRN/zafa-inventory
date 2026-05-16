@@ -2,11 +2,14 @@
     'use strict';
 
     const cfg = window.DASHBOARD_MONITOR_CONFIG || {};
-    const BASE_URL   = cfg.baseUrl || '';
-    const SHOW_URL   = cfg.showUrl || '';
-    const MOD_URL    = cfg.modUrl || '';
-    const TRUNC_URL  = cfg.truncUrl || '';
-    const CSRF       = cfg.csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '');
+    const BASE_URL      = cfg.baseUrl      || '';
+    const SHOW_URL      = cfg.showUrl      || '';
+    const MOD_URL       = cfg.modUrl       || '';
+    const TRUNC_URL     = cfg.truncUrl     || '';
+    const LOG_INFO_URL  = cfg.logInfoUrl   || '';
+    const LOG_EXPORT_URL= cfg.logExportUrl || '';
+    const LOG_TRUNC_URL = cfg.logTruncUrl  || '';
+    const CSRF          = cfg.csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '');
 
     let currentPage = 1;
 
@@ -188,7 +191,7 @@
             });
     };
 
-    // ── TRUNCATE ────────────────────────────────────────────────────────
+    // ── TRUNCATE ACTIVITY LOG ────────────────────────────────────────────
     const doTruncate = () => {
         if (typeof Swal === 'undefined') return;
         Swal.fire({
@@ -218,6 +221,75 @@
                     Swal.fire('Gagal', message ?? 'Terjadi kesalahan.', 'error');
                 }
               }).catch(() => Swal.fire('Error', 'Gagal melakukan truncate.', 'error'));
+        });
+    };
+
+    // ── LARAVEL LOG INFO ────────────────────────────────────────────────
+    const fmtBytes = (bytes) => {
+        if (bytes === 0) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+    };
+
+    const loadLaravelLogInfo = () => {
+        if (!LOG_INFO_URL) return;
+        const spinner   = document.getElementById('log-info-spinner');
+        const content   = document.getElementById('log-info-content');
+        const missing   = document.getElementById('log-info-missing');
+        const sizeEl    = document.getElementById('log-info-size');
+        const modEl     = document.getElementById('log-info-modified');
+        const badgeSz   = document.getElementById('laravel-log-size');
+
+        fetch(LOG_INFO_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(({ exists, size_bytes, modified }) => {
+                if (spinner) spinner.style.display = 'none';
+                if (!exists) {
+                    if (missing) missing.style.display = '';
+                    if (badgeSz) badgeSz.textContent = 'Tidak ada';
+                    return;
+                }
+                const formatted = fmtBytes(size_bytes);
+                if (sizeEl) sizeEl.textContent = formatted;
+                if (modEl)  modEl.textContent  = modified ? modified : '—';
+                if (content) content.style.display = '';
+                if (badgeSz) badgeSz.textContent = formatted;
+            }).catch(() => {
+                if (spinner) spinner.style.display = 'none';
+                if (missing) { missing.style.display = ''; missing.textContent = 'Gagal memuat info laravel.log.'; }
+            });
+    };
+
+    // ── TRUNCATE LARAVEL LOG ────────────────────────────────────────────
+    const doTruncateLaravelLog = () => {
+        if (typeof Swal === 'undefined') return;
+        Swal.fire({
+            title: 'Kosongkan laravel.log?',
+            html: 'Seluruh isi file <strong>laravel.log</strong> akan dihapus permanen.<br><span class="text-muted small">Tindakan ini tidak dapat dibatalkan.</span>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e6a817',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Kosongkan!',
+            cancelButtonText: 'Batal',
+        }).then(result => {
+            if (!result.isConfirmed) return;
+            fetch(LOG_TRUNC_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                },
+            }).then(r => r.json())
+              .then(({ success, message }) => {
+                if (success) {
+                    Swal.fire('Berhasil!', message, 'success').then(() => loadLaravelLogInfo());
+                } else {
+                    Swal.fire('Gagal', message ?? 'Terjadi kesalahan.', 'error');
+                }
+              }).catch(() => Swal.fire('Error', 'Gagal mengosongkan laravel.log.', 'error'));
         });
     };
 
@@ -269,6 +341,9 @@
         const truncBtn = document.getElementById('btn-truncate');
         if (truncBtn) truncBtn.addEventListener('click', doTruncate);
 
+        const truncLogBtn = document.getElementById('btn-truncate-log');
+        if (truncLogBtn) truncLogBtn.addEventListener('click', doTruncateLaravelLog);
+
         // Enter key filter
         ['filter-username', 'filter-date-from', 'filter-date-to'].forEach(id => {
             const el = document.getElementById(id);
@@ -282,5 +357,6 @@
         // ── INIT ────────────────────────────────────────────────────────────
         loadModules();
         fetchData(1);
+        loadLaravelLogInfo();
     });
 })();

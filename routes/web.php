@@ -105,6 +105,10 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
             Route::get('/modules', [DashboardMonitorController::class, 'modules'])->name('dashboard-monitor.modules');
             Route::get('/{id}', [DashboardMonitorController::class, 'show'])->name('dashboard-monitor.show');
             Route::post('/truncate', [DashboardMonitorController::class, 'truncate'])->name('dashboard-monitor.truncate');
+            // Laravel Log Management
+            Route::get('/laravel-log/info', [DashboardMonitorController::class, 'laravelLogInfo'])->name('dashboard-monitor.laravel-log.info');
+            Route::get('/laravel-log/export', [DashboardMonitorController::class, 'exportLaravelLog'])->name('dashboard-monitor.laravel-log.export');
+            Route::post('/laravel-log/truncate', [DashboardMonitorController::class, 'truncateLaravelLog'])->name('dashboard-monitor.laravel-log.truncate');
         });
     });
 

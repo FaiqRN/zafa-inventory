@@ -11,11 +11,63 @@
     <div class="container-fluid">
 
         {{-- ===== TODAY BADGE ===== --}}
-        <div class="mb-3">
+        <div class="mb-3 d-flex align-items-center flex-wrap gap-2">
             <span class="badge badge-pill px-3 py-2" style="background:#FFC107; color:#4A2511; font-size:.9rem;">
                 <i class="fas fa-calendar-day mr-1"></i>
                 Aktivitas Hari Ini: <strong id="stat-today">{{ number_format($stats['today']) }}</strong>
             </span>
+            <span class="badge badge-pill px-3 py-2" style="background:#17a2b8; color:#fff; font-size:.9rem;">
+                <i class="fas fa-file-alt mr-1"></i>
+                laravel.log: <strong id="laravel-log-size">...</strong>
+            </span>
+        </div>
+
+        {{-- ===== LARAVEL LOG PANEL ===== --}}
+        <div class="card mb-3 card-laravel-log">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span><i class="fas fa-file-code mr-2 text-info"></i> Laravel Log <span class="text-muted small">(storage/logs/laravel.log)</span></span>
+                <div class="d-flex gap-1" id="laravel-log-actions">
+                    @can('export-laravel-log')
+                    <a id="btn-export-log"
+                       href="{{ route('dashboard-monitor.laravel-log.export') }}"
+                       class="btn btn-info btn-sm"
+                       title="Download laravel.log sebagai file .log">
+                        <i class="fas fa-download mr-1"></i> Export .log
+                    </a>
+                    @endcan
+                    @can('truncate-laravel-log')
+                    <button class="btn btn-warning btn-sm" id="btn-truncate-log" title="Kosongkan isi laravel.log">
+                        <i class="fas fa-eraser mr-1"></i> Truncate Log
+                    </button>
+                    @endcan
+                </div>
+            </div>
+            <div class="card-body py-2">
+                <div class="row align-items-center" id="laravel-log-info-row">
+                    <div class="col-auto">
+                        <i class="fas fa-spinner fa-spin text-muted" id="log-info-spinner"></i>
+                    </div>
+                    <div class="col" id="log-info-content" style="display:none;">
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <span class="log-info-chip">
+                                <i class="fas fa-weight-hanging mr-1 text-info"></i>
+                                Ukuran: <strong id="log-info-size">—</strong>
+                            </span>
+                            <span class="log-info-chip">
+                                <i class="fas fa-clock mr-1 text-warning"></i>
+                                Terakhir diubah: <strong id="log-info-modified">—</strong>
+                            </span>
+                            <span class="log-info-chip">
+                                <i class="fas fa-calendar-alt mr-1 text-success"></i>
+                                Cleanup otomatis: <strong>Setiap tanggal 1, pukul 04:00</strong>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-12" id="log-info-missing" style="display:none;">
+                        <span class="text-muted"><i class="fas fa-exclamation-circle mr-1"></i> File laravel.log tidak ditemukan.</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- ===== FILTER PANEL ===== --}}
@@ -116,11 +168,14 @@
 @push('js')
 <script>
 window.DASHBOARD_MONITOR_CONFIG = {
-    baseUrl: @json(route('dashboard-monitor.data')),
-    showUrl: @json(url('dashboard-monitor')),
-    modUrl: @json(route('dashboard-monitor.modules')),
-    truncUrl: @json(route('dashboard-monitor.truncate')),
-    csrfToken: document.querySelector('meta[name="csrf-token"]').content
+    baseUrl:        @json(route('dashboard-monitor.data')),
+    showUrl:        @json(url('dashboard-monitor')),
+    modUrl:         @json(route('dashboard-monitor.modules')),
+    truncUrl:       @json(route('dashboard-monitor.truncate')),
+    logInfoUrl:     @json(route('dashboard-monitor.laravel-log.info')),
+    logExportUrl:   @json(route('dashboard-monitor.laravel-log.export')),
+    logTruncUrl:    @json(route('dashboard-monitor.laravel-log.truncate')),
+    csrfToken:      document.querySelector('meta[name="csrf-token"]').content
 };
 </script>
 <script src="{{ asset('js/DashboardMonitor.js') }}"></script>

@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DashboardMonitorLogger;
 use App\Models\DashboardMonitorLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DashboardMonitorController extends Controller
 {
@@ -105,7 +108,16 @@ class DashboardMonitorController extends Controller
             abort(403, 'Anda tidak memiliki izin untuk melakukan truncate.');
         }
 
+        $totalBefore = DashboardMonitorLog::count();
+
         DB::table('dashboard_monitor_logs')->truncate();
+
+        DashboardMonitorLogger::delete(
+            'Dashboard Monitor',
+            "Truncate semua activity log ({$totalBefore} record dihapus)",
+            ['total_deleted' => $totalBefore],
+            $request
+        );
 
         return response()->json([
             'success' => true,
@@ -124,5 +136,107 @@ class DashboardMonitorController extends Controller
             ->pluck('module');
 
         return response()->json(['success' => true, 'data' => $modules]);
+    }
+
+    // =====================================================================
+    // LARAVEL LOG MANAGEMENT
+    // =====================================================================
+
+    /**
+     * Informasi ukuran & status file laravel.log.
+     */
+    public function laravelLogInfo(Request $request)
+    {
+        $logPath = storage_path('logs/laravel.log');
+
+        $exists   = file_exists($logPath);
+        $sizeBytes = $exists ? filesize($logPath) : 0;
+        $sizeKb    = round($sizeBytes / 1024, 2);
+        $sizeMb    = round($sizeBytes / 1024 / 1024, 4);
+        $modified  = $exists ? date('Y-m-d H:i:s', filemtime($logPath)) : null;
+
+        return response()->json([
+            'success'    => true,
+            'exists'     => $exists,
+            'size_bytes' => $sizeBytes,
+            'size_kb'    => $sizeKb,
+            'size_mb'    => $sizeMb,
+            'modified'   => $modified,
+        ]);
+    }
+
+    /**
+     * Export laravel.log sebagai file download (.log).
+     */
+    public function exportLaravelLog(Request $request): StreamedResponse|\Illuminate\Http\JsonResponse
+    {
+        if (!$request->user() || !$request->user()->can('export-laravel-log')) {
+            abort(403, 'Anda tidak memiliki izin untuk mengekspor laravel.log.');
+        }
+
+        $logPath = storage_path('logs/laravel.log');
+
+        if (!file_exists($logPath)) {
+            return response()->json(['success' => false, 'message' => 'File laravel.log tidak ditemukan.'], 404);
+        }
+
+        $sizeKb   = round(filesize($logPath) / 1024, 2);
+        $fileName = 'laravel_' . now()->format('Ymd_His') . '.log';
+
+        // Catat aktivitas export
+        DashboardMonitorLogger::create(
+            'Laravel Log',
+            "Export laravel.log ({$sizeKb} KB) sebagai {$fileName}",
+            [
+                'file'      => 'storage/logs/laravel.log',
+                'size_kb'   => $sizeKb,
+                'export_as' => $fileName,
+            ],
+            $request
+        );
+
+        return response()->streamDownload(function () use ($logPath) {
+            readfile($logPath);
+        }, $fileName, [
+            'Content-Type'        => 'text/plain',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
+    /**
+     * Truncate isi file laravel.log (hanya admin).
+     */
+    public function truncateLaravelLog(Request $request)
+    {
+        if (!$request->user() || !$request->user()->can('truncate-laravel-log')) {
+            abort(403, 'Anda tidak memiliki izin untuk menghapus laravel.log.');
+        }
+
+        $logPath = storage_path('logs/laravel.log');
+
+        if (!file_exists($logPath)) {
+            return response()->json(['success' => false, 'message' => 'File laravel.log tidak ditemukan.'], 404);
+        }
+
+        $sizeBefore = filesize($logPath);
+        $sizeBeforeKb = round($sizeBefore / 1024, 2);
+
+        file_put_contents($logPath, '');
+
+        DashboardMonitorLogger::delete(
+            'Laravel Log',
+            "Truncate laravel.log ({$sizeBeforeKb} KB dihapus)",
+            [
+                'file'        => 'storage/logs/laravel.log',
+                'size_before' => "{$sizeBeforeKb} KB",
+                'triggered'   => 'manual',
+            ],
+            $request
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => "File laravel.log berhasil dikosongkan ({$sizeBeforeKb} KB dihapus).",
+        ]);
     }
 }
