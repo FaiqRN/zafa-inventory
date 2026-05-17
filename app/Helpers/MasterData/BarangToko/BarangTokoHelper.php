@@ -134,4 +134,5 @@ class BarangTokoHelper
 
         return $rules;
     }
+    
 }
