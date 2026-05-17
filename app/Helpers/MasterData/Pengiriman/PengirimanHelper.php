@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Helpers\MasterData\pengiriman;
+namespace App\Helpers\MasterData\Pengiriman;
 // tes
 use App\Helpers\AuditHelper;
 use App\Models\Pengiriman;

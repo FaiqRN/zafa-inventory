@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Helpers\MasterData\barangToko;
+namespace App\Helpers\MasterData\BarangToko;
 
 use App\Models\BarangToko;
 use Illuminate\Support\Facades\Validator;

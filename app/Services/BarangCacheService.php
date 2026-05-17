@@ -6,7 +6,7 @@ use App\Models\Barang;
 use App\Models\Pemesanan;
 use App\Models\Pengiriman;
 use App\Models\Retur;
-use App\Helpers\MasterData\barang\BarangStokHelper;
+use App\Helpers\MasterData\Barang\BarangStokHelper;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
