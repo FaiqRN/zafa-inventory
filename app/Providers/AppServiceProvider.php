@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Barang;
 use App\Models\Pemesanan;
 use App\Models\Toko;
@@ -21,10 +20,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        Excel::macro('storeMultiple', function (...$args) {
-        });
-
-        $this->app->singleton(WablasService::class, function ($app) {
+        $this->app->singleton(WablasService::class, function () {
             return new WablasService();
         });
     }
