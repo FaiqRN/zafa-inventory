@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\KonfigurasiSistem;
+use App\Models\Toko;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -140,7 +141,18 @@ class KonfigurasiIntervalKirimController extends Controller
                 ]);
             }
 
-            DashboardMonitorLogger::update('Konfigurasi Interval Kirim', "Update interval pengiriman menjadi {$request->nilai} hari", null, ['nilai' => (int) $request->nilai], $request);
+            // Sync ke semua toko agar mengikuti nilai global terbaru.
+            $affectedToko = Toko::query()->update([
+                Toko::FIELD_MIN_INTERVAL_KIRIM_HARI => (int) $request->nilai,
+            ]);
+
+            DashboardMonitorLogger::update(
+                'Konfigurasi Interval Kirim',
+                "Update interval pengiriman menjadi {$request->nilai} hari",
+                null,
+                ['nilai' => (int) $request->nilai, 'toko_updated' => $affectedToko],
+                $request
+            );
 
             return response()->json([
                 'success' => true,
