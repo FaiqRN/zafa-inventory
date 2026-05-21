@@ -107,28 +107,7 @@ class DashboardInventoryOptimizationController extends Controller
         return null;
     }
 
-    public function recalculate(Request $request, RekomendasiService $rekomendasiService)
-    {
-        try {
-            $hariObservasi = max(
-                1,
-                (int) $request->input('hari_observasi', DashboardInventoryOptimizationHelper::DEFAULT_HARI_OBSERVASI)
-            );
-            $hasil = $rekomendasiService->hitungSemua($hariObservasi);
-
-            return redirect()->route('dashboard.inventory-optimization')
-                ->with('success', 'Perhitungan optimasi inventory selesai. Berhasil: '
-                    . ($hasil['berhasil'] ?? 0)
-                    . ', Gagal: '
-                    . ($hasil['gagal'] ?? 0)
-                    . '.');
-        } catch (\Throwable $e) {
-            Log::error('Error in dashboard recalculate: ' . $e->getMessage());
-
-            return redirect()->route('dashboard.inventory-optimization')
-                ->with('error', 'Gagal melakukan perhitungan ulang: ' . $e->getMessage());
-        }
-    }
+    // Method recalculate() dihapus — data sekarang diperbarui otomatis via auto-refresh.
 
     /**
      * Auto refresh data dashboard inventory optimization.

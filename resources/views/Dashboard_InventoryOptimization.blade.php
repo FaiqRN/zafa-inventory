@@ -60,7 +60,16 @@
     </div>
 </div>
 
-<div class="inv-refresh-time inv-refresh-time-plain" id="inv-refresh-time">Update terakhir: -</div>
+<div class="inv-auto-refresh-bar" id="inv-auto-refresh-bar">
+    <div class="inv-auto-refresh-left">
+        <span class="inv-auto-refresh-dot is-idle" id="inv-auto-refresh-dot"></span>
+        <span id="inv-auto-refresh-label">Auto-update aktif</span>
+    </div>
+    <div class="inv-auto-refresh-right">
+        <span class="inv-refresh-time" id="inv-refresh-time">Update terakhir: -</span>
+        <span class="inv-refresh-countdown" id="inv-refresh-countdown"></span>
+    </div>
+</div>
 
 {{-- MAP --}}
 <div class="inv-map-wrap">
@@ -104,13 +113,8 @@
         window.INV_NOMINATIM_BASE_URL = @json($nominatimBaseUrl ?? 'https://nominatim.openstreetmap.org');
         window.INV_AUTO_REFRESH_URL = @json(route('dashboard.api.inventory-optimization.auto-refresh'));
 
-        {{--
-            FIX: Auto-refresh diubah dari 10.000ms (10 detik) ke 300.000ms (5 menit).
-            Interval 10 detik menyebabkan ratusan baris duplikat di inventory_rekomendasi
-            karena setiap fetch memanggil hitungSemua() dari sisi server.
-            5 menit cukup untuk pembaruan real-time dashboard tanpa membebani DB.
-        --}}
-        window.INV_AUTO_REFRESH_INTERVAL_MS = 300000;
+        {{-- Auto-refresh setiap 60 detik (1 menit) untuk pembaruan data real-time --}}
+        window.INV_AUTO_REFRESH_INTERVAL_MS = 60000;
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ asset('js/Dashboard_InventoryOptimization.js') }}"></script>

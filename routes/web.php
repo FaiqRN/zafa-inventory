@@ -72,8 +72,6 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
         Route::middleware('can:view-dashboard-inventory-optimization')->group(function () {
             Route::get('/inventory-optimization', [DashboardInventoryOptimizationController::class, 'index'])
                 ->name('dashboard.inventory-optimization');
-            Route::post('/inventory-optimization/recalculate', [DashboardInventoryOptimizationController::class, 'recalculate'])
-                ->name('dashboard.inventory-optimization.recalculate');
 
             // API endpoints Inventory Optimization
             Route::prefix('api/inventory-optimization')->group(function () {
@@ -103,12 +101,17 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
             Route::get('/', [DashboardMonitorController::class, 'index'])->name('dashboard-monitor.index');
             Route::get('/data', [DashboardMonitorController::class, 'getData'])->name('dashboard-monitor.data');
             Route::get('/modules', [DashboardMonitorController::class, 'modules'])->name('dashboard-monitor.modules');
-            Route::get('/{id}', [DashboardMonitorController::class, 'show'])->name('dashboard-monitor.show');
             Route::post('/truncate', [DashboardMonitorController::class, 'truncate'])->name('dashboard-monitor.truncate');
             // Laravel Log Management
             Route::get('/laravel-log/info', [DashboardMonitorController::class, 'laravelLogInfo'])->name('dashboard-monitor.laravel-log.info');
             Route::get('/laravel-log/export', [DashboardMonitorController::class, 'exportLaravelLog'])->name('dashboard-monitor.laravel-log.export');
             Route::post('/laravel-log/truncate', [DashboardMonitorController::class, 'truncateLaravelLog'])->name('dashboard-monitor.laravel-log.truncate');
+            // SQL Import
+            Route::get('/sql-import/tables', [DashboardMonitorController::class, 'getAllowedTablesList'])->name('dashboard-monitor.sql-import.tables');
+            Route::get('/sql-import/columns', [DashboardMonitorController::class, 'getTableColumns'])->name('dashboard-monitor.sql-import.columns');
+            Route::post('/sql-import/execute', [DashboardMonitorController::class, 'executeSqlImport'])->name('dashboard-monitor.sql-import.execute');
+            // Wildcard /{id} harus di paling akhir agar tidak menangkap route lain
+            Route::get('/{id}', [DashboardMonitorController::class, 'show'])->name('dashboard-monitor.show');
         });
     });
 

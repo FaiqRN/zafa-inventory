@@ -587,6 +587,40 @@
         }
     }
 
+    function setRefreshDotState(state) {
+        var dotEl = document.getElementById('inv-auto-refresh-dot');
+        var labelEl = document.getElementById('inv-auto-refresh-label');
+
+        if (dotEl) {
+            dotEl.className = 'inv-auto-refresh-dot' + (state ? ' is-' + state : '');
+        }
+
+        if (labelEl) {
+            switch (state) {
+                case 'running':
+                    labelEl.textContent = 'Memperbarui data...';
+                    break;
+                case 'error':
+                    labelEl.textContent = 'Gagal memperbarui';
+                    break;
+                default:
+                    labelEl.textContent = 'Auto-update aktif';
+                    break;
+            }
+        }
+    }
+
+    function updateCountdown(secondsLeft) {
+        var countdownEl = document.getElementById('inv-refresh-countdown');
+        if (countdownEl) {
+            if (secondsLeft > 0) {
+                countdownEl.textContent = '· refresh dalam ' + secondsLeft + 's';
+            } else {
+                countdownEl.textContent = '';
+            }
+        }
+    }
+
     function applyDashboardSnapshot(snapshot) {
         if (!snapshot) {
             return;
@@ -608,6 +642,7 @@
         }
 
         isAutoRefreshRunning = true;
+        setRefreshDotState('running');
 
         fetch(autoRefreshUrl, {
             method: 'GET',
@@ -636,24 +671,62 @@
                     : new Date().toISOString();
 
                 setAutoRefreshIndicator(updatedAt);
+                setRefreshDotState('idle');
             })
             .catch(function (error) {
                 console.error('Auto refresh dashboard gagal:', error);
+                setRefreshDotState('error');
+
+                // Kembalikan ke idle setelah 5 detik agar user tahu error sudah lewat
+                setTimeout(function () {
+                    setRefreshDotState('idle');
+                }, 5000);
             })
             .finally(function () {
                 isAutoRefreshRunning = false;
             });
     }
 
+    var countdownTimer = null;
+    var countdownSeconds = 0;
+
+    function startCountdown() {
+        countdownSeconds = Math.floor(autoRefreshIntervalMs / 1000);
+        updateCountdown(countdownSeconds);
+
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+        }
+
+        countdownTimer = setInterval(function () {
+            countdownSeconds--;
+            if (countdownSeconds <= 0) {
+                updateCountdown(0);
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            } else {
+                updateCountdown(countdownSeconds);
+            }
+        }, 1000);
+    }
+
+    function doRefreshAndResetCountdown() {
+        refreshDashboardData();
+        startCountdown();
+    }
+
     function startAutoRefresh() {
         setAutoRefreshIndicator(new Date().toISOString());
-        refreshDashboardData();
+        setRefreshDotState('idle');
 
-        autoRefreshTimer = window.setInterval(refreshDashboardData, autoRefreshIntervalMs);
+        // Refresh pertama kali saat halaman dimuat
+        doRefreshAndResetCountdown();
+
+        autoRefreshTimer = window.setInterval(doRefreshAndResetCountdown, autoRefreshIntervalMs);
 
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible') {
-                refreshDashboardData();
+                doRefreshAndResetCountdown();
             }
         });
 
@@ -661,6 +734,10 @@
             if (autoRefreshTimer !== null) {
                 window.clearInterval(autoRefreshTimer);
                 autoRefreshTimer = null;
+            }
+            if (countdownTimer !== null) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
             }
         });
     }
