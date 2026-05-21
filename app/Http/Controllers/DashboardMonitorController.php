@@ -359,14 +359,28 @@ class DashboardMonitorController extends Controller
             ], 422);
         }
 
-        // ── 4. Cek keamanan: pastikan tidak ada DROP, ALTER, DELETE, UPDATE, TRUNCATE ──
-        $dangerous = ['DROP ', 'ALTER ', 'DELETE ', 'UPDATE ', 'TRUNCATE ', 'CREATE ', 'GRANT ', 'REVOKE '];
-        $upperSql  = strtoupper($rawSql);
-        foreach ($dangerous as $keyword) {
-            if (str_contains($upperSql, $keyword)) {
+        // ── 4. Cek keamanan: pastikan SQL tidak mengandung statement berbahaya ──
+        // Hanya cek apakah SQL DIMULAI dengan command berbahaya (bukan di dalam data values)
+        $dangerousPatterns = [
+            '/^\s*DROP\s+/im',
+            '/^\s*ALTER\s+/im',
+            '/^\s*DELETE\s+/im',
+            '/^\s*TRUNCATE\s+/im',
+            '/^\s*CREATE\s+/im',
+            '/^\s*GRANT\s+/im',
+            '/^\s*REVOKE\s+/im',
+            '/;\s*DROP\s+/i',
+            '/;\s*ALTER\s+/i',
+            '/;\s*DELETE\s+/i',
+            '/;\s*UPDATE\s+/i',
+            '/;\s*TRUNCATE\s+/i',
+            '/;\s*CREATE\s+/i',
+        ];
+        foreach ($dangerousPatterns as $pattern) {
+            if (preg_match($pattern, $rawSql)) {
                 return response()->json([
                     'success' => false,
-                    'message' => "SQL mengandung perintah berbahaya ({$keyword}). Hanya INSERT INTO yang diizinkan.",
+                    'message' => 'SQL mengandung perintah berbahaya. Hanya satu statement INSERT INTO yang diizinkan.',
                 ], 422);
             }
         }
@@ -388,17 +402,15 @@ class DashboardMonitorController extends Controller
             }
         }
 
-        // ── 7. Eksekusi dalam transaction ──
+        // ── 7. Eksekusi ──
+        // Gunakan DB::unprepared() karena DB::statement() menggunakan PDO prepared statements
+        // yang akan gagal jika data mengandung karakter '?' (dianggap parameter placeholder)
         try {
             $rowsBefore = DB::table($tableName)->count();
 
-            DB::beginTransaction();
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
-            
-            $affected = DB::statement($cleanSql);
-            
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
-            DB::commit();
+            DB::unprepared('SET FOREIGN_KEY_CHECKS=0');
+            DB::unprepared($cleanSql);
+            DB::unprepared('SET FOREIGN_KEY_CHECKS=1');
 
             $rowsAfter = DB::table($tableName)->count();
             $rowsInserted = $rowsAfter - $rowsBefore;
@@ -428,9 +440,8 @@ class DashboardMonitorController extends Controller
                 'mode'          => $mode,
             ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
             // Pastikan FK check dihidupkan kembali
-            try { DB::statement('SET FOREIGN_KEY_CHECKS=1'); } catch (\Throwable $ex) {}
+            try { DB::unprepared('SET FOREIGN_KEY_CHECKS=1'); } catch (\Throwable $ex) {}
 
             Log::error('SQL Import failed', [
                 'table' => $tableName,
