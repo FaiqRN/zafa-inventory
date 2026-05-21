@@ -3,7 +3,7 @@
 @section('title', 'dashboard')
 
 @push('css')
-<link rel="stylesheet" href="{{ asset('css/DashboardMonitor.css') }}">
+<link rel="stylesheet" href="{{ asset('css/DashboardMonitor.css') }}?v=1.0.1">
 @endpush
 
 @section('content')
@@ -291,5 +291,5 @@ window.DASHBOARD_MONITOR_CONFIG = {
     csrfToken:      document.querySelector('meta[name="csrf-token"]').content
 };
 </script>
-<script src="{{ asset('js/DashboardMonitor.js') }}"></script>
+<script src="{{ asset('js/DashboardMonitor.js') }}?v=1.0.1"></script>
 @endpush
