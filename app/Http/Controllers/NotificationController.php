@@ -23,14 +23,16 @@ class NotificationController extends Controller
 
     private function getSettings()
     {
-        if (!Storage::exists(self::SETTINGS_FILE)) {
+        $disk = Storage::disk('local');
+
+        if (!$disk->exists(self::SETTINGS_FILE)) {
             return self::DEFAULT_SETTINGS;
         }
 
         try {
-            $content = Storage::get(self::SETTINGS_FILE);
+            $content = $disk->get(self::SETTINGS_FILE);
             $settings = json_decode($content, true);
-            return array_merge(self::DEFAULT_SETTINGS, $settings);
+            return array_merge(self::DEFAULT_SETTINGS, $settings ?? []);
         } catch (\Exception $e) {
             return self::DEFAULT_SETTINGS;
         }
