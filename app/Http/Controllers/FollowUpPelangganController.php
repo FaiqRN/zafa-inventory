@@ -39,6 +39,27 @@ class FollowUpPelangganController extends Controller
         ]);
     }
 
+    private function isFollowUpEnabled(): bool
+    {
+        return (bool) config('followup.enabled', true);
+    }
+
+    private function rejectIfFollowUpDisabled(Request $request)
+    {
+        if ($this->isFollowUpEnabled()) {
+            return null;
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Follow up sedang dinonaktifkan.',
+            ], 403);
+        }
+
+        abort(403, 'Follow up sedang dinonaktifkan.');
+    }
+
     /**
      * Display the follow up pelanggan page
      */
@@ -55,10 +76,13 @@ class FollowUpPelangganController extends Controller
 
         $activemenu = 'follow-up-pelanggan';
 
+        $followUpEnabled = $this->isFollowUpEnabled();
+
         return view('follow-up.index', [
             'breadcrumb' => $breadcrumb,
             'page' => $page,
-            'activemenu' => $activemenu
+            'activemenu' => $activemenu,
+            'followUpEnabled' => $followUpEnabled,
         ]);
     }
 
@@ -67,6 +91,10 @@ class FollowUpPelangganController extends Controller
      */
     public function getFilteredCustomers(Request $request)
     {
+        if ($response = $this->rejectIfFollowUpDisabled($request)) {
+            return $response;
+        }
+
         try {
             $filters = $request->get('filters', []);
             $search = $request->get('search');
@@ -148,6 +176,10 @@ class FollowUpPelangganController extends Controller
      */
     public function sendFollowUp(Request $request)
     {
+        if ($response = $this->rejectIfFollowUpDisabled($request)) {
+            return $response;
+        }
+
         $validator = Validator::make($request->all(), [
             'customers'  => 'required|string',
             'message'    => 'nullable|string|max:1000',
@@ -673,8 +705,12 @@ class FollowUpPelangganController extends Controller
     /**
      * FIXED: Test WhatsApp connection with image support
      */
-    public function testWhatsAppConnection()
+    public function testWhatsAppConnection(Request $request)
     {
+        if ($response = $this->rejectIfFollowUpDisabled($request)) {
+            return $response;
+        }
+
         try {
             $testPhone = env('APP_ADMIN_PHONE', '6282245454528');
             $testMessage = 'Test koneksi Wablas dengan gambar - ' . now()->format('Y-m-d H:i:s');
@@ -707,8 +743,12 @@ class FollowUpPelangganController extends Controller
     /**
      * Get device status for frontend
      */
-    public function getDeviceStatus()
+    public function getDeviceStatus(Request $request)
     {
+        if ($response = $this->rejectIfFollowUpDisabled($request)) {
+            return $response;
+        }
+
         try {
             $deviceStatus = $this->checkWablasDeviceStatus();
             
@@ -771,6 +811,10 @@ class FollowUpPelangganController extends Controller
      */
     public function getHistory(Request $request)
     {
+        if ($response = $this->rejectIfFollowUpDisabled($request)) {
+            return $response;
+        }
+
         try {
             $customerId = $request->get('customer_id');
             $targetType = $request->get('target_type');
@@ -857,6 +901,10 @@ class FollowUpPelangganController extends Controller
      */
     public function uploadImage(Request $request)
     {
+        if ($response = $this->rejectIfFollowUpDisabled($request)) {
+            return $response;
+        }
+
         $validator = Validator::make($request->all(), [
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120' // 5MB
         ]);
@@ -1321,8 +1369,12 @@ class FollowUpPelangganController extends Controller
     /**
      * Debug function to check database tables and data
      */
-    public function debugDatabase()
+    public function debugDatabase(Request $request)
     {
+        if ($response = $this->rejectIfFollowUpDisabled($request)) {
+            return $response;
+        }
+
         if (!app()->environment(['local', 'testing'])) {
             abort(404);
         }
