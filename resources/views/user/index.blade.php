@@ -69,7 +69,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="username">Username <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="username" name="username" required>
+                                <input type="text" class="form-control" id="username" name="username" required autocomplete="off">
                                 <div class="invalid-feedback" id="error-username"></div>
                             </div>
                             <div class="form-group">
@@ -90,7 +90,7 @@
                             <div class="form-group">
                                 <label for="password">Password <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control" id="password" name="password" required>
+                                    <input type="password" class="form-control" id="password" name="password" required autocomplete="off">
                                     <div class="input-group-append">
                                         <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#password">
                                             <i class="fas fa-eye"></i>
@@ -103,7 +103,7 @@
                             <div class="form-group">
                                 <label for="password_confirmation">Konfirmasi Password <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
+                                    <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required autocomplete="off">
                                     <div class="input-group-append">
                                         <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#password_confirmation">
                                             <i class="fas fa-eye"></i>
@@ -189,7 +189,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="edit_username">Username <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="edit_username" name="username" required>
+                                <input type="text" class="form-control" id="edit_username" name="username" required autocomplete="off">
                                 <div class="invalid-feedback" id="error-edit_username"></div>
                             </div>
                             <div class="form-group">
@@ -210,7 +210,7 @@
                             <div class="form-group">
                                 <label for="edit_password">Password Baru</label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control" id="edit_password" name="password">
+                                    <input type="password" class="form-control" id="edit_password" name="password" autocomplete="off">
                                     <div class="input-group-append">
                                         <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#edit_password">
                                             <i class="fas fa-eye"></i>
@@ -223,7 +223,7 @@
                             <div class="form-group">
                                 <label for="edit_password_confirmation">Konfirmasi Password Baru</label>
                                 <div class="input-group">
-                                    <input type="password" class="form-control" id="edit_password_confirmation" name="password_confirmation">
+                                    <input type="password" class="form-control" id="edit_password_confirmation" name="password_confirmation" autocomplete="off">
                                     <div class="input-group-append">
                                         <button class="btn btn-outline-secondary toggle-password" type="button" data-target="#edit_password_confirmation">
                                             <i class="fas fa-eye"></i>

@@ -44,8 +44,8 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="username">Username <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="username" name="username" 
-                                           value="{{ old('username', $user->username) }}" required>
+                                     <input type="text" class="form-control" id="username" name="username" 
+                                         value="{{ old('username', $user->username) }}" required autocomplete="off">
                                 </div>
                                 <div class="form-group">
                                     <label for="telp">Nomor Telepon <span class="text-danger">*</span></label>

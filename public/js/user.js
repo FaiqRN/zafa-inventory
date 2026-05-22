@@ -2,77 +2,17 @@ $(document).ready(function() {
     // Load data user saat halaman dimuat
     loadUserData();
 
-    // Object to store timeout for each password field
-    var passwordTimeouts = {};
-
     // Toggle password visibility
     $(document).on('click', '.toggle-password', function() {
         var button = $(this);
         var target = $(button.data('target'));
         var icon = button.find('i');
-        var fieldId = button.data('target');
         
         if (target.attr('type') === 'password') {
             target.attr('type', 'text');
             icon.removeClass('fa-eye').addClass('fa-eye-slash');
-            // Clear auto-hide timeout when manually showing
-            if (passwordTimeouts[fieldId]) {
-                clearTimeout(passwordTimeouts[fieldId]);
-                delete passwordTimeouts[fieldId];
-            }
         } else {
             target.attr('type', 'password');
-            icon.removeClass('fa-eye-slash').addClass('fa-eye');
-        }
-    });
-
-    // Auto show/hide password on input
-    $(document).on('input', 'input[type="password"], input[type="text"][id*="password"]', function() {
-        var input = $(this);
-        var fieldId = '#' + input.attr('id');
-        var button = $('.toggle-password[data-target="' + fieldId + '"]');
-        var icon = button.find('i');
-        
-        // Clear previous timeout
-        if (passwordTimeouts[fieldId]) {
-            clearTimeout(passwordTimeouts[fieldId]);
-        }
-        
-        // Only auto-show/hide if user is typing (has value)
-        if (input.val().length > 0) {
-            // Show password while typing
-            if (input.attr('type') === 'password') {
-                input.attr('type', 'text');
-                icon.removeClass('fa-eye').addClass('fa-eye-slash');
-            }
-            
-            // Set timeout to hide password after 2 seconds of inactivity
-            passwordTimeouts[fieldId] = setTimeout(function() {
-                if (input.attr('type') === 'text') {
-                    input.attr('type', 'password');
-                    icon.removeClass('fa-eye-slash').addClass('fa-eye');
-                }
-                delete passwordTimeouts[fieldId];
-            }, 2000); // Hide after 2 seconds
-        }
-    });
-
-    // Clear timeout when field loses focus and hide immediately
-    $(document).on('blur', 'input[type="password"], input[type="text"][id*="password"]', function() {
-        var input = $(this);
-        var fieldId = '#' + input.attr('id');
-        var button = $('.toggle-password[data-target="' + fieldId + '"]');
-        var icon = button.find('i');
-        
-        // Clear timeout
-        if (passwordTimeouts[fieldId]) {
-            clearTimeout(passwordTimeouts[fieldId]);
-            delete passwordTimeouts[fieldId];
-        }
-        
-        // Hide password when field loses focus
-        if (input.attr('type') === 'text' && input.attr('id').includes('password')) {
-            input.attr('type', 'password');
             icon.removeClass('fa-eye-slash').addClass('fa-eye');
         }
     });

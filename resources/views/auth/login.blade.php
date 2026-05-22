@@ -104,7 +104,7 @@
                     placeholder="Masukkan username Anda"
                     value="{{ old('username') }}"
                     required
-                    autocomplete="username"
+                    autocomplete="off"
                     maxlength="50">
                 </div>
                 @error('username')
@@ -170,7 +170,7 @@
                   id="login-username"
                   placeholder="Enter your username"
                   value="{{ old('username') }}"
-                  autocomplete="username">
+                  autocomplete="off">
               </div>
               @error('username')
                 <span class="error-message">{{ $message }}</span>
@@ -190,7 +190,7 @@
                   name="password"
                   id="password"
                   placeholder="Enter your password"
-                  autocomplete="current-password">
+                  autocomplete="off">
 
                 <span class="toggle-password" id="togglePassword" title="Show password">
                   <svg id="eyeHide" class="hide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
