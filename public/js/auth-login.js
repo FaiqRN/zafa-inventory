@@ -28,19 +28,8 @@ if (splashScreen && welcomeContent && rejectedContent && errorDetail) {
         }, 500);
       }, 2800);
     } else {
-      // Show welcome state
-      splashScreen.className = 'welcome';
-      welcomeContent.style.display = 'flex';
-      welcomeContent.style.flexDirection = 'column';
-      welcomeContent.style.alignItems = 'center';
-      rejectedContent.style.display = 'none';
-
-      setTimeout(function () {
-        splashScreen.classList.add('fade-out');
-        setTimeout(function() {
-          splashScreen.style.display = 'none';
-        }, 500);
-      }, 2000);
+      // No errors, hide splash screen immediately
+      splashScreen.style.display = 'none';
     }
   });
 }
@@ -111,10 +100,8 @@ if (countdownContainer && countdownEl && resendForm) {
 // PASSWORD SHOW/HIDE FUNCTIONALITY
 // ============================================
 // BEHAVIOR:
-// 1. Saat halaman dibuka: password TERLIHAT (type="text"), icon HIDE (eyeHide tampil)
-// 2. Saat user mengetik: password TETAP TERLIHAT
-// 3. Setelah berhenti 1.5 detik: password AUTO-TERTUTUP (type="password"), icon SHOW (eyeShow tampil)
-// 4. Klik icon: toggle manual antara show/hide
+// 1. Password tersembunyi secara default.
+// 2. Klik ikon mata untuk menampilkan/menyembunyikan password secara manual.
 // ============================================
 
 const togglePassword = document.getElementById('togglePassword');
@@ -123,39 +110,8 @@ const eyeHide = document.getElementById('eyeHide');
 const eyeShow = document.getElementById('eyeShow');
 
 if (togglePassword && passwordInput && eyeHide && eyeShow) {
-  let typingTimer;
-  let isManuallyToggled = false;
-
-  // Event: User mengetik password
-  passwordInput.addEventListener('input', function() {
-    // Clear timer sebelumnya
-    clearTimeout(typingTimer);
-
-    // Saat mengetik: password TETAP TERLIHAT (kecuali user manual hide)
-    if (!isManuallyToggled) {
-      passwordInput.setAttribute('type', 'text');
-      eyeHide.classList.remove('hide');
-      eyeShow.classList.add('hide');
-      togglePassword.setAttribute('title', 'Hide password');
-    }
-
-    // Set timer untuk auto-hide setelah 1.5 detik tidak mengetik
-    typingTimer = setTimeout(function() {
-      if (!isManuallyToggled) {
-        // AUTO-HIDE: password jadi dots
-        passwordInput.setAttribute('type', 'password');
-        eyeHide.classList.add('hide');
-        eyeShow.classList.remove('hide');
-        togglePassword.setAttribute('title', 'Show password');
-      }
-    }, 200); // 0.2 detik
-  });
-
   // Event: User klik icon mata (manual toggle)
   togglePassword.addEventListener('click', function () {
-    // Clear auto-hide timer
-    clearTimeout(typingTimer);
-
     const currentType = passwordInput.getAttribute('type');
 
     if (currentType === 'password') {
@@ -164,31 +120,12 @@ if (togglePassword && passwordInput && eyeHide && eyeShow) {
       eyeHide.classList.remove('hide');
       eyeShow.classList.add('hide');
       this.setAttribute('title', 'Hide password');
-      isManuallyToggled = true;
     } else {
       // Password TERLIHAT -> SEMBUNYIKAN
       passwordInput.setAttribute('type', 'password');
       eyeHide.classList.add('hide');
       eyeShow.classList.remove('hide');
       this.setAttribute('title', 'Show password');
-      isManuallyToggled = true;
-    }
-  });
-
-  // Event: User mulai mengetik lagi (reset flag manual)
-  passwordInput.addEventListener('keydown', function() {
-    if (isManuallyToggled) {
-      isManuallyToggled = false;
-    }
-  });
-
-  // Event: User focus ke field password (jika ada isi, tampilkan)
-  passwordInput.addEventListener('focus', function() {
-    if (!isManuallyToggled && passwordInput.value.length > 0) {
-      passwordInput.setAttribute('type', 'text');
-      eyeHide.classList.remove('hide');
-      eyeShow.classList.add('hide');
-      togglePassword.setAttribute('title', 'Hide password');
     }
   });
 }
