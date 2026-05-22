@@ -7,7 +7,7 @@ const welcomeContent = document.getElementById('splash-content-welcome');
 const rejectedContent = document.getElementById('splash-content-rejected');
 const errorDetail = document.getElementById('error-detail');
 
-if (splashScreen && welcomeContent && rejectedContent && errorDetail) {
+if (splashScreen && rejectedContent && errorDetail) {
   const hasErrors = splashScreen.dataset.hasErrors === '1';
   const errorMessage = splashScreen.dataset.errorMessage || 'Username atau password tidak valid';
 
@@ -15,7 +15,9 @@ if (splashScreen && welcomeContent && rejectedContent && errorDetail) {
     if (hasErrors) {
       // Show rejected state
       splashScreen.className = 'rejected';
-      welcomeContent.style.display = 'none';
+      if (welcomeContent) {
+        welcomeContent.style.display = 'none';
+      }
       rejectedContent.style.display = 'flex';
       rejectedContent.style.flexDirection = 'column';
       rejectedContent.style.alignItems = 'center';
@@ -110,22 +112,32 @@ const eyeHide = document.getElementById('eyeHide');
 const eyeShow = document.getElementById('eyeShow');
 
 if (togglePassword && passwordInput && eyeHide && eyeShow) {
+  let isPasswordVisible = false;
+
+  const setPasswordVisibility = function (visible) {
+    isPasswordVisible = visible;
+    passwordInput.setAttribute('type', visible ? 'text' : 'password');
+    eyeHide.classList.toggle('hide', !visible);
+    eyeShow.classList.toggle('hide', visible);
+    togglePassword.setAttribute('title', visible ? 'Hide password' : 'Show password');
+  };
+
+  // Pastikan selalu tersembunyi saat awal load.
+  setPasswordVisibility(false);
+
   // Event: User klik icon mata (manual toggle)
   togglePassword.addEventListener('click', function () {
-    const currentType = passwordInput.getAttribute('type');
+    setPasswordVisibility(!isPasswordVisible);
+  });
 
-    if (currentType === 'password') {
-      // Password TERSEMBUNYI -> TAMPILKAN
-      passwordInput.setAttribute('type', 'text');
-      eyeHide.classList.remove('hide');
-      eyeShow.classList.add('hide');
-      this.setAttribute('title', 'Hide password');
-    } else {
-      // Password TERLIHAT -> SEMBUNYIKAN
-      passwordInput.setAttribute('type', 'password');
-      eyeHide.classList.add('hide');
-      eyeShow.classList.remove('hide');
-      this.setAttribute('title', 'Show password');
+  // Kunci tampilan agar tetap tersamarkan saat mengetik kecuali user membuka manual.
+  passwordInput.addEventListener('input', function () {
+    if (!isPasswordVisible && passwordInput.getAttribute('type') !== 'password') {
+      window.requestAnimationFrame(function () {
+        if (!isPasswordVisible) {
+          setPasswordVisibility(false);
+        }
+      });
     }
   });
 }
