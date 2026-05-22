@@ -686,26 +686,22 @@ function sendMassFollowUp() {
         formData.append(`images[${index}]`, imageData.file);
     });
     
-    const estimatedTime = Math.ceil(filteredCustomers.length * 3.5); // 3.5 seconds per customer (more realistic)
-    const estimatedMinutes = Math.ceil(estimatedTime / 60);
-    
     AlertHelper.fire({
-        title: 'ðŸ“¤ Mengirim Follow Up via WhatsApp...',
+        title: '📤 Menjadwalkan Broadcast WhatsApp...',
         html: `
             <div class="text-center">
                 <div class="mb-3">
                     <i class="fab fa-whatsapp fa-3x text-success mb-3"></i>
-                    <p>Mengirim ke <strong>${filteredCustomers.length}</strong> customer</p>
+                    <p>Mempersiapkan broadcast ke <strong>${filteredCustomers.length}</strong> customer</p>
                 </div>
                 <div class="progress mb-3">
                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
                 </div>
                 <div class="alert alert-info">
                     <small>
-                        <i class="fas fa-clock mr-1"></i>
-                        Estimasi waktu: ~${estimatedMinutes} menit<br>
                         <i class="fas fa-info-circle mr-1"></i>
-                        Jangan tutup halaman ini selama proses berlangsung
+                        Sedang memvalidasi data dan upload gambar...<br>
+                        Pengiriman WA berjalan otomatis di background
                     </small>
                 </div>
             </div>
@@ -717,13 +713,13 @@ function sendMassFollowUp() {
             
             let progress = 0;
             const progressInterval = setInterval(() => {
-                progress += 2;
+                progress += 8;
                 if (progress <= 85) {
                     $('.progress-bar').css('width', progress + '%');
                 } else {
                     clearInterval(progressInterval);
                 }
-            }, (estimatedTime * 1000) / 42); 
+            }, 200); 
         }
     });
     
@@ -733,7 +729,7 @@ function sendMassFollowUp() {
         data: formData,
         processData: false,
         contentType: false,
-        timeout: (estimatedTime + 60) * 1000, 
+        timeout: 60000, 
         xhr: function() {
             var xhr = new window.XMLHttpRequest();
             xhr.upload.addEventListener("progress", function(evt) {
@@ -747,9 +743,14 @@ function sendMassFollowUp() {
         success: function(response) {
             $('.progress-bar').css('width', '100%');
             
-            if (response && response.status === 'success') {
+            if (response && (response.status === 'queued' || response.status === 'success')) {
+                const isQueued = response.status === 'queued';
+                const queuedCount = response.summary ? (response.summary.queued ?? response.summary.success ?? 0) : 0;
+                const skippedCount = response.summary ? (response.summary.skipped ?? response.summary.failed ?? 0) : 0;
+                const totalCount = response.summary ? response.summary.total : filteredCustomers.length;
+
                 AlertHelper.fire({
-                    title: 'ðŸŽ‰ Follow Up Berhasil Dikirim!',
+                    title: isQueued ? '🚀 Broadcast Dijadwalkan!' : '🎉 Follow Up Berhasil Dikirim!',
                     html: `
                         <div class="text-center">
                             <div class="mb-4">
@@ -760,68 +761,61 @@ function sendMassFollowUp() {
                             <div class="row text-center">
                                 <div class="col-4">
                                     <div class="border rounded p-3 bg-light">
-                                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                                        <h4 class="text-success mb-0">${response.summary.success}</h4>
-                                        <small class="text-muted">Berhasil Dikirim</small>
+                                        <i class="fas fa-paper-plane fa-2x text-success mb-2"></i>
+                                        <h4 class="text-success mb-0">${queuedCount}</h4>
+                                        <small class="text-muted">${isQueued ? 'Dijadwalkan' : 'Berhasil Dikirim'}</small>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="border rounded p-3 bg-light">
                                         <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
-                                        <h4 class="text-danger mb-0">${response.summary.failed}</h4>
-                                        <small class="text-muted">Gagal Dikirim</small>
+                                        <h4 class="text-danger mb-0">${skippedCount}</h4>
+                                        <small class="text-muted">Dilewati</small>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="border rounded p-3 bg-light">
                                         <i class="fas fa-users fa-2x text-info mb-2"></i>
-                                        <h4 class="text-info mb-0">${response.summary.total}</h4>
+                                        <h4 class="text-info mb-0">${totalCount}</h4>
                                         <small class="text-muted">Total Customer</small>
                                     </div>
                                 </div>
                             </div>
                             
-                            ${response.summary.success > 0 ? `
+                            ${isQueued && queuedCount > 0 ? `
                                 <div class="alert alert-success mt-4">
-                                    <i class="fab fa-whatsapp mr-2"></i>
-                                    <strong>WhatsApp berhasil dikirim!</strong><br>
-                                    Customer akan menerima pesan dalam beberapa detik.
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    <strong>Broadcast sedang berjalan di background!</strong><br>
+                                    <small>Pesan WhatsApp dikirim secara otomatis. Cek riwayat untuk status pengiriman.</small>
                                 </div>
                             ` : ''}
                             
-                            ${response.summary.failed > 0 ? `
+                            ${skippedCount > 0 ? `
                                 <div class="alert alert-warning mt-3">
                                     <i class="fas fa-exclamation-triangle mr-2"></i>
-                                    Ada ${response.summary.failed} pesan yang gagal dikirim
+                                    ${skippedCount} customer dilewati (nomor tidak valid atau data tidak lengkap)
                                 </div>
                             ` : ''}
                         </div>
                     `,
-                    icon: response.summary.success > 0 ? 'success' : 'warning',
+                    icon: queuedCount > 0 ? 'success' : 'warning',
                     confirmButtonText: 'OK',
-                    showCancelButton: response.summary.failed > 0,
-                    cancelButtonText: response.summary.failed > 0 ? 'Lihat Detail Error' : '',
-                    cancelButtonColor: '#6c757d',
                     width: '700px'
-                }).then((result) => {
-                    if (result.dismiss === Swal.DismissReason.cancel && response.summary.failed > 0) {
-                        showSendResults(response.results);
-                    }
                 });
                 
                 resetForm();
-                loadRiwayatData();
+                setTimeout(loadRiwayatData, 2000);
                 $('#previewModal').modal('hide');
             } else {
                 AlertHelper.fire({
-                    title: 'âŒ Error Pengiriman',
+                    title: '❌ Error Pengiriman',
                     text: response.message || 'Terjadi kesalahan',
                     icon: 'error'
                 });
             }
         },
         error: function(xhr, status, error) {
-            console.error('âŒ Send follow up error:', {
+            console.error('❌ Send follow up error:', {
                 status: xhr.status,
                 statusText: xhr.statusText,
                 error: error,

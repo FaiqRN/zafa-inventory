@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Bus\Batch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Http;
+use App\Jobs\SendFollowUpBroadcastJob;
 use App\Models\FollowUp;
 use App\Models\Pemesanan;
 use App\Models\Customer;
@@ -134,280 +137,189 @@ class FollowUpPelangganController extends Controller
     }
 
     /**
-     * Send follow up message with FIXED WhatsApp broadcast including images
+     * Send follow up message — pengiriman WA diproses via Queue agar non-blocking.
+     *
+     * Alur:
+     *  1. Validasi input & upload gambar (sinkron, cepat).
+     *  2. Cek koneksi device WA.
+     *  3. Simpan record follow_up ke DB dengan status 'pending'.
+     *  4. Dispatch SendFollowUpBroadcastJob ke queue per customer.
+     *  5. Return response segera — worker queue yang kirim WA di background.
      */
     public function sendFollowUp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'customers' => 'required|string',
-            'message' => 'nullable|string|max:1000',
-            'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
-            'target_type' => 'required|in:pelangganLama,pelangganBaru,pelangganTidakKembali,keseluruhan'
+            'customers'  => 'required|string',
+            'message'    => 'nullable|string|max:1000',
+            'images'     => 'nullable|array',
+            'images.*'   => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+            'target_type' => 'required|in:pelangganLama,pelangganBaru,pelangganTidakKembali,keseluruhan',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
         try {
-            // Decode customers JSON
+            // 1. Decode daftar customer
             $customers = json_decode($request->customers, true);
             if (!$customers || !is_array($customers)) {
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Data customer tidak valid'
+                    'status'  => 'error',
+                    'message' => 'Data customer tidak valid',
                 ], 422);
             }
 
-            $message = $request->message;
+            $message    = (string) ($request->message ?? '');
             $targetType = $request->target_type;
             $imagePaths = [];
-            $imageUrls = [];
+            $imageUrls  = [];
 
-            // FIXED: Handle image uploads with proper storage and URL generation
+            // 2. Upload gambar (sinkron & cepat — tidak ada sleep di sini)
             if ($request->hasFile('images')) {
-                Log::info('Processing ' . count($request->file('images')) . ' uploaded images');
-                
+                Log::info('Follow-up: memproses ' . count($request->file('images')) . ' gambar.');
+
                 foreach ($request->file('images') as $index => $image) {
                     try {
-                        // Validate image
                         if (!$image->isValid()) {
-                            Log::error("Invalid image at index {$index}");
+                            Log::error("Follow-up: gambar index {$index} tidak valid.");
                             continue;
                         }
 
-                        // Generate unique filename
                         $imageName = time() . '_' . uniqid() . '_' . $index . '.' . $image->getClientOriginalExtension();
-                        
-                        // Store in public disk
                         $imagePath = $image->storeAs('follow-up-images', $imageName, 'public');
-                        
+
                         if (!$imagePath) {
-                            Log::error("Failed to store image {$imageName}");
+                            Log::error("Follow-up: gagal menyimpan gambar {$imageName}.");
                             continue;
                         }
 
                         $imagePaths[] = $imagePath;
-                        
-                        // CRITICAL FIX: Generate full accessible URL for WhatsApp API
-                        $fullImageUrl = url('storage/' . $imagePath);
-                        $imageUrls[] = $fullImageUrl;
-                        
-                        Log::info("Image uploaded successfully: {$imagePath}, URL: {$fullImageUrl}");
-                        
-                        // Verify the image is accessible
-                        if (!$this->verifyImageUrl($fullImageUrl)) {
-                            Log::warning("Image URL not accessible: {$fullImageUrl}");
-                        }
-                        
+                        $imageUrls[]  = url('storage/' . $imagePath);
+
+                        Log::info("Follow-up: gambar tersimpan — {$imagePath}");
                     } catch (\Exception $e) {
-                        Log::error("Failed to upload image at index {$index}: " . $e->getMessage());
-                        continue;
+                        Log::error("Follow-up: error upload gambar index {$index}: " . $e->getMessage());
                     }
                 }
-                
-                Log::info("Total images processed: " . count($imageUrls) . " out of " . count($request->file('images')));
+
+                Log::info('Follow-up: total gambar berhasil diproses: ' . count($imageUrls));
             }
 
-            // Check if we have something to send
+            // 3. Pastikan ada konten yang dikirim
             if (empty($message) && empty($imageUrls)) {
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'Pesan atau gambar harus diisi minimal salah satu'
+                    'status'  => 'error',
+                    'message' => 'Pesan atau gambar harus diisi minimal salah satu',
                 ], 422);
             }
 
-            // Check WhatsApp device status first
+            // 4. Cek status device WA (sinkron, sekali)
             $deviceStatus = $this->checkWablasDeviceStatus();
             if (!$deviceStatus['isConnected']) {
                 return response()->json([
-                    'status' => 'error',
-                    'message' => 'WhatsApp device tidak terhubung. Status: ' . $deviceStatus['message']
+                    'status'  => 'error',
+                    'message' => 'WhatsApp device tidak terhubung. Status: ' . $deviceStatus['message'],
                 ], 500);
             }
 
-            Log::info("Starting WhatsApp broadcast to " . count($customers) . " customers with " . count($imageUrls) . " images");
+            // 5. Simpan record pending & dispatch job per customer
+            $validSources  = ['shopee', 'tokopedia', 'whatsapp', 'instagram', 'langsung'];
+            $queuedCount   = 0;
+            $skippedCount  = 0;
+            $skippedItems  = [];
 
-            $successCount = 0;
-            $failedCount = 0;
-            $results = [];
+            foreach ($customers as $customer) {
+                $name  = $customer['name']  ?? '';
+                $phone = $this->formatPhoneNumber($customer['phone'] ?? '');
 
-            // Process customers in smaller batches for image sending
-            $batchSize = count($imageUrls) > 0 ? 2 : 5; // Smaller batches when sending images
-            $customerBatches = array_chunk($customers, $batchSize);
-            
-            foreach ($customerBatches as $batchIndex => $batch) {
-                Log::info("Processing batch " . ($batchIndex + 1) . " of " . count($customerBatches));
-                
-                foreach ($batch as $customer) {
-                    try {
-                        // Validate customer data
-                        if (empty($customer['phone']) || empty($customer['name'])) {
-                            $results[] = [
-                                'customer' => $customer['name'] ?? 'Unknown',
-                                'phone' => $customer['phone'] ?? 'Unknown',
-                                'status' => 'failed',
-                                'error' => 'Data customer tidak lengkap'
-                            ];
-                            $failedCount++;
-                            continue;
-                        }
-
-                        // Format phone number
-                        $phone = $this->formatPhoneNumber($customer['phone']);
-                        if (!$this->validatePhoneNumber($phone)) {
-                            $results[] = [
-                                'customer' => $customer['name'],
-                                'phone' => $customer['phone'],
-                                'status' => 'failed',
-                                'error' => 'Format nomor telepon tidak valid: ' . $phone
-                            ];
-                            $failedCount++;
-                            continue;
-                        }
-
-                        // Create follow up record in database
-                        // Normalize source_channel to match ENUM values
-                        $sourceChannel = $customer['orderSource'] ?? null;
-                        $validSources = ['shopee', 'tokopedia', 'whatsapp', 'instagram', 'langsung'];
-                        
-                        // Map 'manual' or 'unknown' to 'langsung'
-                        if ($sourceChannel && !in_array(strtolower($sourceChannel), $validSources)) {
-                            $sourceChannel = 'langsung';
-                        }
-                        
-                        $followUpData = [
-                            'customer_name' => $customer['name'],
-                            'phone_number' => $phone,
-                            'customer_email' => $customer['email'] ?? null,
-                            'target_type' => $targetType,
-                            'message' => $message,
-                            'images' => !empty($imagePaths) ? json_encode($imagePaths) : null,
-                            'source_channel' => $sourceChannel,
-                            'status' => 'pending',
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ];
-
-                        $followUpId = DB::table('follow_up')->insertGetId($followUpData);
-                        Log::info("Created follow_up record {$followUpId} for {$customer['name']}");
-
-                        // FIXED: Send via WhatsApp with proper image handling
-                        $whatsappResult = $this->sendWhatsAppWithImages($phone, $message, $imageUrls, $customer['name']);
-                        
-                        if ($whatsappResult['success']) {
-                            // Update status to sent
-                            DB::table('follow_up')
-                                ->where('follow_up_id', $followUpId)
-                                ->update([
-                                    'status' => 'sent',
-                                    'sent_at' => now(),
-                                    'wablas_message_id' => $whatsappResult['message_id'] ?? null,
-                                    'wablas_response' => json_encode($whatsappResult['response']),
-                                    'updated_at' => now()
-                                ]);
-                            
-                            $results[] = [
-                                'customer' => $customer['name'],
-                                'phone' => $phone,
-                                'status' => 'success',
-                                'message_id' => $whatsappResult['message_id'] ?? null,
-                                'follow_up_id' => $followUpId
-                            ];
-                            $successCount++;
-                            
-                            Log::info("Successfully sent WhatsApp with images to {$customer['name']} ({$phone})");
-                        } else {
-                            // Update status to failed
-                            DB::table('follow_up')
-                                ->where('follow_up_id', $followUpId)
-                                ->update([
-                                    'status' => 'failed',
-                                    'error_message' => $whatsappResult['error'] ?? 'Unknown error',
-                                    'wablas_response' => json_encode($whatsappResult['response']),
-                                    'updated_at' => now()
-                                ]);
-                            
-                            $results[] = [
-                                'customer' => $customer['name'],
-                                'phone' => $phone,
-                                'status' => 'failed',
-                                'error' => $whatsappResult['error'] ?? 'Gagal mengirim pesan'
-                            ];
-                            $failedCount++;
-                            
-                            Log::error("Failed to send WhatsApp to {$customer['name']} ({$phone}): " . $whatsappResult['error']);
-                        }
-
-                        // CRITICAL: Longer delay when sending images
-                        $delay = count($imageUrls) > 0 ? 6 : 3; // 6 seconds for images, 3 for text only
-                        sleep($delay);
-
-                    } catch (\Exception $e) {
-                        Log::error('Follow up send error for customer ' . ($customer['name'] ?? 'unknown') . ': ' . $e->getMessage());
-                        
-                        if (isset($followUpId)) {
-                            DB::table('follow_up')
-                                ->where('follow_up_id', $followUpId)
-                                ->update([
-                                    'status' => 'failed',
-                                    'error_message' => $e->getMessage(),
-                                    'updated_at' => now()
-                                ]);
-                        }
-                        
-                        $results[] = [
-                            'customer' => $customer['name'] ?? 'Unknown',
-                            'phone' => $customer['phone'] ?? 'Unknown',
-                            'status' => 'failed',
-                            'error' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
-                        ];
-                        $failedCount++;
-                    }
+                // Skip customer dengan data tidak lengkap
+                if (empty($name) || empty($customer['phone'])) {
+                    $skippedCount++;
+                    $skippedItems[] = ['name' => $name ?: 'Unknown', 'reason' => 'Data tidak lengkap'];
+                    continue;
                 }
-                
-                // Longer delay between batches when sending images
-                if ($batchIndex < count($customerBatches) - 1) {
-                    $batchDelay = count($imageUrls) > 0 ? 10 : 5;
-                    Log::info("Waiting {$batchDelay} seconds before next batch...");
-                    sleep($batchDelay);
+
+                if (!$this->validatePhoneNumber($phone)) {
+                    $skippedCount++;
+                    $skippedItems[] = ['name' => $name, 'reason' => "Nomor tidak valid: {$phone}"];
+                    continue;
                 }
+
+                // Normalisasi source_channel
+                $sourceChannel = $customer['orderSource'] ?? null;
+                if ($sourceChannel && !in_array(strtolower($sourceChannel), $validSources, true)) {
+                    $sourceChannel = 'langsung';
+                }
+
+                // Simpan record follow_up dengan status 'pending'
+                $followUpId = DB::table('follow_up')->insertGetId([
+                    'customer_name'  => $name,
+                    'phone_number'   => $phone,
+                    'customer_email' => $customer['email'] ?? null,
+                    'target_type'    => $targetType,
+                    'message'        => $message,
+                    'images'         => !empty($imagePaths) ? json_encode($imagePaths) : null,
+                    'source_channel' => $sourceChannel,
+                    'status'         => 'pending',
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
+
+                // Dispatch ke queue — TIDAK blocking, tidak ada sleep()
+                SendFollowUpBroadcastJob::dispatch(
+                    followUpId:   $followUpId,
+                    phone:        $phone,
+                    customerName: $name,
+                    message:      $message,
+                    imageUrls:    $imageUrls,
+                    targetType:   $targetType,
+                )->onQueue('follow-up');
+
+                $queuedCount++;
             }
 
-            Log::info("WhatsApp broadcast completed. Success: {$successCount}, Failed: {$failedCount}");
-
-            DashboardMonitorLogger::create('Follow Up', "Broadcast {$targetType} ke {$successCount} customer (gagal: {$failedCount})", [
+            Log::info("Follow-up: {$queuedCount} job di-queue, {$skippedCount} dilewati.", [
                 'target_type' => $targetType,
-                'total' => count($customers),
-                'success' => $successCount,
-                'failed' => $failedCount,
-                'images' => count($imageUrls),
-            ], $request);
+                'images'      => count($imageUrls),
+            ]);
+
+            DashboardMonitorLogger::create(
+                'Follow Up',
+                "Broadcast {$targetType}: {$queuedCount} customer dijadwalkan, {$skippedCount} dilewati",
+                [
+                    'target_type' => $targetType,
+                    'total'       => count($customers),
+                    'queued'      => $queuedCount,
+                    'skipped'     => $skippedCount,
+                    'images'      => count($imageUrls),
+                ],
+                $request
+            );
 
             return response()->json([
-                'status' => 'success',
-                'message' => "Follow up selesai. Berhasil: {$successCount}, Gagal: {$failedCount}",
+                'status'  => 'queued',
+                'message' => "Broadcast dijadwalkan untuk {$queuedCount} customer. Pesan akan dikirim di background.",
                 'summary' => [
-                    'total' => count($customers),
-                    'success' => $successCount,
-                    'failed' => $failedCount,
-                    'images_sent' => count($imageUrls)
+                    'total'   => count($customers),
+                    'queued'  => $queuedCount,
+                    'skipped' => $skippedCount,
+                    'images'  => count($imageUrls),
+                    'skipped_items' => $skippedItems,
                 ],
-                'results' => $results
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Send follow up error: ' . $e->getMessage());
+            Log::error('Follow-up sendFollowUp error: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
-            
+
             return response()->json([
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+                'status'  => 'error',
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage(),
             ], 500);
         }
     }
