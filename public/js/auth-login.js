@@ -7,7 +7,7 @@ const welcomeContent = document.getElementById('splash-content-welcome');
 const rejectedContent = document.getElementById('splash-content-rejected');
 const errorDetail = document.getElementById('error-detail');
 
-if (splashScreen && welcomeContent && rejectedContent && errorDetail) {
+if (splashScreen && rejectedContent && errorDetail) {
   const hasErrors = splashScreen.dataset.hasErrors === '1';
   const errorMessage = splashScreen.dataset.errorMessage || 'Username atau password tidak valid';
 
@@ -15,7 +15,9 @@ if (splashScreen && welcomeContent && rejectedContent && errorDetail) {
     if (hasErrors) {
       // Show rejected state
       splashScreen.className = 'rejected';
-      welcomeContent.style.display = 'none';
+      if (welcomeContent) {
+        welcomeContent.style.display = 'none';
+      }
       rejectedContent.style.display = 'flex';
       rejectedContent.style.flexDirection = 'column';
       rejectedContent.style.alignItems = 'center';
@@ -28,19 +30,8 @@ if (splashScreen && welcomeContent && rejectedContent && errorDetail) {
         }, 500);
       }, 2800);
     } else {
-      // Show welcome state
-      splashScreen.className = 'welcome';
-      welcomeContent.style.display = 'flex';
-      welcomeContent.style.flexDirection = 'column';
-      welcomeContent.style.alignItems = 'center';
-      rejectedContent.style.display = 'none';
-
-      setTimeout(function () {
-        splashScreen.classList.add('fade-out');
-        setTimeout(function() {
-          splashScreen.style.display = 'none';
-        }, 500);
-      }, 2000);
+      // No errors, hide splash screen immediately
+      splashScreen.style.display = 'none';
     }
   });
 }
@@ -111,10 +102,8 @@ if (countdownContainer && countdownEl && resendForm) {
 // PASSWORD SHOW/HIDE FUNCTIONALITY
 // ============================================
 // BEHAVIOR:
-// 1. Saat halaman dibuka: password TERLIHAT (type="text"), icon HIDE (eyeHide tampil)
-// 2. Saat user mengetik: password TETAP TERLIHAT
-// 3. Setelah berhenti 1.5 detik: password AUTO-TERTUTUP (type="password"), icon SHOW (eyeShow tampil)
-// 4. Klik icon: toggle manual antara show/hide
+// 1. Password tersembunyi secara default.
+// 2. Klik ikon mata untuk menampilkan/menyembunyikan password secara manual.
 // ============================================
 
 const togglePassword = document.getElementById('togglePassword');
@@ -123,72 +112,32 @@ const eyeHide = document.getElementById('eyeHide');
 const eyeShow = document.getElementById('eyeShow');
 
 if (togglePassword && passwordInput && eyeHide && eyeShow) {
-  let typingTimer;
-  let isManuallyToggled = false;
+  let isPasswordVisible = false;
 
-  // Event: User mengetik password
-  passwordInput.addEventListener('input', function() {
-    // Clear timer sebelumnya
-    clearTimeout(typingTimer);
+  const setPasswordVisibility = function (visible) {
+    isPasswordVisible = visible;
+    passwordInput.setAttribute('type', visible ? 'text' : 'password');
+    eyeHide.classList.toggle('hide', !visible);
+    eyeShow.classList.toggle('hide', visible);
+    togglePassword.setAttribute('title', visible ? 'Hide password' : 'Show password');
+  };
 
-    // Saat mengetik: password TETAP TERLIHAT (kecuali user manual hide)
-    if (!isManuallyToggled) {
-      passwordInput.setAttribute('type', 'text');
-      eyeHide.classList.remove('hide');
-      eyeShow.classList.add('hide');
-      togglePassword.setAttribute('title', 'Hide password');
-    }
-
-    // Set timer untuk auto-hide setelah 1.5 detik tidak mengetik
-    typingTimer = setTimeout(function() {
-      if (!isManuallyToggled) {
-        // AUTO-HIDE: password jadi dots
-        passwordInput.setAttribute('type', 'password');
-        eyeHide.classList.add('hide');
-        eyeShow.classList.remove('hide');
-        togglePassword.setAttribute('title', 'Show password');
-      }
-    }, 200); // 0.2 detik
-  });
+  // Pastikan selalu tersembunyi saat awal load.
+  setPasswordVisibility(false);
 
   // Event: User klik icon mata (manual toggle)
   togglePassword.addEventListener('click', function () {
-    // Clear auto-hide timer
-    clearTimeout(typingTimer);
-
-    const currentType = passwordInput.getAttribute('type');
-
-    if (currentType === 'password') {
-      // Password TERSEMBUNYI -> TAMPILKAN
-      passwordInput.setAttribute('type', 'text');
-      eyeHide.classList.remove('hide');
-      eyeShow.classList.add('hide');
-      this.setAttribute('title', 'Hide password');
-      isManuallyToggled = true;
-    } else {
-      // Password TERLIHAT -> SEMBUNYIKAN
-      passwordInput.setAttribute('type', 'password');
-      eyeHide.classList.add('hide');
-      eyeShow.classList.remove('hide');
-      this.setAttribute('title', 'Show password');
-      isManuallyToggled = true;
-    }
+    setPasswordVisibility(!isPasswordVisible);
   });
 
-  // Event: User mulai mengetik lagi (reset flag manual)
-  passwordInput.addEventListener('keydown', function() {
-    if (isManuallyToggled) {
-      isManuallyToggled = false;
-    }
-  });
-
-  // Event: User focus ke field password (jika ada isi, tampilkan)
-  passwordInput.addEventListener('focus', function() {
-    if (!isManuallyToggled && passwordInput.value.length > 0) {
-      passwordInput.setAttribute('type', 'text');
-      eyeHide.classList.remove('hide');
-      eyeShow.classList.add('hide');
-      togglePassword.setAttribute('title', 'Hide password');
+  // Kunci tampilan agar tetap tersamarkan saat mengetik kecuali user membuka manual.
+  passwordInput.addEventListener('input', function () {
+    if (!isPasswordVisible && passwordInput.getAttribute('type') !== 'password') {
+      window.requestAnimationFrame(function () {
+        if (!isPasswordVisible) {
+          setPasswordVisibility(false);
+        }
+      });
     }
   });
 }

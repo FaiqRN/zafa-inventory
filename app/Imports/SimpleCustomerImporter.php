@@ -3,11 +3,11 @@
 namespace App\Imports;
 
 use App\Models\Customer;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\IReader;
 use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\ToCollection;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class SimpleCustomerImporter implements ToCollection, WithHeadingRow
+class SimpleCustomerImporter
 {
     protected int $processedCount = 0;
     protected int $insertedCount = 0;
@@ -15,6 +15,90 @@ class SimpleCustomerImporter implements ToCollection, WithHeadingRow
 
     /** @var array<int, string> */
     protected array $errors = [];
+
+    /**
+     * @return array{processed:int, inserted:int, updated:int}
+     */
+    public function import(string $filePath): array
+    {
+        $this->resetImportState();
+
+        if (!is_readable($filePath)) {
+            throw new \RuntimeException('File impor tidak dapat dibaca.');
+        }
+
+        $reader = IOFactory::createReaderForFile($filePath);
+
+        if ($reader instanceof IReader) {
+            $reader->setReadDataOnly(true);
+        }
+
+        $spreadsheet = $reader->load($filePath);
+        $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, false);
+
+        if (empty($rows)) {
+            return [
+                'processed' => 0,
+                'inserted' => 0,
+                'updated' => 0,
+            ];
+        }
+
+        $firstRow = array_shift($rows);
+        if (!is_array($firstRow)) {
+            $firstRow = [];
+        }
+
+        $containsKnownHeader = function (array $headers): bool {
+            foreach ($headers as $header) {
+                if (in_array($header, ['nama', 'gender', 'usia', 'alamat', 'email', 'no_tlp'], true)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        $combineRowWithHeaders = function (array $headers, array $row): array {
+            $mapped = [];
+
+            foreach ($headers as $index => $header) {
+                if ($header === null || $header === '') {
+                    continue;
+                }
+
+                $mapped[$header] = $row[$index] ?? null;
+            }
+
+            return $mapped;
+        };
+
+        $normalizedHeaders = array_map(function ($header) {
+            return $this->normalizeHeaderToField($this->normalizeKey((string) $header));
+        }, $firstRow);
+
+        $hasHeaderRow = $containsKnownHeader($normalizedHeaders);
+        $defaultHeaders = ['nama', 'gender', 'usia', 'alamat', 'email', 'no_tlp'];
+        $rowNumber = 1;
+
+        if (!$hasHeaderRow) {
+            $firstData = $combineRowWithHeaders($defaultHeaders, $firstRow);
+            $this->processRowArray($firstData, $rowNumber);
+        }
+
+        foreach ($rows as $row) {
+            $rowNumber++;
+            $headers = $hasHeaderRow ? $normalizedHeaders : $defaultHeaders;
+            $rowData = $combineRowWithHeaders($headers, is_array($row) ? $row : []);
+            $this->processRowArray($rowData, $rowNumber);
+        }
+
+        return [
+            'processed' => $this->getProcessedCount(),
+            'inserted' => $this->getInsertedCount(),
+            'updated' => $this->getUpdatedCount(),
+        ];
+    }
 
     public function collection(Collection $rows): void
     {

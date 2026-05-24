@@ -38,7 +38,7 @@
                         <div class="form-group">
                             <label for="current_password">Password Saat Ini <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                <input type="password" class="form-control" id="current_password" name="current_password" required autocomplete="off">
                                 <div class="input-group-append">
                                     <span class="input-group-text toggle-password" data-target="current_password">
                                         <i class="fas fa-eye"></i>
@@ -49,7 +49,7 @@
                         <div class="form-group">
                             <label for="password">Password Baru <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="password" name="password" required>
+                                <input type="password" class="form-control" id="password" name="password" required autocomplete="off">
                                 <div class="input-group-append">
                                     <span class="input-group-text toggle-password" data-target="password">
                                         <i class="fas fa-eye"></i>
@@ -61,7 +61,7 @@
                         <div class="form-group">
                             <label for="password_confirmation">Konfirmasi Password Baru <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
+                                <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required autocomplete="off">
                                 <div class="input-group-append">
                                     <span class="input-group-text toggle-password" data-target="password_confirmation">
                                         <i class="fas fa-eye"></i>

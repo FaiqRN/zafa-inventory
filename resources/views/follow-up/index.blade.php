@@ -7,6 +7,8 @@
     <li class="breadcrumb-item active">Follow Up Pelanggan</li>
 @endsection
 
+@php($followUpEnabled = $followUpEnabled ?? config('followup.enabled', true))
+
 @push('css')
     <!-- Follow Up Custom CSS -->
     <link rel="stylesheet" href="{{ asset('css/follow-up.css') }}">
@@ -15,6 +17,14 @@
 @endpush
 
 @section('content')
+@if (!$followUpEnabled)
+<div class="container-fluid">
+    <div class="alert alert-warning" role="alert">
+        <h5 class="mb-1">Fitur Follow Up dinonaktifkan</h5>
+        <p class="mb-0">Aktifkan dengan mengatur <strong>FOLLOW_UP_ENABLED=true</strong> di file .env lalu jalankan ulang cache config.</p>
+    </div>
+</div>
+@else
 <div class="container-fluid">
     <!-- Header Card with Device Status -->
     <div class="card card-outline card-primary">
@@ -383,17 +393,20 @@
 
 <!-- CSRF Token -->
 <meta name="csrf-token" content="{{ csrf_token() }}">
+@endif
 @endsection
 
 @push('js')
-    <script>
-        window.followUpPermissions = {
-            create: @json(\Illuminate\Support\Facades\Gate::allows('create-follow-up')),
-            edit: @json(\Illuminate\Support\Facades\Gate::allows('edit-follow-up')),
-        };
-    </script>
-    <!-- SweetAlert2 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.7.12/sweetalert2.min.js"></script>
-    <!-- Follow Up Custom JavaScript -->
-    <script src="{{ asset('js/follow-up.js') }}"></script>
+    @if ($followUpEnabled)
+        <script>
+            window.followUpPermissions = {
+                create: @json(\Illuminate\Support\Facades\Gate::allows('create-follow-up')),
+                edit: @json(\Illuminate\Support\Facades\Gate::allows('edit-follow-up')),
+            };
+        </script>
+        <!-- SweetAlert2 -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.7.12/sweetalert2.min.js"></script>
+        <!-- Follow Up Custom JavaScript -->
+        <script src="{{ asset('js/follow-up.js') }}"></script>
+    @endif
 @endpush

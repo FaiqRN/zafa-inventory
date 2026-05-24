@@ -97,7 +97,7 @@
               placeholder="Masukkan username Anda" 
               value="{{ old('username') }}"
               required
-              autocomplete="username"
+              autocomplete="off"
               maxlength="50">
           </div>
           @error('username')

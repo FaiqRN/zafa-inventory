@@ -3,7 +3,7 @@
 @section('title', 'dashboard')
 
 @push('css')
-<link rel="stylesheet" href="{{ asset('css/DashboardMonitor.css') }}">
+<link rel="stylesheet" href="{{ asset('css/DashboardMonitor.css') }}?v=1.0.1">
 @endpush
 
 @section('content')
@@ -66,6 +66,116 @@
                     <div class="col-12" id="log-info-missing" style="display:none;">
                         <span class="text-muted"><i class="fas fa-exclamation-circle mr-1"></i> File laravel.log tidak ditemukan.</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===== SQL IMPORT PANEL ===== --}}
+        <div class="card mb-3 card-sql-import">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2 card-header-sql-import"
+                 id="sql-import-header" role="button" data-toggle="collapse" data-target="#sql-import-body" aria-expanded="false">
+                <span>
+                    <i class="fas fa-database mr-2 text-primary"></i> SQL Import
+                    <span class="text-muted small ml-1">(Paste INSERT INTO statement)</span>
+                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-pill badge-info sql-import-table-count" id="sql-import-table-count" title="Jumlah tabel yang diizinkan">
+                        <i class="fas fa-table mr-1"></i><span id="sql-import-count-num">13</span> tabel
+                    </span>
+                    <i class="fas fa-chevron-down sql-import-chevron" id="sql-import-chevron"></i>
+                </div>
+            </div>
+            <div class="collapse" id="sql-import-body">
+                <div class="card-body">
+                    {{-- Mode Selector --}}
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label font-weight-bold mb-1">
+                                <i class="fas fa-cog mr-1 text-muted"></i> Mode Import
+                            </label>
+                            <select class="form-control form-control-sm" id="sql-import-mode">
+                                <option value="insert">INSERT — Tambah data baru saja</option>
+                                <option value="upsert">UPSERT — Tambah atau update jika sudah ada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label font-weight-bold mb-1">
+                                <i class="fas fa-table mr-1 text-muted"></i> Tabel Diizinkan
+                            </label>
+                            <select class="form-control form-control-sm" id="sql-import-table-selector">
+                                <option value="">— Pilih untuk lihat struktur —</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-outline-info btn-sm w-100" id="btn-show-columns" disabled>
+                                <i class="fas fa-columns mr-1"></i> Lihat Kolom
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Column Info Area --}}
+                    <div class="sql-import-columns-area mb-3" id="sql-import-columns-area" style="display:none;">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="font-weight-bold text-muted small">
+                                <i class="fas fa-th-list mr-1"></i> Struktur Tabel: <strong id="sql-import-columns-table"></strong>
+                            </span>
+                            <button type="button" class="close" id="btn-close-columns" aria-label="Tutup">&times;</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-striped mb-0" id="sql-import-columns-table-body">
+                                <thead>
+                                    <tr>
+                                        <th>Kolom</th><th>Tipe</th><th>Null</th><th>Key</th><th>Default</th><th>Extra</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {{-- SQL Textarea --}}
+                    <div class="sql-import-editor-wrap">
+                        <label class="form-label font-weight-bold mb-1">
+                            <i class="fas fa-code mr-1 text-muted"></i> SQL Statement
+                        </label>
+                        <textarea class="form-control sql-import-textarea" id="sql-import-textarea"
+                                  rows="10"
+                                  placeholder="Paste INSERT INTO statement disini...&#10;&#10;Contoh:&#10;INSERT INTO `barang` (`barang_id`, `barang_kode`, `nama_barang`, ...) VALUES&#10;('BRG0000001', 'BRG1', 'Kering Kentang', ...);"
+                                  spellcheck="false"></textarea>
+                    </div>
+
+                    {{-- SQL Preview Info --}}
+                    <div class="sql-import-preview mt-2 mb-3" id="sql-import-preview" style="display:none;">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span class="sql-preview-chip" id="sql-preview-table">
+                                <i class="fas fa-table mr-1"></i> Tabel: <strong>—</strong>
+                            </span>
+                            <span class="sql-preview-chip" id="sql-preview-rows">
+                                <i class="fas fa-list-ol mr-1"></i> Baris: <strong>—</strong>
+                            </span>
+                            <span class="sql-preview-chip" id="sql-preview-status">
+                                <i class="fas fa-check-circle mr-1"></i> <strong>—</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Action Buttons --}}
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" id="btn-sql-import-execute" disabled>
+                                <i class="fas fa-play mr-1"></i> Jalankan Import
+                            </button>
+                            <button class="btn btn-outline-secondary" id="btn-sql-import-clear">
+                                <i class="fas fa-broom mr-1"></i> Bersihkan
+                            </button>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="fas fa-shield-alt mr-1 text-success"></i> FK check dinonaktifkan sementara saat import
+                        </div>
+                    </div>
+
+                    {{-- Result Area --}}
+                    <div class="sql-import-result mt-3" id="sql-import-result" style="display:none;"></div>
                 </div>
             </div>
         </div>
@@ -175,8 +285,11 @@ window.DASHBOARD_MONITOR_CONFIG = {
     logInfoUrl:     @json(route('dashboard-monitor.laravel-log.info')),
     logExportUrl:   @json(route('dashboard-monitor.laravel-log.export')),
     logTruncUrl:    @json(route('dashboard-monitor.laravel-log.truncate')),
+    sqlTablesUrl:   @json(route('dashboard-monitor.sql-import.tables')),
+    sqlColumnsUrl:  @json(route('dashboard-monitor.sql-import.columns')),
+    sqlExecuteUrl:  @json(route('dashboard-monitor.sql-import.execute')),
     csrfToken:      document.querySelector('meta[name="csrf-token"]').content
 };
 </script>
-<script src="{{ asset('js/DashboardMonitor.js') }}"></script>
+<script src="{{ asset('js/DashboardMonitor.js') }}?v=1.0.1"></script>
 @endpush

@@ -239,4 +239,221 @@ class DashboardMonitorController extends Controller
             'message' => "File laravel.log berhasil dikosongkan ({$sizeBeforeKb} KB dihapus).",
         ]);
     }
+
+    // =====================================================================
+    // SQL IMPORT FEATURE
+    // =====================================================================
+
+    /**
+     * Daftar tabel yang diizinkan untuk SQL import.
+     */
+    private function getAllowedTables(): array
+    {
+        return [
+            'barang',
+            'barang_stok',
+            'toko',
+            'barang_toko',
+            'pengiriman',
+            'retur',
+            'pemesanan',
+            'follow_up',
+            'data_customer',
+            'eoq_biaya_pesan_global',
+            'eoq_biaya_pesan_toko',
+            'eoq_biaya_simpan',
+            'ss_zscore_setting',
+        ];
+    }
+
+    /**
+     * Ambil informasi kolom untuk tabel yang diizinkan (untuk preview UI).
+     */
+    public function getTableColumns(Request $request)
+    {
+        $table = $request->query('table');
+        $allowed = $this->getAllowedTables();
+
+        if (!$table || !in_array($table, $allowed)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tabel tidak valid atau tidak diizinkan.',
+            ], 422);
+        }
+
+        try {
+            $columns = DB::select("SHOW COLUMNS FROM `{$table}`");
+            $columnList = array_map(fn($col) => [
+                'field'   => $col->Field,
+                'type'    => $col->Type,
+                'null'    => $col->Null,
+                'key'     => $col->Key,
+                'default' => $col->Default,
+                'extra'   => $col->Extra,
+            ], $columns);
+
+            return response()->json([
+                'success' => true,
+                'table'   => $table,
+                'columns' => $columnList,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil informasi kolom: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Ambil daftar tabel yang diizinkan (untuk dropdown UI).
+     */
+    public function getAllowedTablesList()
+    {
+        return response()->json([
+            'success' => true,
+            'tables'  => $this->getAllowedTables(),
+        ]);
+    }
+
+    /**
+     * Eksekusi SQL Import.
+     * 
+     * Menerima raw SQL INSERT statement, mem-parsing dan mengeksekusinya
+     * dalam database transaction dengan foreign key check dinonaktifkan sementara.
+     */
+    public function executeSqlImport(Request $request)
+    {
+        $request->validate([
+            'sql'  => 'required|string|min:20',
+            'mode' => 'nullable|in:insert,upsert',
+        ]);
+
+        $rawSql = trim($request->input('sql'));
+        $mode   = $request->input('mode', 'insert');
+        $allowed = $this->getAllowedTables();
+
+        // ── 1. Validasi bahwa SQL dimulai dengan INSERT INTO ──
+        if (!preg_match('/^\s*INSERT\s+INTO\s+/i', $rawSql)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'SQL harus berupa statement INSERT INTO.',
+            ], 422);
+        }
+
+        // ── 2. Extract nama tabel dari SQL ──
+        if (!preg_match('/INSERT\s+INTO\s+`?(\w+)`?\s*/i', $rawSql, $tableMatch)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak dapat menemukan nama tabel dari SQL.',
+            ], 422);
+        }
+
+        $tableName = $tableMatch[1];
+
+        // ── 3. Validasi tabel ada di whitelist ──
+        if (!in_array($tableName, $allowed)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Tabel \"{$tableName}\" tidak diizinkan untuk import. Tabel yang diizinkan: " . implode(', ', $allowed),
+            ], 422);
+        }
+
+        // ── 4. Cek keamanan: pastikan SQL tidak mengandung statement berbahaya ──
+        // Hanya cek apakah SQL DIMULAI dengan command berbahaya (bukan di dalam data values)
+        $dangerousPatterns = [
+            '/^\s*DROP\s+/im',
+            '/^\s*ALTER\s+/im',
+            '/^\s*DELETE\s+/im',
+            '/^\s*TRUNCATE\s+/im',
+            '/^\s*CREATE\s+/im',
+            '/^\s*GRANT\s+/im',
+            '/^\s*REVOKE\s+/im',
+            '/;\s*DROP\s+/i',
+            '/;\s*ALTER\s+/i',
+            '/;\s*DELETE\s+/i',
+            '/;\s*UPDATE\s+/i',
+            '/;\s*TRUNCATE\s+/i',
+            '/;\s*CREATE\s+/i',
+        ];
+        foreach ($dangerousPatterns as $pattern) {
+            if (preg_match($pattern, $rawSql)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'SQL mengandung perintah berbahaya. Hanya satu statement INSERT INTO yang diizinkan.',
+                ], 422);
+            }
+        }
+
+        // ── 5. Hilangkan trailing semicolon dan whitespace ──
+        $cleanSql = rtrim($rawSql, " \t\n\r\0\x0B;");
+
+        // ── 6. Jika mode upsert, tambahkan ON DUPLICATE KEY UPDATE ──
+        if ($mode === 'upsert') {
+            // Extract kolom dari INSERT INTO `table` (`col1`, `col2`, ...) VALUES
+            if (preg_match('/INSERT\s+INTO\s+`?\w+`?\s*\(([^)]+)\)/i', $cleanSql, $colMatch)) {
+                $colsPart = $colMatch[1];
+                $cols = array_map(function ($c) {
+                    return trim(trim($c), '`');
+                }, explode(',', $colsPart));
+
+                $updateParts = array_map(fn($c) => "`{$c}` = VALUES(`{$c}`)", $cols);
+                $cleanSql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', $updateParts);
+            }
+        }
+
+        // ── 7. Eksekusi ──
+        // Gunakan DB::unprepared() karena DB::statement() menggunakan PDO prepared statements
+        // yang akan gagal jika data mengandung karakter '?' (dianggap parameter placeholder)
+        try {
+            $rowsBefore = DB::table($tableName)->count();
+
+            DB::unprepared('SET FOREIGN_KEY_CHECKS=0');
+            DB::unprepared($cleanSql);
+            DB::unprepared('SET FOREIGN_KEY_CHECKS=1');
+
+            $rowsAfter = DB::table($tableName)->count();
+            $rowsInserted = $rowsAfter - $rowsBefore;
+
+            // Log aktivitas import
+            DashboardMonitorLogger::create(
+                'SQL Import',
+                "Import data ke tabel \"{$tableName}\" ({$rowsInserted} baris baru, mode: {$mode})",
+                [
+                    'table'         => $tableName,
+                    'mode'          => $mode,
+                    'rows_before'   => $rowsBefore,
+                    'rows_after'    => $rowsAfter,
+                    'rows_inserted' => $rowsInserted,
+                    'sql_preview'   => mb_substr($rawSql, 0, 500),
+                ],
+                $request
+            );
+
+            return response()->json([
+                'success'       => true,
+                'message'       => "Import berhasil ke tabel \"{$tableName}\".",
+                'table'         => $tableName,
+                'rows_before'   => $rowsBefore,
+                'rows_after'    => $rowsAfter,
+                'rows_inserted' => $rowsInserted,
+                'mode'          => $mode,
+            ]);
+        } catch (\Throwable $e) {
+            // Pastikan FK check dihidupkan kembali
+            try { DB::unprepared('SET FOREIGN_KEY_CHECKS=1'); } catch (\Throwable $ex) {}
+
+            Log::error('SQL Import failed', [
+                'table' => $tableName,
+                'error' => $e->getMessage(),
+                'sql'   => mb_substr($rawSql, 0, 500),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Import gagal: ' . $e->getMessage(),
+                'table'   => $tableName,
+            ], 500);
+        }
+    }
 }

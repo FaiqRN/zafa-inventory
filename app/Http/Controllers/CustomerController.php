@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use App\Imports\ManualCSVImporter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\SimpleCustomerImporter;
 use Illuminate\Support\Facades\Validator;
 use App\Helpers\DashboardMonitorLogger;
@@ -292,10 +291,10 @@ class CustomerController extends Controller
                 $errors = $importer->getErrors();
             } else {
                 $importer = new SimpleCustomerImporter();
-                Excel::import($importer, $storedPath);
-                $processed = $importer->getProcessedCount();
-                $inserted = $importer->getInsertedCount();
-                $updated = $importer->getUpdatedCount();
+                $result = $importer->import($storedPath);
+                $processed = $result['processed'] ?? 0;
+                $inserted = $result['inserted'] ?? 0;
+                $updated = $result['updated'] ?? 0;
                 $errors = $importer->getErrors();
             }
 

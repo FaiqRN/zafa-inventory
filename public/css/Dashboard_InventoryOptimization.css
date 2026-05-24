@@ -72,6 +72,11 @@
     align-items: center;
     gap: 8px;
 }
+.inv-auto-refresh-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 .inv-auto-refresh-dot {
     width: 9px;
     height: 9px;
@@ -90,9 +95,10 @@
     font-size: 11px;
     white-space: nowrap;
 }
-.inv-refresh-time-plain {
-    margin: 0 1.25rem 1rem;
-    display: block;
+.inv-refresh-countdown {
+    color: #64748b;
+    font-size: 11px;
+    white-space: nowrap;
 }
 
 @keyframes invRefreshPulse {
@@ -291,6 +297,8 @@
     .inv-map-wrap    { height: 300px; }
     .inv-topbar      { flex-direction: column; align-items: flex-start; }
     .inv-refresh-time { white-space: normal; }
+    .inv-auto-refresh-bar { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .inv-auto-refresh-right { flex-wrap: wrap; }
 
     .inv-map-search {
         top: 8px;

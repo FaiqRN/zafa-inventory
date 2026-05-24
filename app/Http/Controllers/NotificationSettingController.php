@@ -47,16 +47,18 @@ class NotificationSettingController extends Controller
 
     public function getSettings()
     {
-        if (!Storage::exists(self::SETTINGS_FILE)) {
+        $disk = Storage::disk('local');
+
+        if (!$disk->exists(self::SETTINGS_FILE)) {
             $this->saveSettings(self::DEFAULT_SETTINGS);
             return self::DEFAULT_SETTINGS;
         }
 
         try {
-            $content = Storage::get(self::SETTINGS_FILE);
+            $content = $disk->get(self::SETTINGS_FILE);
             $settings = json_decode($content, true);
             
-            return array_merge(self::DEFAULT_SETTINGS, $settings);
+            return array_merge(self::DEFAULT_SETTINGS, $settings ?? []);
         } catch (\Exception $e) {
             return self::DEFAULT_SETTINGS;
         }
@@ -72,9 +74,10 @@ class NotificationSettingController extends Controller
 
     private function saveSettings(array $settings)
     {
-        Storage::makeDirectory('settings');
+        $disk = Storage::disk('local');
+        $disk->makeDirectory('settings');
         
-        Storage::put(self::SETTINGS_FILE, json_encode($settings, JSON_PRETTY_PRINT));
+        $disk->put(self::SETTINGS_FILE, json_encode($settings, JSON_PRETTY_PRINT));
     }
 
     public function reset(Request $request)

@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Pengiriman;
-use App\Helpers\MasterData\pengiriman\PengirimanHelper;
+use App\Helpers\MasterData\Pengiriman\PengirimanHelper;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;

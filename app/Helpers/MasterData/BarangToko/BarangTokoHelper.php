@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Helpers\MasterData\barangToko;
+namespace App\Helpers\MasterData\BarangToko;
 
 use App\Models\Barang;
 use App\Models\BarangToko;
@@ -134,4 +134,5 @@ class BarangTokoHelper
 
         return $rules;
     }
+    
 }

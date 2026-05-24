@@ -164,8 +164,8 @@ class Barang extends Model
             return $this->attributes['available_stock'];
         }
         
-        if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
-            return \App\Helpers\MasterData\barang\BarangHelper::calculateAvailableStock($this->barang_id);
+        if (class_exists(\App\Helpers\MasterData\Barang\BarangHelper::class)) {
+            return \App\Helpers\MasterData\Barang\BarangHelper::calculateAvailableStock($this->barang_id);
         }
         
         return $this->stok ?? 0;
@@ -200,8 +200,8 @@ class Barang extends Model
             return $this->attributes['stock_details'];
         }
         
-        if (class_exists(\App\Helpers\MasterData\barang\BarangHelper::class)) {
-            return \App\Helpers\MasterData\barang\BarangHelper::getStockDetails($this->barang_id);
+        if (class_exists(\App\Helpers\MasterData\Barang\BarangHelper::class)) {
+            return \App\Helpers\MasterData\Barang\BarangHelper::getStockDetails($this->barang_id);
         }
         
         return [

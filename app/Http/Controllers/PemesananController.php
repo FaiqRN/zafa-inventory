@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pemesanan;
 use App\Models\Barang;
-use App\Helpers\MasterData\barang\BarangStokHelper;
+use App\Helpers\MasterData\Barang\BarangStokHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;

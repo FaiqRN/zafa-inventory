@@ -9,6 +9,11 @@ use Symfony\Component\HttpFoundation\Response;
 class SessionTimeout
 {
     /**
+     * Waktu idle maksimum sebelum user otomatis logout (dalam menit).
+     */
+    private const MAX_IDLE_MINUTES = 10;
+
+    /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
@@ -21,29 +26,24 @@ class SessionTimeout
             if (!$request->session()->has('last_activity')) {
                 $request->session()->put('last_activity', now()->timestamp);
             }
-            
+
             // Ambil waktu aktivitas terakhir
             $lastActivity = $request->session()->get('last_activity');
-            
-            // Cek apakah pengguna memilih "remember me"
-            // Jika tidak, cek apakah session sudah melewati batas waktu maksimum
-            // (default 120 menit/2 jam)
-            $sessionLifetime = config('session.lifetime');
-            $maxIdleMinutes = $sessionLifetime > 0 ? $sessionLifetime : 120;
-            
-            if (!Auth::viaRemember() && now()->timestamp - $lastActivity > $maxIdleMinutes * 60) {
+
+            // Logout otomatis jika tidak ada aktivitas selama MAX_IDLE_MINUTES menit
+            if (now()->timestamp - $lastActivity > self::MAX_IDLE_MINUTES * 60) {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
-                
+
                 return redirect()->route('login')
-                    ->with('error', 'Sesi Anda telah berakhir karena tidak ada aktivitas. Silakan login kembali.');
+                    ->with('error', 'Sesi Anda telah berakhir karena tidak ada aktivitas selama ' . self::MAX_IDLE_MINUTES . ' menit. Silakan login kembali.');
             }
-            
-            // Update waktu aktivitas terakhir jika ada request baru
+
+            // Update waktu aktivitas terakhir setiap ada request baru
             $request->session()->put('last_activity', now()->timestamp);
         }
-        
+
         return $next($request);
     }
 }
