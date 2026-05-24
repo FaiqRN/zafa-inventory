@@ -155,6 +155,21 @@
                 </div>
                 <div class="card-body">
                     <div class="row" id="rekCards"></div>
+                    <div id="rekDetailPanel" class="rek-detail-panel" style="display:none;">
+                        <div class="rek-detail-head">
+                            <div>
+                                <div class="rek-detail-title" id="rekDetailTitle">Detail mitra kategori</div>
+                                <div class="rek-detail-sub" id="rekDetailSub">Klik mitra untuk melihat alasan rekomendasi.</div>
+                            </div>
+                            <button type="button" class="rek-detail-close" id="rekDetailClose" aria-label="Tutup">&times;</button>
+                        </div>
+                        <div class="rek-detail-body">
+                            <div class="rek-detail-list" id="rekDetailList"></div>
+                            <div class="rek-detail-reason" id="rekDetailReason">
+                                <div class="rek-empty">Klik mitra untuk melihat alasan rekomendasi.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -244,7 +259,7 @@
                 </div>
 
                 {{-- ── BAGIAN 3: Visualisasi — toggle Bar / Radar ── --}}
-                <div class="md-section mt-3">
+                <div class="md-section md-section-last mt-3">
                     <div class="md-section-title">
                         <span class="icon-circle"><i class="fas fa-chart-bar"></i></span>
                         Visualisasi Profil KPI
@@ -267,20 +282,6 @@
                     </div>
                 </div>
 
-                {{-- ── BAGIAN 4: Smart Info — pola kemiripan toko (CF) ── --}}
-                <div class="smart-info-section">
-                    <div class="smart-info-header">
-                        <div style="width:32px;height:32px;background:#E8A020;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i class="fas fa-lightbulb" style="color:#fff;font-size:14px;"></i>
-                        </div>
-                        <div>
-                            <div class="smart-info-title">Informasi Cerdas — Toko Serupa & Pola Produk</div>
-                            <div class="smart-info-sub">Berdasarkan analisis kesamaan profil dan pola penjualan dengan toko-toko lain</div>
-                        </div>
-                    </div>
-                    <div id="smartInfoBody"></div>
-                </div>
-
             </div>{{-- end modal-body --}}
 
             <div class="modal-footer py-2" style="border-top:1px solid #f0ede8;">
@@ -300,6 +301,7 @@ window.PARTNER_PERFORMANCE_CONFIG = {
     serverMeta: @json($kpi_meta ?? []),
     dataStatus: @json($data_status ?? null),
     apiDataUrl: @json(route('analytics.partner-performance.api.data')),
+    apiRecommendationUrl: @json(route('analytics.partner-performance.api.recommendations')),
     autoSyncMs: 30000
 };
 </script>

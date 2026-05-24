@@ -36,9 +36,6 @@
                             <div class="panel-sub">Berdasarkan skor hybrid · Histori 2025 dan berlanjut ke 2026</div>
                         </div>
                     </div>
-                    <a href="{{ route('analytics.partner-performance.index') }}" class="panel-nav">
-                        Lihat semua <i class="fas fa-arrow-right"></i>
-                    </a>
                 </div>
                 <div class="panel-body">
                     <div class="d-flex align-items-center" style="gap:20px; flex-wrap:wrap;">
@@ -73,9 +70,6 @@
                             <div class="panel-sub">Diurutkan dari skor tertinggi — klik batang untuk detail mitra</div>
                         </div>
                     </div>
-                    <a href="{{ route('analytics.partner-performance.index') }}" class="panel-nav">
-                        Ranking lengkap <i class="fas fa-arrow-right"></i>
-                    </a>
                 </div>
                 <div class="panel-body">
                     <div class="bar-chart-wrap">
@@ -105,11 +99,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2" style="gap:8px;">
-                        <a href="{{ route('analytics.partner-performance.index') }}" class="panel-nav">
-                            Lihat laporan <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </div>
                 </div>
                 <div class="panel-body">
 
@@ -128,7 +117,7 @@
                             </button>
                             <button class="analytic-pill active-fc" id="btnFC" onclick="toggleLayer('fc')">
                                 <span style="display:inline-block;width:16px;height:2px;background:#1E607F;border-radius:1px;vertical-align:middle;opacity:.5;"></span>
-                                Forecasting (2 bln)
+                                Forecasting <span id="forecastHorizonLabel"></span>
                             </button>
                         </div>
 
@@ -165,7 +154,7 @@
                         </div>
                         <div class="line-legend-item" id="legendFC">
                             <div class="line-legend-line" style="background:#1E607F;opacity:.5;"></div>
-                            <span>Prediksi (Apr–Jun 2026)</span>
+                            <span>Prediksi (Forecasting)</span>
                         </div>
                         <div class="ml-auto">
                             <span class="insight-badge" id="trendBadge" style="background:#E7F4ED;color:#1F7A4D;">
@@ -176,7 +165,7 @@
 
                     <div class="nav-hint mt-2">
                         <i class="fas fa-info-circle"></i>
-                        Skor aktual diambil dari rata-rata hybrid score semua mitra per bulan (Jan 2025–Mar 2026). Titik data Apr–Jun 2026 merupakan prediksi berbasis tren historis.
+                        <span id="lineHintText">Skor aktual diambil dari rata-rata hybrid score semua mitra per bulan. Titik data forecast merupakan prediksi berbasis tren historis.</span>
                     </div>
                 </div>
             </div>
@@ -201,9 +190,6 @@
                             <div class="panel-sub">Perlu evaluasi sebelum pengiriman berikutnya</div>
                         </div>
                     </div>
-                    <a href="{{ route('analytics.partner-performance.index') }}?kategori=D" class="panel-nav" style="color:var(--d);">
-                        Lihat kategori D <i class="fas fa-arrow-right"></i>
-                    </a>
                 </div>
                 <div class="panel-body" id="returList"></div>
             </div>
@@ -220,9 +206,6 @@
                             <div class="panel-sub">5 indikator kinerja dalam format yang lebih mudah dibaca</div>
                         </div>
                     </div>
-                    <a href="{{ route('analytics.partner-performance.index') }}" class="panel-nav">
-                        Detail KPI <i class="fas fa-arrow-right"></i>
-                    </a>
                 </div>
                 <div class="panel-body">
                     <div style="position:relative; height:260px;">
@@ -247,9 +230,6 @@
                             <div class="panel-sub">Rata-rata skor wilayah</div>
                         </div>
                     </div>
-                    <a href="{{ route('analytics.partner-performance.index') }}" class="panel-nav">
-                        Filter wilayah <i class="fas fa-arrow-right"></i>
-                    </a>
                 </div>
                 <div class="panel-body" id="wilayahList"></div>
             </div>

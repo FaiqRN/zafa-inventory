@@ -17,7 +17,7 @@ use Exception;
 
 class PartnerPerformanceController extends Controller
 {
-    private const DASHBOARD_SNAPSHOT_TTL_SECONDS = 20;
+    private const DASHBOARD_SNAPSHOT_TTL_SECONDS = 300;
     private const DASHBOARD_SNAPSHOT_FALLBACK_TTL_SECONDS = 300;
     private const KPI_LOCK_TTL_SECONDS = 30;
 
@@ -27,6 +27,7 @@ class PartnerPerformanceController extends Controller
             'index',
             'dashboard',
             'getData',
+            'getRecommendationDetails',
             'getTrends',
             'getStatistics',
             'searchPartners',
@@ -38,6 +39,80 @@ class PartnerPerformanceController extends Controller
             'debugExport',
             'debugAlert',
         ]);
+    }
+
+    /**
+     * Get Recommendation Details by Category (API)
+     */
+    public function getRecommendationDetails(Request $request)
+    {
+        try {
+            $category = strtoupper((string) $request->get('category', ''));
+            if (!in_array($category, ['A', 'B', 'C', 'D'], true)) {
+                return $this->jsonNoCache([
+                    'success' => false,
+                    'message' => 'Kategori tidak valid.'
+                ], 422);
+            }
+
+            $kpiOptions = $this->buildKpiOptionsFromRequest($request);
+            $kpiResult = $this->getReadOnlyKpiResult($kpiOptions);
+            $rows = collect($kpiResult['frontend_rows'] ?? []);
+
+            $filtered = $rows->where('kat', $category)->values();
+            $partners = $filtered->map(function ($row) use ($category) {
+                $score = [
+                    'hybrid_pct' => (int) round(((float) ($row['hybrid'] ?? 0)) * 100),
+                    'cbf_pct' => (int) round(((float) ($row['cbf'] ?? 0)) * 100),
+                    'cf_pct' => (int) round(((float) ($row['cf'] ?? 0)) * 100),
+                    'cf_user_pct' => (int) round(((float) ($row['user'] ?? 0)) * 100),
+                    'cf_item_pct' => (int) round(((float) ($row['item'] ?? 0)) * 100),
+                ];
+
+                return [
+                    'id' => $row['id'] ?? null,
+                    'nama' => $row['nama'] ?? '-',
+                    'wil' => $row['wil'] ?? '-',
+                    'kat' => $row['kat'] ?? $category,
+                    'rank' => (int) ($row['rank'] ?? 0),
+                    'hybrid' => (float) ($row['hybrid'] ?? 0),
+                    'performance' => (float) ($row['performance'] ?? 0),
+                    'kpi' => is_array($row['kpi'] ?? null) ? $row['kpi'] : [],
+                    'score' => $score,
+                    'reason' => $this->buildRecommendationReason($row, $category),
+                ];
+            })->values();
+
+            $avgHybrid = $partners->isEmpty()
+                ? 0
+                : round($partners->avg(function ($partner) {
+                    return (float) ($partner['score']['hybrid_pct'] ?? 0);
+                }), 1);
+
+            return $this->jsonNoCache([
+                'success' => true,
+                'category' => $category,
+                'category_label' => $this->getCategoryLabel($category),
+                'summary' => [
+                    'total_partners' => $partners->count(),
+                    'avg_hybrid_pct' => $avgHybrid,
+                ],
+                'meta' => [
+                    'generated_at' => now()->toDateTimeString(),
+                    'period_start' => $kpiResult['meta']['period_start'] ?? null,
+                    'period_end' => $kpiResult['meta']['period_end'] ?? null,
+                    'alpha' => $kpiResult['meta']['alpha'] ?? null,
+                    'beta' => $kpiResult['meta']['beta'] ?? null,
+                ],
+                'partners' => $partners,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Get recommendation details error: ' . $e->getMessage());
+            return $this->jsonNoCache([
+                'success' => false,
+                'message' => 'Gagal memuat detail rekomendasi: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -406,7 +481,10 @@ class PartnerPerformanceController extends Controller
                     ->whereBetween('tanggal_retur', [$monthStart, $monthEnd])
                     ->sum('jumlah_retur') ?? 0;
                 
-                $sold = max(0, $shipped - $returned);
+                $sold = Retur::where('toko_id', $partnerId)
+                    ->whereBetween('tanggal_retur', [$monthStart, $monthEnd])
+                    ->sum('total_terjual') ?? 0;
+                $sold = max(0, (float) $sold);
                 $sellThroughRate = $shipped > 0 ? ($sold / $shipped) * 100 : 0;
                 
                 $revenue = Retur::where('toko_id', $partnerId)
@@ -513,7 +591,7 @@ class PartnerPerformanceController extends Controller
     {
         try {
             $underperformingPartners = $this->calculatePartnerPerformance()
-                ->where('grade', 'C')
+                ->whereIn('category', ['C', 'D'])
                 ->take(10);
             
             $sentCount = 0;
@@ -526,7 +604,7 @@ class PartnerPerformanceController extends Controller
                     Log::info('Bulk Alert Sent', [
                         'partner_id' => $partner['toko_id'],
                         'partner_name' => $partner['nama_toko'],
-                        'reason' => 'Low performance - Grade C',
+                        'reason' => 'Low performance - Category C/D',
                         'sell_through_rate' => $partner['sell_through_rate'],
                         'sent_at' => now()
                     ]);
@@ -763,6 +841,7 @@ class PartnerPerformanceController extends Controller
                 $riskScore = $this->calculatePartnerRiskScore($tokoId, $periodStart);
 
                 return [
+                    'rank' => (int) ($partner['rank'] ?? PHP_INT_MAX),
                     'toko_id' => $tokoId,
                     'nama_toko' => $partner['nama_toko'] ?? $tokoId,
                     'total_shipped' => $totalShipped,
@@ -771,7 +850,7 @@ class PartnerPerformanceController extends Controller
                     'sell_through_rate' => round($sellThroughRate, 2),
                     'avg_days_to_return' => round($avgDaysToReturn, 0),
                     'revenue' => (float) ($support['revenue'] ?? 0),
-                    'grade' => $this->calculateGrade($sellThroughRate),
+                    'grade' => $this->gradeFromHybrid((float) ($partner['hybrid_score'] ?? 0)),
                     'performance_score' => round(((float) ($partner['hybrid_score'] ?? 0)) * 100, 2),
                     'trend' => $trend,
                     'risk_score' => $riskScore,
@@ -785,11 +864,9 @@ class PartnerPerformanceController extends Controller
                 ];
             } catch (Exception $e) {
                 Log::warning('Error mapping KPI result for toko ' . ($partner['toko_id'] ?? '-') . ': ' . $e->getMessage());
-
-                $fallback = Toko::find($partner['toko_id'] ?? null);
-                return $fallback ? $this->getDefaultPartnerPerformance($fallback) : null;
+                return null;
             }
-        })->filter()->sortByDesc('performance_score')->values();
+        })->filter()->sortBy('rank')->values();
     }
 
     private function calculateAverageDaysToReturn($tokoId, $periodStart)
@@ -856,6 +933,16 @@ class PartnerPerformanceController extends Controller
         }
     }
 
+    private function gradeFromHybrid(float $hybridScore): string
+    {
+        if ($hybridScore >= 0.85) return 'A+';
+        if ($hybridScore >= 0.70) return 'A';
+        if ($hybridScore >= 0.55) return 'B+';
+        if ($hybridScore >= 0.40) return 'B';
+        if ($hybridScore >= 0.25) return 'C+';
+        return 'C';
+    }
+
     private function calculateGrade($sellThroughRate)
     {
         // Fixed grading system based on sell-through rate
@@ -881,11 +968,10 @@ class PartnerPerformanceController extends Controller
                     ->whereBetween('tanggal_pengiriman', [$monthStart, $monthEnd])
                     ->sum('jumlah_kirim') ?? 0;
                 
-                $returned = Retur::where('toko_id', $tokoId)
+                $sold = Retur::where('toko_id', $tokoId)
                     ->whereBetween('tanggal_retur', [$monthStart, $monthEnd])
-                    ->sum('jumlah_retur') ?? 0;
-                
-                $sold = max(0, $shipped - $returned);
+                    ->sum('total_terjual') ?? 0;
+                $sold = max(0, (float) $sold);
                 $sellThrough = $shipped > 0 ? ($sold / $shipped) * 100 : 0;
                 
                 $last3Months[] = $sellThrough;
@@ -1002,7 +1088,10 @@ class PartnerPerformanceController extends Controller
                     ->whereBetween('tanggal_retur', [$monthStart, $monthEnd])
                     ->sum('jumlah_retur') ?? 0;
                 
-                $monthlySold = max(0, $monthlyShipped - $monthlyReturned);
+                $monthlySold = Retur::where('toko_id', $tokoId)
+                    ->whereBetween('tanggal_retur', [$monthStart, $monthEnd])
+                    ->sum('total_terjual') ?? 0;
+                $monthlySold = max(0, (float) $monthlySold);
                 $monthlySellThrough = $monthlyShipped > 0 ? ($monthlySold / $monthlyShipped) * 100 : 0;
                 
                 $monthlyData[] = $monthlySellThrough;
@@ -1147,7 +1236,7 @@ class PartnerPerformanceController extends Controller
             $alerts = collect();
             
             foreach ($partners as $partner) {
-                if ($partner['grade'] === 'C' || $partner['sell_through_rate'] < 40) {
+                if (in_array($partner['category'], ['C', 'D'], true) || $partner['sell_through_rate'] < 40) {
                     $alerts->push([
                         'type' => 'performance',
                         'severity' => 'high',
@@ -1181,8 +1270,8 @@ class PartnerPerformanceController extends Controller
             return [
                 'total_partners' => $partners->count(),
                 'avg_performance' => round($partners->avg('performance_score'), 1),
-                'top_performers' => $partners->whereIn('grade', ['A+', 'A'])->count(),
-                'needs_attention' => $partners->where('grade', 'C')->count(),
+                'top_performers' => $partners->where('category', 'A')->count(),
+                'needs_attention' => $partners->whereIn('category', ['C', 'D'])->count(),
                 'total_revenue' => $partners->sum('revenue'),
                 'avg_sell_through' => round($partners->avg('sell_through_rate'), 1),
                 'trend_improving' => $partners->filter(function($p) { return $p['trend']['trend'] === 'improving'; })->count(),
@@ -1216,6 +1305,141 @@ class PartnerPerformanceController extends Controller
             Log::error('Get partner performance data error: ' . $e->getMessage());
             return [];
         }
+    }
+
+    private function buildRecommendationReason(array $row, string $category): array
+    {
+        $hybridPct = (int) round(((float) ($row['hybrid'] ?? 0)) * 100);
+        $cbf = (float) ($row['cbf'] ?? 0);
+        $cf = (float) ($row['cf'] ?? 0);
+        $cfUser = (float) ($row['user'] ?? 0);
+        $cfItem = (float) ($row['item'] ?? 0);
+
+        $cbfShare = $this->percentageShare($cbf, $cf);
+        $cfShare = 100 - $cbfShare;
+        [$cfUserShare, $cfItemShare] = $this->percentageSplit($cfUser, $cfItem);
+
+        $kpiSignals = $this->buildKpiSignalSummary(is_array($row['kpi'] ?? null) ? $row['kpi'] : []);
+        $categoryLabel = $this->getCategoryLabel($category);
+        $summary = "Skor hybrid {$hybridPct}% masuk kategori {$category} - {$categoryLabel}.";
+
+        $details = [
+            $this->buildCategoryNarrative($category),
+            "Kontribusi model: CBF {$cbfShare}% vs CF {$cfShare}% (user {$cfUserShare}%, item {$cfItemShare}%).",
+        ];
+
+        if (!empty($kpiSignals['strengths'])) {
+            $details[] = 'KPI kuat: ' . implode(', ', $kpiSignals['strengths']) . '.';
+        }
+
+        if (!empty($kpiSignals['watchouts'])) {
+            $details[] = 'Perlu perhatian: ' . implode(', ', $kpiSignals['watchouts']) . '.';
+        }
+
+        return [
+            'summary' => $summary,
+            'details' => $details,
+            'cbf_share' => $cbfShare,
+            'cf_share' => $cfShare,
+            'cf_user_share' => $cfUserShare,
+            'cf_item_share' => $cfItemShare,
+        ];
+    }
+
+    private function buildKpiSignalSummary(array $kpi): array
+    {
+        $labels = [
+            'total_sales' => 'Volume Penjualan',
+            'return_rate' => 'Retur Barang',
+            'trans_freq' => 'Frekuensi Transaksi',
+            'sales_eff' => 'Efisiensi Penjualan',
+            'konsistensi' => 'Konsistensi',
+        ];
+
+        $entries = [];
+        foreach ($labels as $key => $label) {
+            if (!isset($kpi[$key]) || !is_array($kpi[$key])) {
+                continue;
+            }
+
+            $entries[] = [
+                'label' => $label,
+                'pct' => (int) ($kpi[$key]['pct'] ?? 0),
+            ];
+        }
+
+        if (empty($entries)) {
+            return ['strengths' => [], 'watchouts' => []];
+        }
+
+        usort($entries, function ($a, $b) {
+            return $b['pct'] <=> $a['pct'];
+        });
+
+        $strengths = array_slice($entries, 0, 2);
+        $watchouts = array_slice(array_reverse($entries), 0, 1);
+
+        return [
+            'strengths' => array_map(function ($item) {
+                return $item['label'] . ' ' . $item['pct'] . '%';
+            }, $strengths),
+            'watchouts' => array_map(function ($item) {
+                return $item['label'] . ' ' . $item['pct'] . '%';
+            }, $watchouts),
+        ];
+    }
+
+    private function buildCategoryNarrative(string $category): string
+    {
+        switch ($category) {
+            case 'A':
+                return 'Kinerja mitra sangat kuat dan siap menerima dorongan distribusi lebih tinggi.';
+            case 'B':
+                return 'Kinerja mitra stabil. Ada ruang perbaikan pada KPI yang masih moderat.';
+            case 'C':
+                return 'Beberapa KPI melemah. Perlu evaluasi dan penyesuaian distribusi.';
+            case 'D':
+                return 'Kinerja mitra berisiko dan butuh tindakan perbaikan segera.';
+            default:
+                return 'Rekomendasi disusun berdasarkan kombinasi KPI dan pola transaksi.';
+        }
+    }
+
+    private function getCategoryLabel(string $category): string
+    {
+        switch ($category) {
+            case 'A':
+                return 'Sangat Baik';
+            case 'B':
+                return 'Baik';
+            case 'C':
+                return 'Perhatian';
+            case 'D':
+                return 'Berisiko';
+            default:
+                return 'Tidak diketahui';
+        }
+    }
+
+    private function percentageShare(float $first, float $second): int
+    {
+        $total = $first + $second;
+        if ($total <= 0) {
+            return 50;
+        }
+
+        return (int) round(($first / $total) * 100);
+    }
+
+    private function percentageSplit(float $first, float $second): array
+    {
+        $total = $first + $second;
+        if ($total <= 0) {
+            return [50, 50];
+        }
+
+        $firstShare = (int) round(($first / $total) * 100);
+        return [$firstShare, 100 - $firstShare];
     }
 
     private function generateAlertMessage($alertType, $partner, $performanceData, $customMessage = '')
@@ -1408,7 +1632,7 @@ class PartnerPerformanceController extends Controller
     private function generateExecutiveSummary($partners)
     {
         $topPerformers = $partners->where('grade', 'A+')->count() + $partners->where('grade', 'A')->count();
-        $underperformers = $partners->where('grade', 'C')->count();
+        $underperformers = $partners->whereIn('category', ['C', 'D'])->count();
         
         return [
             'key_metrics' => [
@@ -1457,7 +1681,7 @@ class PartnerPerformanceController extends Controller
                 'total_partners' => $partners->count(),
                 'avg_performance' => round($partners->avg('performance_score'), 1),
                 'top_grade_count' => $partners->whereIn('grade', ['A+', 'A'])->count(),
-                'needs_attention' => $partners->where('grade', 'C')->count()
+                'needs_attention' => $partners->whereIn('category', ['C', 'D'])->count()
             ],
             'trends' => [
                 'improving' => $partners->filter(function($p) { return $p['trend']['trend'] === 'improving'; })->count(),

@@ -130,6 +130,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
                 ->name('api.statistics');
             Route::get('/api/search', [PartnerPerformanceController::class, 'searchPartners'])
                 ->name('api.search');
+            Route::get('/api/recommendations', [PartnerPerformanceController::class, 'getRecommendationDetails'])
+                ->name('api.recommendations');
 
             // Partner Actions
             Route::get('/history/{partnerId}', [PartnerPerformanceController::class, 'getPartnerHistory'])

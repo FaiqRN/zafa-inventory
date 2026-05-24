@@ -329,10 +329,12 @@ class ItemCollaborativeFilteringService
 		foreach ($rawRows as $tokoId => $row) {
 			$avgSalesNorm = (float) ($normalizedAvgSales[$tokoId] ?? 0.0);
 
-			$rawScore = $avgSalesNorm
-				* (float) ($row['diversity_factor'] ?? 0)
-				* (float) ($row['balance_factor'] ?? 0)
-				* (float) ($row['relation_score'] ?? 0);
+			$rawScore = (
+				(0.4 * $avgSalesNorm)
+				+ (0.2 * (float) ($row['diversity_factor'] ?? 0))
+				+ (0.2 * (float) ($row['balance_factor'] ?? 0))
+				+ (0.2 * (float) ($row['relation_score'] ?? 0))
+			);
 
 			$rawRows[$tokoId]['normalized_avg_sales'] = self::clamp($avgSalesNorm, 0, 1);
 			$rawRows[$tokoId]['raw_score'] = self::clamp($rawScore, 0, 1);
