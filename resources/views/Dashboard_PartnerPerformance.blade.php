@@ -1,3 +1,4 @@
+    {{-- ═══ test new 6 ═══ --}}
 @extends('layouts.template')
 
 @section('title', 'dashboard')
