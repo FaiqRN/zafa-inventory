@@ -10,7 +10,7 @@ const API_DATA_URL = DASHBOARD_PP_CONFIG.apiDataUrl || '/analytics/partner-perfo
 const API_TRENDS_URL = DASHBOARD_PP_CONFIG.apiTrendsUrl || '/analytics/partner-performance/api/trends';
 const REPORT_INDEX_URL = DASHBOARD_PP_CONFIG.reportIndexUrl || '/analytics/partner-performance';
 const TREND_HISTORY_MONTHS = 12;
-const TREND_FORECAST_MONTHS = 2;
+const DEFAULT_FORECAST_MONTHS = 2;
 const AUTO_SYNC_MS = 30000;
 
 let MITRA = [];
@@ -32,6 +32,12 @@ const BG = { A:'#E7F4ED', B:'#E7F1F6', C:'#F9F1E4', D:'#FBEDE8' };
 
 let BULAN_LABEL = [];
 let TREN_KAT = { all: [], A: [], B: [], C: [], D: [] };
+let ACTUAL_LABELS = [];
+let FORECAST_LABELS = [];
+let forecastMonths = Number(DASHBOARD_PP_CONFIG.forecastMonths || 0);
+if (!Number.isFinite(forecastMonths) || forecastMonths <= 0) {
+    forecastMonths = DEFAULT_FORECAST_MONTHS;
+}
 
 let activeKat = 'all';
 let showMA    = true;
@@ -208,14 +214,81 @@ function buildAverageKpi(rows){
     return result;
 }
 
+function buildRangeText(labels){
+    if (!Array.isArray(labels) || !labels.length) {
+        return '';
+    }
+
+    const first = labels[0];
+    const last = labels[labels.length - 1];
+    return first === last ? first : `${first}–${last}`;
+}
+
+function syncForecastLabelsFromChart(labels, lastActualIdx){
+    if (!Array.isArray(labels) || !labels.length) {
+        ACTUAL_LABELS = [];
+        FORECAST_LABELS = [];
+        return;
+    }
+
+    if (lastActualIdx >= 0 && lastActualIdx + 1 < labels.length) {
+        ACTUAL_LABELS = labels.slice(0, lastActualIdx + 1);
+        FORECAST_LABELS = labels.slice(lastActualIdx + 1);
+        return;
+    }
+
+    if (lastActualIdx >= 0) {
+        ACTUAL_LABELS = labels.slice(0, lastActualIdx + 1);
+        FORECAST_LABELS = [];
+        return;
+    }
+
+    ACTUAL_LABELS = [];
+    FORECAST_LABELS = labels.slice();
+}
+
+function updateForecastUi(){
+    const actualRange = buildRangeText(ACTUAL_LABELS);
+    const forecastRange = buildRangeText(FORECAST_LABELS);
+    const horizonCount = FORECAST_LABELS.length || forecastMonths || 0;
+    const horizonText = horizonCount ? `(${horizonCount} bln)` : '';
+
+    $('#forecastHorizonLabel').text(horizonText);
+
+    const legendText = forecastRange
+        ? `Prediksi (${forecastRange})`
+        : (horizonCount ? `Prediksi (${horizonCount} bln)` : 'Prediksi (Forecasting)');
+    $('#legendFC span').text(legendText);
+
+    const actualPart = actualRange ? ` (${actualRange})` : '';
+    const forecastPart = forecastRange
+        ? `Titik data ${forecastRange} merupakan prediksi berbasis tren historis.`
+        : 'Titik data forecast merupakan prediksi berbasis tren historis.';
+    $('#lineHintText').text(`Skor aktual diambil dari rata-rata hybrid score semua mitra per bulan${actualPart}. ${forecastPart}`);
+}
+
 function applyTrendData(trendResponse){
     const series = trendResponse && trendResponse.series ? trendResponse.series : {};
     const labels = Array.isArray(series.labels) ? series.labels : [];
-    const futureLabels = Array.isArray(series.future_labels)
-        ? series.future_labels
-        : new Array(TREND_FORECAST_MONTHS).fill('').map((_, i) => `F+${i + 1}`);
+    const metaForecastMonths = Number(trendResponse && trendResponse.meta ? trendResponse.meta.forecast_months : 0);
+    const fallbackCount = (Number.isFinite(metaForecastMonths) && metaForecastMonths > 0)
+        ? metaForecastMonths
+        : (forecastMonths > 0 ? forecastMonths : DEFAULT_FORECAST_MONTHS);
+
+    let futureLabels = Array.isArray(series.future_labels) ? series.future_labels : [];
+    if (!futureLabels.length) {
+        futureLabels = new Array(fallbackCount).fill('').map((_, i) => `F+${i + 1}`);
+    }
+
+    if (futureLabels.length) {
+        forecastMonths = futureLabels.length;
+    } else if (fallbackCount > 0) {
+        forecastMonths = fallbackCount;
+    }
 
     BULAN_LABEL = labels.length ? [...labels, ...futureLabels] : [...futureLabels];
+    ACTUAL_LABELS = labels.slice();
+    FORECAST_LABELS = futureLabels.slice();
 
     ['all', 'A', 'B', 'C', 'D'].forEach((key) => {
         const base = Array.isArray(series[key]) ? series[key].map((value) => value === null ? null : toNumber(value, 0)) : [];
@@ -225,9 +298,20 @@ function applyTrendData(trendResponse){
     });
 
     if (!BULAN_LABEL.length) {
-        BULAN_LABEL = ['F+1', 'F+2'];
-        TREN_KAT = { all: [null, null], A: [null, null], B: [null, null], C: [null, null], D: [null, null] };
+        const emptyCount = forecastMonths > 0 ? forecastMonths : DEFAULT_FORECAST_MONTHS;
+        BULAN_LABEL = new Array(emptyCount).fill('').map((_, i) => `F+${i + 1}`);
+        TREN_KAT = {
+            all: new Array(emptyCount).fill(null),
+            A: new Array(emptyCount).fill(null),
+            B: new Array(emptyCount).fill(null),
+            C: new Array(emptyCount).fill(null),
+            D: new Array(emptyCount).fill(null)
+        };
+        ACTUAL_LABELS = [];
+        FORECAST_LABELS = BULAN_LABEL.slice();
     }
+
+    updateForecastUi();
 }
 
 function loadDashboardData(){
@@ -250,7 +334,7 @@ function loadDashboardData(){
         url: API_TRENDS_URL,
         method: 'GET',
         cache: false,
-        data: { months: TREND_HISTORY_MONTHS, forecast_months: TREND_FORECAST_MONTHS, _ts: ts },
+        data: { months: TREND_HISTORY_MONTHS, forecast_months: forecastMonths, _ts: ts },
     });
 
     const dataDeferred = $.Deferred();
@@ -542,6 +626,9 @@ function renderLine(){
         $('#aboxForecast').text('-');
         $('#trendBadge').css({background:'#F4F2EE',color:'#6B6B66'}).find('#trendText').text('-');
         $('#trendBadge').find('i').attr('class','fas fa-hourglass-half');
+        $('#forecastHorizonLabel').text('');
+        $('#legendFC span').text('Prediksi (Forecasting)');
+        $('#lineHintText').text('');
         return;
     }
 
@@ -601,16 +688,8 @@ function renderLine(){
     const katLabel = {all:'Semua Mitra', A:'Kategori A', B:'Kategori B', C:'Kategori C', D:'Kategori D'};
     $('#lineSubTitle').text(`Rata-rata skor hybrid ${katLabel[activeKat]} · MA-3 · Least Square · Forecasting`);
 
-    if (lastActualIdx >= 0 && (lastActualIdx + 1) < labels.length) {
-        const firstForecastLabel = labels[lastActualIdx + 1];
-        const lastForecastLabel = labels[labels.length - 1];
-        const forecastRange = firstForecastLabel === lastForecastLabel
-            ? firstForecastLabel
-            : `${firstForecastLabel}–${lastForecastLabel}`;
-        $('#legendFC span').text(`Prediksi (${forecastRange})`);
-    } else {
-        $('#legendFC span').text('Prediksi (Forecasting)');
-    }
+    syncForecastLabelsFromChart(labels, lastActualIdx);
+    updateForecastUi();
 
     // Bangun datasets
     const datasets = [

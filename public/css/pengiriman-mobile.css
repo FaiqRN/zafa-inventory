@@ -45,18 +45,31 @@
     .pengiriman-page .pengiriman-table-wrap {
         margin: 0 !important;
         padding: 0 !important;
+        overflow-x: visible !important;
+    }
+
+    .pengiriman-page .dataTables_wrapper {
+        overflow-x: visible !important;
+    }
+
+    .pengiriman-page .dataTables_scrollBody {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
     }
 
-    .pengiriman-page .dataTables_wrapper {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-    }
 
     .pengiriman-page #table_pengiriman {
         min-width: 860px;
         table-layout: auto !important;
+        width: 100% !important;
+    }
+
+    /* Disable sticky table headers on this page to avoid header/body misalignment */
+    .pengiriman-page #table_pengiriman thead th {
+        position: static !important;
+        top: auto !important;
+        z-index: auto !important;
+        background: inherit !important;
     }
 
     .pengiriman-page #table_pengiriman th,
@@ -64,30 +77,20 @@
         white-space: nowrap !important;
         word-break: normal !important;
         overflow-wrap: normal !important;
-        vertical-align: top !important;
+        vertical-align: middle !important;
+        min-width: 90px;
+        max-width: 300px;
+        text-align: left;
     }
 
-    /* Keep first column normal; only action column stays fixed while scrolling. */
-    .pengiriman-page #table_pengiriman th:first-child,
-    .pengiriman-page #table_pengiriman td:first-child {
+    .pengiriman-page #table_pengiriman th,
+    .pengiriman-page #table_pengiriman td {
         position: static !important;
         left: auto !important;
+        right: auto !important;
         z-index: auto !important;
-    }
-
-    .pengiriman-page #table_pengiriman th:last-child,
-    .pengiriman-page #table_pengiriman td:last-child {
-        position: sticky !important;
-        right: 0 !important;
-        z-index: 3 !important;
-        min-width: 140px;
-        background: #ffffff !important;
-        box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.35);
-    }
-
-    .pengiriman-page #table_pengiriman thead th:last-child {
-        z-index: 4 !important;
-        background: #f8f9fa !important;
+        background: inherit !important;
+        box-shadow: none !important;
     }
 
     .pengiriman-page #table_pengiriman td:last-child .d-flex {

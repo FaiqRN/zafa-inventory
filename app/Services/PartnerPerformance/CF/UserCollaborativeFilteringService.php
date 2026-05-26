@@ -56,8 +56,12 @@ class UserCollaborativeFilteringService
 			foreach ($neighbors as $neighbor) {
 				$sim = (float) ($neighbor['similarity'] ?? 0);
 				$neighborId = (string) ($neighbor['toko_id'] ?? '');
-				$scoreKpi = (float) ($kpiScoreMap[$neighborId] ?? 0);
 
+				if (!array_key_exists($neighborId, $kpiScoreMap)) {
+					continue;
+				}
+
+				$scoreKpi = (float) $kpiScoreMap[$neighborId];
 				$numerator += $sim * $scoreKpi;
 				$denominator += $sim;
 			}

@@ -18,8 +18,7 @@
 
     .retur-page .retur-table-wrap,
     .retur-page .dataTables_wrapper {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
+        overflow-x: visible !important;
     }
 
     .retur-page .retur-table-wrap {
@@ -27,9 +26,24 @@
         padding: 0 !important;
     }
 
+    .retur-page .dataTables_scrollBody {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+
     .retur-page #table_retur {
         min-width: 760px;
         table-layout: auto !important;
+        width: 100% !important;
+    }
+
+    /* Disable sticky table headers on this page to avoid header/body misalignment */
+    .retur-page #table_retur thead th {
+        position: static !important;
+        top: auto !important;
+        z-index: auto !important;
+        background: inherit !important;
     }
 
     .retur-page #table_retur th,
@@ -37,10 +51,23 @@
         white-space: nowrap !important;
         word-break: normal !important;
         overflow-wrap: normal !important;
-        vertical-align: top !important;
+        vertical-align: middle !important;
+        min-width: 90px;
+        max-width: 300px;
+        text-align: left;
     }
 
-    /* Keep first column normal; only action column stays fixed while scrolling. */
+    .retur-page #table_retur th,
+    .retur-page #table_retur td {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        z-index: auto !important;
+        background: inherit !important;
+        box-shadow: none !important;
+    }
+
+    /* Keep columns normal; avoid sticky overlay on mobile. */
     .retur-page #table_retur th:first-child,
     .retur-page #table_retur td:first-child {
         position: static !important;
@@ -50,17 +77,12 @@
 
     .retur-page #table_retur th:last-child,
     .retur-page #table_retur td:last-child {
-        position: sticky !important;
-        right: 0 !important;
-        z-index: 3 !important;
+        position: static !important;
+        right: auto !important;
+        z-index: auto !important;
         min-width: 110px;
-        background: #ffffff !important;
-        box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.35);
-    }
-
-    .retur-page #table_retur thead th:last-child {
-        z-index: 4 !important;
-        background: #f8f9fa !important;
+        background: inherit !important;
+        box-shadow: none !important;
     }
 
     .retur-page #table_retur td:last-child .d-flex {

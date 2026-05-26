@@ -184,6 +184,10 @@ $(document).ready(function() {
         }
     };
 
+    dataTable.on('draw', function() {
+        recalculateTableLayout();
+    });
+
     $(window)
         .off('resize.retur orientationchange.retur')
         .on('resize.retur orientationchange.retur', function() {

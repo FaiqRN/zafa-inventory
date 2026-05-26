@@ -245,3 +245,23 @@
         max-height: 350px;
     }
 }
+
+@media (max-width: 767.98px) {
+    .table-wrapper {
+        margin: 0;
+        padding: 0;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table-wrapper .table th:first-child,
+    .table-wrapper .table td:first-child,
+    .table-wrapper .table th:last-child,
+    .table-wrapper .table td:last-child {
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+        z-index: auto !important;
+        background: inherit !important;
+        box-shadow: none !important;
+    }
+}

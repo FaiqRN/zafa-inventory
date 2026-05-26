@@ -150,6 +150,22 @@ html {
     background-color: white !important;
     z-index: 10 !important;
   }
+
+  /* Pengiriman & Retur need pure horizontal scroll on mobile. */
+  .pengiriman-page .table td:first-child,
+  .pengiriman-page .table th:first-child,
+  .pengiriman-page .table td:last-child,
+  .pengiriman-page .table th:last-child,
+  .retur-page .table td:first-child,
+  .retur-page .table th:first-child,
+  .retur-page .table td:last-child,
+  .retur-page .table th:last-child {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    background-color: inherit !important;
+    z-index: auto !important;
+  }
   
   /* Action buttons in tables */
   .table .btn-group {

@@ -13,6 +13,7 @@ const serverMeta = (PARTNER_PERFORMANCE_CONFIG.serverMeta && typeof PARTNER_PERF
     ? PARTNER_PERFORMANCE_CONFIG.serverMeta
     : {};
 const API_DATA_URL = PARTNER_PERFORMANCE_CONFIG.apiDataUrl || '/analytics/partner-performance/api/data';
+const API_REK_URL = PARTNER_PERFORMANCE_CONFIG.apiRecommendationUrl || '/analytics/partner-performance/api/recommendations';
 const AUTO_SYNC_MS = Number(PARTNER_PERFORMANCE_CONFIG.autoSyncMs || 30000);
 let DATA = Array.isArray(serverData) ? serverData : [];
 let TOTAL_ACTIVE_MITRA = Number(serverMeta.total_active_partners || 0);
@@ -62,6 +63,10 @@ let latestSnapshotHash = String(serverMeta.snapshot_hash || '');
 let latestSnapshotTimestamp = parseSnapshotTimestamp(
     serverMeta.snapshot_generated_at || serverMeta.generated_at || ''
 );
+let rekVisibleIdsByCategory = {};
+let rekCache = {};
+let activeRekCategory = '';
+let activeRekPartnerId = '';
 
 function parseSnapshotTimestamp(value){
     if(!value){
@@ -118,6 +123,9 @@ function applyBackendPayload(res, options = {}){
     DATA = res.frontend_data;
 
     const snapshotMeta = extractSnapshotMeta(res);
+    if(snapshotMeta.hash && snapshotMeta.hash !== latestSnapshotHash){
+        rekCache = {};
+    }
     if(snapshotMeta.hash){
         latestSnapshotHash = snapshotMeta.hash;
     }
@@ -177,9 +185,15 @@ function refreshWilayahFilterOptions(){
    RENDER TABEL RANKING — kolom baru tanpa insight/rekomendasi
 ══════════════════════════════════════════════════════════ */
 function renderTable(data){
-    const sorted = [...data].sort((a,b)=>
-        sortOrd==='desc' ? b[sortCol]-a[sortCol] : a[sortCol]-b[sortCol]
-    );
+    const sorted = [...data].sort((a, b) => {
+        if (sortCol === 'hybrid' && sortOrd === 'desc') {
+            return (Number(a.rank) || 0) - (Number(b.rank) || 0);
+        }
+
+        return sortOrd === 'desc'
+            ? b[sortCol] - a[sortCol]
+            : a[sortCol] - b[sortCol];
+    });
     const totalRows = sorted.length;
     const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
     if(currentPage > totalPages) currentPage = totalPages;
@@ -275,6 +289,10 @@ function renderRek(data){
     if(!hasScoringData()){
         $('#rekMeta').html('');
         $('#rekCards').html('');
+        rekVisibleIdsByCategory = {};
+        activeRekCategory = '';
+        activeRekPartnerId = '';
+        hideRekDetailPanel();
         return;
     }
 
@@ -285,8 +303,9 @@ function renderRek(data){
         {k:'D',icon:'fas fa-hand-paper',  head:'Berisiko',    aksi:'Tahan pengiriman dan lakukan review mitra', desc:'Prioritas mitigasi untuk menghindari kerugian stok.'},
     ];
     const total = data.length;
+    rekVisibleIdsByCategory = {};
     const updatedAt = new Date().toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-    $('#rekMeta').html(`<span class="rek-live-dot"></span> Berbasis kategori mitra aktif · ${total} mitra · update ${updatedAt}`);
+    $('#rekMeta').html(`<span class="rek-live-dot"></span> Berbasis kategori mitra aktif · ${total} mitra · update ${updatedAt} · klik kartu untuk detail`);
 
     $('#rekCards').html(cfg.map(c=>{
         const rows = data.filter(d=>d.kat===c.k);
@@ -295,8 +314,11 @@ function renderRek(data){
         const avgHybrid = rows.length
             ? Math.round((rows.reduce((sum,row)=>sum+row.hybrid,0)/rows.length)*100)
             : 0;
+        rekVisibleIdsByCategory[c.k] = rows.map(row => String(row && row.id ? row.id : '')).filter(Boolean);
+        const isActive = activeRekCategory === c.k ? ' active' : '';
+        const pressed = activeRekCategory === c.k ? 'true' : 'false';
         return `<div class="col-xl-3 col-md-6 col-12 mb-2">
-            <div class="rcard rcard-${c.k.toLowerCase()}">
+            <div class="rcard rcard-${c.k.toLowerCase()} rek-card${isActive}" data-kat="${c.k}" role="button" tabindex="0" aria-pressed="${pressed}">
                 <div class="rcard-top">
                     <div>
                         <div class="rcard-kat" style="color:${KAT_COL[c.k]};">
@@ -326,7 +348,258 @@ function renderRek(data){
             </div>
         </div>`;
     }).join(''));
+
+    if(activeRekCategory && rekCache[activeRekCategory]){
+        renderRekDetailPanel(rekCache[activeRekCategory], { preservePartner: true });
+    }
 }
+
+function setActiveRekCard(category){
+    $('.rek-card').removeClass('active').attr('aria-pressed', 'false');
+    if(!category){
+        return;
+    }
+
+    $(`.rek-card[data-kat="${category}"]`).addClass('active').attr('aria-pressed', 'true');
+}
+
+function hideRekDetailPanel(){
+    $('#rekDetailPanel').hide();
+}
+
+function showRekDetailLoading(category){
+    const label = (KAT_META[category] && KAT_META[category].short) ? KAT_META[category].short : category;
+    $('#rekDetailTitle').text(`Detail mitra kategori ${category} - ${label}`);
+    $('#rekDetailSub').text('Memuat data mitra...');
+    $('#rekDetailList').html('<div class="rek-empty">Memuat daftar mitra...</div>');
+    $('#rekDetailReason').html('<div class="rek-empty">Pilih mitra untuk melihat alasan rekomendasi.</div>');
+    $('#rekDetailPanel').show();
+}
+
+function renderRekDetailPanel(payload, options = {}){
+    const category = String(payload && payload.category ? payload.category : '').toUpperCase();
+    const label = payload && payload.category_label
+        ? payload.category_label
+        : ((KAT_META[category] && KAT_META[category].short) ? KAT_META[category].short : category);
+    let partners = Array.isArray(payload && payload.partners) ? payload.partners : [];
+
+    const visibleIds = new Set(rekVisibleIdsByCategory[category] || []);
+    if(visibleIds.size){
+        partners = partners.filter(p => visibleIds.has(String(p && p.id ? p.id : '')));
+    }
+
+    $('#rekDetailTitle').text(`Detail mitra kategori ${category} - ${label}`);
+    $('#rekDetailSub').text(`${partners.length} mitra - klik mitra untuk lihat alasan rekomendasi`);
+    $('#rekDetailPanel').show();
+
+    if(!partners.length){
+        $('#rekDetailList').html('<div class="rek-empty">Belum ada mitra pada kategori ini.</div>');
+        $('#rekDetailReason').html('<div class="rek-empty">Tidak ada alasan rekomendasi yang bisa ditampilkan.</div>');
+        return;
+    }
+
+    const preservePartner = !!options.preservePartner;
+    const hasSelected = preservePartner && partners.some(p => String(p.id) === String(activeRekPartnerId));
+    const selectedId = hasSelected ? String(activeRekPartnerId) : String(partners[0].id);
+    activeRekPartnerId = selectedId;
+
+    $('#rekDetailList').html(partners.map((partner, idx) => {
+        const score = partner.score || {};
+        const hybridPct = Number.isFinite(score.hybrid_pct)
+            ? score.hybrid_pct
+            : Math.round(((partner.hybrid || 0) * 100));
+        const kpi = partner.kpi || {};
+        const sales = kpi.total_sales && kpi.total_sales.raw ? kpi.total_sales.raw : '-';
+        const retur = kpi.return_rate && kpi.return_rate.raw ? kpi.return_rate.raw : '-';
+        const freq = kpi.trans_freq && kpi.trans_freq.raw ? kpi.trans_freq.raw : '-';
+        const isActive = String(partner.id) === selectedId ? ' active' : '';
+
+        return `
+        <div class="rek-item${isActive}" data-id="${partner.id}">
+            <div class="rek-item-top">
+                <div>
+                    <div class="rek-item-title">#${idx + 1} ${partner.nama || '-'}</div>
+                    <div class="rek-item-meta">${partner.wil || '-'}</div>
+                </div>
+                <div class="rek-item-score">${hybridPct}%<span>hybrid</span></div>
+            </div>
+            <div class="rek-item-tags">
+                <span class="rek-chip">Sales ${sales}</span>
+                <span class="rek-chip">Retur ${retur}</span>
+                <span class="rek-chip">Freq ${freq}</span>
+            </div>
+        </div>`;
+    }).join(''));
+
+    const selectedPartner = partners.find(p => String(p.id) === selectedId) || partners[0];
+    renderRekReason(selectedPartner);
+}
+
+function renderRekReason(partner){
+    if(!partner){
+        $('#rekDetailReason').html('<div class="rek-empty">Pilih mitra untuk melihat alasan rekomendasi.</div>');
+        return;
+    }
+
+    const reason = partner.reason || {};
+    const details = Array.isArray(reason.details) ? reason.details : [];
+    const score = partner.score || {};
+
+    const hybridPct = Number.isFinite(score.hybrid_pct)
+        ? score.hybrid_pct
+        : Math.round(((partner.hybrid || 0) * 100));
+    const cbfPct = Number.isFinite(score.cbf_pct)
+        ? score.cbf_pct
+        : Math.round(((partner.cbf || 0) * 100));
+    const cfPct = Number.isFinite(score.cf_pct)
+        ? score.cf_pct
+        : Math.round(((partner.cf || 0) * 100));
+    const userPct = Number.isFinite(score.cf_user_pct)
+        ? score.cf_user_pct
+        : Math.round(((partner.user || 0) * 100));
+    const itemPct = Number.isFinite(score.cf_item_pct)
+        ? score.cf_item_pct
+        : Math.round(((partner.item || 0) * 100));
+
+    const summary = reason.summary || 'Alasan rekomendasi belum tersedia.';
+    const detailHtml = details.length
+        ? `<ul class="rek-reason-list">${details.map(text => `<li>${text}</li>`).join('')}</ul>`
+        : '';
+
+    const shareCbf = Number.isFinite(Number(reason.cbf_share)) ? Number(reason.cbf_share) : null;
+    const shareCf = Number.isFinite(Number(reason.cf_share)) ? Number(reason.cf_share) : null;
+    const shareUser = Number.isFinite(Number(reason.cf_user_share)) ? Number(reason.cf_user_share) : null;
+    const shareItem = Number.isFinite(Number(reason.cf_item_share)) ? Number(reason.cf_item_share) : null;
+
+    const shareHtml = (shareCbf !== null && shareCf !== null)
+        ? `
+            <div class="rek-reason-chips">
+                <span class="rek-chip">Kontribusi CBF ${shareCbf}%</span>
+                <span class="rek-chip">Kontribusi CF ${shareCf}%</span>
+                <span class="rek-chip">CF User ${shareUser}%</span>
+                <span class="rek-chip">CF Item ${shareItem}%</span>
+            </div>`
+        : '';
+
+    $('#rekDetailReason').html(`
+        <div class="rek-reason-title">Alasan rekomendasi - ${partner.nama || '-'}</div>
+        <div class="rek-reason-summary">${summary}</div>
+        ${detailHtml}
+        <div class="rek-reason-metrics">
+            <div class="rek-metric">
+                <div class="rek-metric-label">Hybrid</div>
+                <div class="rek-metric-val">${hybridPct}%</div>
+            </div>
+            <div class="rek-metric">
+                <div class="rek-metric-label">CBF</div>
+                <div class="rek-metric-val">${cbfPct}%</div>
+            </div>
+            <div class="rek-metric">
+                <div class="rek-metric-label">CF</div>
+                <div class="rek-metric-val">${cfPct}%</div>
+            </div>
+            <div class="rek-metric">
+                <div class="rek-metric-label">CF User</div>
+                <div class="rek-metric-val">${userPct}%</div>
+            </div>
+            <div class="rek-metric">
+                <div class="rek-metric-label">CF Item</div>
+                <div class="rek-metric-val">${itemPct}%</div>
+            </div>
+        </div>
+        ${shareHtml}
+    `);
+}
+
+function openRekDetail(category){
+    if(!category){
+        return;
+    }
+
+    activeRekCategory = category;
+    setActiveRekCard(category);
+
+    if(rekCache[category]){
+        renderRekDetailPanel(rekCache[category]);
+        return;
+    }
+
+    showRekDetailLoading(category);
+    const requestedCategory = category;
+
+    $.ajax({
+        url: API_REK_URL,
+        method: 'GET',
+        cache: false,
+        data: { category: requestedCategory, months: 6, _ts: Date.now() },
+        success: function(res){
+            if(activeRekCategory !== requestedCategory){
+                return;
+            }
+
+            if(res && res.success){
+                rekCache[requestedCategory] = res;
+                renderRekDetailPanel(res);
+                return;
+            }
+
+            const message = res && res.message
+                ? res.message
+                : 'Data rekomendasi belum tersedia.';
+            $('#rekDetailList').html(`<div class="rek-empty">${message}</div>`);
+        },
+        error: function(xhr){
+            if(activeRekCategory !== requestedCategory){
+                return;
+            }
+
+            const message = (xhr.responseJSON && xhr.responseJSON.message)
+                ? xhr.responseJSON.message
+                : 'Gagal memuat detail rekomendasi.';
+            $('#rekDetailList').html(`<div class="rek-empty">${message}</div>`);
+        }
+    });
+}
+
+$(document).on('click', '.rek-card', function(){
+    const category = String($(this).data('kat') || '').toUpperCase();
+    openRekDetail(category);
+});
+
+$(document).on('keydown', '.rek-card', function(e){
+    if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        const category = String($(this).data('kat') || '').toUpperCase();
+        openRekDetail(category);
+    }
+});
+
+$(document).on('click', '.rek-item', function(){
+    const selectedId = String($(this).data('id') || '');
+    if(!selectedId || !activeRekCategory || !rekCache[activeRekCategory]){
+        return;
+    }
+
+    const partners = Array.isArray(rekCache[activeRekCategory].partners)
+        ? rekCache[activeRekCategory].partners
+        : [];
+    const partner = partners.find(p => String(p && p.id ? p.id : '') === selectedId);
+    if(!partner){
+        return;
+    }
+
+    activeRekPartnerId = selectedId;
+    $('.rek-item').removeClass('active');
+    $(this).addClass('active');
+    renderRekReason(partner);
+});
+
+$(document).on('click', '#rekDetailClose', function(){
+    activeRekCategory = '';
+    activeRekPartnerId = '';
+    setActiveRekCard('');
+    hideRekDetailPanel();
+});
 
 /* ══════════════════════════════════════════════════════════
    MODAL DETAIL — klik tombol Detail
@@ -511,40 +784,6 @@ $(document).on('click','.btn-detail',function(){
             });
         }
     },250);
-
-    /* ── Smart Info: kemiripan toko (CF) ── */
-    const simData = d.similar || [];
-    if(!simData.length){
-        $('#smartInfoBody').html('<div class="p-4 text-center text-muted" style="font-size:12px;">Tidak ada data kemiripan tersedia.</div>');
-    } else {
-        $('#smartInfoBody').html(simData.map(s=>{
-            const sCol = KAT_COL[s.kat];
-            const sBg  = KAT_BG[s.kat];
-            const prodHtml = s.produk.map(p=>`
-                <div class="prod-row">
-                    <div class="prod-icon"><i class="fas fa-box"></i></div>
-                    <div class="prod-name">${p.nama}</div>
-                    <div class="prod-stat">${p.stat}</div>
-                </div>`).join('');
-            return `
-            <div class="sim-card">
-                <div class="sim-header">
-                    <div>
-                        <div class="sim-toko">
-                            <i class="fas fa-store mr-1" style="color:${sCol};font-size:12px;"></i>
-                            Mirip dengan: <strong>${s.nama}</strong>
-                        </div>
-                        <div style="font-size:11px;color:#888780;margin-top:2px;">${s.reason}</div>
-                    </div>
-                    <div class="sim-badge">${s.pct}% mirip</div>
-                </div>
-                <div style="font-size:11px;font-weight:600;color:#888780;margin-bottom:6px;">
-                    <i class="fas fa-tag mr-1"></i> Pola Produk Serupa:
-                </div>
-                ${prodHtml}
-            </div>`;
-        }).join(''));
-    }
 
     $('#modalDetail').modal('show');
 });

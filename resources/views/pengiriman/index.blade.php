@@ -306,6 +306,10 @@ $(document).ready(function() {
         }
     };
 
+    dataTable.on('draw', function() {
+        recalculateTableLayout();
+    });
+
     $(window)
         .off('resize.pengiriman orientationchange.pengiriman')
         .on('resize.pengiriman orientationchange.pengiriman', function() {
