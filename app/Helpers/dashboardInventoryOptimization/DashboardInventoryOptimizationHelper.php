@@ -184,8 +184,8 @@ class DashboardInventoryOptimizationHelper
     {
         $parts = array_filter([
             $toko->{Toko::FIELD_ALAMAT},
-            $toko->{Toko::FIELD_WILAYAH_KECAMATAN},
-            $toko->{Toko::FIELD_WILAYAH_KOTA_KABUPATEN},
+
+            
         ]);
 
         return !empty($parts) ? implode(', ', $parts) : '-';
