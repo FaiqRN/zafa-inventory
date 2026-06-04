@@ -21,13 +21,6 @@ pre.json-block {
 .gap-2 { gap: .5rem; }
 
 /* ── Laravel Log Panel ──────────────────────────────────────── */
-.card-laravel-log .card-header {
-    background: linear-gradient(90deg, #e8f4fd 0%, #f0f9ff 100%);
-    border-bottom: 1px solid #bee3f8;
-}
-.card-laravel-log .card-body {
-    background: #f8fdff;
-}
 .log-info-chip {
     display: inline-flex;
     align-items: center;
@@ -52,20 +45,11 @@ pre.json-block {
 
 /* ── SQL Import Panel ──────────────────────────────────────── */
 .card-sql-import {
-    border: 1px solid #c3dafe;
-    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.08);
 }
 .card-header-sql-import {
-    background: linear-gradient(135deg, #e8eaf6 0%, #e3f2fd 50%, #f3e5f5 100%);
-    border-bottom: 1px solid #c5cae9;
     cursor: pointer;
     user-select: none;
-    transition: background .2s;
-}
-.card-header-sql-import:hover {
-    background: linear-gradient(135deg, #dde0f2 0%, #d6ecfb 50%, #eddbf1 100%);
 }
 .sql-import-chevron {
     transition: transform .3s ease;
@@ -88,27 +72,27 @@ pre.json-block {
 
 /* SQL Textarea */
 .sql-import-textarea {
-    font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+    font-family: 'Consolas', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
     font-size: .82rem;
     line-height: 1.6;
-    background: #1e1e2e;
-    color: #cdd6f4;
-    border: 1px solid #45475a;
-    border-radius: 8px;
-    padding: 14px 16px;
+    background: #ffffff;
+    color: #495057;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 12px 14px;
     resize: vertical;
     min-height: 180px;
     transition: border-color .2s, box-shadow .2s;
 }
 .sql-import-textarea:focus {
-    border-color: #89b4fa;
-    box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.2);
-    background: #181825;
-    color: #cdd6f4;
+    border-color: var(--zafa-yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+    background: #ffffff;
+    color: #495057;
     outline: none;
 }
 .sql-import-textarea::placeholder {
-    color: #6c7086;
+    color: #9ca3af;
     font-style: italic;
 }
 

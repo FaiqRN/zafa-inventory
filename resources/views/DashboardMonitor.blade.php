@@ -7,7 +7,6 @@
 @endpush
 
 @section('content')
-<section class="content">
     <div class="container-fluid">
 
         {{-- ===== TODAY BADGE ===== --}}
@@ -252,7 +251,6 @@
         </div>
 
     </div>
-</section>
 
 {{-- ===== MODAL DETAIL ===== --}}
 <div class="modal fade" id="modal-detail" tabindex="-1" role="dialog" aria-labelledby="modal-detail-title" aria-hidden="true">
