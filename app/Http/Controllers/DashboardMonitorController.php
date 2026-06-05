@@ -208,13 +208,14 @@ class DashboardMonitorController extends Controller
         return response()->streamDownload(function () use ($logPath) {
             readfile($logPath);
         }, $fileName, [
-            'Content-Type'              => 'application/octet-stream',
-            'Content-Disposition'       => 'attachment; filename="' . $fileName . '"',
-            'Content-Transfer-Encoding' => 'binary',
-            'Cache-Control'             => 'private, no-cache, no-store, must-revalidate',
-            'Pragma'                    => 'no-cache',
-            'Expires'                   => '0',
-            'X-Accel-Buffering'         => 'no',
+            'Content-Type'                  => 'application/octet-stream',
+            'Content-Disposition'           => 'attachment; filename="' . $fileName . '"',
+            'Content-Transfer-Encoding'     => 'binary',
+            'Cache-Control'                 => 'private, no-cache, no-store, must-revalidate',
+            'Pragma'                        => 'no-cache',
+            'Expires'                       => '0',
+            'X-Accel-Buffering'             => 'no',
+            'Access-Control-Expose-Headers' => 'Content-Disposition',
         ]);
     }
 
@@ -423,13 +424,14 @@ class DashboardMonitorController extends Controller
 
                 fclose($out);
             }, $fileName, [
-                'Content-Type'              => 'application/octet-stream',
-                'Content-Disposition'       => 'attachment; filename="' . $fileName . '"',
-                'Content-Transfer-Encoding' => 'binary',
-                'Cache-Control'             => 'private, no-cache, no-store, must-revalidate',
-                'Pragma'                    => 'no-cache',
-                'Expires'                   => '0',
-                'X-Accel-Buffering'         => 'no',
+                'Content-Type'                  => 'application/octet-stream',
+                'Content-Disposition'           => 'attachment; filename="' . $fileName . '"',
+                'Content-Transfer-Encoding'     => 'binary',
+                'Cache-Control'                 => 'private, no-cache, no-store, must-revalidate',
+                'Pragma'                        => 'no-cache',
+                'Expires'                       => '0',
+                'X-Accel-Buffering'             => 'no',
+                'Access-Control-Expose-Headers' => 'Content-Disposition',
             ]);
         } catch (\Exception $e) {
             Log::error('Export SQL failed for table ' . $table . ': ' . $e->getMessage(), [
@@ -563,13 +565,14 @@ class DashboardMonitorController extends Controller
                     unlink($tempZipPath);
                 }
             }, $zipFileName, [
-                'Content-Type'              => 'application/zip',
-                'Content-Disposition'       => 'attachment; filename="' . $zipFileName . '"',
-                'Content-Transfer-Encoding' => 'binary',
-                'Cache-Control'             => 'private, no-cache, no-store, must-revalidate',
-                'Pragma'                    => 'no-cache',
-                'Expires'                   => '0',
-                'X-Accel-Buffering'         => 'no',
+                'Content-Type'                  => 'application/zip',
+                'Content-Disposition'           => 'attachment; filename="' . $zipFileName . '"',
+                'Content-Transfer-Encoding'     => 'binary',
+                'Cache-Control'                 => 'private, no-cache, no-store, must-revalidate',
+                'Pragma'                        => 'no-cache',
+                'Expires'                       => '0',
+                'X-Accel-Buffering'             => 'no',
+                'Access-Control-Expose-Headers' => 'Content-Disposition',
             ]);
         } catch (\Exception $e) {
             Log::error('Export All SQL failed: ' . $e->getMessage(), [

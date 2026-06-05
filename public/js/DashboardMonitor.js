@@ -594,6 +594,105 @@
     };
 
     /**
+     * Download file via fetch+blob agar error (redirect login, 500, dsb) bisa ditangkap.
+     * @param {string} url - URL endpoint export
+     * @param {string} defaultFilename - Nama file default jika server tidak mengirim
+     */
+    const doFetchDownload = (url, defaultFilename) => {
+        // Tampilkan loading
+        let swalLoading = null;
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Memproses Export...',
+                html: '<i class="fas fa-spinner fa-spin fa-2x text-primary"></i><br><br>Mohon tunggu...',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+            });
+            swalLoading = true;
+        }
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/octet-stream, application/zip, application/json, */*',
+            },
+            credentials: 'same-origin',
+        })
+        .then(response => {
+            const contentType = response.headers.get('Content-Type') || '';
+
+            // Cek apakah diredirect ke login (Redis timeout → session hilang → redirect)
+            if (!response.ok || response.redirected) {
+                // Coba parse sebagai JSON untuk pesan error dari server
+                if (contentType.includes('application/json')) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Server mengembalikan error.');
+                    });
+                }
+                // Jika bukan JSON dan response tidak ok (misal redirect ke login)
+                if (response.status === 401 || response.redirected) {
+                    throw new Error('Sesi telah berakhir. Silakan refresh halaman dan login kembali.');
+                }
+                throw new Error(`Server error: HTTP ${response.status}`);
+            }
+
+            // Jika response adalah JSON (error dari controller)
+            if (contentType.includes('application/json')) {
+                return response.json().then(data => {
+                    if (!data.success) {
+                        throw new Error(data.message || 'Export gagal.');
+                    }
+                    throw new Error('Response tidak terduga dari server.');
+                });
+            }
+
+            // Response adalah file — baca sebagai blob
+            return response.blob().then(blob => ({ blob, response }));
+        })
+        .then(({ blob, response }) => {
+            // Ambil nama file dari Content-Disposition header
+            const disposition = response.headers.get('Content-Disposition') || '';
+            let filename = defaultFilename;
+            const match = disposition.match(/filename[^;=\n]*=(['"])?(.*?)\1(;|$)/i);
+            if (match && match[2]) {
+                filename = match[2].trim();
+            }
+
+            // Trigger download via blob URL
+            const blobUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+            if (swalLoading && typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Export Berhasil!',
+                    text: `File "${filename}" berhasil diunduh.`,
+                    icon: 'success',
+                    timer: 2500,
+                    showConfirmButton: false,
+                });
+            }
+        })
+        .catch(err => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Export Gagal',
+                    html: `<p>${err.message || 'Terjadi kesalahan saat export.'}</p><p class="text-muted small">Pastikan koneksi stabil dan coba lagi.</p>`,
+                    icon: 'error',
+                });
+            } else {
+                alert('Export gagal: ' + (err.message || 'Terjadi kesalahan.'));
+            }
+        });
+    };
+
+    /**
      * Export SQL untuk tabel yang dipilih.
      */
     const exportSql = () => {
@@ -609,10 +708,11 @@
         }
 
         const exportUrl = `${SQL_EXPORT_URL}?table=${encodeURIComponent(table)}`;
+        const defaultFilename = `sql_export_${table}.sql`;
 
         if (typeof Swal === 'undefined') {
             if (confirm(`Export SQL untuk tabel "${table}"?`)) {
-                window.location.href = exportUrl;
+                doFetchDownload(exportUrl, defaultFilename);
             }
             return;
         }
@@ -628,7 +728,7 @@
             cancelButtonText: 'Batal',
         }).then(result => {
             if (result.isConfirmed) {
-                window.location.href = exportUrl;
+                doFetchDownload(exportUrl, defaultFilename);
             }
         });
     };
@@ -641,7 +741,7 @@
 
         if (typeof Swal === 'undefined') {
             if (confirm(`Export SQL untuk semua ${ALLOWED_TABLES.length} tabel sekaligus?`)) {
-                window.location.href = SQL_EXPORT_ALL_URL;
+                doFetchDownload(SQL_EXPORT_ALL_URL, 'sql_export_all.zip');
             }
             return;
         }
@@ -665,20 +765,7 @@
             cancelButtonText: 'Batal',
         }).then(result => {
             if (result.isConfirmed) {
-                // Show loading
-                Swal.fire({
-                    title: 'Memproses Export...',
-                    html: '<i class="fas fa-spinner fa-spin fa-2x text-primary"></i><br><br>Mohon tunggu, sedang mengekspor semua tabel...',
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                });
-
-                window.location.href = SQL_EXPORT_ALL_URL;
-
-                // Close loading setelah 3 detik (waktu estimasi download dimulai)
-                setTimeout(() => {
-                    Swal.close();
-                }, 3000);
+                doFetchDownload(SQL_EXPORT_ALL_URL, 'sql_export_all.zip');
             }
         });
     };
