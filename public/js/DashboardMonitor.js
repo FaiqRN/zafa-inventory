@@ -12,6 +12,8 @@
     const SQL_TABLES_URL  = cfg.sqlTablesUrl  || '';
     const SQL_COLUMNS_URL = cfg.sqlColumnsUrl || '';
     const SQL_EXECUTE_URL = cfg.sqlExecuteUrl || '';
+    const SQL_EXPORT_URL  = cfg.sqlExportUrl  || '';
+    const SQL_EXPORT_ALL_URL = cfg.sqlExportAllUrl || '';
     const CSRF          = cfg.csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '');
 
     let currentPage = 1;
@@ -591,6 +593,96 @@
         });
     };
 
+    /**
+     * Export SQL untuk tabel yang dipilih.
+     */
+    const exportSql = () => {
+        if (!SQL_EXPORT_URL) return;
+        const table = document.getElementById('sql-import-table-selector')?.value || '';
+        if (!table) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Pilih Tabel', 'Pilih tabel yang akan di-export terlebih dahulu.', 'info');
+            } else {
+                alert('Pilih tabel yang akan di-export terlebih dahulu.');
+            }
+            return;
+        }
+
+        const exportUrl = `${SQL_EXPORT_URL}?table=${encodeURIComponent(table)}`;
+
+        if (typeof Swal === 'undefined') {
+            if (confirm(`Export SQL untuk tabel "${table}"?`)) {
+                window.location.href = exportUrl;
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Export SQL?',
+            text: `SQL untuk tabel "${table}" akan diunduh.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Export',
+            cancelButtonText: 'Batal',
+        }).then(result => {
+            if (result.isConfirmed) {
+                window.location.href = exportUrl;
+            }
+        });
+    };
+
+    /**
+     * Export SQL untuk SEMUA tabel yang diizinkan sekaligus.
+     */
+    const exportAllSql = () => {
+        if (!SQL_EXPORT_ALL_URL) return;
+
+        if (typeof Swal === 'undefined') {
+            if (confirm(`Export SQL untuk semua ${ALLOWED_TABLES.length} tabel sekaligus?`)) {
+                window.location.href = SQL_EXPORT_ALL_URL;
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Export Semua Tabel?',
+            html: `
+                <div style="text-align:left;">
+                    <p>Anda akan mengekspor <strong>${ALLOWED_TABLES.length} tabel</strong> sekaligus:</p>
+                    <div style="max-height:200px; overflow-y:auto; background:#f8f9fa; padding:10px; border-radius:4px; font-size:0.85rem;">
+                        ${ALLOWED_TABLES.map(t => `<div>• <code>${t}</code></div>`).join('')}
+                    </div>
+                    <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle mr-1"></i>File SQL akan diunduh sebagai satu file ZIP.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-download mr-1"></i> Ya, Export Semua',
+            cancelButtonText: 'Batal',
+        }).then(result => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Memproses Export...',
+                    html: '<i class="fas fa-spinner fa-spin fa-2x text-primary"></i><br><br>Mohon tunggu, sedang mengekspor semua tabel...',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                });
+
+                window.location.href = SQL_EXPORT_ALL_URL;
+
+                // Close loading setelah 3 detik (waktu estimasi download dimulai)
+                setTimeout(() => {
+                    Swal.close();
+                }, 3000);
+            }
+        });
+    };
+
     // ── EVENT LISTENERS ─────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
         const btnFilter = document.getElementById('btn-filter');
@@ -670,10 +762,17 @@
         // Table selector → enable/disable columns button
         const tableSelector = document.getElementById('sql-import-table-selector');
         const btnShowColumns = document.getElementById('btn-show-columns');
+        const btnExport = document.getElementById('btn-sql-export');
         if (tableSelector && btnShowColumns) {
             tableSelector.addEventListener('change', () => {
                 btnShowColumns.disabled = !tableSelector.value;
             });
+        }
+
+        if (tableSelector && btnExport) {
+            const toggleExport = () => { btnExport.disabled = !tableSelector.value; };
+            tableSelector.addEventListener('change', toggleExport);
+            toggleExport();
         }
 
         // Show Columns button
@@ -707,6 +806,16 @@
         const btnExecute = document.getElementById('btn-sql-import-execute');
         if (btnExecute) {
             btnExecute.addEventListener('click', executeSqlImport);
+        }
+
+        if (btnExport) {
+            btnExport.addEventListener('click', exportSql);
+        }
+
+        // Export All button
+        const btnExportAll = document.getElementById('btn-sql-export-all');
+        if (btnExportAll) {
+            btnExportAll.addEventListener('click', exportAllSql);
         }
 
         // Clear button

@@ -164,6 +164,12 @@
                             <button class="btn btn-primary" id="btn-sql-import-execute" disabled>
                                 <i class="fas fa-play mr-1"></i> Jalankan Import
                             </button>
+                            <button class="btn btn-outline-success" id="btn-sql-export" type="button" title="Export tabel yang dipilih">
+                                <i class="fas fa-file-export mr-1"></i> Export SQL
+                            </button>
+                            <button class="btn btn-success" id="btn-sql-export-all" type="button" title="Export semua tabel sekaligus">
+                                <i class="fas fa-download mr-1"></i> Export All
+                            </button>
                             <button class="btn btn-outline-secondary" id="btn-sql-import-clear">
                                 <i class="fas fa-broom mr-1"></i> Bersihkan
                             </button>
@@ -285,6 +291,8 @@ window.DASHBOARD_MONITOR_CONFIG = {
     logTruncUrl:    @json(route('dashboard-monitor.laravel-log.truncate')),
     sqlTablesUrl:   @json(route('dashboard-monitor.sql-import.tables')),
     sqlColumnsUrl:  @json(route('dashboard-monitor.sql-import.columns')),
+    sqlExportUrl:   @json(route('dashboard-monitor.sql-import.export')),
+    sqlExportAllUrl:@json(route('dashboard-monitor.sql-import.export-all')),
     sqlExecuteUrl:  @json(route('dashboard-monitor.sql-import.execute')),
     csrfToken:      document.querySelector('meta[name="csrf-token"]').content
 };

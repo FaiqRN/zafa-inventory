@@ -113,6 +113,8 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
             // SQL Import
             Route::get('/sql-import/tables', [DashboardMonitorController::class, 'getAllowedTablesList'])->name('dashboard-monitor.sql-import.tables');
             Route::get('/sql-import/columns', [DashboardMonitorController::class, 'getTableColumns'])->name('dashboard-monitor.sql-import.columns');
+            Route::get('/sql-import/export', [DashboardMonitorController::class, 'exportSql'])->name('dashboard-monitor.sql-import.export');
+            Route::get('/sql-import/export-all', [DashboardMonitorController::class, 'exportAllSql'])->name('dashboard-monitor.sql-import.export-all');
             Route::post('/sql-import/execute', [DashboardMonitorController::class, 'executeSqlImport'])->name('dashboard-monitor.sql-import.execute');
 
             // Wildcard route - must be last
