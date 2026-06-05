@@ -331,129 +331,50 @@ class DashboardMonitorController extends Controller
             ], 422);
         }
 
-        $columns = $this->getTableColumnNames($table);
-        if (empty($columns)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kolom tabel tidak ditemukan.',
-            ], 404);
-        }
-
-        $rowCount = DB::table($table)->count();
-        $primaryKey = $this->getPrimaryKeyColumn($table);
-        $fileName = 'sql_export_' . $table . '_' . now()->format('Ymd_His') . '.sql';
-        $generatedAt = now()->format('Y-m-d H:i:s');
-
-        DashboardMonitorLogger::create(
-            'SQL Export',
-            "Export SQL tabel \"{$table}\" ({$rowCount} baris)",
-            [
-                'table'     => $table,
-                'rows'      => $rowCount,
-                'export_as' => $fileName,
-            ],
-            $request
-        );
-
-        return response()->streamDownload(function () use ($table, $columns, $primaryKey, $rowCount, $generatedAt) {
-            $pdo = DB::connection()->getPdo();
-            $out = fopen('php://output', 'w');
-
-            fwrite($out, "-- SQL Export\n");
-            fwrite($out, "-- Table: {$table}\n");
-            fwrite($out, "-- Rows: {$rowCount}\n");
-            fwrite($out, "-- Generated at: {$generatedAt}\n\n");
-
-            $orderColumn = $primaryKey ?: $columns[0];
-            $colList = implode(', ', array_map(fn($c) => "`{$c}`", $columns));
-
-            DB::table($table)
-                ->orderBy($orderColumn)
-                ->chunk(500, function ($rows) use ($out, $table, $columns, $colList, $pdo) {
-                    if ($rows->isEmpty()) {
-                        return;
-                    }
-
-                    $valueLines = [];
-                    foreach ($rows as $row) {
-                        $rowArray = (array) $row;
-                        $values = [];
-                        foreach ($columns as $col) {
-                            $values[] = $this->sqlValue($rowArray[$col] ?? null, $pdo);
-                        }
-                        $valueLines[] = '(' . implode(', ', $values) . ')';
-                    }
-
-                    fwrite(
-                        $out,
-                        "INSERT INTO `{$table}` ({$colList}) VALUES\n" . implode(",\n", $valueLines) . ";\n\n"
-                    );
-
-                    if (function_exists('flush')) {
-                        flush();
-                    }
-                });
-
-            fclose($out);
-        }, $fileName, ['Content-Type' => 'text/plain; charset=UTF-8']);
-    }
-
-    /**
-     * Export SQL INSERT untuk SEMUA tabel yang diizinkan sekaligus (dalam format ZIP).
-     */
-    public function exportAllSql(Request $request): StreamedResponse
-    {
-        $allowed = $this->getAllowedTables();
-        $zipFileName = 'sql_export_all_' . now()->format('Ymd_His') . '.zip';
-        $generatedAt = now()->format('Y-m-d H:i:s');
-
-        $totalRows = 0;
-        foreach ($allowed as $table) {
-            $totalRows += DB::table($table)->count();
-        }
-
-        DashboardMonitorLogger::create(
-            'SQL Export All',
-            "Export SQL semua tabel (" . count($allowed) . " tabel, {$totalRows} baris total)",
-            [
-                'tables'    => $allowed,
-                'total_tables' => count($allowed),
-                'total_rows' => $totalRows,
-                'export_as' => $zipFileName,
-            ],
-            $request
-        );
-
-        return response()->streamDownload(function () use ($allowed, $generatedAt) {
-            $zip = new \ZipArchive();
-            $tempZipPath = tempnam(sys_get_temp_dir(), 'sql_export_') . '.zip';
-
-            if ($zip->open($tempZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-                throw new \Exception('Gagal membuat file ZIP.');
+        try {
+            $columns = $this->getTableColumnNames($table);
+            if (empty($columns)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kolom tabel tidak ditemukan.',
+                ], 404);
             }
 
-            $pdo = DB::connection()->getPdo();
+            $rowCount = DB::table($table)->count();
+            $primaryKey = $this->getPrimaryKeyColumn($table);
+            $fileName = 'sql_export_' . $table . '_' . now()->format('Ymd_His') . '.sql';
+            $generatedAt = now()->format('Y-m-d H:i:s');
 
-            foreach ($allowed as $table) {
-                $columns = $this->getTableColumnNames($table);
-                if (empty($columns)) {
-                    continue;
-                }
+            DashboardMonitorLogger::create(
+                'SQL Export',
+                "Export SQL tabel \"{$table}\" ({$rowCount} baris)",
+                [
+                    'table'     => $table,
+                    'rows'      => $rowCount,
+                    'export_as' => $fileName,
+                ],
+                $request
+            );
 
-                $rowCount = DB::table($table)->count();
-                $primaryKey = $this->getPrimaryKeyColumn($table);
+            return response()->streamDownload(function () use ($table, $columns, $primaryKey, $rowCount, $generatedAt) {
+                // Set time limit for large exports
+                set_time_limit(300); // 5 minutes
+                ini_set('memory_limit', '512M');
+
+                $pdo = DB::connection()->getPdo();
+                $out = fopen('php://output', 'w');
+
+                fwrite($out, "-- SQL Export\n");
+                fwrite($out, "-- Table: {$table}\n");
+                fwrite($out, "-- Rows: {$rowCount}\n");
+                fwrite($out, "-- Generated at: {$generatedAt}\n\n");
+
                 $orderColumn = $primaryKey ?: $columns[0];
                 $colList = implode(', ', array_map(fn($c) => "`{$c}`", $columns));
 
-                // Generate SQL content in memory
-                $sqlContent = "-- SQL Export\n";
-                $sqlContent .= "-- Table: {$table}\n";
-                $sqlContent .= "-- Rows: {$rowCount}\n";
-                $sqlContent .= "-- Generated at: {$generatedAt}\n\n";
-
                 DB::table($table)
                     ->orderBy($orderColumn)
-                    ->chunk(500, function ($rows) use (&$sqlContent, $table, $columns, $colList, $pdo) {
+                    ->chunk(500, function ($rows) use ($out, $table, $columns, $colList, $pdo) {
                         if ($rows->isEmpty()) {
                             return;
                         }
@@ -468,22 +389,180 @@ class DashboardMonitorController extends Controller
                             $valueLines[] = '(' . implode(', ', $values) . ')';
                         }
 
-                        $sqlContent .= "INSERT INTO `{$table}` ({$colList}) VALUES\n" . implode(",\n", $valueLines) . ";\n\n";
+                        fwrite(
+                            $out,
+                            "INSERT INTO `{$table}` ({$colList}) VALUES\n" . implode(",\n", $valueLines) . ";\n\n"
+                        );
+
+                        // Flush output for large files
+                        if (ob_get_level() > 0) {
+                            ob_flush();
+                        }
+                        flush();
                     });
 
-                // Add SQL file to ZIP
-                $zip->addFromString("{$table}.sql", $sqlContent);
+                fclose($out);
+            }, $fileName, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Content-Transfer-Encoding' => 'binary',
+                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+                'Pragma' => 'public',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Export SQL failed for table ' . $table . ': ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Export gagal: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Export SQL INSERT untuk SEMUA tabel yang diizinkan sekaligus (dalam format ZIP).
+     */
+    public function exportAllSql(Request $request): StreamedResponse|\Illuminate\Http\JsonResponse
+    {
+        try {
+            $allowed = $this->getAllowedTables();
+            $zipFileName = 'sql_export_all_' . now()->format('Ymd_His') . '.zip';
+            $generatedAt = now()->format('Y-m-d H:i:s');
+
+            $totalRows = 0;
+            foreach ($allowed as $table) {
+                try {
+                    $totalRows += DB::table($table)->count();
+                } catch (\Exception $e) {
+                    Log::warning("Failed to count table {$table}: " . $e->getMessage());
+                }
             }
 
-            $zip->close();
+            DashboardMonitorLogger::create(
+                'SQL Export All',
+                "Export SQL semua tabel (" . count($allowed) . " tabel, {$totalRows} baris total)",
+                [
+                    'tables'    => $allowed,
+                    'total_tables' => count($allowed),
+                    'total_rows' => $totalRows,
+                    'export_as' => $zipFileName,
+                ],
+                $request
+            );
 
-            // Stream ZIP file
-            readfile($tempZipPath);
-            unlink($tempZipPath);
-        }, $zipFileName, [
-            'Content-Type' => 'application/zip',
-            'Content-Disposition' => 'attachment; filename="' . $zipFileName . '"',
-        ]);
+            return response()->streamDownload(function () use ($allowed, $generatedAt) {
+                // Set time limit for large exports
+                set_time_limit(300); // 5 minutes
+                ini_set('memory_limit', '512M');
+
+                $zip = new \ZipArchive();
+                $tempZipPath = tempnam(sys_get_temp_dir(), 'sql_export_') . '.zip';
+
+                if ($zip->open($tempZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                    throw new \Exception('Gagal membuat file ZIP.');
+                }
+
+                $pdo = DB::connection()->getPdo();
+
+                foreach ($allowed as $table) {
+                    try {
+                        $columns = $this->getTableColumnNames($table);
+                        if (empty($columns)) {
+                            continue;
+                        }
+
+                        $rowCount = DB::table($table)->count();
+                        $primaryKey = $this->getPrimaryKeyColumn($table);
+                        $orderColumn = $primaryKey ?: $columns[0];
+                        $colList = implode(', ', array_map(fn($c) => "`{$c}`", $columns));
+
+                        // Generate SQL content in memory
+                        $sqlContent = "-- SQL Export\n";
+                        $sqlContent .= "-- Table: {$table}\n";
+                        $sqlContent .= "-- Rows: {$rowCount}\n";
+                        $sqlContent .= "-- Generated at: {$generatedAt}\n\n";
+
+                        DB::table($table)
+                            ->orderBy($orderColumn)
+                            ->chunk(500, function ($rows) use (&$sqlContent, $table, $columns, $colList, $pdo) {
+                                if ($rows->isEmpty()) {
+                                    return;
+                                }
+
+                                $valueLines = [];
+                                foreach ($rows as $row) {
+                                    $rowArray = (array) $row;
+                                    $values = [];
+                                    foreach ($columns as $col) {
+                                        $values[] = $this->sqlValue($rowArray[$col] ?? null, $pdo);
+                                    }
+                                    $valueLines[] = '(' . implode(', ', $values) . ')';
+                                }
+
+                                $sqlContent .= "INSERT INTO `{$table}` ({$colList}) VALUES\n" . implode(",\n", $valueLines) . ";\n\n";
+                            });
+
+                        // Add SQL file to ZIP
+                        $zip->addFromString("{$table}.sql", $sqlContent);
+                    } catch (\Exception $e) {
+                        // Log error but continue with other tables
+                        Log::error("Failed to export table {$table}: " . $e->getMessage());
+                        $zip->addFromString("{$table}_ERROR.txt", "Export failed: " . $e->getMessage());
+                    }
+                }
+
+                $zip->close();
+
+                // Ensure file exists and is readable
+                if (!file_exists($tempZipPath)) {
+                    throw new \Exception('File ZIP tidak berhasil dibuat.');
+                }
+
+                // Stream ZIP file
+                $fileSize = filesize($tempZipPath);
+                if ($fileSize === false) {
+                    throw new \Exception('Tidak dapat membaca ukuran file ZIP.');
+                }
+
+                // Output file content
+                $handle = fopen($tempZipPath, 'rb');
+                if ($handle === false) {
+                    throw new \Exception('Tidak dapat membuka file ZIP untuk dibaca.');
+                }
+
+                while (!feof($handle)) {
+                    echo fread($handle, 8192);
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
+                    flush();
+                }
+
+                fclose($handle);
+
+                // Clean up temp file
+                if (file_exists($tempZipPath)) {
+                    unlink($tempZipPath);
+                }
+            }, $zipFileName, [
+                'Content-Type' => 'application/zip',
+                'Content-Disposition' => 'attachment; filename="' . $zipFileName . '"',
+                'Content-Transfer-Encoding' => 'binary',
+                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+                'Pragma' => 'public',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Export All SQL failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Export gagal: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     private function getTableColumnNames(string $table): array

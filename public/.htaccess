@@ -7,7 +7,7 @@
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:HTTP:Authorization}]
 
     # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
@@ -22,4 +22,17 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+# Disable output buffering for downloads
+<FilesMatch "\.(zip|sql|log)$">
+    php_flag output_buffering Off
+</FilesMatch>
+
+# Increase timeout for large exports
+<IfModule mod_php.c>
+    php_value max_execution_time 300
+    php_value memory_limit 512M
+    php_value post_max_size 50M
+    php_value upload_max_filesize 50M
 </IfModule>
