@@ -195,11 +195,26 @@ class DashboardMonitorController extends Controller
             $request
         );
 
+        // Tutup session sebelum streaming agar tidak terjadi session lock di production (Redis)
+        if (session()->isStarted()) {
+            session()->save();
+        }
+
+        // Bersihkan semua output buffer yang aktif (penting di production)
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         return response()->streamDownload(function () use ($logPath) {
             readfile($logPath);
         }, $fileName, [
-            'Content-Type'        => 'text/plain',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Content-Type'              => 'application/octet-stream',
+            'Content-Disposition'       => 'attachment; filename="' . $fileName . '"',
+            'Content-Transfer-Encoding' => 'binary',
+            'Cache-Control'             => 'private, no-cache, no-store, must-revalidate',
+            'Pragma'                    => 'no-cache',
+            'Expires'                   => '0',
+            'X-Accel-Buffering'         => 'no',
         ]);
     }
 
@@ -356,9 +371,18 @@ class DashboardMonitorController extends Controller
                 $request
             );
 
+            // Tutup session sebelum streaming agar tidak terjadi session lock di production (Redis)
+            if (session()->isStarted()) {
+                session()->save();
+            }
+
+            // Bersihkan semua output buffer yang aktif (penting di production)
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
             return response()->streamDownload(function () use ($table, $columns, $primaryKey, $rowCount, $generatedAt) {
-                // Set time limit for large exports
-                set_time_limit(300); // 5 minutes
+                set_time_limit(300);
                 ini_set('memory_limit', '512M');
 
                 $pdo = DB::connection()->getPdo();
@@ -394,20 +418,18 @@ class DashboardMonitorController extends Controller
                             "INSERT INTO `{$table}` ({$colList}) VALUES\n" . implode(",\n", $valueLines) . ";\n\n"
                         );
 
-                        // Flush output for large files
-                        if (ob_get_level() > 0) {
-                            ob_flush();
-                        }
                         flush();
                     });
 
                 fclose($out);
             }, $fileName, [
-                'Content-Type' => 'text/plain; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'Content-Type'              => 'application/octet-stream',
+                'Content-Disposition'       => 'attachment; filename="' . $fileName . '"',
                 'Content-Transfer-Encoding' => 'binary',
-                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-                'Pragma' => 'public',
+                'Cache-Control'             => 'private, no-cache, no-store, must-revalidate',
+                'Pragma'                    => 'no-cache',
+                'Expires'                   => '0',
+                'X-Accel-Buffering'         => 'no',
             ]);
         } catch (\Exception $e) {
             Log::error('Export SQL failed for table ' . $table . ': ' . $e->getMessage(), [
@@ -452,9 +474,18 @@ class DashboardMonitorController extends Controller
                 $request
             );
 
+            // Tutup session sebelum streaming agar tidak terjadi session lock di production (Redis)
+            if (session()->isStarted()) {
+                session()->save();
+            }
+
+            // Bersihkan semua output buffer yang aktif (penting di production)
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
             return response()->streamDownload(function () use ($allowed, $generatedAt) {
-                // Set time limit for large exports
-                set_time_limit(300); // 5 minutes
+                set_time_limit(300);
                 ini_set('memory_limit', '512M');
 
                 $zip = new \ZipArchive();
@@ -478,7 +509,6 @@ class DashboardMonitorController extends Controller
                         $orderColumn = $primaryKey ?: $columns[0];
                         $colList = implode(', ', array_map(fn($c) => "`{$c}`", $columns));
 
-                        // Generate SQL content in memory
                         $sqlContent = "-- SQL Export\n";
                         $sqlContent .= "-- Table: {$table}\n";
                         $sqlContent .= "-- Rows: {$rowCount}\n";
@@ -504,10 +534,8 @@ class DashboardMonitorController extends Controller
                                 $sqlContent .= "INSERT INTO `{$table}` ({$colList}) VALUES\n" . implode(",\n", $valueLines) . ";\n\n";
                             });
 
-                        // Add SQL file to ZIP
                         $zip->addFromString("{$table}.sql", $sqlContent);
                     } catch (\Exception $e) {
-                        // Log error but continue with other tables
                         Log::error("Failed to export table {$table}: " . $e->getMessage());
                         $zip->addFromString("{$table}_ERROR.txt", "Export failed: " . $e->getMessage());
                     }
@@ -515,18 +543,10 @@ class DashboardMonitorController extends Controller
 
                 $zip->close();
 
-                // Ensure file exists and is readable
                 if (!file_exists($tempZipPath)) {
                     throw new \Exception('File ZIP tidak berhasil dibuat.');
                 }
 
-                // Stream ZIP file
-                $fileSize = filesize($tempZipPath);
-                if ($fileSize === false) {
-                    throw new \Exception('Tidak dapat membaca ukuran file ZIP.');
-                }
-
-                // Output file content
                 $handle = fopen($tempZipPath, 'rb');
                 if ($handle === false) {
                     throw new \Exception('Tidak dapat membuka file ZIP untuk dibaca.');
@@ -534,24 +554,22 @@ class DashboardMonitorController extends Controller
 
                 while (!feof($handle)) {
                     echo fread($handle, 8192);
-                    if (ob_get_level() > 0) {
-                        ob_flush();
-                    }
                     flush();
                 }
 
                 fclose($handle);
 
-                // Clean up temp file
                 if (file_exists($tempZipPath)) {
                     unlink($tempZipPath);
                 }
             }, $zipFileName, [
-                'Content-Type' => 'application/zip',
-                'Content-Disposition' => 'attachment; filename="' . $zipFileName . '"',
+                'Content-Type'              => 'application/zip',
+                'Content-Disposition'       => 'attachment; filename="' . $zipFileName . '"',
                 'Content-Transfer-Encoding' => 'binary',
-                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-                'Pragma' => 'public',
+                'Cache-Control'             => 'private, no-cache, no-store, must-revalidate',
+                'Pragma'                    => 'no-cache',
+                'Expires'                   => '0',
+                'X-Accel-Buffering'         => 'no',
             ]);
         } catch (\Exception $e) {
             Log::error('Export All SQL failed: ' . $e->getMessage(), [
