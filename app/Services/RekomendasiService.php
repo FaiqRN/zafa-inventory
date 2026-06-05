@@ -136,6 +136,48 @@ class RekomendasiService
         return compact('berhasil', 'gagal', 'errors');
     }
 
+    /**
+     * Truncate seluruh tabel inventory_rekomendasi lalu generate ulang dari awal.
+     *
+     * Digunakan oleh auto-refresh tiap 5 menit agar:
+     *   1. Tidak ada baris stale untuk kombinasi yang sudah tidak aktif
+     *   2. Stok aktual, is_below_rop, shelf_life_flag selalu fresh
+     *
+     * CATATAN: Truncate + insert lebih bersih dari UPSERT untuk skenario ini
+     * karena kombinasi aktif bisa berubah (toko baru, barang baru, toko nonaktif).
+     * UPSERT tidak menghapus baris lama yang kombinasinya sudah tidak relevan.
+     *
+     * Proses ini berjalan di background — caller tidak perlu menunggu selesai
+     * (dipanggil via endpoint auto-refresh, response dikirim setelah truncate+generate
+     * selesai, lalu JS langsung fetch data terbaru).
+     *
+     * @return array{berhasil: int, gagal: int, errors: array, truncated: int}
+     */
+    public function truncateAndRegenerate(int $hariObservasi = self::DEFAULT_HARI_OBSERVASI): array
+    {
+        // Catat jumlah baris sebelum dihapus untuk logging
+        $truncated = InventoryRekomendasi::count();
+
+        Log::info('RekomendasiService::truncateAndRegenerate dimulai', [
+            'baris_dihapus' => $truncated,
+            'hari_observasi' => $hariObservasi,
+        ]);
+
+        // Hapus semua data lama sekaligus — lebih efisien dari DELETE row-per-row
+        InventoryRekomendasi::truncate();
+
+        // Generate ulang semua kombinasi aktif
+        $hasil = $this->hitungSemua($hariObservasi);
+
+        Log::info('RekomendasiService::truncateAndRegenerate selesai', [
+            'truncated' => $truncated,
+            'berhasil'  => $hasil['berhasil'],
+            'gagal'     => $hasil['gagal'],
+        ]);
+
+        return array_merge($hasil, ['truncated' => $truncated]);
+    }
+
     private function sinkronkanZscorePasanganAktif(): void
     {
         try {
@@ -291,66 +333,63 @@ class RekomendasiService
     }
 
     /**
-     * Hitung stok aktual di toko berdasarkan window waktu shelf life produk.
+     * Hitung stok aktual di toko mitra untuk sistem konsinyasi.
      *
-     * FIX: Sebelumnya query tanpa filter tanggal — menghitung semua pengiriman
-     * sepanjang masa. Akibatnya stok bisa negatif atau tidak akurat untuk
-     * produk yang sudah berulang kali dikirim dan diretur.
+     * PENDEKATAN KONSINYASI:
+     * Kepemilikan barang tetap di UMKM sampai terjual. Stok aktual
+     * adalah semua yang sudah dikirim (status terkirim) dikurangi
+     * yang sudah terjual dan dikembalikan melalui proses retur.
      *
-     * Sekarang: window dihitung mundur dari sekarang sejauh (shelf_life_days × 2)
-     * untuk menangkap siklus aktif terakhir. Minimal fallback 90 hari jika
-     * shelf_life tidak ditemukan.
+     * Pengiriman yang belum ada retumya (masih aktif di toko) =
+     * seluruh jumlah kirim dianggap masih berada di toko.
      *
-     * Rumus: stok_aktual = total_kirim - total_terjual - total_retur
-     * dalam window tersebut.
+     * Tidak pakai window filter tanggal karena interval kirim
+     * bisa 40-140 hari — window pendek akan memotong pengiriman
+     * aktif yang masih berada di toko.
+     *
+     * Rumus: stok = total_kirim(terkirim) - total_terjual - total_retur
      */
     private function getStokAktual(string $tokoId, string $barangId): int
     {
-        // Tentukan window berdasarkan shelf_life produk (2 siklus ke belakang)
-        $shelfLifeDays = (int) (\App\Models\Barang::where(\App\Models\Barang::FIELD_BARANG_ID, $barangId)
-            ->value(\App\Models\Barang::FIELD_SHELF_LIFE) ?? 0);
-
-        $windowHari  = $shelfLifeDays > 0 ? $shelfLifeDays * 2 : 90;
-        $cutoffDate  = \Carbon\Carbon::now()->subDays($windowHari)->toDateString();
-
+        // Hanya hitung pengiriman yang sudah berstatus terkirim
         $totalKirim = (int) Pengiriman::where(Pengiriman::FIELD_TOKO_ID, $tokoId)
             ->where(Pengiriman::FIELD_BARANG_ID, $barangId)
-            ->whereDate(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '>=', $cutoffDate)
+            ->where(Pengiriman::FIELD_STATUS, 'terkirim')
             ->sum(Pengiriman::FIELD_JUMLAH_KIRIM);
 
+        // Yang sudah terjual (dari retur yang sudah diisi)
         $totalTerjual = (int) Retur::where(Retur::FIELD_TOKO_ID, $tokoId)
             ->where(Retur::FIELD_BARANG_ID, $barangId)
-            ->whereDate(Retur::FIELD_TANGGAL_RETUR, '>=', $cutoffDate)
             ->sum(Retur::FIELD_TOTAL_TERJUAL);
 
+        // Yang dikembalikan ke UMKM
         $totalRetur = (int) Retur::where(Retur::FIELD_TOKO_ID, $tokoId)
             ->where(Retur::FIELD_BARANG_ID, $barangId)
-            ->whereDate(Retur::FIELD_TANGGAL_RETUR, '>=', $cutoffDate)
             ->sum(Retur::FIELD_JUMLAH_RETUR);
 
-        \Illuminate\Support\Facades\Log::debug('RekomendasiService::getStokAktual', [
-            'toko_id'      => $tokoId,
-            'barang_id'    => $barangId,
-            'window_hari'  => $windowHari,
-            'cutoff'       => $cutoffDate,
-            'total_kirim'  => $totalKirim,
-            'total_jual'   => $totalTerjual,
-            'total_retur'  => $totalRetur,
-            'stok_aktual'  => max(0, $totalKirim - $totalTerjual - $totalRetur),
+        $stokAktual = max(0, $totalKirim - $totalTerjual - $totalRetur);
+
+        Log::debug('RekomendasiService::getStokAktual', [
+            'toko_id'       => $tokoId,
+            'barang_id'     => $barangId,
+            'total_kirim'   => $totalKirim,
+            'total_terjual' => $totalTerjual,
+            'total_retur'   => $totalRetur,
+            'stok_aktual'   => $stokAktual,
         ]);
 
-        return max(0, $totalKirim - $totalTerjual - $totalRetur);
+        return $stokAktual;
     }
 
     /**
-     * Ambil kombinasi toko+barang aktif dari pengiriman 2 tahun terakhir.
+     * Ambil kombinasi toko+barang aktif dari pengiriman 1 tahun terakhir.
      *
      * Hanya kombinasi yang terdaftar di barang_toko yang diproses,
      * karena barang_toko_id dibutuhkan sebagai PK upsert.
      */
     private function getKombinasiAktif(): array
     {
-        $cutoff = Carbon::now()->subYears(2);
+        $cutoff = Carbon::now()->subYears(1);
 
         // Ambil kombinasi dari pengiriman, lalu filter yang punya barang_toko_id
         return Pengiriman::where(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '>=', $cutoff)

@@ -107,30 +107,45 @@ class DashboardInventoryOptimizationController extends Controller
         return null;
     }
 
-    // Method recalculate() dihapus — data sekarang diperbarui otomatis via auto-refresh.
+    public function recalculate()
+    {
+        try {
+            /** @var \App\Services\RekomendasiService $rekomendasiService */
+            $rekomendasiService = app(\App\Services\RekomendasiService::class);
+            $hasil = $rekomendasiService->truncateAndRegenerate();
 
-    /**
-     * Auto refresh data dashboard inventory optimization.
-     *
-     * FIX: Endpoint ini sekarang HANYA membaca data terbaru dari DB,
-     * TIDAK lagi menghitung ulang (hitungSemua) setiap dipanggil.
-     *
-     * Sebelumnya endpoint ini memanggil hitungSemua() setiap 10 detik
-     * yang menyebabkan:
-     *   1. Ratusan baris duplikat di inventory_rekomendasi
-     *   2. Beban DB yang sangat berat (kalkulasi EOQ/SS/ROP berulang)
-     *   3. Nilai yang tidak stabil karena terus di-overwrite
-     *
-     * Kalkulasi ulang sekarang hanya dilakukan lewat:
-     *   - Tombol "Hitung Ulang" → route recalculate (manual oleh user)
-     *   - Scheduler harian (jika dikonfigurasi)
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
+            $dashboardData = DashboardInventoryOptimizationHelper::getLatestDataOnly();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Hitung ulang selesai.',
+                'meta'    => [
+                    'berhasil'         => $hasil['berhasil'],
+                    'gagal'            => $hasil['gagal'],
+                    'truncated'        => $hasil['truncated'],
+                    'updated_at'       => now()->toIso8601String(),
+                    'interval_seconds' => 300,
+                ],
+                'data'    => $dashboardData,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error in recalculate: ' . $e->getMessage());
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal hitung ulang: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function autoRefreshInventoryOptimization()
     {
         try {
-            // Hanya ambil data terbaru — tidak ada kalkulasi sama sekali
+            /** @var \App\Services\RekomendasiService $rekomendasiService */
+            $rekomendasiService = app(\App\Services\RekomendasiService::class);
+
+            $hasil = $rekomendasiService->truncateAndRegenerate();
+
             $dashboardData = DashboardInventoryOptimizationHelper::getLatestDataOnly();
 
             return response()->json([
@@ -138,6 +153,9 @@ class DashboardInventoryOptimizationController extends Controller
                 'message' => 'Data dashboard diperbarui.',
                 'data'    => $dashboardData,
                 'meta'    => [
+                    'berhasil'         => $hasil['berhasil'],
+                    'gagal'            => $hasil['gagal'],
+                    'truncated'        => $hasil['truncated'],
                     'updated_at'       => now()->toIso8601String(),
                     'interval_seconds' => 300,
                 ],

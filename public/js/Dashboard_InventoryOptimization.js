@@ -5,7 +5,7 @@
     var tokosGeo = window.INV_TOKOS || [];
     var nominatimBaseUrl = window.INV_NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
     var autoRefreshUrl = window.INV_AUTO_REFRESH_URL || '/dashboard/api/inventory-optimization/auto-refresh';
-    var autoRefreshIntervalMs = parseInt(window.INV_AUTO_REFRESH_INTERVAL_MS, 10) || 10000;
+    var autoRefreshIntervalMs = parseInt(window.INV_AUTO_REFRESH_INTERVAL_MS, 10) || 300000;
 
     const NEARBY_DISTANCE_KM = 3; //Buat jarak maksimal untuk kelompok toko berdekatan
     const MIN_TOKO_FOR_AREA = 3;
@@ -598,7 +598,7 @@
         if (labelEl) {
             switch (state) {
                 case 'running':
-                    labelEl.textContent = 'Memperbarui data...';
+                    labelEl.textContent = 'Menghitung ulang data...';
                     break;
                 case 'error':
                     labelEl.textContent = 'Gagal memperbarui';

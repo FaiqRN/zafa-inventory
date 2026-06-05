@@ -46,16 +46,18 @@
         <div class="inv-metric-value" id="inv-m-flag">
             {{ collect($rekomendasiData)->where('shelf_life_flag', true)->count() }}
         </div>
-        <div class="inv-metric-sub">interval > batas aman</div>
+        <div class="inv-metric-sub" id="inv-flag-count">
+            {{ collect($rekomendasiData)->where('shelf_life_flag', true)->count() }} interval > batas aman
+        </div>
     </div>
 
     <div class="inv-metric-card inv-metric-card--ok">
         <div class="inv-metric-label">Stok aman</div>
         <div class="inv-metric-value" id="inv-m-ok">
-            {{ collect($rekomendasiData)->where('is_below_rop', false)->where('shelf_life_flag', false)->count() }}
+            {{ collect($rekomendasiData)->where('is_below_rop', false)->count() }}
         </div>
         <div class="inv-metric-sub" id="inv-ok-count">
-            {{ collect($rekomendasiData)->where('is_below_rop', false)->where('shelf_life_flag', false)->count() }} aman
+            {{ collect($rekomendasiData)->where('is_below_rop', false)->count() }} di atas ROP
         </div>
     </div>
 </div>
@@ -113,10 +115,9 @@
         window.INV_NOMINATIM_BASE_URL = @json($nominatimBaseUrl ?? 'https://nominatim.openstreetmap.org');
         window.INV_AUTO_REFRESH_URL = @json(route('dashboard.api.inventory-optimization.auto-refresh'));
 
-        {{-- Auto-refresh setiap 60 detik (1 menit) untuk pembaruan data real-time --}}
-        window.INV_AUTO_REFRESH_INTERVAL_MS = 60000;
+        {{-- Auto-refresh setiap 5 menit (300 detik) — truncate + regenerate semua kombinasi --}}
+        window.INV_AUTO_REFRESH_INTERVAL_MS = 300000;
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ asset('js/Dashboard_InventoryOptimization.js') }}"></script>
 @endpush
-{{-- EOF --}}
