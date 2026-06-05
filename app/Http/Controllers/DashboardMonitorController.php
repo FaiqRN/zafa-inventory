@@ -195,9 +195,13 @@ class DashboardMonitorController extends Controller
             $request
         );
 
-        // Tutup session sebelum streaming agar tidak terjadi session lock di production (Redis)
-        if (session()->isStarted()) {
-            session()->save();
+        // Tutup session sebelum streaming (Redis timeout diabaikan agar export tetap jalan)
+        try {
+            if (session()->isStarted()) {
+                session()->save();
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Session save gagal sebelum export log (Redis?): ' . $e->getMessage());
         }
 
         // Bersihkan semua output buffer yang aktif (penting di production)
@@ -372,9 +376,13 @@ class DashboardMonitorController extends Controller
                 $request
             );
 
-            // Tutup session sebelum streaming agar tidak terjadi session lock di production (Redis)
-            if (session()->isStarted()) {
-                session()->save();
+            // Tutup session sebelum streaming (Redis timeout diabaikan agar export tetap jalan)
+            try {
+                if (session()->isStarted()) {
+                    session()->save();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Session save gagal sebelum export SQL (Redis?): ' . $e->getMessage());
             }
 
             // Bersihkan semua output buffer yang aktif (penting di production)
@@ -476,9 +484,13 @@ class DashboardMonitorController extends Controller
                 $request
             );
 
-            // Tutup session sebelum streaming agar tidak terjadi session lock di production (Redis)
-            if (session()->isStarted()) {
-                session()->save();
+            // Tutup session sebelum streaming (Redis timeout diabaikan agar export tetap jalan)
+            try {
+                if (session()->isStarted()) {
+                    session()->save();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Session save gagal sebelum export all SQL (Redis?): ' . $e->getMessage());
             }
 
             // Bersihkan semua output buffer yang aktif (penting di production)

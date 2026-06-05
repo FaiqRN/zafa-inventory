@@ -297,5 +297,5 @@ window.DASHBOARD_MONITOR_CONFIG = {
     csrfToken:      document.querySelector('meta[name="csrf-token"]').content
 };
 </script>
-<script src="{{ asset('js/DashboardMonitor.js') }}?v=1.0.1"></script>
+<script src="{{ asset('js/DashboardMonitor.js') }}?v=1.0.2"></script>
 @endpush
