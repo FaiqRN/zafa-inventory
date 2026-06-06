@@ -256,6 +256,7 @@ class EoqService
         $totalKirim = (int) Pengiriman::where(Pengiriman::FIELD_TOKO_ID, $tokoId)
             ->where(Pengiriman::FIELD_BARANG_ID, $barangId)
             ->whereDate(Pengiriman::FIELD_TANGGAL_PENGIRIMAN, '>=', $cutoffDate)
+            ->where(Pengiriman::FIELD_STATUS, 'terkirim')
             ->sum(Pengiriman::FIELD_JUMLAH_KIRIM);
 
         $totalRetur = (int) Retur::where(Retur::FIELD_TOKO_ID, $tokoId)

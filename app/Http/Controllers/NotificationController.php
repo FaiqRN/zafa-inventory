@@ -130,6 +130,46 @@ class NotificationController extends Controller
             ];
         }
 
+        // 3. Check for products below Reorder Point (dari inventory_rekomendasi)
+        // Dikelompokkan per toko — 1 notifikasi per toko, bukan per kombinasi,
+        // agar tidak flood dropdown kalau ada banyak produk kritis sekaligus.
+        $belowRopRows = \App\Models\InventoryRekomendasi::query()
+            ->join('toko as t', 'inventory_rekomendasi.toko_id', '=', 't.toko_id')
+            ->join('barang as b', 'inventory_rekomendasi.barang_id', '=', 'b.barang_id')
+            ->where('inventory_rekomendasi.is_below_rop', true)
+            ->where('t.is_active', true)
+            ->select([
+                'inventory_rekomendasi.toko_id',
+                't.nama_toko',
+                \Illuminate\Support\Facades\DB::raw('COUNT(*) as jumlah_produk_kritis'),
+                \Illuminate\Support\Facades\DB::raw('GROUP_CONCAT(b.nama_barang ORDER BY b.nama_barang SEPARATOR ", ") as produk_kritis'),
+            ])
+            ->groupBy('inventory_rekomendasi.toko_id', 't.nama_toko')
+            ->orderByDesc('jumlah_produk_kritis')
+            ->get();
+
+        foreach ($belowRopRows as $row) {
+            $jumlah       = (int) $row->jumlah_produk_kritis;
+            $namaToko     = $row->nama_toko;
+            $produkList   = $row->produk_kritis;
+
+            // Potong daftar produk kalau terlalu panjang agar muat di dropdown
+            $produkDisplay = mb_strlen($produkList) > 60
+                ? mb_substr($produkList, 0, 57) . '...'
+                : $produkList;
+
+            $notifications[] = [
+                'id'         => 'rop_' . $row->toko_id,
+                'type'       => 'reorder_point',
+                'title'      => 'Stok Di Bawah ROP — ' . $namaToko,
+                'message'    => "{$jumlah} produk perlu dikirim ulang: {$produkDisplay}",
+                'icon'       => 'fas fa-exclamation-triangle',
+                'icon_color' => 'danger',
+                'url'        => route('dashboard.inventory-optimization'),
+                'created_at' => now()->toISOString(),
+            ];
+        }
+
         // Sort by urgency (danger first, then warning)
         usort($notifications, function($a, $b) {
             $order = ['danger' => 0, 'warning' => 1, 'info' => 2, 'primary' => 3];

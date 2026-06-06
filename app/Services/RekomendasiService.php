@@ -68,7 +68,7 @@ class RekomendasiService
         $stokAktual = $this->getStokAktual($tokoId, $barangId);
 
         // ── Step 6: is_below_rop ─────────────────────────────────────────────
-        $isBelowRop = $stokAktual <= $ropHasil['rop'] ? 1 : 0;
+        $isBelowRop = $stokAktual < $ropHasil['rop'] ? 1 : 0;
 
         // ── Step 7: Susun hasil ──────────────────────────────────────────────
         $hasil = [
