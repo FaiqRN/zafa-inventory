@@ -93,6 +93,79 @@
                                     <option value="100">100</option>
                                 </select>
                             </div>
+                            {{-- Tombol Export Evaluasi Excel + Dropdown Alpha --}}
+                            <div class="btn-group" style="height:30px;" id="exportAlphaGroup">
+                                {{-- Tombol utama: langsung download alpha=0.5 --}}
+                                <a id="btnExportEvaluasi"
+                                   href="{{ route('analytics.partner-performance.evaluasi.export') }}?alpha=0.5"
+                                   class="btn btn-sm"
+                                   style="height:30px;padding:0 10px;font-size:11px;font-weight:600;
+                                          background:#1a6b3a;color:#fff;border:none;border-radius:5px 0 0 5px;
+                                          display:inline-flex;align-items:center;gap:5px;
+                                          text-decoration:none;white-space:nowrap;"
+                                   title="Download Excel evaluasi dengan Alpha = 0.5 (default)">
+                                    <i class="fas fa-file-excel" style="font-size:11px;"></i>
+                                    Export Evaluasi <span style="opacity:.75;font-size:10px;">(α=0.5)</span>
+                                </a>
+                                {{-- Tombol panah dropdown --}}
+                                <button type="button"
+                                        class="btn btn-sm dropdown-toggle dropdown-toggle-split"
+                                        data-toggle="dropdown"
+                                        aria-haspopup="true"
+                                        aria-expanded="false"
+                                        style="height:30px;padding:0 8px;font-size:11px;
+                                               background:#145c30;color:#fff;border:none;
+                                               border-left:1px solid rgba(255,255,255,.25);
+                                               border-radius:0 5px 5px 0;"
+                                        title="Pilih nilai Alpha lainnya">
+                                    <i class="fas fa-chevron-down" style="font-size:9px;"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-right" style="min-width:220px;padding:6px 0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);">
+                                    <div style="padding:6px 14px 4px;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">
+                                        <i class="fas fa-sliders-h mr-1"></i> Pilih Nilai Alpha (α)
+                                    </div>
+                                    <div class="dropdown-divider" style="margin:4px 0;"></div>
+                                    @foreach([
+                                        '0.0' => ['label' => 'α = 0.0', 'desc' => 'Baseline — Murni CF (100% Collaborative Filtering)',  'color' => '#37474F', 'badge' => 'Baseline'],
+                                        '0.3' => ['label' => 'α = 0.3', 'desc' => 'Hybrid — CF Lebih Dominan (70% CF + 30% CBF)',          'color' => '#1565C0', 'badge' => ''],
+                                        '0.5' => ['label' => 'α = 0.5', 'desc' => 'Hybrid — Seimbang CBF & CF (50% + 50%)',                 'color' => '#1a6b3a', 'badge' => 'Default'],
+                                        '0.7' => ['label' => 'α = 0.7', 'desc' => 'Hybrid — CBF Lebih Dominan (70% CBF + 30% CF)',          'color' => '#E65100', 'badge' => ''],
+                                        '1.0' => ['label' => 'α = 1.0', 'desc' => 'Baseline — Murni CBF (100% Content-Based Filtering)',     'color' => '#B71C1C', 'badge' => 'Baseline'],
+                                    ] as $val => $info)
+                                    <a class="dropdown-item d-flex align-items-center"
+                                       href="{{ route('analytics.partner-performance.evaluasi.export') }}?alpha={{ $val }}"
+                                       style="padding:7px 14px;font-size:11px;gap:10px;
+                                              {{ in_array($val, ['0.0','1.0']) ? 'background:#f8f9fa;' : '' }}"
+                                       title="Download evaluasi_alpha{{ str_replace('.', '', $val) }}_....xlsx">
+                                        <span style="width:28px;height:28px;border-radius:50%;background:{{ $info['color'] }};
+                                                     display:inline-flex;align-items:center;justify-content:center;
+                                                     color:#fff;font-size:9px;font-weight:700;flex-shrink:0;">
+                                            {{ $val }}
+                                        </span>
+                                        <span style="flex:1;">
+                                            <span style="font-weight:700;color:#2c2c2a;display:block;">
+                                                {{ $info['label'] }}
+                                                @if($info['badge'])
+                                                    <span style="font-size:9px;font-weight:600;padding:1px 5px;
+                                                                 border-radius:3px;margin-left:4px;
+                                                                 background:{{ $info['badge']==='Baseline' ? '#eceff1' : '#e8f5e9' }};
+                                                                 color:{{ $info['badge']==='Baseline' ? '#546e7a' : '#2e7d32' }}">
+                                                        {{ $info['badge'] }}
+                                                    </span>
+                                                @endif
+                                            </span>
+                                            <span style="color:#888;font-size:10px;">{{ $info['desc'] }}</span>
+                                        </span>
+                                        <i class="fas fa-download" style="color:#bbb;font-size:10px;flex-shrink:0;"></i>
+                                    </a>
+                                    @endforeach
+                                    <div class="dropdown-divider" style="margin:4px 0;"></div>
+                                    <div style="padding:4px 14px 2px;font-size:10px;color:#aaa;line-height:1.4;">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        File: <code style="font-size:9px;">evaluasi_alpha<em>XX</em>_YYYYMMDD.xlsx</code>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
