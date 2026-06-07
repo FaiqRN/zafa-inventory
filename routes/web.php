@@ -154,6 +154,11 @@ Route::middleware(['auth', 'prevent.back', 'verifysession', 'session.timeout', '
             // Export & Reports
             Route::post('/generate-report', [PartnerPerformanceController::class, 'generateReport'])
                 ->name('generate-report');
+
+            // Evaluasi Model: Export Excel (Ranking + Ground Truth + Label Relevansi)
+            Route::get('/evaluasi/export',
+                [App\Http\Controllers\EvaluasiExportController::class, 'export'])
+                ->name('evaluasi.export');
         });
     });
 
