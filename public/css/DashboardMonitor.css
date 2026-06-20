@@ -21,13 +21,6 @@ pre.json-block {
 .gap-2 { gap: .5rem; }
 
 /* ── Laravel Log Panel ──────────────────────────────────────── */
-.card-laravel-log .card-header {
-    background: linear-gradient(90deg, #e8f4fd 0%, #f0f9ff 100%);
-    border-bottom: 1px solid #bee3f8;
-}
-.card-laravel-log .card-body {
-    background: #f8fdff;
-}
 .log-info-chip {
     display: inline-flex;
     align-items: center;
@@ -50,3 +43,175 @@ pre.json-block {
     transform: translateY(-1px);
 }
 
+/* ── SQL Import Panel ──────────────────────────────────────── */
+.card-sql-import {
+    overflow: hidden;
+}
+.card-header-sql-import {
+    cursor: pointer;
+    user-select: none;
+}
+.sql-import-chevron {
+    transition: transform .3s ease;
+    color: #666;
+    font-size: .85rem;
+}
+.card-header-sql-import[aria-expanded="true"] .sql-import-chevron,
+#sql-import-body.show ~ .card-header-sql-import .sql-import-chevron {
+    transform: rotate(180deg);
+}
+/* Fix: Bootstrap collapse doesn't update aria on header, so use sibling approach */
+#sql-import-body.show + .sql-import-chevron-rotated,
+.card-sql-import .card-header-sql-import.collapsed .sql-import-chevron {
+    transform: rotate(0deg);
+}
+.sql-import-table-count {
+    font-size: .78rem;
+    letter-spacing: .3px;
+}
+
+/* SQL Textarea */
+.sql-import-textarea {
+    font-family: 'Consolas', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+    font-size: .82rem;
+    line-height: 1.6;
+    background: #ffffff;
+    color: #495057;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 12px 14px;
+    resize: vertical;
+    min-height: 180px;
+    transition: border-color .2s, box-shadow .2s;
+}
+.sql-import-textarea:focus {
+    border-color: var(--zafa-yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+    background: #ffffff;
+    color: #495057;
+    outline: none;
+}
+.sql-import-textarea::placeholder {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+/* Preview Chips */
+.sql-preview-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 3px 12px;
+    font-size: .8rem;
+    color: #555;
+    white-space: nowrap;
+}
+.sql-preview-chip strong {
+    margin-left: 3px;
+    color: #1a73e8;
+}
+.sql-preview-chip.chip-valid {
+    border-color: #81c784;
+    background: #e8f5e9;
+}
+.sql-preview-chip.chip-valid strong {
+    color: #2e7d32;
+}
+.sql-preview-chip.chip-invalid {
+    border-color: #e57373;
+    background: #ffebee;
+}
+.sql-preview-chip.chip-invalid strong {
+    color: #c62828;
+}
+
+/* Column Info Area */
+.sql-import-columns-area {
+    background: #fafbff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 14px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+.sql-import-columns-area .table th {
+    background: #e8eaf6;
+    font-size: .75rem;
+    white-space: nowrap;
+    padding: 4px 8px;
+}
+.sql-import-columns-area .table td {
+    font-size: .78rem;
+    padding: 3px 8px;
+    font-family: 'Consolas', 'Fira Code', monospace;
+}
+
+/* Result Area */
+.sql-import-result {
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: .85rem;
+    animation: sqlResultFadeIn .3s ease;
+}
+.sql-import-result.result-success {
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+    border: 1px solid #a5d6a7;
+    color: #1b5e20;
+}
+.sql-import-result.result-error {
+    background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);
+    border: 1px solid #ef9a9a;
+    color: #b71c1c;
+}
+.sql-import-result .result-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: .9rem;
+}
+.sql-import-result .result-detail {
+    font-size: .82rem;
+    opacity: .9;
+}
+.sql-import-result .result-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: 8px;
+}
+.sql-import-result .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255,255,255,.7);
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 14px;
+    padding: 2px 10px;
+    font-size: .78rem;
+}
+.sql-import-result .stat-chip strong {
+    margin-left: 3px;
+}
+
+@keyframes sqlResultFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* SQL Import Button Animation */
+#btn-sql-import-execute {
+    transition: all .2s;
+    font-weight: 600;
+}
+#btn-sql-import-execute:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+#btn-sql-import-execute:disabled {
+    opacity: .5;
+}
+
+/* Collapse chevron rotation via Bootstrap events (JS-driven class) */
+.sql-import-chevron.rotated {
+    transform: rotate(180deg);
+}

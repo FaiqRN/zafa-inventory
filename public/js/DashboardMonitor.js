@@ -9,6 +9,11 @@
     const LOG_INFO_URL  = cfg.logInfoUrl   || '';
     const LOG_EXPORT_URL= cfg.logExportUrl || '';
     const LOG_TRUNC_URL = cfg.logTruncUrl  || '';
+    const SQL_TABLES_URL  = cfg.sqlTablesUrl  || '';
+    const SQL_COLUMNS_URL = cfg.sqlColumnsUrl || '';
+    const SQL_EXECUTE_URL = cfg.sqlExecuteUrl || '';
+    const SQL_EXPORT_URL  = cfg.sqlExportUrl  || '';
+    const SQL_EXPORT_ALL_URL = cfg.sqlExportAllUrl || '';
     const CSRF          = cfg.csrfToken || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '');
 
     let currentPage = 1;
@@ -293,7 +298,477 @@
         });
     };
 
+    // ═════════════════════════════════════════════════════════════════════
+    // SQL IMPORT FEATURE
+    // ═════════════════════════════════════════════════════════════════════
 
+    const ALLOWED_TABLES = [
+        'barang', 'barang_stok', 'toko', 'barang_toko', 'pengiriman',
+        'retur', 'pemesanan', 'follow_up', 'data_customer',
+        'eoq_biaya_pesan_global', 'eoq_biaya_pesan_toko', 'eoq_biaya_simpan',
+        'ss_zscore_setting',
+    ];
+
+    /**
+     * Load tabel yang diizinkan ke dropdown selector.
+     */
+    const loadSqlImportTables = () => {
+        const sel = document.getElementById('sql-import-table-selector');
+        if (!sel) return;
+
+        // Populate dari daftar lokal agar tidak perlu fetch
+        ALLOWED_TABLES.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = t;
+            sel.appendChild(opt);
+        });
+
+        const countEl = document.getElementById('sql-import-count-num');
+        if (countEl) countEl.textContent = ALLOWED_TABLES.length;
+    };
+
+    /**
+     * Load kolom tabel dari server.
+     */
+    const loadTableColumns = (tableName) => {
+        if (!SQL_COLUMNS_URL || !tableName) return;
+
+        const area = document.getElementById('sql-import-columns-area');
+        const titleEl = document.getElementById('sql-import-columns-table');
+        const tbody = document.querySelector('#sql-import-columns-table-body tbody');
+        if (!area || !tbody) return;
+
+        titleEl.textContent = tableName;
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat...</td></tr>';
+        area.style.display = '';
+
+        fetch(`${SQL_COLUMNS_URL}?table=${encodeURIComponent(tableName)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(({ success, columns, message }) => {
+            if (!success) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-danger text-center">${message}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = columns.map(c => `
+                <tr>
+                    <td><strong>${c.field}</strong></td>
+                    <td>${c.type}</td>
+                    <td>${c.null === 'YES' ? '<span class="text-success">YES</span>' : '<span class="text-danger">NO</span>'}</td>
+                    <td>${c.key ? `<span class="badge badge-primary badge-sm">${c.key}</span>` : '—'}</td>
+                    <td>${c.default ?? '<span class="text-muted">NULL</span>'}</td>
+                    <td>${c.extra || '—'}</td>
+                </tr>
+            `).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Gagal memuat kolom.</td></tr>';
+        });
+    };
+
+    /**
+     * Parse SQL untuk preview (extract nama tabel dan jumlah baris).
+     */
+    const parseSqlPreview = (sql) => {
+        const result = { table: null, rows: 0, valid: false, error: null };
+
+        if (!sql || sql.trim().length < 10) return result;
+
+        const trimmed = sql.trim();
+
+        // Cek apakah dimulai dengan INSERT INTO
+        if (!/^\s*INSERT\s+INTO\s+/i.test(trimmed)) {
+            result.error = 'Bukan statement INSERT INTO';
+            return result;
+        }
+
+        // Extract nama tabel
+        const tableMatch = trimmed.match(/INSERT\s+INTO\s+`?(\w+)`?\s*/i);
+        if (!tableMatch) {
+            result.error = 'Tidak dapat mendeteksi nama tabel';
+            return result;
+        }
+        result.table = tableMatch[1];
+
+        // Cek apakah tabel diizinkan
+        if (!ALLOWED_TABLES.includes(result.table)) {
+            result.error = `Tabel "${result.table}" tidak diizinkan`;
+            return result;
+        }
+
+        // Hitung jumlah baris (hitung kemunculan pola buka-tutup kurung VALUES)
+        // Setiap row dalam VALUES ditandai dengan tanda kurung buka-tutup yang berisi data
+        const valuesMatch = trimmed.match(/VALUES\s*/i);
+        if (valuesMatch) {
+            // Count rows by matching top-level parenthesized groups after VALUES
+            const valuesIdx = trimmed.search(/VALUES\s*/i) + trimmed.match(/VALUES\s*/i)[0].length;
+            const valuesPart = trimmed.substring(valuesIdx);
+            
+            // Count opening parens at the top level (not nested)
+            let depth = 0;
+            let rowCount = 0;
+            for (let i = 0; i < valuesPart.length; i++) {
+                const ch = valuesPart[i];
+                if (ch === '(') {
+                    if (depth === 0) rowCount++;
+                    depth++;
+                } else if (ch === ')') {
+                    depth--;
+                } else if (ch === "'" || ch === '"') {
+                    // Skip string literals
+                    const quote = ch;
+                    i++;
+                    while (i < valuesPart.length) {
+                        if (valuesPart[i] === '\\') { i++; } // skip escaped
+                        else if (valuesPart[i] === quote) break;
+                        i++;
+                    }
+                }
+            }
+            result.rows = rowCount;
+        }
+
+        result.valid = true;
+        return result;
+    };
+
+    /**
+     * Update preview chips berdasarkan parsing SQL.
+     */
+    const updateSqlPreview = () => {
+        const textarea = document.getElementById('sql-import-textarea');
+        const preview = document.getElementById('sql-import-preview');
+        const executeBtn = document.getElementById('btn-sql-import-execute');
+        if (!textarea || !preview) return;
+
+        const sql = textarea.value;
+        if (!sql || sql.trim().length < 10) {
+            preview.style.display = 'none';
+            if (executeBtn) executeBtn.disabled = true;
+            return;
+        }
+
+        const parsed = parseSqlPreview(sql);
+        preview.style.display = '';
+
+        const tableChip = document.getElementById('sql-preview-table');
+        const rowsChip  = document.getElementById('sql-preview-rows');
+        const statusChip = document.getElementById('sql-preview-status');
+
+        if (tableChip) {
+            tableChip.innerHTML = `<i class="fas fa-table mr-1"></i> Tabel: <strong>${parsed.table || '—'}</strong>`;
+            tableChip.className = 'sql-preview-chip' + (parsed.table && ALLOWED_TABLES.includes(parsed.table) ? ' chip-valid' : parsed.table ? ' chip-invalid' : '');
+        }
+        if (rowsChip) {
+            rowsChip.innerHTML = `<i class="fas fa-list-ol mr-1"></i> Baris: <strong>${parsed.rows || '—'}</strong>`;
+        }
+        if (statusChip) {
+            if (parsed.valid) {
+                statusChip.innerHTML = '<i class="fas fa-check-circle mr-1"></i> <strong>Siap import</strong>';
+                statusChip.className = 'sql-preview-chip chip-valid';
+            } else {
+                statusChip.innerHTML = `<i class="fas fa-times-circle mr-1"></i> <strong>${parsed.error || 'Tidak valid'}</strong>`;
+                statusChip.className = 'sql-preview-chip chip-invalid';
+            }
+        }
+
+        if (executeBtn) executeBtn.disabled = !parsed.valid;
+    };
+
+    /**
+     * Eksekusi SQL Import via API.
+     */
+    const executeSqlImport = () => {
+        const textarea = document.getElementById('sql-import-textarea');
+        const modeSelect = document.getElementById('sql-import-mode');
+        const resultArea = document.getElementById('sql-import-result');
+        const executeBtn = document.getElementById('btn-sql-import-execute');
+        if (!textarea || !SQL_EXECUTE_URL) return;
+
+        const sql  = textarea.value.trim();
+        const mode = modeSelect?.value || 'insert';
+
+        if (!sql) return;
+
+        // Konfirmasi dengan SweetAlert
+        const parsed = parseSqlPreview(sql);
+        if (!parsed.valid) return;
+
+        const modeLabel = mode === 'upsert' ? 'UPSERT (Insert atau Update)' : 'INSERT (Tambah baru)';
+
+        if (typeof Swal === 'undefined') {
+            // Fallback ke confirm biasa
+            if (!confirm(`Import ${parsed.rows} baris ke tabel "${parsed.table}" dengan mode ${modeLabel}?`)) return;
+            doExecuteImport(sql, mode, resultArea, executeBtn);
+            return;
+        }
+
+        Swal.fire({
+            title: 'Konfirmasi SQL Import',
+            html: `
+                <div style="text-align:left;">
+                    <p>Anda akan menjalankan import berikut:</p>
+                    <table class="table table-sm table-borderless" style="font-size:.85rem;">
+                        <tr><td style="width:100px;"><strong>Tabel</strong></td><td><code>${parsed.table}</code></td></tr>
+                        <tr><td><strong>Baris</strong></td><td>${parsed.rows} baris data</td></tr>
+                        <tr><td><strong>Mode</strong></td><td>${modeLabel}</td></tr>
+                    </table>
+                    <p class="text-muted small mb-0"><i class="fas fa-info-circle mr-1"></i>Foreign key check akan dinonaktifkan sementara.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#007bff',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-play mr-1"></i> Jalankan Import',
+            cancelButtonText: 'Batal',
+        }).then(result => {
+            if (!result.isConfirmed) return;
+            doExecuteImport(sql, mode, resultArea, executeBtn);
+        });
+    };
+
+    const doExecuteImport = (sql, mode, resultArea, executeBtn) => {
+        // Disable button + show spinner
+        if (executeBtn) {
+            executeBtn.disabled = true;
+            executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...';
+        }
+
+        fetch(SQL_EXECUTE_URL, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': CSRF,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ sql, mode }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (resultArea) {
+                resultArea.style.display = '';
+                if (data.success) {
+                    resultArea.className = 'sql-import-result mt-3 result-success';
+                    resultArea.innerHTML = `
+                        <div class="result-title"><i class="fas fa-check-circle mr-1"></i> ${data.message}</div>
+                        <div class="result-stats">
+                            <span class="stat-chip"><i class="fas fa-table mr-1 text-primary"></i> Tabel: <strong>${data.table}</strong></span>
+                            <span class="stat-chip"><i class="fas fa-arrow-left mr-1 text-muted"></i> Sebelum: <strong>${data.rows_before}</strong></span>
+                            <span class="stat-chip"><i class="fas fa-arrow-right mr-1 text-success"></i> Sesudah: <strong>${data.rows_after}</strong></span>
+                            <span class="stat-chip"><i class="fas fa-plus mr-1 text-info"></i> Ditambahkan: <strong>${data.rows_inserted}</strong></span>
+                            <span class="stat-chip"><i class="fas fa-cog mr-1 text-secondary"></i> Mode: <strong>${data.mode}</strong></span>
+                        </div>
+                    `;
+                    // Refresh activity log
+                    fetchData(1);
+                } else {
+                    resultArea.className = 'sql-import-result mt-3 result-error';
+                    resultArea.innerHTML = `
+                        <div class="result-title"><i class="fas fa-times-circle mr-1"></i> Import Gagal</div>
+                        <div class="result-detail">${data.message || 'Terjadi kesalahan.'}</div>
+                    `;
+                }
+            }
+        })
+        .catch(err => {
+            if (resultArea) {
+                resultArea.style.display = '';
+                resultArea.className = 'sql-import-result mt-3 result-error';
+                resultArea.innerHTML = `
+                    <div class="result-title"><i class="fas fa-times-circle mr-1"></i> Error</div>
+                    <div class="result-detail">${err.message || 'Gagal menghubungi server.'}</div>
+                `;
+            }
+        })
+        .finally(() => {
+            if (executeBtn) {
+                executeBtn.innerHTML = '<i class="fas fa-play mr-1"></i> Jalankan Import';
+                // Re-evaluate state
+                updateSqlPreview();
+            }
+        });
+    };
+
+    /**
+     * Download file via fetch+blob agar error (redirect login, 500, dsb) bisa ditangkap.
+     * @param {string} url - URL endpoint export
+     * @param {string} defaultFilename - Nama file default jika server tidak mengirim
+     */
+    const doFetchDownload = (url, defaultFilename) => {
+        // Tampilkan loading
+        let swalLoading = null;
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Memproses Export...',
+                html: '<i class="fas fa-spinner fa-spin fa-2x text-primary"></i><br><br>Mohon tunggu...',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+            });
+            swalLoading = true;
+        }
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/octet-stream, application/zip, application/json, */*',
+            },
+            credentials: 'same-origin',
+        })
+        .then(response => {
+            const contentType = response.headers.get('Content-Type') || '';
+
+            // Cek apakah diredirect ke login (Redis timeout → session hilang → redirect)
+            if (!response.ok || response.redirected) {
+                // Coba parse sebagai JSON untuk pesan error dari server
+                if (contentType.includes('application/json')) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Server mengembalikan error.');
+                    });
+                }
+                // Jika bukan JSON dan response tidak ok (misal redirect ke login)
+                if (response.status === 401 || response.redirected) {
+                    throw new Error('Sesi telah berakhir. Silakan refresh halaman dan login kembali.');
+                }
+                throw new Error(`Server error: HTTP ${response.status}`);
+            }
+
+            // Jika response adalah JSON (error dari controller)
+            if (contentType.includes('application/json')) {
+                return response.json().then(data => {
+                    if (!data.success) {
+                        throw new Error(data.message || 'Export gagal.');
+                    }
+                    throw new Error('Response tidak terduga dari server.');
+                });
+            }
+
+            // Response adalah file — baca sebagai blob
+            return response.blob().then(blob => ({ blob, response }));
+        })
+        .then(({ blob, response }) => {
+            // Ambil nama file dari Content-Disposition header
+            const disposition = response.headers.get('Content-Disposition') || '';
+            let filename = defaultFilename;
+            const match = disposition.match(/filename[^;=\n]*=(['"])?(.*?)\1(;|$)/i);
+            if (match && match[2]) {
+                filename = match[2].trim();
+            }
+
+            // Trigger download via blob URL
+            const blobUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+            if (swalLoading && typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Export Berhasil!',
+                    text: `File "${filename}" berhasil diunduh.`,
+                    icon: 'success',
+                    timer: 2500,
+                    showConfirmButton: false,
+                });
+            }
+        })
+        .catch(err => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Export Gagal',
+                    html: `<p>${err.message || 'Terjadi kesalahan saat export.'}</p><p class="text-muted small">Pastikan koneksi stabil dan coba lagi.</p>`,
+                    icon: 'error',
+                });
+            } else {
+                alert('Export gagal: ' + (err.message || 'Terjadi kesalahan.'));
+            }
+        });
+    };
+
+    /**
+     * Export SQL untuk tabel yang dipilih.
+     */
+    const exportSql = () => {
+        if (!SQL_EXPORT_URL) return;
+        const table = document.getElementById('sql-import-table-selector')?.value || '';
+        if (!table) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Pilih Tabel', 'Pilih tabel yang akan di-export terlebih dahulu.', 'info');
+            } else {
+                alert('Pilih tabel yang akan di-export terlebih dahulu.');
+            }
+            return;
+        }
+
+        const exportUrl = `${SQL_EXPORT_URL}?table=${encodeURIComponent(table)}`;
+        const defaultFilename = `sql_export_${table}.sql`;
+
+        if (typeof Swal === 'undefined') {
+            if (confirm(`Export SQL untuk tabel "${table}"?`)) {
+                doFetchDownload(exportUrl, defaultFilename);
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Export SQL?',
+            text: `SQL untuk tabel "${table}" akan diunduh.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Export',
+            cancelButtonText: 'Batal',
+        }).then(result => {
+            if (result.isConfirmed) {
+                doFetchDownload(exportUrl, defaultFilename);
+            }
+        });
+    };
+
+    /**
+     * Export SQL untuk SEMUA tabel yang diizinkan sekaligus.
+     */
+    const exportAllSql = () => {
+        if (!SQL_EXPORT_ALL_URL) return;
+
+        if (typeof Swal === 'undefined') {
+            if (confirm(`Export SQL untuk semua ${ALLOWED_TABLES.length} tabel sekaligus?`)) {
+                doFetchDownload(SQL_EXPORT_ALL_URL, 'sql_export_all.zip');
+            }
+            return;
+        }
+
+        Swal.fire({
+            title: 'Export Semua Tabel?',
+            html: `
+                <div style="text-align:left;">
+                    <p>Anda akan mengekspor <strong>${ALLOWED_TABLES.length} tabel</strong> sekaligus:</p>
+                    <div style="max-height:200px; overflow-y:auto; background:#f8f9fa; padding:10px; border-radius:4px; font-size:0.85rem;">
+                        ${ALLOWED_TABLES.map(t => `<div>• <code>${t}</code></div>`).join('')}
+                    </div>
+                    <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle mr-1"></i>File SQL akan diunduh sebagai satu file ZIP.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-download mr-1"></i> Ya, Export Semua',
+            cancelButtonText: 'Batal',
+        }).then(result => {
+            if (result.isConfirmed) {
+                doFetchDownload(SQL_EXPORT_ALL_URL, 'sql_export_all.zip');
+            }
+        });
+    };
 
     // ── EVENT LISTENERS ─────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
@@ -354,9 +829,101 @@
             }
         });
 
+        // ── SQL IMPORT LISTENERS ────────────────────────────────────────
+        // Chevron rotation for collapse
+        const sqlImportBody = document.getElementById('sql-import-body');
+        const sqlImportChevron = document.getElementById('sql-import-chevron');
+        if (sqlImportBody && sqlImportChevron) {
+            sqlImportBody.addEventListener('show.bs.collapse', () => sqlImportChevron.classList.add('rotated'));
+            sqlImportBody.addEventListener('hide.bs.collapse', () => sqlImportChevron.classList.remove('rotated'));
+            // Bootstrap 4 fallback
+            if (typeof $ !== 'undefined') {
+                $(sqlImportBody).on('show.bs.collapse', () => sqlImportChevron.classList.add('rotated'));
+                $(sqlImportBody).on('hide.bs.collapse', () => sqlImportChevron.classList.remove('rotated'));
+            }
+        }
+
+        // Load tables dropdown
+        loadSqlImportTables();
+
+        // Table selector → enable/disable columns button
+        const tableSelector = document.getElementById('sql-import-table-selector');
+        const btnShowColumns = document.getElementById('btn-show-columns');
+        const btnExport = document.getElementById('btn-sql-export');
+        if (tableSelector && btnShowColumns) {
+            tableSelector.addEventListener('change', () => {
+                btnShowColumns.disabled = !tableSelector.value;
+            });
+        }
+
+        if (tableSelector && btnExport) {
+            const toggleExport = () => { btnExport.disabled = !tableSelector.value; };
+            tableSelector.addEventListener('change', toggleExport);
+            toggleExport();
+        }
+
+        // Show Columns button
+        if (btnShowColumns) {
+            btnShowColumns.addEventListener('click', () => {
+                const tbl = document.getElementById('sql-import-table-selector')?.value;
+                if (tbl) loadTableColumns(tbl);
+            });
+        }
+
+        // Close columns area
+        const btnCloseColumns = document.getElementById('btn-close-columns');
+        if (btnCloseColumns) {
+            btnCloseColumns.addEventListener('click', () => {
+                const area = document.getElementById('sql-import-columns-area');
+                if (area) area.style.display = 'none';
+            });
+        }
+
+        // SQL textarea → real-time preview
+        const sqlTextarea = document.getElementById('sql-import-textarea');
+        if (sqlTextarea) {
+            let previewTimer = null;
+            sqlTextarea.addEventListener('input', () => {
+                clearTimeout(previewTimer);
+                previewTimer = setTimeout(updateSqlPreview, 300);
+            });
+        }
+
+        // Execute button
+        const btnExecute = document.getElementById('btn-sql-import-execute');
+        if (btnExecute) {
+            btnExecute.addEventListener('click', executeSqlImport);
+        }
+
+        if (btnExport) {
+            btnExport.addEventListener('click', exportSql);
+        }
+
+        // Export All button
+        const btnExportAll = document.getElementById('btn-sql-export-all');
+        if (btnExportAll) {
+            btnExportAll.addEventListener('click', exportAllSql);
+        }
+
+        // Clear button
+        const btnClear = document.getElementById('btn-sql-import-clear');
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                const ta = document.getElementById('sql-import-textarea');
+                const preview = document.getElementById('sql-import-preview');
+                const result = document.getElementById('sql-import-result');
+                const execBtn = document.getElementById('btn-sql-import-execute');
+                if (ta) ta.value = '';
+                if (preview) preview.style.display = 'none';
+                if (result) result.style.display = 'none';
+                if (execBtn) execBtn.disabled = true;
+            });
+        }
+
         // ── INIT ────────────────────────────────────────────────────────────
         loadModules();
         fetchData(1);
         loadLaravelLogInfo();
     });
 })();
+

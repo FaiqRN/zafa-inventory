@@ -1,10 +1,9 @@
 <?php
-
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use App\Exports\Sheets\EvaluasiMetrikSheet;
 
-class PartnerPerformanceExport implements WithMultipleSheets
+class PartnerPerformanceExport
 {
     protected string $periodRankingStart;
     protected string $periodRankingEnd;
@@ -29,7 +28,7 @@ class PartnerPerformanceExport implements WithMultipleSheets
     public function sheets(): array
     {
         return [
-            new Sheets\EvaluasiMetrikSheet(
+            new EvaluasiMetrikSheet(
                 $this->periodRankingStart,
                 $this->periodRankingEnd,
                 $this->groundTruthStart,

@@ -6,7 +6,7 @@ use App\Models\Pengiriman;
 use App\Models\Toko;
 use App\Models\Barang;
 use App\Models\BarangToko;
-use App\Helpers\MasterData\pengiriman\PengirimanHelper;
+use App\Helpers\MasterData\Pengiriman\PengirimanHelper;
 use App\Services\PengirimanCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;

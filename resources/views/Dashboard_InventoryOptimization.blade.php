@@ -46,21 +46,32 @@
         <div class="inv-metric-value" id="inv-m-flag">
             {{ collect($rekomendasiData)->where('shelf_life_flag', true)->count() }}
         </div>
-        <div class="inv-metric-sub">interval > batas aman</div>
+        <div class="inv-metric-sub" id="inv-flag-count">
+            {{ collect($rekomendasiData)->where('shelf_life_flag', true)->count() }} interval > batas aman
+        </div>
     </div>
 
     <div class="inv-metric-card inv-metric-card--ok">
         <div class="inv-metric-label">Stok aman</div>
         <div class="inv-metric-value" id="inv-m-ok">
-            {{ collect($rekomendasiData)->where('is_below_rop', false)->where('shelf_life_flag', false)->count() }}
+            {{ collect($rekomendasiData)->where('is_below_rop', false)->count() }}
         </div>
         <div class="inv-metric-sub" id="inv-ok-count">
-            {{ collect($rekomendasiData)->where('is_below_rop', false)->where('shelf_life_flag', false)->count() }} aman
+            {{ collect($rekomendasiData)->where('is_below_rop', false)->count() }} di atas ROP
         </div>
     </div>
 </div>
 
-<div class="inv-refresh-time inv-refresh-time-plain" id="inv-refresh-time">Update terakhir: -</div>
+<div class="inv-auto-refresh-bar" id="inv-auto-refresh-bar">
+    <div class="inv-auto-refresh-left">
+        <span class="inv-auto-refresh-dot is-idle" id="inv-auto-refresh-dot"></span>
+        <span id="inv-auto-refresh-label">Auto-update aktif</span>
+    </div>
+    <div class="inv-auto-refresh-right">
+        <span class="inv-refresh-time" id="inv-refresh-time">Update terakhir: -</span>
+        <span class="inv-refresh-countdown" id="inv-refresh-countdown"></span>
+    </div>
+</div>
 
 {{-- MAP --}}
 <div class="inv-map-wrap">
@@ -104,15 +115,9 @@
         window.INV_NOMINATIM_BASE_URL = @json($nominatimBaseUrl ?? 'https://nominatim.openstreetmap.org');
         window.INV_AUTO_REFRESH_URL = @json(route('dashboard.api.inventory-optimization.auto-refresh'));
 
-        {{--
-            FIX: Auto-refresh diubah dari 10.000ms (10 detik) ke 300.000ms (5 menit).
-            Interval 10 detik menyebabkan ratusan baris duplikat di inventory_rekomendasi
-            karena setiap fetch memanggil hitungSemua() dari sisi server.
-            5 menit cukup untuk pembaruan real-time dashboard tanpa membebani DB.
-        --}}
+        {{-- Auto-refresh setiap 5 menit (300 detik) — truncate + regenerate semua kombinasi --}}
         window.INV_AUTO_REFRESH_INTERVAL_MS = 300000;
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ asset('js/Dashboard_InventoryOptimization.js') }}"></script>
 @endpush
-{{-- EOF --}}

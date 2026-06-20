@@ -116,14 +116,16 @@
             @endcan
 
             <!-- Follow Up Pelanggan -->
-            @can('view-follow-up')
-            <li class="nav-item">
-                <a href="{{ route('follow-up-pelanggan.index') }}" class="nav-link {{ ($activemenu == 'follow-up-pelanggan')? 'active' : '' }}">
-                    <i class="nav-icon fas fa-envelope-open-text"></i>
-                    <p>Follow Up Pelanggan</p>
-                </a>
-            </li>
-            @endcan
+            @if (config('followup.enabled'))
+                @can('view-follow-up')
+                <li class="nav-item">
+                    <a href="{{ route('follow-up-pelanggan.index') }}" class="nav-link {{ ($activemenu == 'follow-up-pelanggan')? 'active' : '' }}">
+                        <i class="nav-icon fas fa-envelope-open-text"></i>
+                        <p>Follow Up Pelanggan</p>
+                    </a>
+                </li>
+                @endcan
+            @endif
             <!-- Sistem Pengaturan -->
             @canany(['manage-users', 'manage-notification-settings', 'view-eoq-setting', 'view-zscore-setting', 'view-config-interval-kirim'])
             <li class="nav-item has-treeview {{ (in_array($activemenu, ['user', 'role', 'notification-settings', 'eoq-setting', 'zscore-setting', 'config-interval-kirim']))? 'menu-open' : '' }}">

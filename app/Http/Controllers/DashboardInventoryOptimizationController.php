@@ -107,51 +107,45 @@ class DashboardInventoryOptimizationController extends Controller
         return null;
     }
 
-    public function recalculate(Request $request, RekomendasiService $rekomendasiService)
+    public function recalculate()
     {
         try {
-            $hariObservasi = max(
-                1,
-                (int) $request->input('hari_observasi', DashboardInventoryOptimizationHelper::DEFAULT_HARI_OBSERVASI)
-            );
-            $hasil = $rekomendasiService->hitungSemua($hariObservasi);
+            /** @var \App\Services\RekomendasiService $rekomendasiService */
+            $rekomendasiService = app(\App\Services\RekomendasiService::class);
+            $hasil = $rekomendasiService->truncateAndRegenerate();
 
-            return redirect()->route('dashboard.inventory-optimization')
-                ->with('success', 'Perhitungan optimasi inventory selesai. Berhasil: '
-                    . ($hasil['berhasil'] ?? 0)
-                    . ', Gagal: '
-                    . ($hasil['gagal'] ?? 0)
-                    . '.');
+            $dashboardData = DashboardInventoryOptimizationHelper::getLatestDataOnly();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Hitung ulang selesai.',
+                'meta'    => [
+                    'berhasil'         => $hasil['berhasil'],
+                    'gagal'            => $hasil['gagal'],
+                    'truncated'        => $hasil['truncated'],
+                    'updated_at'       => now()->toIso8601String(),
+                    'interval_seconds' => 300,
+                ],
+                'data'    => $dashboardData,
+            ]);
         } catch (\Throwable $e) {
-            Log::error('Error in dashboard recalculate: ' . $e->getMessage());
+            Log::error('Error in recalculate: ' . $e->getMessage());
 
-            return redirect()->route('dashboard.inventory-optimization')
-                ->with('error', 'Gagal melakukan perhitungan ulang: ' . $e->getMessage());
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal hitung ulang: ' . $e->getMessage(),
+            ], 500);
         }
     }
 
-    /**
-     * Auto refresh data dashboard inventory optimization.
-     *
-     * FIX: Endpoint ini sekarang HANYA membaca data terbaru dari DB,
-     * TIDAK lagi menghitung ulang (hitungSemua) setiap dipanggil.
-     *
-     * Sebelumnya endpoint ini memanggil hitungSemua() setiap 10 detik
-     * yang menyebabkan:
-     *   1. Ratusan baris duplikat di inventory_rekomendasi
-     *   2. Beban DB yang sangat berat (kalkulasi EOQ/SS/ROP berulang)
-     *   3. Nilai yang tidak stabil karena terus di-overwrite
-     *
-     * Kalkulasi ulang sekarang hanya dilakukan lewat:
-     *   - Tombol "Hitung Ulang" → route recalculate (manual oleh user)
-     *   - Scheduler harian (jika dikonfigurasi)
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function autoRefreshInventoryOptimization()
     {
         try {
-            // Hanya ambil data terbaru — tidak ada kalkulasi sama sekali
+            /** @var \App\Services\RekomendasiService $rekomendasiService */
+            $rekomendasiService = app(\App\Services\RekomendasiService::class);
+
+            $hasil = $rekomendasiService->truncateAndRegenerate();
+
             $dashboardData = DashboardInventoryOptimizationHelper::getLatestDataOnly();
 
             return response()->json([
@@ -159,6 +153,9 @@ class DashboardInventoryOptimizationController extends Controller
                 'message' => 'Data dashboard diperbarui.',
                 'data'    => $dashboardData,
                 'meta'    => [
+                    'berhasil'         => $hasil['berhasil'],
+                    'gagal'            => $hasil['gagal'],
+                    'truncated'        => $hasil['truncated'],
                     'updated_at'       => now()->toIso8601String(),
                     'interval_seconds' => 300,
                 ],

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\AuditHelper;
-use App\Helpers\MasterData\barangToko\BarangTokoHelper;
-use App\Helpers\MasterData\barangToko\BarangTokoOperationHelper;
+use App\Helpers\MasterData\BarangToko\BarangTokoHelper;
+use App\Helpers\MasterData\BarangToko\BarangTokoOperationHelper;
 use App\Helpers\DashboardMonitorLogger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;

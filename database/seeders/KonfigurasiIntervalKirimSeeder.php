@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\KonfigurasiSistem;
 use Spatie\Permission\Models\Permission;
 use App\Helpers\RoleHelper;
+use App\Models\Toko;
 
 class KonfigurasiIntervalKirimSeeder extends Seeder
 {
@@ -27,6 +28,16 @@ class KonfigurasiIntervalKirimSeeder extends Seeder
         );
 
         $this->command->info('✓ Konfigurasi min_interval_kirim_hari berhasil di-seed (default: 14 hari)');
+
+        // ── 1b. Set default per-toko jika masih 0/null ─────────────────────
+        $affected = Toko::where(Toko::FIELD_MIN_INTERVAL_KIRIM_HARI, 0)
+            ->orWhereNull(Toko::FIELD_MIN_INTERVAL_KIRIM_HARI)
+            ->update([
+                Toko::FIELD_MIN_INTERVAL_KIRIM_HARI => KonfigurasiSistem::DEFAULT_MIN_INTERVAL_KIRIM_HARI,
+            ]);
+
+        $this->command->info("✓ {$affected} toko di-set min_interval_kirim_hari = "
+            . KonfigurasiSistem::DEFAULT_MIN_INTERVAL_KIRIM_HARI);
 
         // ── 2. Buat permission baru ───────────────────────────────────────────
         $permissions = [

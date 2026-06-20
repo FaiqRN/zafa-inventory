@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PreventBackAfterLogout
 {
@@ -16,6 +17,16 @@ class PreventBackAfterLogout
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
+
+        // Jangan timpa header untuk file download (StreamedResponse atau attachment)
+        if ($response instanceof StreamedResponse) {
+            return $response;
+        }
+
+        $contentDisposition = $response->headers->get('Content-Disposition', '');
+        if (str_contains($contentDisposition, 'attachment')) {
+            return $response;
+        }
         
         $response->headers->set('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
         $response->headers->set('Pragma', 'no-cache');

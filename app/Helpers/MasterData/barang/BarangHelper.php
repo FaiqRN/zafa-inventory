@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Helpers\MasterData\barang;
+namespace App\Helpers\MasterData\Barang;
 
 use App\Models\Barang;
 use App\Models\Pemesanan;

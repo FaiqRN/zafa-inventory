@@ -5,7 +5,7 @@
     var tokosGeo = window.INV_TOKOS || [];
     var nominatimBaseUrl = window.INV_NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
     var autoRefreshUrl = window.INV_AUTO_REFRESH_URL || '/dashboard/api/inventory-optimization/auto-refresh';
-    var autoRefreshIntervalMs = parseInt(window.INV_AUTO_REFRESH_INTERVAL_MS, 10) || 10000;
+    var autoRefreshIntervalMs = parseInt(window.INV_AUTO_REFRESH_INTERVAL_MS, 10) || 300000;
 
     const NEARBY_DISTANCE_KM = 3; //Buat jarak maksimal untuk kelompok toko berdekatan
     const MIN_TOKO_FOR_AREA = 3;
@@ -587,6 +587,40 @@
         }
     }
 
+    function setRefreshDotState(state) {
+        var dotEl = document.getElementById('inv-auto-refresh-dot');
+        var labelEl = document.getElementById('inv-auto-refresh-label');
+
+        if (dotEl) {
+            dotEl.className = 'inv-auto-refresh-dot' + (state ? ' is-' + state : '');
+        }
+
+        if (labelEl) {
+            switch (state) {
+                case 'running':
+                    labelEl.textContent = 'Menghitung ulang data...';
+                    break;
+                case 'error':
+                    labelEl.textContent = 'Gagal memperbarui';
+                    break;
+                default:
+                    labelEl.textContent = 'Auto-update aktif';
+                    break;
+            }
+        }
+    }
+
+    function updateCountdown(secondsLeft) {
+        var countdownEl = document.getElementById('inv-refresh-countdown');
+        if (countdownEl) {
+            if (secondsLeft > 0) {
+                countdownEl.textContent = '· refresh dalam ' + secondsLeft + 's';
+            } else {
+                countdownEl.textContent = '';
+            }
+        }
+    }
+
     function applyDashboardSnapshot(snapshot) {
         if (!snapshot) {
             return;
@@ -608,6 +642,7 @@
         }
 
         isAutoRefreshRunning = true;
+        setRefreshDotState('running');
 
         fetch(autoRefreshUrl, {
             method: 'GET',
@@ -636,24 +671,62 @@
                     : new Date().toISOString();
 
                 setAutoRefreshIndicator(updatedAt);
+                setRefreshDotState('idle');
             })
             .catch(function (error) {
                 console.error('Auto refresh dashboard gagal:', error);
+                setRefreshDotState('error');
+
+                // Kembalikan ke idle setelah 5 detik agar user tahu error sudah lewat
+                setTimeout(function () {
+                    setRefreshDotState('idle');
+                }, 5000);
             })
             .finally(function () {
                 isAutoRefreshRunning = false;
             });
     }
 
+    var countdownTimer = null;
+    var countdownSeconds = 0;
+
+    function startCountdown() {
+        countdownSeconds = Math.floor(autoRefreshIntervalMs / 1000);
+        updateCountdown(countdownSeconds);
+
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+        }
+
+        countdownTimer = setInterval(function () {
+            countdownSeconds--;
+            if (countdownSeconds <= 0) {
+                updateCountdown(0);
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            } else {
+                updateCountdown(countdownSeconds);
+            }
+        }, 1000);
+    }
+
+    function doRefreshAndResetCountdown() {
+        refreshDashboardData();
+        startCountdown();
+    }
+
     function startAutoRefresh() {
         setAutoRefreshIndicator(new Date().toISOString());
-        refreshDashboardData();
+        setRefreshDotState('idle');
 
-        autoRefreshTimer = window.setInterval(refreshDashboardData, autoRefreshIntervalMs);
+        // Refresh pertama kali saat halaman dimuat
+        doRefreshAndResetCountdown();
+
+        autoRefreshTimer = window.setInterval(doRefreshAndResetCountdown, autoRefreshIntervalMs);
 
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible') {
-                refreshDashboardData();
+                doRefreshAndResetCountdown();
             }
         });
 
@@ -661,6 +734,10 @@
             if (autoRefreshTimer !== null) {
                 window.clearInterval(autoRefreshTimer);
                 autoRefreshTimer = null;
+            }
+            if (countdownTimer !== null) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
             }
         });
     }

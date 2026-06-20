@@ -4,14 +4,15 @@
  */
 
 @media (max-width: 767.98px) {
+
     .retur-page .row.mb-3,
     .retur-page .dataTables_wrapper .row {
         margin-left: 0 !important;
         margin-right: 0 !important;
     }
 
-    .retur-page .row.mb-3 > [class*="col-"],
-    .retur-page .dataTables_wrapper .row > [class*="col-"] {
+    .retur-page .row.mb-3>[class*="col-"],
+    .retur-page .dataTables_wrapper .row>[class*="col-"] {
         padding-left: 0 !important;
         padding-right: 0 !important;
     }

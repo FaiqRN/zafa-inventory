@@ -79,14 +79,25 @@ class ForgotPasswordController extends Controller
             ->where('username', $request->username)
             ->first();
 
-        Mail::send('emails.reset-password', [
-            'token' => $token,
-            'email' => $request->email,
-            'user' => $user
-        ], function ($message) use ($request) {
-            $message->to($request->email);
-            $message->subject('Reset Password - ZafaSys');
-        });
+        try {
+            Mail::send('emails.reset-password', [
+                'token' => $token,
+                'email' => $request->email,
+                'user' => $user
+            ], function ($message) use ($request) {
+                $message->to($request->email);
+                $message->subject('Reset Password - ZafaSys');
+            });
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Email Reset Password Error: ' . $e->getMessage());
+            
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            
+            return back()->with([
+                'message' => 'Gagal mengirim email reset password. Pastikan pengaturan email (SMTP) di server Anda valid. Error: ' . $e->getMessage(),
+                'class' => 'error'
+            ])->withInput();
+        }
 
         $cooldownUntil = Carbon::now()->addMinutes(5)->timestamp;
 

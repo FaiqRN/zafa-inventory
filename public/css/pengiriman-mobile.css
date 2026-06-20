@@ -36,8 +36,8 @@
         margin-right: 0 !important;
     }
 
-    .pengiriman-page .row.mb-3 > [class*="col-"],
-    .pengiriman-page .dataTables_wrapper .row > [class*="col-"] {
+    .pengiriman-page .row.mb-3>[class*="col-"],
+    .pengiriman-page .dataTables_wrapper .row>[class*="col-"] {
         padding-left: 0 !important;
         padding-right: 0 !important;
     }
